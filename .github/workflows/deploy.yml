@@ -61,10 +61,10 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
           REGISTRY: ${{ secrets.ECR_REGISTRY }}
           REPOSITORY: ${{ inputs.ECR_REPOSITORY }}
-          HELM_DIR: "helm_deploy/laa-civil-case-api"
+          HELM_DIR: "deploy/infrastructure/helm"
           SHARED_IP_RANGES_LAA: ${{ env.SHARED_IP_RANGES_LAA }}
         run: |
-          helm upgrade laa-civil-case-api \
+          helm upgrade laa-inquests-api \
           ${HELM_DIR} \
           --namespace=${{ secrets.KUBE_NAMESPACE }} \
           --values ${HELM_DIR}/values/values-${{ inputs.environment }}.yaml \

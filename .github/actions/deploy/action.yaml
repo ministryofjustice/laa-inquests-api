@@ -1,0 +1,96 @@
+name: "Deploy"
+description: "Deploy docker image to namespace"
+inputs:
+  kube-cert:
+    description: "Kubernetes cluster authentication certificate"
+    required: true
+  kube-token:
+    description: "Kubernetes cluster authentication token"
+    required: true
+  kube-cluster:
+    description: "Kubernetes cluster name"
+    required: true
+  kube-namespace:
+    description: "Kubernetes cluster namespace"
+    required: true
+  app-environment:
+    description:
+      "Environment to which the app is being deployed [staging, production, etc]"
+    required: true
+  ecr-repository:
+    description: "ECR repository"
+    required: true
+  ecr-registry_url:
+    description: "ECR registry url"
+    required: true
+  session_secret:
+    description: "Session secret"
+  service_name:
+    description: "Service name"
+  session_name:
+    description: "Session name"
+  ratelimit_max:
+    description: "Rate limit max"
+  ratewindow_ms:
+    description: "Rate limit max"
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout
+      uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
+
+    - name: Authenticate to the cluster
+      uses: ministryofjustice/laa-reusable-github-actions/.github/actions/authenticate_to_cluster@2aa2676c3cd9876ec7037ee8b3d729d0306cb7c6
+      with:
+        kube-cert: ${{ inputs.kube-cert }}
+        kube-token: ${{ inputs.kube-token }}
+        kube-cluster: ${{ inputs.kube-cluster }}
+        kube-namespace: ${{ inputs.kube-namespace }}
+
+    - name: Set up AWS credentials for ECR and Kubernetes
+      uses: aws-actions/configure-aws-credentials@v6.0.0
+      with:
+        role-to-assume: ${{ inputs.ecr-role-to-assume }}
+        aws-region: ${{ inputs.ecr-region }}
+
+    - uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076
+      id: login-ecr
+
+    - name: Deploy infrastructure to UAT
+      shell: bash
+      run: |
+        if [ ${{ inputs.app-environment }} == 'uat' ]
+        then
+          echo "DEPLOYING"
+          kubectl apply --record=false -f ./deploy/infrastructure/grafana/
+        fi
+    - run: |
+        docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+        docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+      shell: bash
+      env:
+        REGISTRY: ${{ inputs.ecr-registry_url }}
+        REPOSITORY: ${{ inputs.ecr-repository }}
+        IMAGE_TAG: ${{ inputs.image-tag }}
+
+    - name: Set environment variables
+      shell: bash
+      run: |
+        echo "NODE_ENV=production" >> $GITHUB_ENV
+        echo "RATE_LIMIT_MAX=${{ inputs.ratelimit_max || '100' }}" >> $GITHUB_ENV
+        echo "RATE_WINDOW_MS=${{ inputs.ratewindow_ms || '900000' }}" >> $GITHUB_ENV
+        echo "SERVICE_NAME=${{ inputs.service_name || 'Inquests' }}" >> $GITHUB_ENV
+        echo "SESSION_NAME=${{ inputs.session_name || 'sessionId' }}" >> $GITHUB_ENV
+        echo "SESSION_SECRET=${{ inputs.session_secret || 'default-session-secret' }}" >> $GITHUB_ENV
+
+    - name: Deploy using Helm
+      shell: bash
+      run: ./deploy/scripts/deploy.sh ${{ inputs.app-environment }}
+      env:
+        REGISTRY: ${{ inputs.ecr-registry_url }}
+        REPOSITORY: ${{ inputs.ecr-repository }}
+        IMAGE_TAG: ${{ github.sha }}
+        GITHUB_SHA: ${{ github.sha }}
+        GITHUB_REF_NAME: ${{ github.ref_name }}
+        GITHUB_HEAD_REF: ${{ github.head_ref }}
+        K8S_NAMESPACE: ${{ inputs.kube-namespace }}

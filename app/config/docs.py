@@ -16,7 +16,7 @@ docs_config = {
     },
     "license_info": {
         "name": "MIT Licence",
-        "url": "https://github.com/ministryofjustice/moj-fastapi-skeleton/blob/main/LICENSE",
+        "url": "https://github.com/ministryofjustice/laa-inquests-api/blob/main/LICENSE",
     },
     "docs_url": "/",
 }

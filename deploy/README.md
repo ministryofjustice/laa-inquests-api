@@ -26,7 +26,7 @@ This example Helm Chart is set up to deploy to four environments:
 
 By default only the dev environment has an enabled ingress.
 
-**You will want to rename every occurrence of `moj-fastapi-skeleton` with the name of your project.**
+**You will want to rename every occurrence of `laa-inquests-api` with the name of your project.**
 
 If you are using the included GitHub Actions workflow this is configured to set the ingress whitelist to the IP Ranges
 given in the [Shared LAA IP Allowlist](https://github.com/ministryofjustice/laa-ip-allowlist).
