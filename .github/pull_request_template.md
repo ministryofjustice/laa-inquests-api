@@ -1,4 +1,4 @@
-## [IDDS-18](https://dsdmoj.atlassian.net/browse/IDDS-XXX): Title
+## [IDDS-18](https://dsdmoj.atlassian.net/browse/IDDS-XXX) - Title
 
 ### What does this PR do?
 
