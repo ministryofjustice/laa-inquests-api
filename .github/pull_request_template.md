@@ -1,8 +1,13 @@
-## [IDDS-18](https://dsdmoj.atlassian.net/browse/IDDS-XXX) - Title
+## [IDDS-XXX] Ticket Title/Description
 
-### What does this PR do?
+---
 
-### Checklist
-- [ ] This code has been personally tested in Docker
-- [ ] The PR title should clearly state what has been done and match the format: [IDDS-XXX] Ticket description
-- [ ] No merge conflicts with main
+**Jira Ticket:** [IDDS-XXX](https://dsdmoj.atlassian.net/browse/IDDS-XXX)
+
+### 🧩 What does this PR do?
+Briefly explain what this ticket does. 
+
+### 🧹 Checklist
+- [ ] **Tested:** Code has been personally tested in Docker
+- [ ] **Formatting:** PR title matches `[IDDS-XXX] Ticket description`
+- [ ] **Git Health:** No merge conflicts with `main`
