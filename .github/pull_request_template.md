@@ -1,7 +1,5 @@
 ## [IDDS-XXX] Ticket Title/Description
 
----
-
 **Jira Ticket:** [IDDS-XXX](https://dsdmoj.atlassian.net/browse/IDDS-XXX)
 
 ### 🧩 What does this PR do?
