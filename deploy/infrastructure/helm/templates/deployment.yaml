@@ -40,5 +40,5 @@ spec:
             {{ include "laa-inquests-api.app.vars" . | nindent 12 }}
           ports:
             - name: http
-              containerPort: {{ .Values.image.containerPort }}
+              containerPort: 8027
               protocol: TCP
