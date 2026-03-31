@@ -2,10 +2,10 @@ name: Release
 
 run-name: Release - ${{ github.ref_name }}
 
-on:
-  push:
-    branches:
-      - main
+# on:
+#   push:
+#     branches:
+#       - main
 
 jobs:
   test:
@@ -21,15 +21,15 @@ jobs:
 
   # Subsequent actions disabled as we do not have an ECR/ Cloud Platform environment configured for this skeleton
   # To use these jobs in your pipeline add the required secrets to GitHub actions and uncomment these jobs
-  #build-and-push:
-  #  name: Build
-  #  uses: ./.github/workflows/build.yml
-  #  needs: [static-analysis, test]
-  #  with:
-  #    ECR_REGION: ${{vars.ECR_REGION}}
-  #    ECR_REPOSITORY: ${{vars.ECR_REPOSITORY}}
-  #  secrets:
-  #    ECR_ROLE_TO_ASSUME: ${{ secrets.ECR_ROLE_TO_ASSUME }}
+  build-and-push:
+   name: Build
+   uses: ./.github/workflows/build.yml
+   needs: [static-analysis, test]
+   with:
+     ECR_REGION: ${{vars.ECR_REGION}}
+     ECR_REPOSITORY: ${{vars.ECR_REPOSITORY}}
+   secrets:
+     ECR_ROLE_TO_ASSUME: ${{ secrets.ECR_ROLE_TO_ASSUME }}
 
   #scan-image:
   #  uses: ./.github/workflows/scan-image.yml

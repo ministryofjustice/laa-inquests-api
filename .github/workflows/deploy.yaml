@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    # From docs: if no activity types are specified, the workflow runs when a pull request is opened or reopened or when the head branch of the pull request is updated.
+    paths:
+      - "deploy/**"
+      - ".github/**"
+      - "src/**"
+      - "tests/**"
+      - "Dockerfile"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Github deployment environment"
+        required: false
+        default: "uat"
+        type: choice
+        options:
+          - uat
+
+jobs:
+  code-linting:
+    name: Code Linting
+    uses: ./.github/workflows/code-linting.yaml
+
+  # snyk:
+  #   name: Snyk scan docker image
+  #   runs-on: ubuntu-latest
+
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
+
+  #     - name: Get Snyk OAuth Token
+  #       id: snyk-auth
+  #       run: |
+  #         TOKEN=$(curl -s -X POST "https://api.snyk.io/oauth2/token" \
+  #           -H "Content-Type: application/x-www-form-urlencoded" \
+  #           -d "grant_type=client_credentials" \
+  #           -d "client_id=${{ secrets.SNYK_CLIENT_ID }}" \
+  #           -d "client_secret=${{ secrets.SNYK_CLIENT_SECRET }}" \
+  #           | jq -r '.access_token')
+
+  #         echo "SNYK_OAUTH_TOKEN=$TOKEN" >> $GITHUB_ENV
+
+  #     - name: Build local Docker image
+  #       run: |
+  #         docker build \
+  #           --tag laa-inquests-api:scan \
+  #           --file Dockerfile .
+
+  #     - name: Run Snyk to scan Docker image
+  #       uses: snyk/actions/docker@c75628d834bd4a804426e1cb7b31a9aa43a54c31
+  #       with:
+  #         image: laa-inquests-api:scan
+  #         args: --docker --severity-threshold=high --policy-path=.snyk
+  #       env:
+  #         SNYK_OAUTH_TOKEN: ${{ env.SNYK_OAUTH_TOKEN }}
+
+  #     - name: Monitor docker image using Snyk
+  #       continue-on-error: true
+  #       uses: snyk/actions/docker@c75628d834bd4a804426e1cb7b31a9aa43a54c31
+  #       env:
+  #         SNYK_OAUTH_TOKEN: ${{ env.SNYK_OAUTH_TOKEN }}
+  #       with:
+  #         command: monitor
+  #         image: laa-inquests-api:scan
+  #         args: --file=Dockerfile --policy-path=.snyk
+
+  unit-tests:
+    name: Pytest Unit Tests
+    uses: ./.github/workflows/unit-tests.yaml
+
+  deploy:
+    if: ${{ !contains(github.actor, '[bot]') }}
+    runs-on: ubuntu-latest
+    environment: uat
+    permissions:
+      id-token: write # This is required for requesting the JWT
+      contents: read # This is required for actions/checkout
+    needs:
+      - unit-tests
+      # - snyk
+    steps:
+      - name: Checkout
+        uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
+      - name: Deploy to uat
+        uses: ./.github/actions/deploy
+        with:
+          app-environment: uat
+          kube-cert: ${{ secrets.KUBE_CERT }}
+          kube-token: ${{ secrets.KUBE_TOKEN }}
+          kube-cluster: ${{ secrets.KUBE_CLUSTER }}
+          kube-namespace: ${{ secrets.KUBE_NAMESPACE }}
+          ecr-repository: ${{ vars.ECR_REPOSITORY }}
+          ecr-registry_url: ${{ secrets.ECR_REGISTRY_URL }}
+          ecr-role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
+          ecr-region: ${{ vars.ECR_REGION }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-sha: ${{ github.sha }}
+          github-ref-name: ${{ github.ref_name }}
+          github-head-ref: ${{ github.head_ref }}
+          image-tag: ${{ github.sha }}
