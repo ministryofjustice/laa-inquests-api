@@ -1,6 +1,4 @@
 from pydantic import BaseModel
-from sqlalchemy import Date
-
 
 class Application(BaseModel):
     id: str
