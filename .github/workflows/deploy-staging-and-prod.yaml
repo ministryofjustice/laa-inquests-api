@@ -1,0 +1,63 @@
+name: Deploy Main to Staging & Prod
+
+on:
+  push:
+    tags:
+      - "*.*.*"
+jobs:
+  deploy-staging:
+    environment: staging
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # This is required for requesting the JWT
+      contents: read # This is required for actions/checkout
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Deploy to staging
+        uses: ./.github/actions/deploy
+        with:
+          app-environment: staging
+          ecr-repository: ${{ vars.ECR_REPOSITORY }}
+          ecr-region: ${{ vars.ECR_REGION }}
+          ecr-registry_url: ${{ secrets.ECR_REGISTRY_URL }}
+          ecr-role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
+          kube-cert: ${{ secrets.KUBE_CERT }}
+          kube-token: ${{ secrets.KUBE_TOKEN }}
+          kube-cluster: ${{ secrets.KUBE_CLUSTER }}
+          kube-namespace: ${{ secrets.KUBE_NAMESPACE }}
+          image-tag: ${{ github.sha }}
+          ratelimit_max: ${{ vars.RATE_LIMIT_MAX }}
+          ratewindow_ms: ${{ vars.RATE_WINDOW_MS }}
+          service_name: ${{ vars.SERVICE_NAME }}
+          session_name: ${{ vars.SESSION_NAME}}
+          session_secret: ${{ secrets.SESSION_SECRET }}
+
+  deploy-production:
+    environment: prod
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    permissions:
+      id-token: write # This is required for requesting the JWT
+      contents: read # This is required for actions/checkout
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Deploy to production
+        uses: ./.github/actions/deploy
+        with:
+          app-environment: production
+          ecr-repository: ${{ vars.ECR_REPOSITORY }}
+          ecr-region: ${{ vars.ECR_REGION }}
+          ecr-registry_url: ${{ secrets.ECR_REGISTRY_URL }}
+          ecr-role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
+          kube-cert: ${{ secrets.KUBE_CERT }}
+          kube-token: ${{ secrets.KUBE_TOKEN }}
+          kube-cluster: ${{ secrets.KUBE_CLUSTER }}
+          kube-namespace: ${{ secrets.KUBE_NAMESPACE }}
+          image-tag: ${{ github.sha }}
+          ratelimit_max: ${{ vars.RATE_LIMIT_MAX }}
+          ratewindow_ms: ${{ vars.RATE_WINDOW_MS }}
+          service_name: ${{ vars.SERVICE_NAME }}
+          session_name: ${{ vars.SESSION_NAME}}
+          session_secret: ${{ secrets.SESSION_SECRET }}

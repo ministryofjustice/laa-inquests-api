@@ -1,9 +1,5 @@
-name: Static Analysis
-on:
-  workflow_call:
-    secrets:
-      SONAR_TOKEN:
-        required: true
+name: Linting
+on: workflow_call
 
 jobs:
   pip-compile:

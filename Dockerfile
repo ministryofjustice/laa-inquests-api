@@ -7,8 +7,8 @@ ARG REQUIREMENTS=requirements-production.txt
 RUN adduser --disabled-password app -u 1000 && \
     cp /usr/share/zoneinfo/Europe/London /etc/localtime
 
-RUN mkdir /home/app/moj-fastapi-skeleton
-WORKDIR /home/app/moj-fastapi-skeleton
+RUN mkdir /home/app/laa-inquests-api
+WORKDIR /home/app/laa-inquests-api
 
 COPY requirements/generated/$REQUIREMENTS requirements.txt
 RUN pip install --upgrade pip
