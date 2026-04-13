@@ -2,6 +2,7 @@ from typing import Sequence
 
 from fastapi import APIRouter, HTTPException, Depends
 
+from app.models.application_model import Application
 from app.models.case_model import CaseRequest, Case
 from app.models.user_model import User
 from app.models.category_model import Category
@@ -19,12 +20,10 @@ router = APIRouter(
 
 
 @router.get("/{case_id}")
-async def read_case(case_id: UUID, session: Session = Depends(get_session)) -> Case:
+async def read_case(case_id: str) -> Application:
     """Get information about a given case ID."""
-    case: Case | None = session.get(Case, case_id)
-    if not case:
-        raise HTTPException(status_code=404, detail="Case not found")
-    return case
+    application = Application(id=case_id, status="Open", provider="Test Provider", date_submitted="13/04/2026")
+    return application
 
 
 @router.get("/")
