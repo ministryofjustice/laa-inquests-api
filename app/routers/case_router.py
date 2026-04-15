@@ -23,6 +23,9 @@ router = APIRouter(
 async def read_case(case_id: str) -> Application:
     """Get information about a given case ID."""
     application = Application(id=case_id, status="Open", provider="Test Provider", date_submitted="13/04/2026")
+    cases = {"1234" : Application(id="1234", status="Open", provider="Test Provider", date_submitted="05/04/2026"),
+         "12345" : Application(id="12345", status="Closed", provider="Test Provider 2", date_submitted="11/04/2026")}
+    application = cases.get(case_id)
     return application
 
 
