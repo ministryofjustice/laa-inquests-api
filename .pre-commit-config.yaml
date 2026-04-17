@@ -2,7 +2,7 @@ default_language_version:
   python: python3.12
 repos:
   - repo: https://github.com/ministryofjustice/devsecops-hooks
-    rev: v1.2.0
+    rev: v1.6.0
     hooks:
       - id: baseline
   - repo: https://github.com/jazzband/pip-tools
@@ -54,3 +54,19 @@ repos:
       - id: ruff
         args: [--fix]
       - id: ruff-format
+  - repo: local
+    hooks:
+        - id: prepare-commit-msg
+          name: Prepend jira id to commit message
+          entry: /bin/bash scripts/prepare-commit-msg.sh
+          language: script
+          stages: [ prepare-commit-msg ]
+          always_run: true
+
+        - id: pytest
+          name: Run unit tests
+          entry: pytest
+          pass_filenames: false
+          language: system
+          stages: [ pre-push ]
+          always_run: true
