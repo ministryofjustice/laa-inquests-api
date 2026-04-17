@@ -135,6 +135,8 @@ The following will:
 
 ```bash
 pre-commit install
+pre-commit install --hook-type prepare-commit-msg
+pre-commit install --hook-type pre-push
 ```
 ### Manually running linting
 The Ruff linter looks for code quality issues. Ensure there are no ruff issues before committing. 
