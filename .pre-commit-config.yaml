@@ -54,3 +54,11 @@ repos:
       - id: ruff
         args: [--fix]
       - id: ruff-format
+  - repo: local
+    hooks:
+        - id: prepare-commit-msg
+          name: Prepend jira id to commit message
+          entry: /bin/bash scripts/prepare-commit-msg.sh
+          language: script
+          stages: [ prepare-commit-msg ]
+          always_run: true
