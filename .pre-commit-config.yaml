@@ -62,3 +62,11 @@ repos:
           language: script
           stages: [ prepare-commit-msg ]
           always_run: true
+
+        - id: pytest
+          name: Run unit tests
+          entry: pytest
+          pass_filenames: false
+          language: system
+          stages: [ pre-push ]
+          always_run: true
