@@ -47,6 +47,7 @@ service:
 
 ingress:
   enabled: true
+  className: modsec-non-prod
   hosts:
     - host: laa-inquests-api-staging.apps.live.cloud-platform.service.justice.gov.uk
       paths:
@@ -55,6 +56,12 @@ ingress:
   annotations:
     external-dns.alpha.kubernetes.io/set-identifier: "laa-inquests-api-laa-inquests-api-staging-green"
     external-dns.alpha.kubernetes.io/aws-weight: "100"
+    nginx.ingress.kubernetes.io/enable-modsecurity: "true"
+    nginx.ingress.kubernetes.io/enable-owasp-core-rules: "true"
+    nginx.ingress.kubernetes.io/modsecurity-transaction-id: "$request_id"
+    nginx.ingress.kubernetes.io/modsecurity-snippet: |
+      SecRuleEngine On
+      SecDefaultAction "phase:2,pass,log,tag:github_team=laa-inquests
 
 resources:
   limits:
