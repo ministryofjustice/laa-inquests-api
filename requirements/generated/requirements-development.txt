@@ -70,7 +70,7 @@ starlette==1.0.0
 typer==0.16.0
 typing-extensions==4.14.1
 typing-inspection==0.4.2
-urllib3==2.5.0
+urllib3==2.6.3
 uvicorn[standard]==0.35.0
 uvloop==0.21.0
 virtualenv==20.31.2
