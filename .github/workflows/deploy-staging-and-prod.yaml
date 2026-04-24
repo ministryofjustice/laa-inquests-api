@@ -44,7 +44,7 @@ jobs:
         uses: ./.github/actions/notify
         with:
           app-environment: staging
-          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL_STAGING }}
           pipeline_status: "${{ job.status }} ${{ join(needs.*.result, ' ') }}"
 
   deploy-production:
@@ -87,5 +87,5 @@ jobs:
         uses: ./.github/actions/notify
         with:
           app-environment: production
-          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL_PROD }}
           pipeline_status: "${{ job.status }} ${{ join(needs.*.result, ' ') }}"
