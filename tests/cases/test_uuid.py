@@ -44,6 +44,7 @@ def test_existing_uuid_collision(session: Session):
     assert (
         original_case.id == original_id
     )  # Ensure the original case keeps its original ID.
+    assert False
 
 
 def test_invalid_uuid_int(session: Session):
