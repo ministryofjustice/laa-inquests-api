@@ -32,7 +32,7 @@ jobs:
           service_name: ${{ vars.SERVICE_NAME }}
           session_name: ${{ vars.SESSION_NAME}}
           session_secret: ${{ secrets.SESSION_SECRET }}
-  notify-slack:
+  notify-slack-staging:
     environment: staging
     needs: deploy-staging
     runs-on: ubuntu-latest
@@ -75,7 +75,7 @@ jobs:
           service_name: ${{ vars.SERVICE_NAME }}
           session_name: ${{ vars.SESSION_NAME}}
           session_secret: ${{ secrets.SESSION_SECRET }}
-  notify-slack:
+  notify-slack-prod:
     environment: production
     needs: deploy-production
     runs-on: ubuntu-latest
