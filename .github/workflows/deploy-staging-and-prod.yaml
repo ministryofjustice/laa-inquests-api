@@ -32,6 +32,20 @@ jobs:
           service_name: ${{ vars.SERVICE_NAME }}
           session_name: ${{ vars.SESSION_NAME}}
           session_secret: ${{ secrets.SESSION_SECRET }}
+  notify-slack:
+    environment: staging
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    if: always() && github.ref_name == 'main'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+      - name: Send Slack Notification
+        uses: ./.github/actions/notify
+        with:
+          app-environment: staging
+          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          pipeline_status: "${{ job.status }} ${{ join(needs.*.result, ' ') }}"
 
   deploy-production:
     environment: prod
@@ -61,3 +75,17 @@ jobs:
           service_name: ${{ vars.SERVICE_NAME }}
           session_name: ${{ vars.SESSION_NAME}}
           session_secret: ${{ secrets.SESSION_SECRET }}
+  notify-slack:
+    environment: production
+    needs: deploy-production
+    runs-on: ubuntu-latest
+    if: always() && github.ref_name == 'main'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+      - name: Send Slack Notification
+        uses: ./.github/actions/notify
+        with:
+          app-environment: production
+          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          pipeline_status: "${{ job.status }} ${{ join(needs.*.result, ' ') }}"
