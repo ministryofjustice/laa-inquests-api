@@ -75,7 +75,7 @@ jobs:
     name: Pytest Unit Tests
     uses: ./.github/workflows/unit-tests.yaml
 
-  deploy:
+  deploy-uat:
     if: ${{ !contains(github.actor, '[bot]') }}
     runs-on: ubuntu-latest
     environment: uat
