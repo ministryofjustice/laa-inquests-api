@@ -15,7 +15,7 @@ from uuid import uuid4
 
 
 def test_auth_get_applications(client: TestClient):
-    response = client.get(f"/applications")
+    response = client.get("/applications")
     json = response.json()
     print(json, "<----")
     assert json["detail"] == "Not authenticated"
@@ -24,7 +24,7 @@ def test_auth_get_applications(client: TestClient):
 
 def test_create_application_disabled_user(client: TestClient, auth_token_disabled_user):
     response = client.post(
-        f"/applications",
+        "/applications",
         headers={"Authorization": f"Bearer {auth_token_disabled_user}"},
     )
     json = response.json()

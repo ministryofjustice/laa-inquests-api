@@ -1,10 +1,3 @@
-from fastapi import FastAPI, Depends
-from fastapi.testclient import TestClient
-from app.models.application.index import Application
-from app.routers.applications import read_application
-from uuid import UUID, uuid4
-
-
 def test_200_create_application_response_contains_expected_base_properties(
     client, auth_token
 ):
@@ -17,7 +10,7 @@ def test_200_create_application_response_contains_expected_base_properties(
         "overall_decision": "PENDING",
     }
     response = client.post(
-        f"/applications",
+        "/applications",
         json=request_body,
         headers={
             "Content-Type": "application/json",

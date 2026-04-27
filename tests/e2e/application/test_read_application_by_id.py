@@ -1,9 +1,5 @@
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
-from app.routers.applications import read_application
 from app.models.application.index import Application
 from sqlmodel import select
-from uuid import UUID, uuid4
 
 
 def test_200_read_application_by_id_returns_expected_application_base_properties(

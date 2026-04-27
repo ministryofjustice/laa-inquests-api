@@ -1,14 +1,8 @@
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
-from app.routers.applications import read_application
-from uuid import UUID, uuid4
-
-
 def test_200_read_all_applications_returns_expected_base_properties_for_each(
     client, auth_token
 ):
     response = client.get(
-        f"/applications",
+        "/applications",
         headers={
             "Content-Type": "application/x-www-form-urlencoded",
             "Authorization": f"Bearer {auth_token}",
