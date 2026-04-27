@@ -14,16 +14,17 @@ from app.models import User
 from uuid import uuid4
 
 
-def test_auth_fail_case(client: TestClient):
-    response = client.delete(f"/cases/{uuid4()}")
+def test_auth_get_applications(client: TestClient):
+    response = client.get(f"/applications")
     json = response.json()
+    print(json, "<----")
     assert json["detail"] == "Not authenticated"
     assert response.status_code == 401
 
 
-def test_create_case_disabled_user(client: TestClient, auth_token_disabled_user):
-    response = client.delete(
-        f"/cases/{uuid4()}",
+def test_create_application_disabled_user(client: TestClient, auth_token_disabled_user):
+    response = client.post(
+        f"/applications",
         headers={"Authorization": f"Bearer {auth_token_disabled_user}"},
     )
     json = response.json()
@@ -52,8 +53,8 @@ def test_raw_token_fail(client: TestClient):
 
 
 def test_credential_exception(client: TestClient, auth_token):
-    response = client.delete(
-        "/cases/{uuid4()}", headers={"Authorization": f"Bearer {auth_token} + 1"}
+    response = client.get(
+        "/applications/{uuid4()}", headers={"Authorization": f"Bearer {auth_token} + 1"}
     )
     json = response.json()
     assert json["detail"] == "Could not validate credentials"
@@ -65,8 +66,8 @@ def test_credential_exception_no_user(session, client: TestClient, auth_token):
     user = session.get(User, username)
     session.delete(user)
     session.commit()
-    response = client.delete(
-        f"/cases/{uuid4()}", headers={"Authorization": f"Bearer {auth_token}"}
+    response = client.get(
+        f"/applications/{uuid4()}", headers={"Authorization": f"Bearer {auth_token}"}
     )
     json = response.json()
     assert json["detail"] == "Could not validate credentials"

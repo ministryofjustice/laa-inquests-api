@@ -1,4 +1,4 @@
-from .case_router import router as case_router
-from .security_router import router as security_router
+from .applications import router as applications
+from .security import router as security
 
-__all__ = ["case_router", "security_router"]
+__all__ = ["applications", "security"]
