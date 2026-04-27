@@ -20,44 +20,54 @@ deploy_branch() {
                 --set image.tag="$IMAGE_TAG" \
                 --set ingress.annotations."external-dns\.alpha\.kubernetes\.io/set-identifier"="$IDENTIFIER" \
                 --set ingress.hosts[0].host="$RELEASE_HOST" \
-                --set env.SERVICE_NAME="$SERVICE_NAME" \
-                --set env.SERVICE_PHASE="$SERVICE_PHASE" \
+                --set env.DB_HOST="$DB_HOST" \
+                --set env.DB_NAME="$DB_NAME" \
+                --set env.DB_PASSWORD="$DB_PASSWORD" \
+                --set env.DB_PORT="$DB_PORT" \
+                --set env.DB_USER="$DB_USER" \
                 --set env.DEPARTMENT_NAME="$DEPARTMENT_NAME" \
                 --set env.DEPARTMENT_URL="$DEPARTMENT_URL" \
                 --set env.CONTACT_EMAIL="$CONTACT_EMAIL" \
                 --set env.CONTACT_PHONE="$CONTACT_PHONE" \
-                --set env.SERVICE_URL="$SERVICE_URL" \
-                --set env.SESSION_SECRET="$SESSION_SECRET" \
-                --set env.SESSION_NAME="$SESSION_NAME" \
-                --set env.RATELIMIT_HEADERS_ENABLED="$RATELIMIT_HEADERS_ENABLED" \
-                --set env.RATELIMIT_STORAGE_URI="$RATELIMIT_STORAGE_URI" \
+                --set env.NODE_ENV="$NODE_ENV" \
+                --set env.SERVICE_NAME="$SERVICE_NAME" \
                 --set env.RATE_LIMIT_MAX="$RATE_LIMIT_MAX" \
                 --set env.RATE_WINDOW_MS="$RATE_WINDOW_MS" \
-                --set env.NODE_ENV="$NODE_ENV"
+                --set env.RATELIMIT_HEADERS_ENABLED="$RATELIMIT_HEADERS_ENABLED" \
+                --set env.RATELIMIT_STORAGE_URI="$RATELIMIT_STORAGE_URI" \
+                --set env.SERVICE_PHASE="$SERVICE_PHASE" \
+                --set env.SESSION_NAME="$SESSION_NAME" \
+                --set env.SESSION_SECRET="$SESSION_SECRET" \
+                --set env.SERVICE_URL="$SERVICE_URL"
 }
 
 deploy_main() {
   RELEASE_HOST="laa-inquests-api-$ENVIRONMENT.apps.live.cloud-platform.service.justice.gov.uk"
   helm upgrade laa-inquests-api ./deploy/infrastructure/helm/. \
-                          --install --wait --timeout 10m \
-                          --namespace="${K8S_NAMESPACE}" \
-                          --values ./deploy/infrastructure/helm/values/"$ENVIRONMENT".yaml \
-                          --set image.repository="$REGISTRY/$REPOSITORY" \
-                          --set image.tag="$IMAGE_TAG" \
-                          --set env.SERVICE_NAME="$SERVICE_NAME" \
-                          --set env.SERVICE_PHASE="$SERVICE_PHASE" \
-                          --set env.DEPARTMENT_NAME="$DEPARTMENT_NAME" \
-                          --set env.DEPARTMENT_URL="$DEPARTMENT_URL" \
-                          --set env.CONTACT_EMAIL="$CONTACT_EMAIL" \
-                          --set env.CONTACT_PHONE="$CONTACT_PHONE" \
-                          --set env.SERVICE_URL="$SERVICE_URL" \
-                          --set env.SESSION_SECRET="$SESSION_SECRET" \
-                          --set env.SESSION_NAME="$SESSION_NAME" \
-                          --set env.RATELIMIT_HEADERS_ENABLED="$RATELIMIT_HEADERS_ENABLED" \
-                          --set env.RATELIMIT_STORAGE_URI="$RATELIMIT_STORAGE_URI" \
-                          --set env.RATE_LIMIT_MAX="$RATE_LIMIT_MAX" \
-                          --set env.RATE_WINDOW_MS="$RATE_WINDOW_MS" \
-                          --set env.NODE_ENV="$NODE_ENV"
+                --install --wait --timeout 10m \
+                --namespace="${K8S_NAMESPACE}" \
+                --values ./deploy/infrastructure/helm/values/"$ENVIRONMENT".yaml \
+                --set image.repository="$REGISTRY/$REPOSITORY" \
+                --set image.tag="$IMAGE_TAG" \
+                --set env.DB_HOST="$DB_HOST" \
+                --set env.DB_NAME="$DB_NAME" \
+                --set env.DB_PASSWORD="$DB_PASSWORD" \
+                --set env.DB_PORT="$DB_PORT" \
+                --set env.DB_USER="$DB_USER" \
+                --set env.DEPARTMENT_NAME="$DEPARTMENT_NAME" \
+                --set env.DEPARTMENT_URL="$DEPARTMENT_URL" \
+                --set env.CONTACT_EMAIL="$CONTACT_EMAIL" \
+                --set env.CONTACT_PHONE="$CONTACT_PHONE" \
+                --set env.NODE_ENV="$NODE_ENV" \
+                --set env.SERVICE_NAME="$SERVICE_NAME" \
+                --set env.RATE_LIMIT_MAX="$RATE_LIMIT_MAX" \
+                --set env.RATE_WINDOW_MS="$RATE_WINDOW_MS" \
+                --set env.RATELIMIT_HEADERS_ENABLED="$RATELIMIT_HEADERS_ENABLED" \
+                --set env.RATELIMIT_STORAGE_URI="$RATELIMIT_STORAGE_URI" \
+                --set env.SERVICE_PHASE="$SERVICE_PHASE" \
+                --set env.SESSION_NAME="$SESSION_NAME" \
+                --set env.SESSION_SECRET="$SESSION_SECRET" \
+                --set env.SERVICE_URL="$SERVICE_URL"
 }
 
 releaseTag="^[0-9]+[.][0-9]+[.][0-9]+$"

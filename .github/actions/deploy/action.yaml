@@ -1,6 +1,30 @@
 name: "Deploy"
 description: "Deploy docker image to namespace"
 inputs:
+  app-environment:
+    description: "Environment to which the app is being deployed [staging, production, etc]"
+    required: true
+  db-user:
+    description: "Username needed to connect to Inquests database"
+    required: true
+  db-password:
+    description: "Password needed to connect to Inquests database"
+    required: true
+  db-host:
+    description: "Inquests database host"
+    required: true
+  db-port:
+    description: "Inquests database port"
+    required: true
+  db-name:
+    description: "Inquests database name"
+    required: true
+  ecr-registry_url:
+    description: "ECR registry url"
+    required: true
+  ecr-repository:
+    description: "ECR repository"
+    required: true
   kube-cert:
     description: "Kubernetes cluster authentication certificate"
     required: true
@@ -13,26 +37,16 @@ inputs:
   kube-namespace:
     description: "Kubernetes cluster namespace"
     required: true
-  app-environment:
-    description:
-      "Environment to which the app is being deployed [staging, production, etc]"
-    required: true
-  ecr-repository:
-    description: "ECR repository"
-    required: true
-  ecr-registry_url:
-    description: "ECR registry url"
-    required: true
-  session_secret:
-    description: "Session secret"
-  service_name:
-    description: "Service name"
-  session_name:
-    description: "Session name"
   ratelimit_max:
     description: "Rate limit max"
   ratewindow_ms:
     description: "Rate limit max"
+  service_name:
+    description: "Service name"
+  session_name:
+    description: "Session name"
+  session_secret:
+    description: "Session secret"
 runs:
   using: "composite"
   steps:
@@ -87,10 +101,15 @@ runs:
       shell: bash
       run: ./deploy/scripts/deploy.sh ${{ inputs.app-environment }}
       env:
-        REGISTRY: ${{ inputs.ecr-registry_url }}
-        REPOSITORY: ${{ inputs.ecr-repository }}
-        IMAGE_TAG: ${{ github.sha }}
+        DB_HOST: ${{ inputs.DB_HOST}}
+        DB_NAME: ${{ inputs.DB_NAME }}
+        DB_PASSWORD: ${{ inputs.DB_PASSWORD }}
+        DB_PORT: ${{ inputs.DB_PORT }}
+        DB_USER: ${{ inputs.DB_USER }}
         GITHUB_SHA: ${{ github.sha }}
         GITHUB_REF_NAME: ${{ github.ref_name }}
         GITHUB_HEAD_REF: ${{ github.head_ref }}
+        IMAGE_TAG: ${{ github.sha }}
         K8S_NAMESPACE: ${{ inputs.kube-namespace }}
+        REGISTRY: ${{ inputs.ecr-registry_url }}
+        REPOSITORY: ${{ inputs.ecr-repository }}
