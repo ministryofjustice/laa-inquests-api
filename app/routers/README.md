@@ -10,47 +10,47 @@ See [here](https://fastapi.tiangolo.com/reference/apirouter/) for the documentat
 ```python
 from fastapi import APIRouter
 from sqlmodel import SQLModel
-from app.models.category_model import Categories
+from app.models.category import Categories
 
-router = APIRouter(prefix="/case",
-                   tags=["cases"])
+router = APIRouter(prefix="/application",
+                   tags=["application"])
 
 
-@router.get("/{case_id}")
-async def read_case(case_id: int):
+@router.get("/{application_id}")
+async def read_case(application_id: int):
     # We will discuss how to read from the database below.
-    case = {"id": 1,
+    application = {"id": 1,
             "name": "test",
             "category": "Housing"}
-    return case
+    return application
 
 
-class Case(SQLModel):
+class Application(SQLModel):
     name: str  # Pydantic ensures the name is always a string
     category: Categories | None = None  # This means that the category must be of the type Categories or None
 
 
 @router.post("/")
-async def create_case(case: Case):
-    return case
+async def create_application(application: Application):
+    return application
 ```
-These create_case route only accepts post requests and requires the request body to be of the form defined by
-the Case model. 
+These create_application route only accepts post requests and requires the request body to be of the form defined by
+the Application model.
 
-This means the body needs to contain a name which can be encoded as a string and a category which 
-matches one of the categories of law defined in the [/app/models/categories.py](../models/category_model.py) enum class.
+This means the body needs to contain a name which can be encoded as a string and a category which
+matches one of the categories of law defined in the [/app/models/categories.py](../models/category.py) enum class.
 
 To learn more about models please read [/app/models/README.md](../models/README.md)
 
 ## Reading and writing to the database
 Database connections are managed with SQLModel sessions, these are inherited from SQLAlchemy sessions.
 
-If your endpoint depends on a database session you can pass this into your routing function using the 
+If your endpoint depends on a database session you can pass this into your routing function using the
 FastAPI `Depends()` method.
 
 ```python
 from fastapi import APIRouter, HTTPException, Depends
-from app.models.case_model import CaseRequest, Case
+from app.models.application import ApplicationRequest, Application
 from sqlmodel import Session, select
 from app.db import get_session
 from datetime import datetime
@@ -62,19 +62,19 @@ router = APIRouter(
 )
 
 
-@router.get("/{case_id}", tags=["cases"])
-async def read_case(case_id: str, session: Session = Depends(get_session)):
-    case = session.get(Case, case_id)
-    if not case:
-        raise HTTPException(status_code=404, detail="Case not found")
-    return case
+@router.get("/{application_id}", tags=["applications"])
+async def read_case(application_id: str, session: Session = Depends(get_session)):
+    application = session.get(Application, application_id)
+    if not application:
+        raise HTTPException(status_code=404, detail="application not found")
+    return application
 
 
-@router.post("/", tags=["cases"], response_model=Case)
-def create_case(request: CaseRequest, session: Session = Depends(get_session)):
-    case = Case(category=request.category, time=datetime.now(), name=request.name, id=1)
-    session.add(case)
+@router.post("/", tags=["applications"], response_model=Application)
+def create_application(request: applicationRequest, session: Session = Depends(get_session)):
+    application = Application(category=request.category, time=datetime.now(), name=request.name, id=1)
+    session.add(application)
     session.commit()
-    session.refresh(case)
-    return case
+    session.refresh(application)
+    return application
 ```
