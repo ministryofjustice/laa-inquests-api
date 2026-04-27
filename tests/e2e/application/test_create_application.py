@@ -14,7 +14,6 @@ def test_200_create_application_response_contains_expected_base_properties(
         },
     )
     new_application = response.json()
-    print(new_application)
 
     assert isinstance(new_application["application_id"], str)
     assert isinstance(new_application["created_at"], str)
