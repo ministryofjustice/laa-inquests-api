@@ -3,6 +3,7 @@ from sqlmodel import Field, SQLModel
 from datetime import datetime, UTC
 from uuid import UUID, uuid4
 
+
 class Application(SQLModel, table=True):
     application_id: UUID | None = Field(default_factory=uuid4, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
@@ -16,6 +17,7 @@ class Application(SQLModel, table=True):
     application_type: str
     auto_grant: bool
     overall_decision: str
+
 
 class ApplicationRequest(BaseModel):
     status: str

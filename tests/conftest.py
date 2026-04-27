@@ -27,9 +27,30 @@ def session_fixture():
         {"username": "jane_doe", "password": "password", "disabled": True},
     ]
     applications_to_add = [
-        {"status": "PENDING", "laa_reference": "INQ-000-001", "used_delegated_functions": True, "application_type": "INITIAL", "auto_grant": True, "overall_decision": "PENDING"},
-        {"status": "PENDING", "laa_reference": "INQ-000-002", "used_delegated_functions": True, "application_type": "INITIAL", "auto_grant": True, "overall_decision": "PENDING"},
-        {"status": "PENDING", "laa_reference": "INQ-000-003", "used_delegated_functions": True, "application_type": "INITIAL", "auto_grant": True, "overall_decision": "PENDING"},
+        {
+            "status": "PENDING",
+            "laa_reference": "INQ-000-001",
+            "used_delegated_functions": True,
+            "application_type": "INITIAL",
+            "auto_grant": True,
+            "overall_decision": "PENDING",
+        },
+        {
+            "status": "PENDING",
+            "laa_reference": "INQ-000-002",
+            "used_delegated_functions": True,
+            "application_type": "INITIAL",
+            "auto_grant": True,
+            "overall_decision": "PENDING",
+        },
+        {
+            "status": "PENDING",
+            "laa_reference": "INQ-000-003",
+            "used_delegated_functions": True,
+            "application_type": "INITIAL",
+            "auto_grant": True,
+            "overall_decision": "PENDING",
+        },
     ]
     with test_session() as db_session:
         for user in users_to_add:
@@ -50,7 +71,14 @@ def session_fixture():
             auto_grant = application.get("auto_grant")
             overall_decision = application.get("overall_decision")
 
-            new_application = Application(status=status, laa_reference=laa_reference, used_delegated_functions=used_delegated_functions, application_type=application_type, auto_grant=auto_grant, overall_decision=overall_decision)
+            new_application = Application(
+                status=status,
+                laa_reference=laa_reference,
+                used_delegated_functions=used_delegated_functions,
+                application_type=application_type,
+                auto_grant=auto_grant,
+                overall_decision=overall_decision,
+            )
 
             db_session.add(new_application)
 
