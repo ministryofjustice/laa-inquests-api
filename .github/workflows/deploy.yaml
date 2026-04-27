@@ -92,10 +92,11 @@ jobs:
         uses: ./.github/actions/deploy
         with:
           app-environment: uat
-          kube-cert: ${{ secrets.KUBE_CERT }}
-          kube-token: ${{ secrets.KUBE_TOKEN }}
-          kube-cluster: ${{ secrets.KUBE_CLUSTER }}
-          kube-namespace: ${{ secrets.KUBE_NAMESPACE }}
+          db-host: ${{ secrets.DB_HOST}}
+          db-name: ${{ secrets.DB_NAME }}
+          db-password: ${{ secrets.DB_PASSWORD }}
+          db-port: ${{ secrets.DB_PORT }}
+          db-user: ${{ secrets.DB_USER }}
           ecr-repository: ${{ vars.ECR_REPOSITORY }}
           ecr-registry_url: ${{ secrets.ECR_REGISTRY_URL }}
           ecr-role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
@@ -105,3 +106,7 @@ jobs:
           github-ref-name: ${{ github.ref_name }}
           github-head-ref: ${{ github.head_ref }}
           image-tag: ${{ github.sha }}
+          kube-cert: ${{ secrets.KUBE_CERT }}
+          kube-token: ${{ secrets.KUBE_TOKEN }}
+          kube-cluster: ${{ secrets.KUBE_CLUSTER }}
+          kube-namespace: ${{ secrets.KUBE_NAMESPACE }}
