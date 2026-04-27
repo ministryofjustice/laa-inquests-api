@@ -23,7 +23,6 @@ async def read_application(
     current_user: User = Depends(get_current_active_user),
 ) -> Application:
     """Get information about a given application."""
-    print("helelo")
     application = session.get(Application, UUID(application_id))
     return application
 
