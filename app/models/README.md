@@ -1,7 +1,7 @@
 # What are models?
 Models are classes which define both the API and database schema.
 
-Each field has Python type annotations which defines what data is accepted by the API 
+Each field has Python type annotations which defines what data is accepted by the API
 as well as the column type in the database.
 
 Every object created from these classes is validated by Pydantic, which ensures that the types of every object matches
@@ -33,9 +33,9 @@ class Birthday(SQLModel):
 ```
 
 ## How do I create a database table?
-By default, models will not be created as a table in the database. 
+By default, models will not be created as a table in the database.
 
-This is because we use models to define more than the database, they also define request and response 
+This is because we use models to define more than the database, they also define request and response
 models from the API.
 
 To create a table with the schema defined by your model set the `table` argument on your class to True.
@@ -56,12 +56,12 @@ Please see [/migrations/README.md](../db/migrations/README.md) for instructions 
 By implementing them as part of your routers' method arguments they are automatically used to validate the user's input.
 
 ```python
-from app.models.case_model import Case, CaseRequest
-from app.routers import case_router
+from app.models.application import Application, ApplicationRequest
+from app.routers import applications
 
 
-@case_router.post("/", tags=["cases"], response_model=Case)
-def create_case(request: CaseRequest):
+@applications.post("/", tags=["applications"], response_model=Application)
+def create_application(request: ApplicationRequest):
     pass
 ```
 
