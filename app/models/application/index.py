@@ -14,7 +14,7 @@ class Application(SQLModel, table=True):
         sa_column_kwargs={"onupdate": lambda: datetime.now(UTC)},
     )
     status: str | None = "LIVE"
-    laa_reference: int | None = Field(index=True)
+    # laa_reference: int | None
     used_delegated_functions: bool = True
     application_type: str | None = "INITIAL"
     auto_grant: bool | None = True
