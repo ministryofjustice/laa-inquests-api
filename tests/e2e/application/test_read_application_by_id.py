@@ -2,7 +2,7 @@ from app.models.application.index import Application
 from sqlmodel import select
 
 
-def test_200_read_application_by_id_returns_expected_application_base_properties(
+def test_200_read_application_by_id_returns_expected_application(
     session, client, auth_token
 ):
     first_application_row = session.exec(select(Application)).first()

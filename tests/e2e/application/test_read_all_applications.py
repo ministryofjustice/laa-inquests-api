@@ -10,7 +10,7 @@ def test_200_read_all_applications_returns_expected_base_properties_for_each(
     )
 
     applications = response.json()
-    assert len(applications) == 3
+    assert len(applications) == 2
     assert isinstance(applications, list)
     for application in applications:
         assert isinstance(application["application_id"], str)

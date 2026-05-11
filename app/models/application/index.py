@@ -3,6 +3,8 @@ from sqlmodel import Field, SQLModel
 from datetime import datetime, UTC
 from uuid import UUID, uuid4
 
+from app.models.application.proceeding import ProceedingRequest
+
 
 class Application(SQLModel, table=True):
     application_id: UUID | None = Field(default_factory=uuid4, primary_key=True)
@@ -11,24 +13,24 @@ class Application(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC),
         sa_column_kwargs={"onupdate": lambda: datetime.now(UTC)},
     )
-    status: str
-    laa_reference: str
-    used_delegated_functions: bool
-    application_type: str
-    auto_grant: bool
-    overall_decision: str
+    status: str | None = "LIVE"
+    laa_reference: int | None = Field(index=True)
+    used_delegated_functions: bool = True
+    application_type: str | None = "INITIAL"
+    auto_grant: bool | None = True
+    overall_decision: str | None = "PENDING"
 
 
 class ApplicationRequest(BaseModel):
-    status: str
-    laa_reference: str
-    used_delegated_functions: bool
-    application_type: str
-    auto_grant: bool
-    overall_decision: str
+    # status: str
+    # laa_reference: str
+    # used_delegated_functions: bool
+    # application_type: str
+    # auto_grant: bool
+    # overall_decision: str
     # documents: list[Document]
     # provider: Provider
     # client: Client
-    # proceedings: list[Proceeding]
+    proceedings: list[ProceedingRequest]
     # notes: list[ApplicationNote]
     # opponents: list[Opponent]
