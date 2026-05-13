@@ -75,7 +75,7 @@ jobs:
     name: Pytest Unit Tests
     uses: ./.github/workflows/unit-tests.yaml
 
-  deploy:
+  deploy-uat:
     if: ${{ !contains(github.actor, '[bot]') }}
     runs-on: ubuntu-latest
     environment: uat
@@ -110,3 +110,17 @@ jobs:
           kube-token: ${{ secrets.KUBE_TOKEN }}
           kube-cluster: ${{ secrets.KUBE_CLUSTER }}
           kube-namespace: ${{ secrets.KUBE_NAMESPACE }}
+  notify-slack:
+    environment: uat
+    needs: deploy-uat
+    runs-on: ubuntu-latest
+    if: always() && github.ref_name == 'main'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+      - name: Send Slack Notification
+        uses: ./.github/actions/notify
+        with:
+          app-environment: uat
+          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL_UAT }}
+          pipeline_status: "${{ job.status }} ${{ join(needs.*.result, ' ') }}"

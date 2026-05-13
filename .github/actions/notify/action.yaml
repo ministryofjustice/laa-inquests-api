@@ -1,0 +1,43 @@
+name: Notify Slack
+description: Send notification of current status to Slack
+
+inputs:
+  slack_webhook_url:
+    required: true
+    description: "Slack webhook url"
+  app-environment:
+    description: "environment to which the app is being deployed [staging, production, etc]"
+    required: true
+  pipeline_status:
+    description: Collated string of previous status' for this pipeline run
+runs:
+  using: "composite"
+  steps:
+    - name: Notify deployment status
+      shell: bash
+      run: |
+        if [[ "${{ inputs.pipeline_status }}" =~ "skipped"|"failure" ]] || [[ ${{ job.status }} == "failure" ]]; then
+          pipelineStatus="failed"
+        else
+          pipelineStatus="success"
+        fi
+
+        environment=$(echo "${{ inputs.app-environment }}" | tr '[:lower:]' '[:upper:]')
+
+        coreMessage="Inquests API Deployment to $environment has"
+
+        if [ $pipelineStatus == "failed" ]; then
+          runUrl=https://github.com/ministryofjustice/laa-inquests-api/actions/runs/${{ github.run_id }}
+          message=":exclamation: $coreMessage Failed! :exclamation: \n $runUrl"
+        elif [ $environment != "UAT" ]; then
+          releaseUrl=https://github.com/ministryofjustice/laa-inquests-api/releases/tag/${{ github.ref_name }}
+          message=":white_check_mark: $coreMessage Succeeded! :white_check_mark: \n $releaseUrl"
+        fi
+
+        postBody="{
+          'text': '${message}'
+        }"
+
+        curl -X POST -H 'Content-type: application/json' \
+          --data "$postBody" \
+          --url ${{ inputs.slack_webhook_url }}
