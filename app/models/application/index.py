@@ -1,6 +1,7 @@
 import enum
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+from pydantic.alias_generators import to_camel
 from sqlalchemy import Column
 from sqlmodel import Field, Relationship, SQLModel, Enum
 from datetime import datetime, UTC
@@ -49,10 +50,22 @@ class ApplicationProceeding(SQLModel, table=True):
 
 
 class ProceedingCreate(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        orm_mode=True,
+        populate_by_name=True,
+        from_attributes=True,
+    )
     proceeding_id: str
 
 
 class ApplicationCreate(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        orm_mode=True,
+        populate_by_name=True,
+        from_attributes=True,
+    )
     # documents: list[Document]
     # provider: Provider
     # client: Client
@@ -60,6 +73,12 @@ class ApplicationCreate(BaseModel):
 
 
 class ProceedingResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        orm_mode=True,
+        populate_by_name=True,
+        from_attributes=True,
+    )
     proceeding_id: str
     proceeding_description: Optional[str] = None
     category_of_law: str
@@ -72,11 +91,14 @@ class ProceedingResponse(BaseModel):
     client_involvement_type: str
     merits_decision: str
 
-    class Config:
-        orm_mode = True
-
 
 class ApplicationResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        orm_mode=True,
+        populate_by_name=True,
+        from_attributes=True,
+    )
     laa_reference: int
     created_at: datetime
     updated_at: datetime
@@ -86,6 +108,3 @@ class ApplicationResponse(BaseModel):
     auto_grant: bool
     overall_decision: str
     proceedings: list[ProceedingResponse] = []
-
-    class Config:
-        orm_mode = True
