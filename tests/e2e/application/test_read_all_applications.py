@@ -10,14 +10,13 @@ def test_200_read_all_applications_returns_expected_base_properties_for_each(
     )
 
     applications = response.json()
-    assert len(applications) == 3
+    assert len(applications) == 1
     assert isinstance(applications, list)
     for application in applications:
-        assert isinstance(application["application_id"], str)
+        assert isinstance(application["laa_reference"], int)
         assert isinstance(application["created_at"], str)
         assert isinstance(application["updated_at"], str)
         assert isinstance(application["status"], str)
-        assert isinstance(application["laa_reference"], str)
         assert isinstance(application["used_delegated_functions"], bool)
         assert isinstance(application["application_type"], str)
         assert isinstance(application["auto_grant"], bool)

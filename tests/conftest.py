@@ -5,10 +5,14 @@ from app.db import get_session
 from app.db.session import CustomSession
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
-
 from app.auth.security import get_password_hash
 from app.models import User
-from app.models.application.index import Application
+from app.models.application.index import (
+    Application,
+    Proceeding,
+    ProceedingId,
+    ApplicationProceeding,
+)
 
 SECRET_KEY = "TEST_KEY"
 
@@ -26,17 +30,7 @@ def session_fixture():
         {"username": "test_user", "password": "test_password", "disabled": False},
         {"username": "jane_doe", "password": "password", "disabled": True},
     ]
-    applications_to_add = [
-        {
-            "laa_reference": "INQ-000-001",
-        },
-        {
-            "laa_reference": "INQ-000-002",
-        },
-        {
-            "laa_reference": "INQ-000-003",
-        },
-    ]
+
     with test_session() as db_session:
         for user in users_to_add:
             username = user.get("username")
@@ -48,25 +42,14 @@ def session_fixture():
                 username=username, hashed_password=password, disabled=disabled
             )
             db_session.add(new_user)
-        for application in applications_to_add:
-            status = application.get("status")
-            laa_reference = application.get("laa_reference")
-            used_delegated_functions = application.get("used_delegated_functions")
-            application_type = application.get("application_type")
-            auto_grant = application.get("auto_grant")
-            overall_decision = application.get("overall_decision")
-
-            new_application = Application(
-                status=status,
-                laa_reference=laa_reference,
-                used_delegated_functions=used_delegated_functions,
-                application_type=application_type,
-                auto_grant=auto_grant,
-                overall_decision=overall_decision,
-            )
-
-            db_session.add(new_application)
-
+        proceeding = Proceeding(proceeding_id=ProceedingId.TEST1)
+        db_session.add(proceeding)
+        db_session.commit()
+        application_proceedings_to_add = [
+            ApplicationProceeding(proceeding_id=ProceedingId.TEST1)
+        ]
+        new_application = Application(proceedings=application_proceedings_to_add)
+        db_session.add(new_application)
         db_session.commit()
         yield db_session
 

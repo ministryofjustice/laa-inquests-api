@@ -17,7 +17,6 @@ from uuid import uuid4
 def test_auth_get_applications(client: TestClient):
     response = client.get("/applications")
     json = response.json()
-    print(json, "<----")
     assert json["detail"] == "Not authenticated"
     assert response.status_code == 401
 
