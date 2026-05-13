@@ -1,4 +1,4 @@
-from sqlmodel import create_engine
+from sqlmodel import SQLModel, create_engine
 from app.config import Config
 from sqlalchemy.orm import sessionmaker
 from app.db.session import CustomSession
@@ -16,6 +16,8 @@ CustomSessionLocal = sessionmaker(
 
 
 def get_session():
+    SQLModel.metadata.create_all(engine)
+
     proceedings = [
         {
             "proceeding_id": "PC049",
@@ -67,6 +69,6 @@ def get_session():
                 proceeding_description=proceeding_description,
             )
             db_session.add(proceeding_to_add)
-
         db_session.commit()
+
         yield db_session
