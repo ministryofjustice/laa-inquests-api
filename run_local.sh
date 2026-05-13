@@ -7,3 +7,4 @@ docker compose logs migrations
 docker compose rm --force
 docker compose logs api
 docker compose exec api python3 bin/add_users.py
+docker compose exec api python3 bin/add_proceedings.py
