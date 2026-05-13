@@ -37,7 +37,6 @@ def test_created_at_read_from_db(session: Session):
     before_creation = datetime.now(UTC)
     original_application = Application(
         status="PENDING",
-        laa_reference="INQ-000-007",
         used_delegated_functions=True,
         application_type="INITIAL",
         auto_grant=True,
@@ -45,7 +44,7 @@ def test_created_at_read_from_db(session: Session):
     )
     session.add(original_application)
     session.commit()
-    application = session.get(Application, original_application.application_id)
+    application = session.get(Application, original_application.laa_reference)
     assert (
         before_creation
         <= application.created_at.replace(tzinfo=UTC)

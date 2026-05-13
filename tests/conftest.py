@@ -5,11 +5,13 @@ from app.db import get_session
 from app.db.session import CustomSession
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
-
 from app.auth.security import get_password_hash
 from app.models import User
-from app.models.application.index import Application
-from app.models.application.proceeding import Proceeding
+from app.models.application.index import (
+    Application,
+    ProceedingId,
+    ApplicationProceeding,
+)
 
 SECRET_KEY = "TEST_KEY"
 
@@ -27,10 +29,6 @@ def session_fixture():
         {"username": "test_user", "password": "test_password", "disabled": False},
         {"username": "jane_doe", "password": "password", "disabled": True},
     ]
-    proceedings_to_add = [
-        {"proceeding_id": "TEST1", "proceeding_description": "Test proceeding 1"},
-        {"proceeding_id": "TEST2", "proceeding_description": "Test proceeding 2"},
-    ]
 
     with test_session() as db_session:
         for user in users_to_add:
@@ -43,16 +41,11 @@ def session_fixture():
                 username=username, hashed_password=password, disabled=disabled
             )
             db_session.add(new_user)
-        for proceeding in proceedings_to_add:
-            proceeding_id = proceeding.get("proceeding_id")
-            proceeding_description = proceeding.get("proceeding_description")
-            proceeding_to_add = Proceeding(
-                proceeding_id=proceeding_id,
-                proceeding_description=proceeding_description,
-            )
-            db_session.add(proceeding_to_add)
-            new_application = Application()
-            db_session.add(new_application)
+        application_proceedings_to_add = [
+            ApplicationProceeding(proceeding_id=ProceedingId.TEST1)
+        ]
+        new_application = Application(proceedings=application_proceedings_to_add)
+        db_session.add(new_application)
         db_session.commit()
         yield db_session
 
