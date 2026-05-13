@@ -4,10 +4,6 @@ def test_200_create_application_response_contains_expected_base_properties(
     request_body = {
         "status": "PENDING",
         "laa_reference": "INQ-000-004",
-        "used_delegated_functions": True,
-        "application_type": "INITIAL",
-        "auto_grant": True,
-        "overall_decision": "PENDING",
     }
     response = client.post(
         "/applications",
@@ -17,7 +13,6 @@ def test_200_create_application_response_contains_expected_base_properties(
             "Authorization": f"Bearer {auth_token}",
         },
     )
-
     new_application = response.json()
 
     assert isinstance(new_application["application_id"], str)

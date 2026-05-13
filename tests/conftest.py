@@ -28,28 +28,13 @@ def session_fixture():
     ]
     applications_to_add = [
         {
-            "status": "PENDING",
             "laa_reference": "INQ-000-001",
-            "used_delegated_functions": True,
-            "application_type": "INITIAL",
-            "auto_grant": True,
-            "overall_decision": "PENDING",
         },
         {
-            "status": "PENDING",
             "laa_reference": "INQ-000-002",
-            "used_delegated_functions": True,
-            "application_type": "INITIAL",
-            "auto_grant": True,
-            "overall_decision": "PENDING",
         },
         {
-            "status": "PENDING",
             "laa_reference": "INQ-000-003",
-            "used_delegated_functions": True,
-            "application_type": "INITIAL",
-            "auto_grant": True,
-            "overall_decision": "PENDING",
         },
     ]
     with test_session() as db_session:

@@ -11,21 +11,21 @@ class Application(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC),
         sa_column_kwargs={"onupdate": lambda: datetime.now(UTC)},
     )
-    status: str
+    status: str | None = "PENDING"
     laa_reference: str
-    used_delegated_functions: bool
-    application_type: str
-    auto_grant: bool
-    overall_decision: str
+    used_delegated_functions: bool | None = True
+    application_type: str | None = "INITIAL"
+    auto_grant: bool | None = True
+    overall_decision: str | None = "PENDING"
 
 
 class ApplicationRequest(BaseModel):
-    status: str
+    # status: str
     laa_reference: str
-    used_delegated_functions: bool
-    application_type: str
-    auto_grant: bool
-    overall_decision: str
+    # used_delegated_functions: bool
+    # application_type: str
+    # auto_grant: bool
+    # overall_decision: str
     # documents: list[Document]
     # provider: Provider
     # client: Client
