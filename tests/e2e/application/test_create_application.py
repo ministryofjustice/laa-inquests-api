@@ -16,7 +16,6 @@ def test_200_create_application_response_contains_expected_base_properties(
             "Authorization": f"Bearer {auth_token}",
         },
     )
-
     new_application = response.json()
     assert isinstance(new_application["laaReference"], int)
     assert isinstance(new_application["createdAt"], str)
