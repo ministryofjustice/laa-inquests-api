@@ -9,6 +9,7 @@ from app.auth.security import get_password_hash
 from app.models import User
 from app.models.application.index import (
     Application,
+    Proceeding,
     ProceedingId,
     ApplicationProceeding,
 )
@@ -41,6 +42,9 @@ def session_fixture():
                 username=username, hashed_password=password, disabled=disabled
             )
             db_session.add(new_user)
+        proceeding = Proceeding(proceeding_id=ProceedingId.TEST1)
+        db_session.add(proceeding)
+        db_session.commit()
         application_proceedings_to_add = [
             ApplicationProceeding(proceeding_id=ProceedingId.TEST1)
         ]
