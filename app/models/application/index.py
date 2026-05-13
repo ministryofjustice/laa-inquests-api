@@ -105,7 +105,6 @@ class ApplicationProceeding(SQLModel, table=True):
 class ProceedingCreate(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
-        orm_mode=True,
         populate_by_name=True,
         from_attributes=True,
     )
@@ -115,7 +114,6 @@ class ProceedingCreate(BaseModel):
 class ApplicationCreate(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
-        orm_mode=True,
         populate_by_name=True,
         from_attributes=True,
     )
@@ -128,9 +126,8 @@ class ApplicationCreate(BaseModel):
 class ProceedingResponse(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
-        orm_mode=True,
-        populate_by_name=True,
         from_attributes=True,
+        populate_by_name=True,
     )
     proceeding_id: str
     proceeding_description: Optional[str] = None
@@ -148,9 +145,8 @@ class ProceedingResponse(BaseModel):
 class ApplicationResponse(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
-        orm_mode=True,
-        populate_by_name=True,
         from_attributes=True,
+        populate_by_name=True,
     )
     laa_reference: int
     created_at: datetime
