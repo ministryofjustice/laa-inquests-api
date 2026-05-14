@@ -1,15 +1,30 @@
 name: laa-inquests-api
 
+x-db-user: &db_user postgres
+x-db-password: &db_password postgres
+x-db-name: &db_name api
+x-db-host: &db_host db
+x-db-port: &db_port 5432
+
+x-postgres_init_env: &postgres_init_env
+  POSTGRES_USER: *db_user
+  POSTGRES_PASSWORD: *db_password
+  POSTGRES_DB: *db_name
+  POSTGRES_PORT: *db_port
+
+x-app_db_env: &app_db_env
+  DB_USER: *db_user
+  DB_PASSWORD: *db_password
+  DB_NAME: *db_name
+  DB_HOST: *db_host
+  DB_PORT: *db_port
+
 services:
   db:
     container_name: db
     image: postgres:18
-    environment: &database_config
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: api
-      POSTGRES_PORT: 5432
-      POSTGRES_HOST: db
+    environment:
+      <<: *postgres_init_env
     ports:
       - "5436:5432"
     healthcheck:
@@ -31,7 +46,7 @@ services:
       - "8027:8027"
     environment:
       SECRET_KEY: "TEST_KEY"
-      <<: *database_config
+      <<: *app_db_env
     volumes:
       - ./app:/home/app/laa-inquests-api/app
       - ./tests:/home/app/laa-inquests-api/tests
@@ -44,7 +59,7 @@ services:
     container_name: db-migrations
     command: alembic upgrade head
     environment:
-      <<: *database_config
+      <<: *app_db_env
     depends_on:
       db:
         condition: service_healthy

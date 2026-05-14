@@ -101,11 +101,11 @@ runs:
       shell: bash
       run: ./deploy/scripts/deploy.sh ${{ inputs.app-environment }}
       env:
-        DB_HOST: ${{ inputs.DB_HOST}}
-        DB_NAME: ${{ inputs.DB_NAME }}
-        DB_PASSWORD: ${{ inputs.DB_PASSWORD }}
-        DB_PORT: ${{ inputs.DB_PORT }}
-        DB_USER: ${{ inputs.DB_USER }}
+        DB_HOST: ${{ inputs.db-host }}
+        DB_NAME: ${{ inputs.db-name }}
+        DB_PASSWORD: ${{ inputs.db-password }}
+        DB_PORT: ${{ inputs.db-port }}
+        DB_USER: ${{ inputs.db-user }}
         GITHUB_SHA: ${{ github.sha }}
         GITHUB_REF_NAME: ${{ github.ref_name }}
         GITHUB_HEAD_REF: ${{ github.head_ref }}
