@@ -4,7 +4,7 @@ from pydantic.alias_generators import to_camel
 from sqlalchemy import Column
 from sqlmodel import Field, Relationship, SQLModel, Enum
 from datetime import datetime, UTC
-from app.models.application.enums import ProceedingId
+from app.models.application.enums import ProceedingId, PublicBodyId
 
 
 class Proceeding(SQLModel, table=True):
@@ -25,6 +25,36 @@ class Proceeding(SQLModel, table=True):
     )
 
 
+class PublicBodyBase(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    public_body_id: PublicBodyId = Field(
+        sa_column=Column(Enum(PublicBodyId), unique=True)
+    )
+
+
+class ClientBase(SQLModel):
+    client_first_name: str
+    client_last_name: str
+    client_last_name_at_birth: str | None
+    last_name_at_birth: str
+    date_of_birth: str
+    national_insurance_number: str | None
+    correspondence_address: str | None
+    home_address: str | None
+    has_applied_previously: bool = False
+    prev_application_reference: str | None
+    relationship_to_deceased: str
+
+
+class DeceasedBase(SQLModel):
+    deceased_first_name: str
+    deceased_last_name: str
+    deceased_date_of_birth: str
+    deceased_date_of_death: str
+    coroners_reference: str
+    further_information: str | None
+
+
 class ApplicationBase(SQLModel):
     laa_reference: int | None = Field(default_factory=None, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
@@ -43,6 +73,23 @@ class Application(ApplicationBase, table=True):
     proceedings: list["ApplicationProceeding"] = Relationship(
         back_populates="application"
     )
+    # client_id: int = Field(foreign_key="client.client_id")
+    # client: Client = Relationship(back_populates="applications")
+    # deceased_id = Field(foreign_key="deceased.deceased_id")
+    # deceased: Deceased = Relationship(back_populates="application")
+
+
+class Client(ClientBase, table=True):
+    client_id: int | None = Field(default=None, primary_key=True)
+    # applications: list["Application"] = Relationship(
+    #     back_populates="client"
+    # )
+
+
+class Deceased(DeceasedBase):
+    laa_reference: int = Field(foreign_key="application.laa_reference")
+    application: Application = Relationship(back_populates="proceedings")
+    deceased_id: int | None = Field(default_factory=None, primary_key=True)
 
 
 class ApplicationProceeding(SQLModel, table=True):
@@ -88,13 +135,6 @@ class ApplicationProceeding(SQLModel, table=True):
         return self.proceeding.substantive_cost_limitation
 
 
-# client
-
-# deceased
-
-# public bodies
-
-
 class ProceedingCreate(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -112,7 +152,7 @@ class ApplicationCreate(BaseModel):
     )
     # documents: list[Document]
     # provider: Provider
-    # client: Client
+    # client: ClientBase
     proceedings: list[ProceedingCreate]
 
 
@@ -150,3 +190,4 @@ class ApplicationResponse(BaseModel):
     auto_grant: bool
     overall_decision: str
     proceedings: list[ProceedingResponse] = []
+    # client: ClientBase
