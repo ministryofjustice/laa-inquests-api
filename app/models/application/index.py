@@ -25,11 +25,12 @@ class Proceeding(SQLModel, table=True):
     )
 
 
-class PublicBodyBase(SQLModel, table=True):
+class PublicBody(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     public_body_id: PublicBodyId = Field(
         sa_column=Column(Enum(PublicBodyId), unique=True)
     )
+    public_body_description: str
 
 
 class ClientBase(SQLModel):
