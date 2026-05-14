@@ -36,14 +36,13 @@ class PublicBody(SQLModel, table=True):
 class ClientBase(SQLModel):
     client_first_name: str
     client_last_name: str
-    client_last_name_at_birth: str | None
-    last_name_at_birth: str
+    client_last_name_at_birth: str | None = None
     date_of_birth: str
-    national_insurance_number: str | None
-    correspondence_address: str | None
-    home_address: str | None
+    national_insurance_number: str | None = None
+    correspondence_address: str | None = None
+    home_address: str | None = None
     has_applied_previously: bool = False
-    prev_application_reference: str | None
+    prev_application_reference: str | None = None
     relationship_to_deceased: str
 
 
@@ -54,6 +53,11 @@ class DeceasedBase(SQLModel):
     deceased_date_of_death: str
     coroners_reference: str
     further_information: str | None
+
+
+class Client(ClientBase, table=True):
+    client_id: int | None = Field(default=None, primary_key=True)
+    applications: list["Application"] = Relationship(back_populates="client")
 
 
 class ApplicationBase(SQLModel):
@@ -74,17 +78,10 @@ class Application(ApplicationBase, table=True):
     proceedings: list["ApplicationProceeding"] = Relationship(
         back_populates="application"
     )
-    # client_id: int = Field(foreign_key="client.client_id")
-    # client: Client = Relationship(back_populates="applications")
+    client_id: int | None = Field(default=None, foreign_key="client.client_id")
+    client: Client | None = Relationship(back_populates="applications")
     # deceased_id = Field(foreign_key="deceased.deceased_id")
     # deceased: Deceased = Relationship(back_populates="application")
-
-
-class Client(ClientBase, table=True):
-    client_id: int | None = Field(default=None, primary_key=True)
-    # applications: list["Application"] = Relationship(
-    #     back_populates="client"
-    # )
 
 
 class Deceased(DeceasedBase):
@@ -145,6 +142,24 @@ class ProceedingCreate(BaseModel):
     proceeding_id: str
 
 
+class ClientCreate(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+    client_first_name: str
+    client_last_name: str
+    client_last_name_at_birth: Optional[str] = None
+    date_of_birth: str
+    national_insurance_number: Optional[str] = None
+    correspondence_address: Optional[str] = None
+    home_address: Optional[str] = None
+    has_applied_previously: bool = False
+    prev_application_reference: Optional[str] = None
+    relationship_to_deceased: str
+
+
 class ApplicationCreate(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -153,8 +168,27 @@ class ApplicationCreate(BaseModel):
     )
     # documents: list[Document]
     # provider: Provider
-    # client: ClientBase
+    client: ClientCreate
     proceedings: list[ProceedingCreate]
+
+
+class ClientResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        from_attributes=True,
+        populate_by_name=True,
+    )
+    client_id: int
+    client_first_name: str
+    client_last_name: str
+    client_last_name_at_birth: Optional[str] = None
+    date_of_birth: str
+    national_insurance_number: Optional[str] = None
+    correspondence_address: Optional[str] = None
+    home_address: Optional[str] = None
+    has_applied_previously: bool = False
+    prev_application_reference: Optional[str] = None
+    relationship_to_deceased: str
 
 
 class ProceedingResponse(BaseModel):
@@ -191,4 +225,4 @@ class ApplicationResponse(BaseModel):
     auto_grant: bool
     overall_decision: str
     proceedings: list[ProceedingResponse] = []
-    # client: ClientBase
+    client: ClientResponse

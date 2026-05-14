@@ -8,6 +8,7 @@ from app.models.application.index import (
     ApplicationCreate,
     ApplicationProceeding,
     ApplicationResponse,
+    Client,
     ProceedingId,
 )
 from app.models.user import User
@@ -49,14 +50,21 @@ def create_application(
 ) -> Application:
     """Creates a new application with proceedings."""
     proceedings_to_add = []
+    print(request)
     for proceeding in request.proceedings:
         code_str = proceeding.proceeding_id
         proceeding_to_add = ApplicationProceeding(proceeding_id=ProceedingId(code_str))
         proceedings_to_add.append(proceeding_to_add)
 
-    new_application = Application(proceedings=proceedings_to_add)
+    new_client = Client(**request.client.model_dump())
+    session.add(new_client)
+    session.commit()
+    session.refresh(new_client)
+
+    new_application = Application(
+        proceedings=proceedings_to_add, client_id=new_client.client_id
+    )
     session.add(new_application)
     session.commit()
     session.refresh(new_application)
-
     return new_application

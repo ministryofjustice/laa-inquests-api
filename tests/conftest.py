@@ -9,6 +9,7 @@ from app.auth.security import get_password_hash
 from app.models import User
 from app.models.application.index import (
     Application,
+    Client,
     Proceeding,
     ProceedingId,
     ApplicationProceeding,
@@ -48,7 +49,20 @@ def session_fixture():
         application_proceedings_to_add = [
             ApplicationProceeding(proceeding_id=ProceedingId.TEST1)
         ]
-        new_application = Application(proceedings=application_proceedings_to_add)
+
+        new_client = Client(
+            client_first_name="test",
+            client_last_name="surname",
+            date_of_birth="01-02-2003",
+            relationship_to_deceased="parent",
+        )
+        db_session.add(new_client)
+        db_session.commit()
+        db_session.refresh(new_client)
+
+        new_application = Application(
+            proceedings=application_proceedings_to_add, client_id=new_client.client_id
+        )
         db_session.add(new_application)
         db_session.commit()
         yield db_session
