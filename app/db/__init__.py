@@ -2,7 +2,8 @@ from sqlmodel import SQLModel, create_engine
 from app.config import Config
 from sqlalchemy.orm import sessionmaker
 from app.db.session import CustomSession
-from app.models.application.index import Proceeding, ProceedingId
+from app.models.application.index import Proceeding
+from app.models.application.enums import ProceedingId
 
 
 db_url = f"postgresql://{Config.DB_USER}:{Config.DB_PASSWORD}@{Config.DB_HOST}:{Config.DB_PORT}/{Config.DB_NAME}"

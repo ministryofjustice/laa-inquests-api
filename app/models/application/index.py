@@ -1,24 +1,10 @@
-import enum
 from typing import Optional
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 from sqlalchemy import Column
 from sqlmodel import Field, Relationship, SQLModel, Enum
 from datetime import datetime, UTC
-
-
-class ProceedingId(str, enum.Enum):
-    PC049 = "PC049"
-    MN035 = "MN035"
-    MN036 = "MN036"
-    MH028 = "MH028"
-    MH030 = "MH030"
-    IQ001 = "IQ001"
-    IQ002 = "IQ002"
-    IQ003 = "IQ003"
-    IQ004 = "IQ004"
-    IQ010 = "IQ010"
-    TEST1 = "TEST1"
+from app.models.application.enums import ProceedingId
 
 
 class Proceeding(SQLModel, table=True):
@@ -100,6 +86,13 @@ class ApplicationProceeding(SQLModel, table=True):
     @property
     def substantive_cost_limitation(self):
         return self.proceeding.substantive_cost_limitation
+
+
+# client
+
+# deceased
+
+# public bodies
 
 
 class ProceedingCreate(BaseModel):
