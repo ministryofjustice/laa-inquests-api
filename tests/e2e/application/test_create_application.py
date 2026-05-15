@@ -25,6 +25,7 @@ def test_201_create_application_response_contains_expected_base_properties(
             "furtherInformation": "he died",
             "clientRelationshipToDeceased": "guardian",
         },
+        "publicBodies": [{"publicBodyId": "Department for Transport"}],
     }
     response = client.post(
         "/applications",
@@ -73,6 +74,7 @@ def test_201_create_application_response_contains_expected_proceeding_informatio
             "furtherInformation": "he died",
             "clientRelationshipToDeceased": "guardian",
         },
+        "publicBodies": [{"publicBodyId": "Department for Transport"}],
     }
     response = client.post(
         "/applications",
@@ -120,6 +122,7 @@ def test_201_responds_with_expected_client_details(client, auth_token):
             "furtherInformation": "he died",
             "clientRelationshipToDeceased": "guardian",
         },
+        "publicBodies": [{"publicBodyId": "Department for Transport"}],
     }
     response = client.post(
         "/applications",

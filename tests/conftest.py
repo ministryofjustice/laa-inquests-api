@@ -63,7 +63,6 @@ def session_fixture():
         application_public_bodies = [
             ApplicationPublicBody(public_body_id=PublicBodyId.DEPARTMENT_FOR_TRANSPORT)
         ]
-
         new_client = Client(
             client_first_name="test",
             client_last_name="surname",
