@@ -2,8 +2,8 @@ from sqlmodel import SQLModel, create_engine
 from app.config import Config
 from sqlalchemy.orm import sessionmaker
 from app.db.session import CustomSession
-from app.models.application.index import Proceeding
-from app.models.application.enums import ProceedingId
+from app.models.application.index import Proceeding, PublicBody
+from app.models.application.enums import ProceedingId, PublicBodyId
 
 
 db_url = f"postgresql://{Config.DB_USER}:{Config.DB_PASSWORD}@{Config.DB_HOST}:{Config.DB_PORT}/{Config.DB_NAME}"
@@ -61,6 +61,22 @@ def get_session():
             "proceeding_description": "S13 Coroner’s Act 1988 - Public Law",
         },
     ]
+
+    public_bodies = [
+        "Prime Minister's Office 10 Downing Street",
+        "Cabinet Office",
+        "Attorney General's Office",
+        "Department for Business & Trade",
+        "Department for Culture, Media & Sport",
+        "Department for Education",
+        "Department for Energy Security & Net Zero",
+        "Department for Environment, Food & Rural Affairs",
+        "Department for Science, Innovation & Technology",
+        "Department for Transport",
+        "Department for Work & Pensions",
+        "Department of Health & Social Care",
+    ]
+
     with CustomSessionLocal() as db_session:
         for proceeding in proceedings:
             proceeding_id = proceeding.get("proceeding_id")
@@ -70,6 +86,13 @@ def get_session():
                 proceeding_description=proceeding_description,
             )
             db_session.add(proceeding_to_add)
-        db_session.commit()
 
+        for public_body in public_bodies:
+            public_body_id = PublicBodyId(public_body)
+            public_body_to_add = PublicBody(
+                public_body_id=public_body_id, public_body_description=public_body
+            )
+            db_session.add(public_body_to_add)
+
+        db_session.commit()
         yield db_session
