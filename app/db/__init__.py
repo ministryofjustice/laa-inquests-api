@@ -1,6 +1,7 @@
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel, create_engine
 from app.config import Config
-from sqlalchemy.orm import sessionmaker
 from app.db.session import CustomSession
 from app.models.application.index import Proceeding, ProceedingId
 
@@ -62,13 +63,15 @@ def get_session():
     ]
     with CustomSessionLocal() as db_session:
         for proceeding in proceedings:
-            proceeding_id = proceeding.get("proceeding_id")
-            proceeding_description = proceeding.get("proceeding_description")
-            proceeding_to_add = Proceeding(
-                proceeding_id=ProceedingId(proceeding_id),
-                proceeding_description=proceeding_description,
+            stmt = (
+                insert(Proceeding)
+                .values(
+                    proceeding_id=ProceedingId(proceeding["proceeding_id"]),
+                    proceeding_description=proceeding["proceeding_description"],
+                )
+                .on_conflict_do_nothing(index_elements=["proceeding_id"])
             )
-            db_session.add(proceeding_to_add)
+            db_session.exec(stmt)
         db_session.commit()
 
         yield db_session
