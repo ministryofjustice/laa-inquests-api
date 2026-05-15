@@ -24,7 +24,7 @@ router = APIRouter(
 async def read_application(
     laa_reference: str,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_active_user),
+    # current_user: User = Depends(get_current_active_user),
 ) -> Application:
     """Get information about a given application."""
     application = session.get(Application, int(laa_reference))
@@ -34,7 +34,7 @@ async def read_application(
 @router.get("/")
 async def read_all_applications(
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_active_user),
+    # current_user: User = Depends(get_current_active_user),
 ) -> Sequence[Application]:
     """Read all the applications currently in the database."""
     applications = session.exec(select(Application)).all()
@@ -45,7 +45,7 @@ async def read_all_applications(
 def create_application(
     request: ApplicationCreate,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_active_user),
+    # current_user: User = Depends(get_current_active_user),
 ) -> Application:
     """Creates a new application with proceedings."""
     proceedings_to_add = []
