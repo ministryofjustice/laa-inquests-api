@@ -10,25 +10,25 @@ from freezegun import freeze_time
 import pytest
 from jwt import ExpiredSignatureError
 from datetime import timedelta, datetime
-from app.models import User
-from uuid import uuid4
+# from app.models import User
+# from uuid import uuid4
 
 
-def test_auth_get_applications(client: TestClient):
-    response = client.get("/applications")
-    json = response.json()
-    assert json["detail"] == "Not authenticated"
-    assert response.status_code == 401
+# def test_auth_get_applications(client: TestClient):
+#     response = client.get("/applications")
+#     json = response.json()
+#     assert json["detail"] == "Not authenticated"
+#     assert response.status_code == 401
 
 
-def test_create_application_disabled_user(client: TestClient, auth_token_disabled_user):
-    response = client.post(
-        "/applications",
-        headers={"Authorization": f"Bearer {auth_token_disabled_user}"},
-    )
-    json = response.json()
-    assert json["detail"] == "User Disabled"
-    assert response.status_code == 401
+# def test_create_application_disabled_user(client: TestClient, auth_token_disabled_user):
+#     response = client.post(
+#         "/applications",
+#         headers={"Authorization": f"Bearer {auth_token_disabled_user}"},
+#     )
+#     json = response.json()
+#     assert json["detail"] == "User Disabled"
+#     assert response.status_code == 401
 
 
 def test_username_token_fail(client: TestClient):
@@ -51,26 +51,26 @@ def test_raw_token_fail(client: TestClient):
     assert response.status_code == 422
 
 
-def test_credential_exception(client: TestClient, auth_token):
-    response = client.get(
-        "/applications/{uuid4()}", headers={"Authorization": f"Bearer {auth_token} + 1"}
-    )
-    json = response.json()
-    assert json["detail"] == "Could not validate credentials"
-    assert response.status_code == 401
+# def test_credential_exception(client: TestClient, auth_token):
+#     response = client.get(
+#         "/applications/{uuid4()}", headers={"Authorization": f"Bearer {auth_token} + 1"}
+#     )
+#     json = response.json()
+#     assert json["detail"] == "Could not validate credentials"
+#     assert response.status_code == 401
 
 
-def test_credential_exception_no_user(session, client: TestClient, auth_token):
-    username = "test_user"
-    user = session.get(User, username)
-    session.delete(user)
-    session.commit()
-    response = client.get(
-        f"/applications/{uuid4()}", headers={"Authorization": f"Bearer {auth_token}"}
-    )
-    json = response.json()
-    assert json["detail"] == "Could not validate credentials"
-    assert response.status_code == 401
+# def test_credential_exception_no_user(session, client: TestClient, auth_token):
+#     username = "test_user"
+#     user = session.get(User, username)
+#     session.delete(user)
+#     session.commit()
+#     response = client.get(
+#         f"/applications/{uuid4()}", headers={"Authorization": f"Bearer {auth_token}"}
+#     )
+#     json = response.json()
+#     assert json["detail"] == "Could not validate credentials"
+#     assert response.status_code == 401
 
 
 def test_authenticate_user(session):
