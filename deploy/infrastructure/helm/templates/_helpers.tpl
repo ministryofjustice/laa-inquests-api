@@ -66,24 +66,8 @@ Create the name of the service account to use
 {{- end }}
 
 {{- define "laa-inquests-api.app.vars" -}}
-- name: ENVIRONMENT
-  value: {{.Values.environment}}
-{{ range $name, $data := .Values.envVars }}
+{{- range $name, $value := .Values.env }}
 - name: {{ $name }}
-{{- if $data.value }}
-  value: "{{ $data.value }}"
-{{- else if $data.secret }}
-  valueFrom:
-    secretKeyRef:
-      name: {{ $data.secret.name }}
-      key: {{ $data.secret.key }}
-      optional: {{ $data.secret.optional | default false }}
-{{- else if $data.configmap }}
-  valueFrom:
-    configMapKeyRef:
-      name: {{ $data.configmap.name }}
-      key: {{ $data.configmap.key }}
-      optional: {{ $data.configmap.optional | default false }}
-{{- end -}}
+  value: {{ $value | quote }}
 {{- end -}}
 {{- end -}}
