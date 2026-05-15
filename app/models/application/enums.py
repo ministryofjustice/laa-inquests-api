@@ -20,9 +20,9 @@ class PublicBodyId(str, enum.Enum):
     CABINET_OFFICE = "Cabinet Office"
     ATTORNEY_GENERAL = "Attorney General's Office"
     DEPARTMENT_FOR_BUSINESS_AND_TRADE = "Department for Business & Trade"
-    DEPARTMENT_FOR_CULTURE_MEDIA_SPORT = "Department for Culture, Media & Sport"
+    DEPARTMENT_FOR_CULTURE_MEDIA_AND_SPORT = "Department for Culture, Media & Sport"
     DEPARTMENT_FOR_EDUCATION = "Department for Education"
-    DEPARTMENT_FOR_ENERGY_SECURITY_NET_ZERO = (
+    DEPARTMENT_FOR_ENERGY_SECURITY_AND_NET_ZERO = (
         "Department for Energy Security & Net Zero"
     )
     DEPARTMENT_FOR_ENVIRONMENT_FOOD_AND_RURAL_AFFAIRS = (
@@ -33,4 +33,4 @@ class PublicBodyId(str, enum.Enum):
     )
     DEPARTMENT_FOR_TRANSPORT = "Department for Transport"
     DEPARTMENT_FOR_WORK_AND_PENSIONS = "Department for Work & Pensions"
-    DEPARTMENT_FOR_HEALTH_AND_SOCIAL_CARE = "Department of Health & Social Care"
+    DEPARTMENT_OF_HEALTH_AND_SOCIAL_CARE = "Department of Health & Social Care"
