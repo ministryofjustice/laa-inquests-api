@@ -1,6 +1,6 @@
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import sessionmaker
-from sqlmodel import SQLModel, create_engine, insert
+from sqlalchemy.dialects.postgresql import insert
+from sqlmodel import SQLModel, create_engine
 from app.config import Config
 from app.db.session import CustomSession
 from app.models.application.index import Proceeding, PublicBody
@@ -91,11 +91,10 @@ def get_session():
             db_session.exec(stmt)
 
         for public_body in public_bodies:
-            public_body_id = PublicBodyId(public_body)
             stmt = (
                 insert(PublicBody)
                 .values(
-                    public_body_id=public_body_id,
+                    public_body_id=PublicBodyId(public_body),
                     public_body_description=public_body,
                 )
                 .on_conflict_do_nothing(index_elements=["public_body_id"])

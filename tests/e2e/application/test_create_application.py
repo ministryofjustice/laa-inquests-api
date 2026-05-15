@@ -25,7 +25,6 @@ def test_201_create_application_response_contains_expected_base_properties(
             "furtherInformation": "he died",
             "clientRelationshipToDeceased": "guardian",
         },
-        "publicBodies": [{"publicBodyId": "Department for Transport"}],
     }
     response = client.post(
         "/applications",
@@ -74,7 +73,6 @@ def test_201_create_application_response_contains_expected_proceeding_informatio
             "furtherInformation": "he died",
             "clientRelationshipToDeceased": "guardian",
         },
-        "publicBodies": [{"publicBodyId": "Department for Transport"}],
     }
     response = client.post(
         "/applications",
@@ -122,7 +120,6 @@ def test_201_responds_with_expected_client_details(client, auth_token):
             "furtherInformation": "he died",
             "clientRelationshipToDeceased": "guardian",
         },
-        "publicBodies": [{"publicBodyId": "Department for Transport"}],
     }
     response = client.post(
         "/applications",
@@ -222,3 +219,10 @@ def test_201_create_application_response_includes_deceased_details(client, auth_
     new_application = response.json()
     deceased = new_application["deceased"]
     assert isinstance(deceased["deceasedId"], int)
+    assert deceased["deceasedFirstName"] == "bob"
+    assert deceased["deceasedLastName"] == "boberton"
+    assert deceased["deceasedDateOfBirth"] == "01-01-2000"
+    assert deceased["deceasedDateOfDeath"] == "01-01-2025"
+    assert deceased["coronersReference"] == "beans"
+    assert deceased["furtherInformation"] == "he died"
+    assert deceased["clientRelationshipToDeceased"] == "guardian"
