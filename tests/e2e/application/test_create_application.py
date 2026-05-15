@@ -1,4 +1,4 @@
-def test_200_create_application_response_contains_expected_base_properties(
+def test_201_create_application_response_contains_expected_base_properties(
     client, auth_token
 ):
     request_body = {
@@ -6,7 +6,25 @@ def test_200_create_application_response_contains_expected_base_properties(
             {
                 "proceedingId": "TEST1",
             }
-        ]
+        ],
+        "client": {
+            "clientFirstName": "test",
+            "clientLastName": "surname",
+            "dateOfBirth": "01-01-1990",
+            "nationalInsuranceNumber": "AB12345A",
+            "correspondenceAddress": "123 street",
+            "homeAddress": "my house",
+        },
+        "publicBodies": [{"publicBodyId": "Department for Transport"}],
+        "deceased": {
+            "deceasedFirstName": "bob",
+            "deceasedLastName": "boberton",
+            "deceasedDateOfBirth": "01-01-2000",
+            "deceasedDateOfDeath": "01-01-2025",
+            "coronersReference": "beans",
+            "furtherInformation": "he died",
+            "clientRelationshipToDeceased": "guardian",
+        },
     }
     response = client.post(
         "/applications",
@@ -28,7 +46,7 @@ def test_200_create_application_response_contains_expected_base_properties(
     assert len(new_application["proceedings"]) == 1
 
 
-def test_200_create_application_response_contains_expected_proceeding_information(
+def test_201_create_application_response_contains_expected_proceeding_information(
     client, auth_token
 ):
     request_body = {
@@ -36,7 +54,25 @@ def test_200_create_application_response_contains_expected_proceeding_informatio
             {
                 "proceedingId": "TEST1",
             }
-        ]
+        ],
+        "client": {
+            "clientFirstName": "test",
+            "clientLastName": "surname",
+            "dateOfBirth": "01-01-1990",
+            "nationalInsuranceNumber": "AB12345A",
+            "correspondenceAddress": "123 street",
+            "homeAddress": "my house",
+        },
+        "publicBodies": [{"publicBodyId": "Department for Transport"}],
+        "deceased": {
+            "deceasedFirstName": "bob",
+            "deceasedLastName": "boberton",
+            "deceasedDateOfBirth": "01-01-2000",
+            "deceasedDateOfDeath": "01-01-2025",
+            "coronersReference": "beans",
+            "furtherInformation": "he died",
+            "clientRelationshipToDeceased": "guardian",
+        },
     }
     response = client.post(
         "/applications",
@@ -58,3 +94,135 @@ def test_200_create_application_response_contains_expected_proceeding_informatio
     assert isinstance(proceeding["substantiveCostLimitation"], int)
     assert isinstance(proceeding["scopeDescription"], str)
     assert isinstance(proceeding["proceedingDescription"], str)
+
+
+def test_201_responds_with_expected_client_details(client, auth_token):
+    request_body = {
+        "proceedings": [
+            {
+                "proceedingId": "TEST1",
+            }
+        ],
+        "client": {
+            "clientFirstName": "testing",
+            "clientLastName": "lastname",
+            "dateOfBirth": "01-01-1990",
+            "correspondenceAddress": "123 street",
+            "homeAddress": "my house",
+        },
+        "publicBodies": [{"publicBodyId": "Department for Transport"}],
+        "deceased": {
+            "deceasedFirstName": "bob",
+            "deceasedLastName": "boberton",
+            "deceasedDateOfBirth": "01-01-2000",
+            "deceasedDateOfDeath": "01-01-2025",
+            "coronersReference": "beans",
+            "furtherInformation": "he died",
+            "clientRelationshipToDeceased": "guardian",
+        },
+    }
+    response = client.post(
+        "/applications",
+        json=request_body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+    new_application = response.json()
+    client = new_application["client"]
+    assert isinstance(client["clientId"], int)
+    assert client["clientFirstName"] == "testing"
+    assert client["clientLastName"] == "lastname"
+    assert client["clientLastNameAtBirth"] is None
+    assert client["dateOfBirth"] == "01-01-1990"
+    assert client["nationalInsuranceNumber"] is None
+    assert client["correspondenceAddress"] == "123 street"
+    assert client["homeAddress"] == "my house"
+    assert not client["hasAppliedPreviously"]
+
+
+def test_201_create_application_responds_with_expected_public_body_details(
+    client, auth_token
+):
+    request_body = {
+        "proceedings": [
+            {
+                "proceedingId": "TEST1",
+            }
+        ],
+        "client": {
+            "clientFirstName": "testing",
+            "clientLastName": "lastname",
+            "dateOfBirth": "01-01-1990",
+            "correspondenceAddress": "123 street",
+            "homeAddress": "my house",
+        },
+        "publicBodies": [{"publicBodyId": "Department for Transport"}],
+        "deceased": {
+            "deceasedFirstName": "bob",
+            "deceasedLastName": "boberton",
+            "deceasedDateOfBirth": "01-01-2000",
+            "deceasedDateOfDeath": "01-01-2025",
+            "coronersReference": "beans",
+            "furtherInformation": "he died",
+            "clientRelationshipToDeceased": "guardian",
+        },
+    }
+    response = client.post(
+        "/applications",
+        json=request_body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+    new_application = response.json()
+    assert len(new_application["publicBodies"]) == 1
+    public_body = new_application["publicBodies"][0]
+    assert public_body["publicBodyDescription"] == "Department for Transport"
+
+
+def test_201_create_application_response_includes_deceased_details(client, auth_token):
+    request_body = {
+        "proceedings": [
+            {
+                "proceedingId": "TEST1",
+            }
+        ],
+        "client": {
+            "clientFirstName": "testing",
+            "clientLastName": "lastname",
+            "dateOfBirth": "01-01-1990",
+            "correspondenceAddress": "123 street",
+            "homeAddress": "my house",
+        },
+        "publicBodies": [{"publicBodyId": "Department for Transport"}],
+        "deceased": {
+            "deceasedFirstName": "bob",
+            "deceasedLastName": "boberton",
+            "deceasedDateOfBirth": "01-01-2000",
+            "deceasedDateOfDeath": "01-01-2025",
+            "coronersReference": "beans",
+            "furtherInformation": "he died",
+            "clientRelationshipToDeceased": "guardian",
+        },
+    }
+    response = client.post(
+        "/applications",
+        json=request_body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+    new_application = response.json()
+    deceased = new_application["deceased"]
+    assert isinstance(deceased["deceasedId"], int)
+    assert deceased["deceasedFirstName"] == "bob"
+    assert deceased["deceasedLastName"] == "boberton"
+    assert deceased["deceasedDateOfBirth"] == "01-01-2000"
+    assert deceased["deceasedDateOfDeath"] == "01-01-2025"
+    assert deceased["coronersReference"] == "beans"
+    assert deceased["furtherInformation"] == "he died"
+    assert deceased["clientRelationshipToDeceased"] == "guardian"

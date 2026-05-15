@@ -8,8 +8,12 @@ from app.models.application.index import (
     Application,
     ApplicationCreate,
     ApplicationProceeding,
+    ApplicationPublicBody,
     ApplicationResponse,
+    Client,
+    Deceased,
     ProceedingId,
+    PublicBodyId,
 )
 # from app.models.user import User
 
@@ -48,16 +52,46 @@ def create_application(
     session: Session = Depends(get_session),
     # current_user: User = Depends(get_current_active_user),
 ) -> Application:
-    """Creates a new application with proceedings."""
+    """Creates a new application with proceedings, public bodies."""
     proceedings_to_add = []
+    public_bodies_to_add = []
+
     for proceeding in request.proceedings:
         code_str = proceeding.proceeding_id
         proceeding_to_add = ApplicationProceeding(proceeding_id=ProceedingId(code_str))
         proceedings_to_add.append(proceeding_to_add)
 
-    new_application = Application(proceedings=proceedings_to_add)
+    for public_body in request.publicBodies:
+        public_body_enum = PublicBodyId(public_body.public_body_id)
+        public_body_to_add = ApplicationPublicBody(public_body_id=public_body_enum)
+        public_bodies_to_add.append(public_body_to_add)
+
+    new_client = Client(**request.client.model_dump())
+    session.add(new_client)
+    session.commit()
+    session.refresh(new_client)
+
+    new_deceased = Deceased(
+        deceased_first_name=request.deceased.deceased_first_name,
+        deceased_last_name=request.deceased.deceased_last_name,
+        deceased_date_of_birth=request.deceased.deceased_date_of_birth,
+        deceased_date_of_death=request.deceased.deceased_date_of_death,
+        coroners_reference=request.deceased.coroners_reference,
+        further_information=request.deceased.further_information,
+        client_relationship_to_deceased=request.deceased.client_relationship_to_deceased,
+        client_id=new_client.client_id,
+    )
+    session.add(new_deceased)
+    session.commit()
+    session.refresh(new_deceased)
+
+    new_application = Application(
+        client_id=new_client.client_id,
+        deceased_id=new_deceased.deceased_id,
+        proceedings=proceedings_to_add,
+        public_bodies=public_bodies_to_add,
+    )
     session.add(new_application)
     session.commit()
     session.refresh(new_application)
-
     return new_application

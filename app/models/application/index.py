@@ -7,6 +7,7 @@ from datetime import datetime, UTC
 from app.models.application.enums import ProceedingId, PublicBodyId
 
 
+# RELATIONS
 class Proceeding(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     proceeding_id: ProceedingId = Field(
@@ -26,25 +27,27 @@ class Proceeding(SQLModel, table=True):
 
 
 class PublicBody(SQLModel, table=True):
+    __tablename__ = "public_body"
     id: int | None = Field(default=None, primary_key=True)
     public_body_id: PublicBodyId = Field(
         sa_column=Column(Enum(PublicBodyId), unique=True)
     )
     public_body_description: str
+    application_public_body: list["ApplicationPublicBody"] = Relationship(
+        back_populates="public_body"
+    )
 
 
 class ClientBase(SQLModel):
     client_first_name: str
     client_last_name: str
-    client_last_name_at_birth: str | None
-    last_name_at_birth: str
+    client_last_name_at_birth: str | None = None
     date_of_birth: str
-    national_insurance_number: str | None
-    correspondence_address: str | None
-    home_address: str | None
+    national_insurance_number: str | None = None
+    correspondence_address: str | None = None
+    home_address: str | None = None
     has_applied_previously: bool = False
-    prev_application_reference: str | None
-    relationship_to_deceased: str
+    prev_application_reference: str | None = None
 
 
 class DeceasedBase(SQLModel):
@@ -54,6 +57,13 @@ class DeceasedBase(SQLModel):
     deceased_date_of_death: str
     coroners_reference: str
     further_information: str | None
+    client_relationship_to_deceased: str
+
+
+class Client(ClientBase, table=True):
+    client_id: int | None = Field(default=None, primary_key=True)
+    applications: list["Application"] = Relationship(back_populates="client")
+    deceased: list["Deceased"] = Relationship(back_populates="client")
 
 
 class ApplicationBase(SQLModel):
@@ -70,27 +80,41 @@ class ApplicationBase(SQLModel):
     overall_decision: str | None = "PENDING"
 
 
+class Deceased(DeceasedBase, table=True):
+    deceased_id: int | None = Field(default_factory=None, primary_key=True)
+    client_id: int = Field(foreign_key="client.client_id")
+    client: Client = Relationship(back_populates="deceased")
+    application: Optional["Application"] = Relationship(
+        back_populates="deceased", sa_relationship_kwargs={"uselist": False}
+    )
+
+
 class Application(ApplicationBase, table=True):
     proceedings: list["ApplicationProceeding"] = Relationship(
         back_populates="application"
     )
-    # client_id: int = Field(foreign_key="client.client_id")
-    # client: Client = Relationship(back_populates="applications")
-    # deceased_id = Field(foreign_key="deceased.deceased_id")
-    # deceased: Deceased = Relationship(back_populates="application")
+    public_bodies: list["ApplicationPublicBody"] = Relationship(
+        back_populates="application"
+    )
+    client_id: int | None = Field(default=None, foreign_key="client.client_id")
+    client: Client | None = Relationship(back_populates="applications")
+    deceased_id: int = Field(foreign_key="deceased.deceased_id")
+    deceased: Deceased | None = Relationship(
+        sa_relationship_kwargs={"uselist": False}, back_populates="application"
+    )
 
 
-class Client(ClientBase, table=True):
-    client_id: int | None = Field(default=None, primary_key=True)
-    # applications: list["Application"] = Relationship(
-    #     back_populates="client"
-    # )
-
-
-class Deceased(DeceasedBase):
+class ApplicationPublicBody(SQLModel, table=True):
+    __tablename__ = "application_public_body"
+    application_public_body_id: int | None = Field(default=None, primary_key=True)
+    public_body_id: PublicBodyId = Field(foreign_key="public_body.public_body_id")
     laa_reference: int = Field(foreign_key="application.laa_reference")
-    application: Application = Relationship(back_populates="proceedings")
-    deceased_id: int | None = Field(default_factory=None, primary_key=True)
+    public_body: PublicBody = Relationship(back_populates="application_public_body")
+    application: Application = Relationship(back_populates="public_bodies")
+
+    @property
+    def public_body_description(self):
+        return self.public_body.public_body_description
 
 
 class ApplicationProceeding(SQLModel, table=True):
@@ -136,6 +160,7 @@ class ApplicationProceeding(SQLModel, table=True):
         return self.proceeding.substantive_cost_limitation
 
 
+# REQUEST BODY -- Create
 class ProceedingCreate(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -143,6 +168,47 @@ class ProceedingCreate(BaseModel):
         from_attributes=True,
     )
     proceeding_id: str
+
+
+class ClientCreate(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+    client_first_name: str
+    client_last_name: str
+    client_last_name_at_birth: Optional[str] = None
+    date_of_birth: str
+    national_insurance_number: Optional[str] = None
+    correspondence_address: Optional[str] = None
+    home_address: Optional[str] = None
+    has_applied_previously: bool = False
+    prev_application_reference: Optional[str] = None
+
+
+class DeceasedCreate(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+    deceased_first_name: str
+    deceased_last_name: str
+    deceased_date_of_birth: str
+    deceased_date_of_death: str
+    coroners_reference: str
+    further_information: str | None
+    client_relationship_to_deceased: str
+
+
+class PublicBodyCreate(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+    public_body_id: str
 
 
 class ApplicationCreate(BaseModel):
@@ -153,8 +219,39 @@ class ApplicationCreate(BaseModel):
     )
     # documents: list[Document]
     # provider: Provider
-    # client: ClientBase
+    client: ClientCreate
+    deceased: DeceasedCreate
+    publicBodies: list[PublicBodyCreate]
     proceedings: list[ProceedingCreate]
+
+
+# RESPONSE BODY
+class ClientResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        from_attributes=True,
+        populate_by_name=True,
+    )
+    client_id: int
+    client_first_name: str
+    client_last_name: str
+    client_last_name_at_birth: Optional[str] = None
+    date_of_birth: str
+    national_insurance_number: Optional[str] = None
+    correspondence_address: Optional[str] = None
+    home_address: Optional[str] = None
+    has_applied_previously: bool = False
+    prev_application_reference: Optional[str] = None
+
+
+class PublicBodyResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        from_attributes=True,
+        populate_by_name=True,
+    )
+    public_body_id: str
+    public_body_description: str
 
 
 class ProceedingResponse(BaseModel):
@@ -176,6 +273,22 @@ class ProceedingResponse(BaseModel):
     merits_decision: str
 
 
+class DeceasedResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+    deceased_id: int
+    deceased_first_name: str
+    deceased_last_name: str
+    deceased_date_of_birth: str
+    deceased_date_of_death: str
+    coroners_reference: str
+    further_information: str | None
+    client_relationship_to_deceased: str
+
+
 class ApplicationResponse(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -191,4 +304,6 @@ class ApplicationResponse(BaseModel):
     auto_grant: bool
     overall_decision: str
     proceedings: list[ProceedingResponse] = []
-    # client: ClientBase
+    public_bodies: list[PublicBodyResponse] = []
+    client: ClientResponse
+    deceased: DeceasedResponse
