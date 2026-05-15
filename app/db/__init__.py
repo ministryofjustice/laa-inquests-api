@@ -89,7 +89,6 @@ def get_session():
                 .on_conflict_do_nothing(index_elements=["proceeding_id"])
             )
             db_session.exec(stmt)
-        db_session.commit()
 
         for public_body in public_bodies:
             public_body_id = PublicBodyId(public_body)
