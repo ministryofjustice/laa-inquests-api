@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
 from typing import Sequence
+
 # from app.auth.security import get_current_active_user
 from app.db import get_session
 from app.models.application.index import (
