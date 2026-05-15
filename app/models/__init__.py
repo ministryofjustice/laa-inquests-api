@@ -8,14 +8,16 @@ from .application.index import (
     Client,
     PublicBody,
     ApplicationPublicBody,
+    Deceased,
 )  # noqa: F401
 from .user import User  # noqa: F401
 
 __all__ = [
     "Proceeding",
     "PublicBody",
-    "Application",
+    "Deceased",
     "Client",
+    "Application",
     "User",
     "ApplicationProceeding",
     "ApplicationPublicBody",

@@ -11,6 +11,7 @@ from app.models.application.index import (
     Application,
     ApplicationPublicBody,
     Client,
+    Deceased,
     Proceeding,
     ProceedingId,
     ApplicationProceeding,
@@ -62,23 +63,42 @@ def session_fixture():
         application_public_bodies = [
             ApplicationPublicBody(public_body_id=PublicBodyId.DEPARTMENT_FOR_TRANSPORT)
         ]
+
         new_client = Client(
             client_first_name="test",
             client_last_name="surname",
             date_of_birth="01-02-2003",
-            relationship_to_deceased="parent",
         )
         db_session.add(new_client)
         db_session.commit()
         db_session.refresh(new_client)
 
+        new_deceased = Deceased(
+            client_id=new_client.client_id,
+            deceased_first_name="mrtest",
+            deceased_last_name="othername",
+            deceased_date_of_birth="01-02-1993",
+            deceased_date_of_death="01-01-2026",
+            coroners_reference="test coroners reference",
+            further_information="something relevant",
+            client_relationship_to_deceased="sibling",
+        )
+
+        db_session.add(new_deceased)
+        db_session.commit()
+        db_session.refresh(new_deceased)
+
         new_application = Application(
             proceedings=application_proceedings_to_add,
             client_id=new_client.client_id,
+            deceased_id=new_deceased.deceased_id,
             public_bodies=application_public_bodies,
         )
+
         db_session.add(new_application)
         db_session.commit()
+        db_session.refresh(new_application)
+
         yield db_session
 
 
