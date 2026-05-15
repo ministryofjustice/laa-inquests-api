@@ -10,8 +10,8 @@ from freezegun import freeze_time
 import pytest
 from jwt import ExpiredSignatureError
 from datetime import timedelta, datetime
-from app.models import User
-from uuid import uuid4
+# from app.models import User
+# from uuid import uuid4
 
 
 # def test_auth_get_applications(client: TestClient):
