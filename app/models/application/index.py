@@ -1,6 +1,6 @@
 from typing import Optional
 from pydantic import BaseModel, ConfigDict
-from pydantic.alias_generators import to_camel
+from pydantic.alias_generators import to_camel, to_snake
 from sqlalchemy import Column
 from sqlmodel import Field, Relationship, SQLModel, Enum
 from datetime import datetime, UTC
@@ -26,11 +26,15 @@ class Proceeding(SQLModel, table=True):
 
 
 class PublicBody(SQLModel, table=True):
+    __tablename__ = "public_body"
     id: int | None = Field(default=None, primary_key=True)
     public_body_id: PublicBodyId = Field(
         sa_column=Column(Enum(PublicBodyId), unique=True)
     )
     public_body_description: str
+    application_public_body: list["ApplicationPublicBody"] = Relationship(
+        back_populates="public_body"
+    )
 
 
 class ClientBase(SQLModel):
@@ -78,6 +82,9 @@ class Application(ApplicationBase, table=True):
     proceedings: list["ApplicationProceeding"] = Relationship(
         back_populates="application"
     )
+    public_bodies: list["ApplicationPublicBody"] = Relationship(
+        back_populates="application"
+    )
     client_id: int | None = Field(default=None, foreign_key="client.client_id")
     client: Client | None = Relationship(back_populates="applications")
     # deceased_id = Field(foreign_key="deceased.deceased_id")
@@ -88,6 +95,19 @@ class Deceased(DeceasedBase):
     laa_reference: int = Field(foreign_key="application.laa_reference")
     application: Application = Relationship(back_populates="proceedings")
     deceased_id: int | None = Field(default_factory=None, primary_key=True)
+
+
+class ApplicationPublicBody(SQLModel, table=True):
+    __tablename__ = "application_public_body"
+    application_public_body_id: int | None = Field(default=None, primary_key=True)
+    public_body_id: PublicBodyId = Field(foreign_key="public_body.public_body_id")
+    laa_reference: int = Field(foreign_key="application.laa_reference")
+    public_body: PublicBody = Relationship(back_populates="application_public_body")
+    application: Application = Relationship(back_populates="public_bodies")
+
+    @property
+    def public_body_description(self):
+        return self.public_body.public_body_description
 
 
 class ApplicationProceeding(SQLModel, table=True):
@@ -160,14 +180,24 @@ class ClientCreate(BaseModel):
     relationship_to_deceased: str
 
 
-class ApplicationCreate(BaseModel):
+class PublicBodyCreate(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
         populate_by_name=True,
         from_attributes=True,
     )
+    public_body_id: str
+
+
+class ApplicationCreate(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_snake,
+        populate_by_name=True,
+        from_attributes=True,
+    )
     # documents: list[Document]
     # provider: Provider
+    publicBodies: list[PublicBodyCreate]
     client: ClientCreate
     proceedings: list[ProceedingCreate]
 
@@ -189,6 +219,16 @@ class ClientResponse(BaseModel):
     has_applied_previously: bool = False
     prev_application_reference: Optional[str] = None
     relationship_to_deceased: str
+
+
+class PublicBodyResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        from_attributes=True,
+        populate_by_name=True,
+    )
+    public_body_id: str
+    public_body_description: str
 
 
 class ProceedingResponse(BaseModel):
@@ -225,4 +265,5 @@ class ApplicationResponse(BaseModel):
     auto_grant: bool
     overall_decision: str
     proceedings: list[ProceedingResponse] = []
+    public_bodies: list[PublicBodyResponse] = []
     client: ClientResponse

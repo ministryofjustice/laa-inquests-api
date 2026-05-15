@@ -16,6 +16,7 @@ def test_201_create_application_response_contains_expected_base_properties(
             "homeAddress": "my house",
             "relationshipToDeceased": "partner",
         },
+        "publicBodies": [{"publicBodyId": "Department for Transport"}],
     }
     response = client.post(
         "/applications",
@@ -55,6 +56,7 @@ def test_201_create_application_response_contains_expected_proceeding_informatio
             "homeAddress": "my house",
             "relationshipToDeceased": "partner",
         },
+        "publicBodies": [{"publicBodyId": "Department for Transport"}],
     }
     response = client.post(
         "/applications",
@@ -93,6 +95,7 @@ def test_201_responds_with_expected_client_details(client, auth_token):
             "homeAddress": "my house",
             "relationshipToDeceased": "partner",
         },
+        "publicBodies": [{"publicBodyId": "Department for Transport"}],
     }
     response = client.post(
         "/applications",
@@ -114,3 +117,36 @@ def test_201_responds_with_expected_client_details(client, auth_token):
     assert client["homeAddress"] == "my house"
     assert client["relationshipToDeceased"] == "partner"
     assert not client["hasAppliedPreviously"]
+
+
+def test_201_create_application_responds_with_expected_public_body_details(
+    client, auth_token
+):
+    request_body = {
+        "proceedings": [
+            {
+                "proceedingId": "TEST1",
+            }
+        ],
+        "client": {
+            "clientFirstName": "testing",
+            "clientLastName": "lastname",
+            "dateOfBirth": "01-01-1990",
+            "correspondenceAddress": "123 street",
+            "homeAddress": "my house",
+            "relationshipToDeceased": "partner",
+        },
+        "publicBodies": [{"publicBodyId": "Department for Transport"}],
+    }
+    response = client.post(
+        "/applications",
+        json=request_body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+    new_application = response.json()
+    assert len(new_application["publicBodies"]) == 1
+    public_body = new_application["publicBodies"][0]
+    assert public_body["publicBodyDescription"] == "Department for Transport"

@@ -9,10 +9,13 @@ from app.auth.security import get_password_hash
 from app.models import User
 from app.models.application.index import (
     Application,
+    ApplicationPublicBody,
     Client,
     Proceeding,
     ProceedingId,
     ApplicationProceeding,
+    PublicBody,
+    PublicBodyId,
 )
 
 SECRET_KEY = "TEST_KEY"
@@ -50,6 +53,15 @@ def session_fixture():
             ApplicationProceeding(proceeding_id=ProceedingId.TEST1)
         ]
 
+        new_public_body = PublicBody(
+            public_body_id=PublicBodyId.DEPARTMENT_FOR_TRANSPORT,
+            public_body_description="Department for Transport",
+        )
+        db_session.add(new_public_body)
+        db_session.commit()
+        application_public_bodies = [
+            ApplicationPublicBody(public_body_id=PublicBodyId.DEPARTMENT_FOR_TRANSPORT)
+        ]
         new_client = Client(
             client_first_name="test",
             client_last_name="surname",
@@ -61,7 +73,9 @@ def session_fixture():
         db_session.refresh(new_client)
 
         new_application = Application(
-            proceedings=application_proceedings_to_add, client_id=new_client.client_id
+            proceedings=application_proceedings_to_add,
+            client_id=new_client.client_id,
+            public_bodies=application_public_bodies,
         )
         db_session.add(new_application)
         db_session.commit()

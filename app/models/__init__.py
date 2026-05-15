@@ -1,7 +1,22 @@
 # All models defining DB Table schemas should be imported into this module this allows them to be
 # found by Alembic when auto-generating migrations.
 
-from .application.index import Application, ApplicationProceeding, Proceeding, Client  # noqa: F401
+from .application.index import (
+    Application,
+    ApplicationProceeding,
+    Proceeding,
+    Client,
+    PublicBody,
+    ApplicationPublicBody,
+)  # noqa: F401
 from .user import User  # noqa: F401
 
-__all__ = ["Proceeding", "Application", "Client", "User", "ApplicationProceeding"]
+__all__ = [
+    "Proceeding",
+    "PublicBody",
+    "Application",
+    "Client",
+    "User",
+    "ApplicationProceeding",
+    "ApplicationPublicBody",
+]
