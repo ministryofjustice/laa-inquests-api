@@ -82,7 +82,12 @@ def get_session():
     with CustomSessionLocal() as db_session:
         db_session.exec(
             text(
-                "ALTER TYPE publicbodyid RENAME VALUE 'DEPARTMENT_FOR_CULTURE_MEDIA_SPORT' TO 'DEPARTMENT_FOR_CULTURE_MEDIA_AND_SPORT'"
+                "ALTER TYPE publicbodyid RENAME VALUE 'DEPARTMENT_FOR_ENERGY_SECURITY_NET_ZERO' TO 'DEPARTMENT_FOR_ENERGY_SECURITY_AND_NET_ZERO'"
+            )
+        )
+        db_session.exec(
+            text(
+                "ALTER TYPE publicbodyid RENAME VALUE 'DEPARTMENT_FOR_HEALTH_AND_SOCIAL_CARE' TO 'DEPARTMENT_OF_HEALTH_AND_SOCIAL_CARE'"
             )
         )
         db_session.commit()
