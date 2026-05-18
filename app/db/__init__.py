@@ -1,3 +1,4 @@
+from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import SQLModel, create_engine
@@ -18,7 +19,6 @@ CustomSessionLocal = sessionmaker(
 
 
 def get_session():
-    SQLModel.metadata.drop_all(engine)
     SQLModel.metadata.create_all(engine)
 
     proceedings = [
@@ -80,6 +80,11 @@ def get_session():
     ]
 
     with CustomSessionLocal() as db_session:
+        for table_name in SQLModel.metadata.sorted_tables:
+            db_session.exec(text(f"DROP TABLE IF EXISTS {table_name.name} CASCADE;"))
+
+        db_session.commit()
+
         for proceeding in proceedings:
             stmt = (
                 insert(Proceeding)
