@@ -1,4 +1,3 @@
-from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import SQLModel, create_engine
@@ -19,6 +18,7 @@ CustomSessionLocal = sessionmaker(
 
 
 def get_session():
+    SQLModel.metadata.drop_all(engine)
     SQLModel.metadata.create_all(engine)
 
     proceedings = [
@@ -80,23 +80,6 @@ def get_session():
     ]
 
     with CustomSessionLocal() as db_session:
-        db_session.exec(
-            text(
-                "ALTER TYPE publicbodyid RENAME VALUE 'DEPARTMENT_FOR_ENERGY_SECURITY_NET_ZERO' TO 'DEPARTMENT_FOR_ENERGY_SECURITY_AND_NET_ZERO'"
-            )
-        )
-        db_session.exec(
-            text(
-                "ALTER TYPE publicbodyid RENAME VALUE 'DEPARTMENT_FOR_HEALTH_AND_SOCIAL_CARE' TO 'DEPARTMENT_OF_HEALTH_AND_SOCIAL_CARE'"
-            )
-        )
-        db_session.commit()
-        print(
-            db_session.execute(
-                text("SELECT unnest(enum_range(NULL::publicbodyid))")
-            ).all()
-        )
-
         for proceeding in proceedings:
             stmt = (
                 insert(Proceeding)
