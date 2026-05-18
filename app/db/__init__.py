@@ -97,7 +97,12 @@ def get_session():
                     public_body_id=PublicBodyId(public_body),
                     public_body_description=public_body,
                 )
-                .on_conflict_do_update(index_elements=["public_body_id"])
+                .on_conflict_do_update(
+                    index_elements=["public_body_id"],
+                    set_=dict(
+                        public_body_id=public_body, public_body_description=public_body
+                    ),
+                )
             )
             db_session.exec(stmt)
 
