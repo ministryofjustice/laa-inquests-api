@@ -46,7 +46,7 @@ async def read_all_applications(
     return applications
 
 
-@router.post("/", response_model=ApplicationResponse)
+@router.post("/", response_model=ApplicationResponse, status_code=201)
 def create_application(
     request: ApplicationCreate,
     session: Session = Depends(get_session),
