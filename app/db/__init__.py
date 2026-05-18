@@ -1,3 +1,4 @@
+from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import SQLModel, create_engine
@@ -79,6 +80,12 @@ def get_session():
     ]
 
     with CustomSessionLocal() as db_session:
+        db_session.exec(
+            text(
+                "ALTER TYPE publicbodyid RENAME VALUE 'DEPARTMENT_FOR_CULTURE_MEDIA_SPORT' TO 'DEPARTMENT_FOR_CULTURE_MEDIA_AND_SPORT'"
+            )
+        ).commit()
+
         for proceeding in proceedings:
             stmt = (
                 insert(Proceeding)
