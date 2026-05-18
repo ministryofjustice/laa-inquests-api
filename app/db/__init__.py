@@ -84,7 +84,8 @@ def get_session():
             text(
                 "ALTER TYPE publicbodyid RENAME VALUE 'DEPARTMENT_FOR_CULTURE_MEDIA_SPORT' TO 'DEPARTMENT_FOR_CULTURE_MEDIA_AND_SPORT'"
             )
-        ).commit()
+        )
+        db_session.commit()
         print(
             db_session.execute(
                 text("SELECT unnest(enum_range(NULL::publicbodyid))")
