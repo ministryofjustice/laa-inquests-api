@@ -38,3 +38,15 @@ def test_200_proceeding_details_included_on_application_response(
 
     requested_application = response.json()
     assert len(requested_application["proceedings"]) == 1
+
+
+def test_404_read_application_returns_404_when_not_found(client, auth_token):
+    response = client.get(
+        "/applications/99999",
+        headers={
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 404
