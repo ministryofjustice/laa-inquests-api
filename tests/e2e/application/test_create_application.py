@@ -8,21 +8,21 @@ def test_201_create_application_response_contains_expected_base_properties(
             }
         ],
         "client": {
-            "clientFirstName": "test",
-            "clientLastName": "surname",
+            "clientFirstName": "Test",
+            "clientLastName": "Surname",
             "dateOfBirth": "01-01-1990",
             "nationalInsuranceNumber": "AB12345A",
-            "correspondenceAddress": "123 street",
-            "homeAddress": "my house",
+            "correspondenceAddress": "2 Example Lane, London",
+            "homeAddress": "1 Example Lane, London",
         },
         "publicBodies": [{"publicBodyId": "Department for Transport"}],
         "deceased": {
-            "deceasedFirstName": "bob",
-            "deceasedLastName": "boberton",
+            "deceasedFirstName": "Test",
+            "deceasedLastName": "Surname",
             "deceasedDateOfBirth": "01-01-2000",
             "deceasedDateOfDeath": "01-01-2025",
-            "coronersReference": "beans",
-            "furtherInformation": "he died",
+            "coronersReference": "COR-2025-001",
+            "furtherInformation": "Further details to be confirmed",
             "clientRelationshipToDeceased": "guardian",
         },
     }
@@ -56,21 +56,21 @@ def test_201_create_application_response_contains_expected_proceeding_informatio
             }
         ],
         "client": {
-            "clientFirstName": "test",
-            "clientLastName": "surname",
+            "clientFirstName": "Test",
+            "clientLastName": "Surname",
             "dateOfBirth": "01-01-1990",
             "nationalInsuranceNumber": "AB12345A",
-            "correspondenceAddress": "123 street",
-            "homeAddress": "my house",
+            "correspondenceAddress": "2 Example Lane, London",
+            "homeAddress": "1 Example Lane, London",
         },
         "publicBodies": [{"publicBodyId": "Department for Transport"}],
         "deceased": {
-            "deceasedFirstName": "bob",
-            "deceasedLastName": "boberton",
+            "deceasedFirstName": "Test",
+            "deceasedLastName": "Surname",
             "deceasedDateOfBirth": "01-01-2000",
             "deceasedDateOfDeath": "01-01-2025",
-            "coronersReference": "beans",
-            "furtherInformation": "he died",
+            "coronersReference": "COR-2025-001",
+            "furtherInformation": "Further details to be confirmed",
             "clientRelationshipToDeceased": "guardian",
         },
     }
@@ -104,20 +104,20 @@ def test_201_responds_with_expected_client_details(client, auth_token):
             }
         ],
         "client": {
-            "clientFirstName": "testing",
-            "clientLastName": "lastname",
+            "clientFirstName": "Test",
+            "clientLastName": "Surname",
             "dateOfBirth": "01-01-1990",
-            "correspondenceAddress": "123 street",
-            "homeAddress": "my house",
+            "correspondenceAddress": "2 Example Lane, London",
+            "homeAddress": "1 Example Lane, London",
         },
         "publicBodies": [{"publicBodyId": "Department for Transport"}],
         "deceased": {
-            "deceasedFirstName": "bob",
-            "deceasedLastName": "boberton",
+            "deceasedFirstName": "Test",
+            "deceasedLastName": "Surname",
             "deceasedDateOfBirth": "01-01-2000",
             "deceasedDateOfDeath": "01-01-2025",
-            "coronersReference": "beans",
-            "furtherInformation": "he died",
+            "coronersReference": "COR-2025-001",
+            "furtherInformation": "Further details to be confirmed",
             "clientRelationshipToDeceased": "guardian",
         },
     }
@@ -132,13 +132,13 @@ def test_201_responds_with_expected_client_details(client, auth_token):
     new_application = response.json()
     client = new_application["client"]
     assert isinstance(client["clientId"], int)
-    assert client["clientFirstName"] == "testing"
-    assert client["clientLastName"] == "lastname"
+    assert client["clientFirstName"] == "Test"
+    assert client["clientLastName"] == "Surname"
     assert client["clientLastNameAtBirth"] is None
     assert client["dateOfBirth"] == "01-01-1990"
     assert client["nationalInsuranceNumber"] is None
-    assert client["correspondenceAddress"] == "123 street"
-    assert client["homeAddress"] == "my house"
+    assert client["correspondenceAddress"] == "2 Example Lane, London"
+    assert client["homeAddress"] == "1 Example Lane, London"
     assert not client["hasAppliedPreviously"]
 
 
@@ -152,20 +152,20 @@ def test_201_create_application_responds_with_expected_public_body_details(
             }
         ],
         "client": {
-            "clientFirstName": "testing",
-            "clientLastName": "lastname",
+            "clientFirstName": "Test",
+            "clientLastName": "Surname",
             "dateOfBirth": "01-01-1990",
-            "correspondenceAddress": "123 street",
-            "homeAddress": "my house",
+            "correspondenceAddress": "2 Example Lane, London",
+            "homeAddress": "1 Example Lane, London",
         },
         "publicBodies": [{"publicBodyId": "Department for Transport"}],
         "deceased": {
-            "deceasedFirstName": "bob",
-            "deceasedLastName": "boberton",
+            "deceasedFirstName": "Test",
+            "deceasedLastName": "Surname",
             "deceasedDateOfBirth": "01-01-2000",
             "deceasedDateOfDeath": "01-01-2025",
-            "coronersReference": "beans",
-            "furtherInformation": "he died",
+            "coronersReference": "COR-2025-001",
+            "furtherInformation": "Further details to be confirmed",
             "clientRelationshipToDeceased": "guardian",
         },
     }
@@ -191,20 +191,20 @@ def test_201_create_application_response_includes_deceased_details(client, auth_
             }
         ],
         "client": {
-            "clientFirstName": "testing",
-            "clientLastName": "lastname",
+            "clientFirstName": "Test",
+            "clientLastName": "Surname",
             "dateOfBirth": "01-01-1990",
-            "correspondenceAddress": "123 street",
-            "homeAddress": "my house",
+            "correspondenceAddress": "2 Example Lane, London",
+            "homeAddress": "1 Example Lane, London",
         },
         "publicBodies": [{"publicBodyId": "Department for Transport"}],
         "deceased": {
-            "deceasedFirstName": "bob",
-            "deceasedLastName": "boberton",
+            "deceasedFirstName": "Test",
+            "deceasedLastName": "Surname",
             "deceasedDateOfBirth": "01-01-2000",
             "deceasedDateOfDeath": "01-01-2025",
-            "coronersReference": "beans",
-            "furtherInformation": "he died",
+            "coronersReference": "COR-2025-001",
+            "furtherInformation": "Further details to be confirmed",
             "clientRelationshipToDeceased": "guardian",
         },
     }
@@ -219,10 +219,10 @@ def test_201_create_application_response_includes_deceased_details(client, auth_
     new_application = response.json()
     deceased = new_application["deceased"]
     assert isinstance(deceased["deceasedId"], int)
-    assert deceased["deceasedFirstName"] == "bob"
-    assert deceased["deceasedLastName"] == "boberton"
+    assert deceased["deceasedFirstName"] == "Test"
+    assert deceased["deceasedLastName"] == "Surname"
     assert deceased["deceasedDateOfBirth"] == "01-01-2000"
     assert deceased["deceasedDateOfDeath"] == "01-01-2025"
-    assert deceased["coronersReference"] == "beans"
-    assert deceased["furtherInformation"] == "he died"
+    assert deceased["coronersReference"] == "COR-2025-001"
+    assert deceased["furtherInformation"] == "Further details to be confirmed"
     assert deceased["clientRelationshipToDeceased"] == "guardian"

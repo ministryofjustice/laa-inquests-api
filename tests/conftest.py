@@ -64,8 +64,8 @@ def session_fixture():
             ApplicationPublicBody(public_body_id=PublicBodyId.DEPARTMENT_FOR_TRANSPORT)
         ]
         new_client = Client(
-            client_first_name="test",
-            client_last_name="surname",
+            client_first_name="Test",
+            client_last_name="Surname",
             date_of_birth="01-02-2003",
         )
         db_session.add(new_client)
@@ -74,12 +74,12 @@ def session_fixture():
 
         new_deceased = Deceased(
             client_id=new_client.client_id,
-            deceased_first_name="mrtest",
-            deceased_last_name="othername",
+            deceased_first_name="Test",
+            deceased_last_name="Surname",
             deceased_date_of_birth="01-02-1993",
             deceased_date_of_death="01-01-2026",
-            coroners_reference="test coroners reference",
-            further_information="something relevant",
+            coroners_reference="COR-2025-001",
+            further_information="Further details to be confirmed",
             client_relationship_to_deceased="sibling",
         )
 
