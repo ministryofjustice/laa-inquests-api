@@ -111,7 +111,9 @@ def patch_merits_decision(
         raise HTTPException(status_code=404, detail="Application not found")
 
     if not application.proceedings:
-        raise HTTPException(status_code=404, detail="No proceedings found for application")
+        raise HTTPException(
+            status_code=404, detail="No proceedings found for application"
+        )
 
     proceeding = application.proceedings[0]
     proceeding.merits_decision = request.merits_decision

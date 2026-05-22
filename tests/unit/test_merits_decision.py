@@ -17,12 +17,16 @@ def _make_request(value="REFUSED"):
 
 
 def test_merits_decision_defaults_to_pending():
-    proceeding = ApplicationProceeding(laa_reference=1, proceeding_id=ProceedingId.TEST1)
+    proceeding = ApplicationProceeding(
+        laa_reference=1, proceeding_id=ProceedingId.TEST1
+    )
     assert proceeding.merits_decision == "PENDING"
 
 
 def test_merits_decision_can_be_set_to_refused():
-    proceeding = ApplicationProceeding(laa_reference=1, proceeding_id=ProceedingId.TEST1)
+    proceeding = ApplicationProceeding(
+        laa_reference=1, proceeding_id=ProceedingId.TEST1
+    )
     proceeding.merits_decision = "REFUSED"
     assert proceeding.merits_decision == "REFUSED"
 
@@ -38,7 +42,9 @@ def test_merits_decision_update_parses_snake_case():
 
 
 def test_patch_merits_decision_calls_session_add_and_commit():
-    proceeding = ApplicationProceeding(laa_reference=1, proceeding_id=ProceedingId.TEST1)
+    proceeding = ApplicationProceeding(
+        laa_reference=1, proceeding_id=ProceedingId.TEST1
+    )
     application = Application(proceedings=[proceeding])
     session = MagicMock()
     session.get.return_value = application
@@ -50,7 +56,9 @@ def test_patch_merits_decision_calls_session_add_and_commit():
 
 
 def test_patch_merits_decision_sets_merits_decision_to_refused():
-    proceeding = ApplicationProceeding(laa_reference=1, proceeding_id=ProceedingId.TEST1)
+    proceeding = ApplicationProceeding(
+        laa_reference=1, proceeding_id=ProceedingId.TEST1
+    )
     application = Application(proceedings=[proceeding])
     session = MagicMock()
     session.get.return_value = application
