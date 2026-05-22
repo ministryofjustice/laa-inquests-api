@@ -4,7 +4,7 @@ from pydantic.alias_generators import to_camel
 from sqlalchemy import Column
 from sqlmodel import Field, Relationship, SQLModel, Enum
 from datetime import datetime, UTC
-from app.models.application.enums import ProceedingId, PublicBodyId
+from app.models.application.enums import MeritsDecision, ProceedingId, PublicBodyId
 
 
 # RELATIONS
@@ -230,7 +230,7 @@ class MeritsDecisionUpdate(BaseModel):
         alias_generator=to_camel,
         populate_by_name=True,
     )
-    merits_decision: str
+    merits_decision: MeritsDecision
 
 
 # RESPONSE BODY

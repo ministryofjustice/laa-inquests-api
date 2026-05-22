@@ -2,6 +2,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from fastapi import HTTPException
+from pydantic import ValidationError
 
 from app.models.application.enums import ProceedingId
 from app.models.application.index import (
@@ -39,6 +40,16 @@ def test_merits_decision_update_parses_camel_case():
 def test_merits_decision_update_parses_snake_case():
     update = MeritsDecisionUpdate(merits_decision="REFUSED")
     assert update.merits_decision == "REFUSED"
+
+
+def test_merits_decision_update_rejects_invalid_value():
+    with pytest.raises(ValidationError):
+        MeritsDecisionUpdate(merits_decision="INVALID_VALUE")
+
+
+def test_merits_decision_update_accepts_granted():
+    update = MeritsDecisionUpdate(merits_decision="GRANTED")
+    assert update.merits_decision == "GRANTED"
 
 
 def test_patch_merits_decision_calls_session_add_and_commit():

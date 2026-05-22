@@ -34,6 +34,8 @@ async def read_application(
 ) -> Application:
     """Get information about a given application."""
     application = session.get(Application, int(laa_reference))
+    if application is None:
+        raise HTTPException(status_code=404, detail="Application not found")
     return application
 
 
