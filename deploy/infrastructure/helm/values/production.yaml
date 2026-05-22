@@ -61,7 +61,8 @@ ingress:
     nginx.ingress.kubernetes.io/modsecurity-transaction-id: "$request_id"
     nginx.ingress.kubernetes.io/modsecurity-snippet: |
       SecRuleEngine On
-      SecDefaultAction "phase:2,pass,log,tag:github_team=laa-inquests
+      SecDefaultAction "phase:2,pass,log,tag:github_team=laa-inquests"
+      SecAction "id:900200,phase:1,nolog,pass,t:none,setvar:tx.allowed_methods=GET HEAD POST OPTIONS PATCH"
 
 resources:
   limits:
