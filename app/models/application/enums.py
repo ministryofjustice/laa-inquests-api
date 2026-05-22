@@ -1,6 +1,12 @@
 import enum
 
 
+class MeritsDecision(str, enum.Enum):
+    PENDING = "PENDING"
+    REFUSED = "REFUSED"
+    GRANTED = "GRANTED"
+
+
 class ProceedingId(str, enum.Enum):
     PC049 = "PC049"
     MN035 = "MN035"
