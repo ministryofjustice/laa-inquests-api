@@ -91,7 +91,7 @@ runs:
       shell: bash
       run: |
         echo "NODE_ENV=production" >> $GITHUB_ENV
-        echo "RATE_LIMIT_MAX=${{ inputs.ratelimit_max || '100' }}" >> $GITHUB_ENV
+        echo "RATE_LIMIT_MAX=${{ inputs.ratelimit_max || '10000' }}" >> $GITHUB_ENV
         echo "RATE_WINDOW_MS=${{ inputs.ratewindow_ms || '900000' }}" >> $GITHUB_ENV
         echo "SERVICE_NAME=${{ inputs.service_name || 'Inquests' }}" >> $GITHUB_ENV
         echo "SESSION_NAME=${{ inputs.session_name || 'sessionId' }}" >> $GITHUB_ENV

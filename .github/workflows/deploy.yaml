@@ -9,7 +9,7 @@ on:
     paths:
       - "deploy/**"
       - ".github/**"
-      - "src/**"
+      - "app/**"
       - "tests/**"
       - "Dockerfile"
   workflow_dispatch:
