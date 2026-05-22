@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlmodel import Session, select
 from typing import Sequence
 
@@ -12,6 +12,7 @@ from app.models.application.index import (
     ApplicationResponse,
     Client,
     Deceased,
+    MeritsDecisionUpdate,
     ProceedingId,
     PublicBodyId,
 )
@@ -95,3 +96,25 @@ def create_application(
     session.commit()
     session.refresh(new_application)
     return new_application
+
+
+@router.patch("/{laa_reference}/merits-decision", status_code=204)
+def patch_merits_decision(
+    laa_reference: str,
+    request: MeritsDecisionUpdate,
+    session: Session = Depends(get_session),
+    # current_user: User = Depends(get_current_active_user),
+) -> Response:
+    """Set the merits decision on the single proceeding for a given application."""
+    application = session.get(Application, int(laa_reference))
+    if application is None:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    if not application.proceedings:
+        raise HTTPException(status_code=404, detail="No proceedings found for application")
+
+    proceeding = application.proceedings[0]
+    proceeding.merits_decision = request.merits_decision
+    session.add(proceeding)
+    session.commit()
+    return Response(status_code=204)

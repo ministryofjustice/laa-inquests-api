@@ -225,6 +225,14 @@ class ApplicationCreate(BaseModel):
     proceedings: list[ProceedingCreate]
 
 
+class MeritsDecisionUpdate(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+    merits_decision: str
+
+
 # RESPONSE BODY
 class ClientResponse(BaseModel):
     model_config = ConfigDict(
