@@ -56,16 +56,8 @@ def test_200_client_addresses_included_on_application_response(
 
     requested_application = response.json()
     client_details = requested_application["client"]
-    assert (
-        client_details["correspondenceAddressSource"] == "USE_CLIENT_ADDRESS"
-    )  # TODO: USE_CLIENT_ADDRESS shouldn't have a correspondence address
-    assert client_details["correspondenceAddress"] == {
-        "addressLine1": "2 Example Lane",
-        "addressLine2": None,
-        "townOrCity": "London",
-        "county": None,
-        "postcode": "SW1A 1AA",
-    }
+    assert client_details["correspondenceAddressSource"] == "USE_CLIENT_HOME_ADDRESS"
+    assert client_details["correspondenceAddress"] is None
     assert client_details["homeAddress"] == {
         "addressLine1": "1 Example Lane",
         "addressLine2": None,

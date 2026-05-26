@@ -82,9 +82,11 @@ class Client(ClientBase, table=True):
     client_id: int | None = Field(default=None, primary_key=True)
     applications: list["Application"] = Relationship(back_populates="client")
     deceased: list["Deceased"] = Relationship(back_populates="client")
-    correspondence_address_id: int = Field(foreign_key="address.address_id")
+    correspondence_address_id: int | None = Field(
+        default=None, foreign_key="address.address_id"
+    )
     home_address_id: int = Field(foreign_key="address.address_id")
-    correspondence_address: "Address" = Relationship(
+    correspondence_address: Optional["Address"] = Relationship(
         sa_relationship_kwargs={"foreign_keys": "[Client.correspondence_address_id]"}
     )
     home_address: "Address" = Relationship(

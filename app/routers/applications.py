@@ -83,10 +83,8 @@ def create_application(
     session.commit()
     session.refresh(home_address_to_add)
 
-    # TODO if correspondence address is not supplied, leave blank. write tests for this specifically.
-    if correspondence_address_to_add is None:
-        correspondence_address_to_add = home_address_to_add
-    else:
+    # TODO Is correspondence_address_to_add really needed anymore
+    if correspondence_address_to_add is not None:
         session.refresh(correspondence_address_to_add)
 
     client_data = request.client.model_dump(
@@ -98,7 +96,11 @@ def create_application(
 
     new_client = Client(
         **client_data,
-        correspondence_address_id=correspondence_address_to_add.address_id,
+        correspondence_address_id=(
+            correspondence_address_to_add.address_id
+            if correspondence_address_to_add is not None
+            else None
+        ),
         home_address_id=home_address_to_add.address_id,
     )
     session.add(new_client)

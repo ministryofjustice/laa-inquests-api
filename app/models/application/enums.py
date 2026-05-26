@@ -8,9 +8,7 @@ class MeritsDecision(str, enum.Enum):
 
 
 class AddressSource(str, enum.Enum):
-    USE_CLIENT_ADDRESS = (
-        "USE_CLIENT_ADDRESS"  # TODO: Change this to USE_CLIENT_HOME_ADDRESS
-    )
+    USE_CLIENT_HOME_ADDRESS = "USE_CLIENT_HOME_ADDRESS"
     USE_PROVIDER_ADDRESS = "USE_PROVIDER_ADDRESS"
     USE_SPECIFIED_ADDRESS = "USE_SPECIFIED_ADDRESS"
 

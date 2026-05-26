@@ -16,9 +16,11 @@ def _make_request_body():
                 "townOrCity": "London",
                 "postcode": "SW1A 1AA",
             },
-            "homeAddress": {  # TODO One of these addresses in tests should use the line 2 and county
+            "homeAddress": {
                 "addressLine1": "1 Example Lane",
+                "addressLine2": "Flat 2",
                 "townOrCity": "London",
+                "county": "Greater London",
                 "postcode": "SW1A 1AA",
             },
         },
@@ -111,12 +113,33 @@ def test_201_responds_with_expected_client_details(client, auth_token):
     }
     assert client["homeAddress"] == {
         "addressLine1": "1 Example Lane",
-        "addressLine2": None,
+        "addressLine2": "Flat 2",
         "townOrCity": "London",
-        "county": None,
+        "county": "Greater London",
         "postcode": "SW1A 1AA",
     }
     assert not client["hasAppliedPreviously"]
+
+
+def test_201_create_application_can_omit_correspondence_address(client, auth_token):
+    request_body = _make_request_body()
+    request_body["client"]["correspondenceAddressSource"] = "USE_CLIENT_HOME_ADDRESS"
+    # TODO can we make the _make_request_body function do this/have more utility to facilitate different request bodies instead of mutating in tests?
+    request_body["client"].pop("correspondenceAddress")
+
+    response = client.post(
+        "/applications",
+        json=request_body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    client_details = response.json()["client"]
+    assert client_details["correspondenceAddressSource"] == "USE_CLIENT_HOME_ADDRESS"
+    assert client_details["correspondenceAddress"] is None
 
 
 def test_201_create_application_responds_with_expected_public_body_details(
