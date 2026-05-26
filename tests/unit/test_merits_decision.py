@@ -62,7 +62,9 @@ def test_patch_merits_decision_calls_session_add_and_commit():
 
     patch_merits_decision("1", _make_request(), session)
 
-    session.add.assert_called_once_with(proceeding)
+    session.add.assert_any_call(application)
+    session.add.assert_any_call(proceeding)
+    assert session.add.call_count == 2
     session.commit.assert_called_once()
 
 
@@ -98,3 +100,16 @@ def test_patch_merits_decision_raises_404_when_no_proceedings():
         patch_merits_decision("1", _make_request(), session)
 
     assert exc.value.status_code == 404
+
+
+def test_patch_merits_decision_sets_overall_decision_on_application():
+    proceeding = ApplicationProceeding(
+        laa_reference=1, proceeding_id=ProceedingId.TEST1
+    )
+    application = Application(proceedings=[proceeding])
+    session = MagicMock()
+    session.get.return_value = application
+
+    patch_merits_decision("1", _make_request("REFUSED"), session)
+
+    assert application.overall_decision == "REFUSED"

@@ -65,3 +65,8 @@ def test_204_patch_merits_decision_updates_db(session, client, auth_token):
         )
     ).first()
     assert proceeding.merits_decision == "REFUSED"
+
+    application = session.exec(
+        select(Application).where(Application.laa_reference == laa_reference)
+    ).first()
+    assert application.overall_decision == "REFUSED"
