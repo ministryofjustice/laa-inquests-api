@@ -119,6 +119,10 @@ def patch_merits_decision(
 
     proceeding = application.proceedings[0]
     proceeding.merits_decision = request.merits_decision
+
+    application.overall_decision = request.merits_decision
+
+    session.add(application)
     session.add(proceeding)
     session.commit()
     return Response(status_code=204)
