@@ -1,29 +1,29 @@
-def _make_request_body():
-    return {
-        "proceedings": [
-            {
-                "proceedingId": "TEST1",
-            }
-        ],
-        "client": {
-            "clientFirstName": "Test",
-            "clientLastName": "Surname",
-            "dateOfBirth": "01-01-1990",
-            "nationalInsuranceNumber": "AB12345A",
-            "correspondenceAddressSource": "USE_SPECIFIED_ADDRESS",
-            "correspondenceAddress": {
-                "addressLine1": "2 Example Lane",
-                "townOrCity": "London",
-                "postcode": "SW1A 1AA",
-            },
-            "homeAddress": {
-                "addressLine1": "1 Example Lane",
-                "addressLine2": "Flat 2",
-                "townOrCity": "London",
-                "county": "Greater London",
-                "postcode": "SW1A 1AA",
-            },
+def _make_request_body(client_overrides=None):
+    client = {
+        "clientFirstName": "Test",
+        "clientLastName": "Surname",
+        "dateOfBirth": "01-01-1990",
+        "nationalInsuranceNumber": "AB12345A",
+        "correspondenceAddressSource": "USE_SPECIFIED_ADDRESS",
+        "correspondenceAddress": {
+            "addressLine1": "2 Example Lane",
+            "townOrCity": "London",
+            "postcode": "SW1A 1AA",
         },
+        "hasNoFixedAbode": False,
+        "homeAddress": {
+            "addressLine1": "1 Example Lane",
+            "addressLine2": "Flat 2",
+            "townOrCity": "London",
+            "county": "Greater London",
+            "postcode": "SW1A 1AA",
+        },
+    }
+    if client_overrides:
+        client.update(client_overrides)
+    return {
+        "proceedings": [{"proceedingId": "TEST1"}],
+        "client": client,
         "publicBodies": [{"publicBodyId": "Department for Transport"}],
         "deceased": {
             "deceasedFirstName": "Test",
@@ -122,9 +122,9 @@ def test_201_responds_with_expected_client_details(client, auth_token):
 
 
 def test_201_create_application_can_omit_correspondence_address(client, auth_token):
-    request_body = _make_request_body()
-    request_body["client"]["correspondenceAddressSource"] = "USE_CLIENT_HOME_ADDRESS"
-    # TODO can we make the _make_request_body function do this/have more utility to facilitate different request bodies instead of mutating in tests?
+    request_body = _make_request_body(
+        {"correspondenceAddressSource": "USE_CLIENT_HOME_ADDRESS"}
+    )
     request_body["client"].pop("correspondenceAddress")
 
     response = client.post(
@@ -178,3 +178,85 @@ def test_201_create_application_response_includes_deceased_details(client, auth_
     assert deceased["coronersReference"] == "COR-2025-001"
     assert deceased["furtherInformation"] == "Further details to be confirmed"
     assert deceased["clientRelationshipToDeceased"] == "guardian"
+
+
+def test_422_rejected_when_has_no_fixed_abode_is_false_and_home_address_is_absent(
+    client, auth_token
+):
+    body = _make_request_body(
+        {"correspondenceAddressSource": "USE_CLIENT_HOME_ADDRESS", "homeAddress": None}
+    )
+    del body["client"]["correspondenceAddress"]
+
+    response = client.post(
+        "/applications",
+        json=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_422_rejected_when_has_no_fixed_abode_is_true_and_home_address_is_provided(
+    client, auth_token
+):
+    body = _make_request_body({"hasNoFixedAbode": True})
+
+    response = client.post(
+        "/applications",
+        json=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_201_accepted_when_has_no_fixed_abode_is_true_and_no_home_address_provided(
+    client, auth_token
+):
+    body = _make_request_body(
+        {
+            "hasNoFixedAbode": True,
+            "correspondenceAddressSource": "USE_SPECIFIED_ADDRESS",
+        }
+    )
+    body["client"].pop("homeAddress")
+
+    response = client.post(
+        "/applications",
+        json=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    client_data = response.json()["client"]
+    assert client_data["hasNoFixedAbode"] is True
+    assert client_data["homeAddress"] is None
+
+
+def test_201_accepted_when_has_no_fixed_abode_is_false_and_home_address_is_provided(
+    client, auth_token
+):
+    response = client.post(
+        "/applications",
+        json=_make_request_body({"hasNoFixedAbode": False}),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    client_data = response.json()["client"]
+    assert client_data["hasNoFixedAbode"] is False
+    assert client_data["homeAddress"] is not None
+    assert client_data["homeAddress"]["addressLine1"] == "1 Example Lane"

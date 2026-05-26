@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 from pydantic.alias_generators import to_camel
 from sqlalchemy import Column
 from sqlmodel import Field, Relationship, SQLModel, Enum
@@ -51,6 +51,7 @@ class ClientBase(SQLModel):
     national_insurance_number: str | None = None
     has_applied_previously: bool = False
     prev_application_reference: str | None = None
+    has_no_fixed_abode: bool = False
     correspondence_address_source: AddressSource = Field(
         sa_column=Column(Enum(AddressSource))
     )
@@ -85,11 +86,11 @@ class Client(ClientBase, table=True):
     correspondence_address_id: int | None = Field(
         default=None, foreign_key="address.address_id"
     )
-    home_address_id: int = Field(foreign_key="address.address_id")
+    home_address_id: int | None = Field(default=None, foreign_key="address.address_id")
     correspondence_address: Optional["Address"] = Relationship(
         sa_relationship_kwargs={"foreign_keys": "[Client.correspondence_address_id]"}
     )
-    home_address: "Address" = Relationship(
+    home_address: Optional["Address"] = Relationship(
         sa_relationship_kwargs={"foreign_keys": "[Client.home_address_id]"}
     )
 
@@ -224,9 +225,22 @@ class ClientCreate(BaseModel):
     national_insurance_number: Optional[str] = None
     correspondence_address_source: str
     correspondence_address: Optional[AddressCreate] = None
-    home_address: AddressCreate
+    home_address: Optional[AddressCreate] = None
     has_applied_previously: bool = False
     prev_application_reference: Optional[str] = None
+    has_no_fixed_abode: bool = False
+
+    @model_validator(mode="after")
+    def validate_home_address_against_fixed_abode(self) -> "ClientCreate":
+        if self.has_no_fixed_abode and self.home_address is not None:
+            raise ValueError(
+                "home_address must not be provided when has_no_fixed_abode is true"
+            )
+        if not self.has_no_fixed_abode and self.home_address is None:
+            raise ValueError(
+                "home_address is required when has_no_fixed_abode is false"
+            )
+        return self
 
 
 class DeceasedCreate(BaseModel):
@@ -303,9 +317,10 @@ class ClientResponse(BaseModel):
     national_insurance_number: Optional[str] = None
     correspondence_address_source: str
     correspondence_address: Optional[AddressResponse] = None
-    home_address: AddressResponse
+    home_address: Optional[AddressResponse] = None
     has_applied_previously: bool = False
     prev_application_reference: Optional[str] = None
+    has_no_fixed_abode: bool = False
 
 
 class PublicBodyResponse(BaseModel):

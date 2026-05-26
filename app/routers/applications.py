@@ -78,10 +78,15 @@ def create_application(
         )
         session.add(correspondence_address)
 
-    home_address_to_add = Address(**request.client.home_address.model_dump())
-    session.add(home_address_to_add)
-    session.commit()
-    session.refresh(home_address_to_add)
+    home_address_id = None
+    if request.client.home_address is not None:
+        home_address_to_add = Address(**request.client.home_address.model_dump())
+        session.add(home_address_to_add)
+        session.commit()
+        session.refresh(home_address_to_add)
+        home_address_id = home_address_to_add.address_id
+    else:
+        session.commit()
 
     correspondence_address_id = None
     if correspondence_address is not None:
@@ -98,7 +103,7 @@ def create_application(
     new_client = Client(
         **client_data,
         correspondence_address_id=correspondence_address_id,
-        home_address_id=home_address_to_add.address_id,
+        home_address_id=home_address_id,
     )
     session.add(new_client)
     session.commit()
