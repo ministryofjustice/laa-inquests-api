@@ -71,21 +71,22 @@ def create_application(
         public_body_to_add = ApplicationPublicBody(public_body_id=public_body_enum)
         public_bodies_to_add.append(public_body_to_add)
 
-    correspondence_address_to_add = None
+    correspondence_address = None
     if request.client.correspondence_address is not None:
-        correspondence_address_to_add = Address(
+        correspondence_address = Address(
             **request.client.correspondence_address.model_dump()
         )
-        session.add(correspondence_address_to_add)
+        session.add(correspondence_address)
 
     home_address_to_add = Address(**request.client.home_address.model_dump())
     session.add(home_address_to_add)
     session.commit()
     session.refresh(home_address_to_add)
 
-    # TODO Is correspondence_address_to_add really needed anymore
-    if correspondence_address_to_add is not None:
-        session.refresh(correspondence_address_to_add)
+    correspondence_address_id = None
+    if correspondence_address is not None:
+        session.refresh(correspondence_address)
+        correspondence_address_id = correspondence_address.address_id
 
     client_data = request.client.model_dump(
         exclude={"correspondence_address", "home_address"}
@@ -96,11 +97,7 @@ def create_application(
 
     new_client = Client(
         **client_data,
-        correspondence_address_id=(
-            correspondence_address_to_add.address_id
-            if correspondence_address_to_add is not None
-            else None
-        ),
+        correspondence_address_id=correspondence_address_id,
         home_address_id=home_address_to_add.address_id,
     )
     session.add(new_client)
