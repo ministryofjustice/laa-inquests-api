@@ -4,7 +4,12 @@ from pydantic.alias_generators import to_camel
 from sqlalchemy import Column
 from sqlmodel import Field, Relationship, SQLModel, Enum
 from datetime import datetime, UTC
-from app.models.application.enums import MeritsDecision, ProceedingId, PublicBodyId
+from app.models.application.enums import (
+    AddressSource,
+    MeritsDecision,
+    ProceedingId,
+    PublicBodyId,
+)
 
 
 # RELATIONS
@@ -44,10 +49,19 @@ class ClientBase(SQLModel):
     client_last_name_at_birth: str | None = None
     date_of_birth: str
     national_insurance_number: str | None = None
-    correspondence_address: str | None = None
-    home_address: str | None = None
     has_applied_previously: bool = False
     prev_application_reference: str | None = None
+    correspondence_address_source: AddressSource = Field(
+        sa_column=Column(Enum(AddressSource))
+    )
+
+
+class AddressBase(SQLModel):
+    address_line_1: str
+    address_line_2: str | None = None
+    town_or_city: str
+    county: str | None = None
+    postcode: str
 
 
 class DeceasedBase(SQLModel):
@@ -60,10 +74,22 @@ class DeceasedBase(SQLModel):
     client_relationship_to_deceased: str
 
 
+class Address(AddressBase, table=True):
+    address_id: int | None = Field(default=None, primary_key=True)
+
+
 class Client(ClientBase, table=True):
     client_id: int | None = Field(default=None, primary_key=True)
     applications: list["Application"] = Relationship(back_populates="client")
     deceased: list["Deceased"] = Relationship(back_populates="client")
+    correspondence_address_id: int = Field(foreign_key="address.address_id")
+    home_address_id: int = Field(foreign_key="address.address_id")
+    correspondence_address: "Address" = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "[Client.correspondence_address_id]"}
+    )
+    home_address: "Address" = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "[Client.home_address_id]"}
+    )
 
 
 class ApplicationBase(SQLModel):
@@ -170,6 +196,19 @@ class ProceedingCreate(BaseModel):
     proceeding_id: str
 
 
+class AddressCreate(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+    address_line_1: str
+    address_line_2: Optional[str] = None
+    town_or_city: str
+    county: Optional[str] = None
+    postcode: str
+
+
 class ClientCreate(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -181,8 +220,9 @@ class ClientCreate(BaseModel):
     client_last_name_at_birth: Optional[str] = None
     date_of_birth: str
     national_insurance_number: Optional[str] = None
-    correspondence_address: Optional[str] = None
-    home_address: Optional[str] = None
+    correspondence_address_source: str
+    correspondence_address: Optional[AddressCreate] = None
+    home_address: AddressCreate
     has_applied_previously: bool = False
     prev_application_reference: Optional[str] = None
 
@@ -234,6 +274,19 @@ class MeritsDecisionUpdate(BaseModel):
 
 
 # RESPONSE BODY
+class AddressResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+    address_line_1: str
+    address_line_2: Optional[str] = None
+    town_or_city: str
+    county: Optional[str] = None
+    postcode: str
+
+
 class ClientResponse(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -246,8 +299,9 @@ class ClientResponse(BaseModel):
     client_last_name_at_birth: Optional[str] = None
     date_of_birth: str
     national_insurance_number: Optional[str] = None
-    correspondence_address: Optional[str] = None
-    home_address: Optional[str] = None
+    correspondence_address_source: str
+    correspondence_address: Optional[AddressResponse] = None
+    home_address: AddressResponse
     has_applied_previously: bool = False
     prev_application_reference: Optional[str] = None
 

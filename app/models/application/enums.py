@@ -7,6 +7,14 @@ class MeritsDecision(str, enum.Enum):
     GRANTED = "GRANTED"
 
 
+class AddressSource(str, enum.Enum):
+    USE_CLIENT_ADDRESS = (
+        "USE_CLIENT_ADDRESS"  # TODO: Change this to USE_CLIENT_HOME_ADDRESS
+    )
+    USE_PROVIDER_ADDRESS = "USE_PROVIDER_ADDRESS"
+    USE_SPECIFIED_ADDRESS = "USE_SPECIFIED_ADDRESS"
+
+
 class ProceedingId(str, enum.Enum):
     PC049 = "PC049"
     MN035 = "MN035"

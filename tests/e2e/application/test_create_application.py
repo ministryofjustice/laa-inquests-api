@@ -1,7 +1,5 @@
-def test_201_create_application_response_contains_expected_base_properties(
-    client, auth_token
-):
-    request_body = {
+def _make_request_body():
+    return {
         "proceedings": [
             {
                 "proceedingId": "TEST1",
@@ -12,8 +10,17 @@ def test_201_create_application_response_contains_expected_base_properties(
             "clientLastName": "Surname",
             "dateOfBirth": "01-01-1990",
             "nationalInsuranceNumber": "AB12345A",
-            "correspondenceAddress": "2 Example Lane, London",
-            "homeAddress": "1 Example Lane, London",
+            "correspondenceAddressSource": "USE_SPECIFIED_ADDRESS",
+            "correspondenceAddress": {
+                "addressLine1": "2 Example Lane",
+                "townOrCity": "London",
+                "postcode": "SW1A 1AA",
+            },
+            "homeAddress": {  # TODO One of these addresses in tests should use the line 2 and county
+                "addressLine1": "1 Example Lane",
+                "townOrCity": "London",
+                "postcode": "SW1A 1AA",
+            },
         },
         "publicBodies": [{"publicBodyId": "Department for Transport"}],
         "deceased": {
@@ -26,14 +33,20 @@ def test_201_create_application_response_contains_expected_base_properties(
             "clientRelationshipToDeceased": "guardian",
         },
     }
+
+
+def test_201_create_application_response_contains_expected_base_properties(
+    client, auth_token
+):
     response = client.post(
         "/applications",
-        json=request_body,
+        json=_make_request_body(),
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {auth_token}",
         },
     )
+    assert response.status_code == 201
     new_application = response.json()
     assert isinstance(new_application["laaReference"], int)
     assert isinstance(new_application["createdAt"], str)
@@ -49,34 +62,9 @@ def test_201_create_application_response_contains_expected_base_properties(
 def test_201_create_application_response_contains_expected_proceeding_information(
     client, auth_token
 ):
-    request_body = {
-        "proceedings": [
-            {
-                "proceedingId": "TEST1",
-            }
-        ],
-        "client": {
-            "clientFirstName": "Test",
-            "clientLastName": "Surname",
-            "dateOfBirth": "01-01-1990",
-            "nationalInsuranceNumber": "AB12345A",
-            "correspondenceAddress": "2 Example Lane, London",
-            "homeAddress": "1 Example Lane, London",
-        },
-        "publicBodies": [{"publicBodyId": "Department for Transport"}],
-        "deceased": {
-            "deceasedFirstName": "Test",
-            "deceasedLastName": "Surname",
-            "deceasedDateOfBirth": "01-01-2000",
-            "deceasedDateOfDeath": "01-01-2025",
-            "coronersReference": "COR-2025-001",
-            "furtherInformation": "Further details to be confirmed",
-            "clientRelationshipToDeceased": "guardian",
-        },
-    }
     response = client.post(
         "/applications",
-        json=request_body,
+        json=_make_request_body(),
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {auth_token}",
@@ -97,33 +85,9 @@ def test_201_create_application_response_contains_expected_proceeding_informatio
 
 
 def test_201_responds_with_expected_client_details(client, auth_token):
-    request_body = {
-        "proceedings": [
-            {
-                "proceedingId": "TEST1",
-            }
-        ],
-        "client": {
-            "clientFirstName": "Test",
-            "clientLastName": "Surname",
-            "dateOfBirth": "01-01-1990",
-            "correspondenceAddress": "2 Example Lane, London",
-            "homeAddress": "1 Example Lane, London",
-        },
-        "publicBodies": [{"publicBodyId": "Department for Transport"}],
-        "deceased": {
-            "deceasedFirstName": "Test",
-            "deceasedLastName": "Surname",
-            "deceasedDateOfBirth": "01-01-2000",
-            "deceasedDateOfDeath": "01-01-2025",
-            "coronersReference": "COR-2025-001",
-            "furtherInformation": "Further details to be confirmed",
-            "clientRelationshipToDeceased": "guardian",
-        },
-    }
     response = client.post(
         "/applications",
-        json=request_body,
+        json=_make_request_body(),
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {auth_token}",
@@ -136,42 +100,31 @@ def test_201_responds_with_expected_client_details(client, auth_token):
     assert client["clientLastName"] == "Surname"
     assert client["clientLastNameAtBirth"] is None
     assert client["dateOfBirth"] == "01-01-1990"
-    assert client["nationalInsuranceNumber"] is None
-    assert client["correspondenceAddress"] == "2 Example Lane, London"
-    assert client["homeAddress"] == "1 Example Lane, London"
+    assert client["nationalInsuranceNumber"] == "AB12345A"
+    assert client["correspondenceAddressSource"] == "USE_SPECIFIED_ADDRESS"
+    assert client["correspondenceAddress"] == {
+        "addressLine1": "2 Example Lane",
+        "addressLine2": None,
+        "townOrCity": "London",
+        "county": None,
+        "postcode": "SW1A 1AA",
+    }
+    assert client["homeAddress"] == {
+        "addressLine1": "1 Example Lane",
+        "addressLine2": None,
+        "townOrCity": "London",
+        "county": None,
+        "postcode": "SW1A 1AA",
+    }
     assert not client["hasAppliedPreviously"]
 
 
 def test_201_create_application_responds_with_expected_public_body_details(
     client, auth_token
 ):
-    request_body = {
-        "proceedings": [
-            {
-                "proceedingId": "TEST1",
-            }
-        ],
-        "client": {
-            "clientFirstName": "Test",
-            "clientLastName": "Surname",
-            "dateOfBirth": "01-01-1990",
-            "correspondenceAddress": "2 Example Lane, London",
-            "homeAddress": "1 Example Lane, London",
-        },
-        "publicBodies": [{"publicBodyId": "Department for Transport"}],
-        "deceased": {
-            "deceasedFirstName": "Test",
-            "deceasedLastName": "Surname",
-            "deceasedDateOfBirth": "01-01-2000",
-            "deceasedDateOfDeath": "01-01-2025",
-            "coronersReference": "COR-2025-001",
-            "furtherInformation": "Further details to be confirmed",
-            "clientRelationshipToDeceased": "guardian",
-        },
-    }
     response = client.post(
         "/applications",
-        json=request_body,
+        json=_make_request_body(),
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {auth_token}",
@@ -184,33 +137,9 @@ def test_201_create_application_responds_with_expected_public_body_details(
 
 
 def test_201_create_application_response_includes_deceased_details(client, auth_token):
-    request_body = {
-        "proceedings": [
-            {
-                "proceedingId": "TEST1",
-            }
-        ],
-        "client": {
-            "clientFirstName": "Test",
-            "clientLastName": "Surname",
-            "dateOfBirth": "01-01-1990",
-            "correspondenceAddress": "2 Example Lane, London",
-            "homeAddress": "1 Example Lane, London",
-        },
-        "publicBodies": [{"publicBodyId": "Department for Transport"}],
-        "deceased": {
-            "deceasedFirstName": "Test",
-            "deceasedLastName": "Surname",
-            "deceasedDateOfBirth": "01-01-2000",
-            "deceasedDateOfDeath": "01-01-2025",
-            "coronersReference": "COR-2025-001",
-            "furtherInformation": "Further details to be confirmed",
-            "clientRelationshipToDeceased": "guardian",
-        },
-    }
     response = client.post(
         "/applications",
-        json=request_body,
+        json=_make_request_body(),
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {auth_token}",

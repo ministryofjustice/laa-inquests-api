@@ -5,11 +5,13 @@ from typing import Sequence
 # from app.auth.security import get_current_active_user
 from app.db import get_session
 from app.models.application.index import (
+    Address,
     Application,
     ApplicationCreate,
     ApplicationProceeding,
     ApplicationPublicBody,
     ApplicationResponse,
+    AddressSource,
     Client,
     Deceased,
     MeritsDecisionUpdate,
@@ -69,7 +71,36 @@ def create_application(
         public_body_to_add = ApplicationPublicBody(public_body_id=public_body_enum)
         public_bodies_to_add.append(public_body_to_add)
 
-    new_client = Client(**request.client.model_dump())
+    correspondence_address_to_add = None
+    if request.client.correspondence_address is not None:
+        correspondence_address_to_add = Address(
+            **request.client.correspondence_address.model_dump()
+        )
+        session.add(correspondence_address_to_add)
+
+    home_address_to_add = Address(**request.client.home_address.model_dump())
+    session.add(home_address_to_add)
+    session.commit()
+    session.refresh(home_address_to_add)
+
+    # TODO if correspondence address is not supplied, leave blank. write tests for this specifically.
+    if correspondence_address_to_add is None:
+        correspondence_address_to_add = home_address_to_add
+    else:
+        session.refresh(correspondence_address_to_add)
+
+    client_data = request.client.model_dump(
+        exclude={"correspondence_address", "home_address"}
+    )
+    client_data["correspondence_address_source"] = AddressSource(
+        client_data["correspondence_address_source"]
+    )
+
+    new_client = Client(
+        **client_data,
+        correspondence_address_id=correspondence_address_to_add.address_id,
+        home_address_id=home_address_to_add.address_id,
+    )
     session.add(new_client)
     session.commit()
     session.refresh(new_client)
