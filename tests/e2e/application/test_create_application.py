@@ -34,6 +34,7 @@ def _make_request_body(client_overrides=None):
             "furtherInformation": "Further details to be confirmed",
             "clientRelationshipToDeceased": "guardian",
         },
+        "isClientCorrespondenceRecipient": True,
     }
 
 
@@ -111,6 +112,8 @@ def test_201_responds_with_expected_client_details(client, auth_token):
         "county": None,
         "postcode": "SW1A 1AA",
     }
+    assert new_application["isClientCorrespondenceRecipient"] is True
+    assert new_application["correspondenceRecipient"] is None
     assert client["homeAddress"] == {
         "addressLine1": "1 Example Lane",
         "addressLine2": "Flat 2",
@@ -260,3 +263,87 @@ def test_201_accepted_when_has_no_fixed_abode_is_false_and_home_address_is_provi
     assert client_data["hasNoFixedAbode"] is False
     assert client_data["homeAddress"] is not None
     assert client_data["homeAddress"]["addressLine1"] == "1 Example Lane"
+
+
+def test_201_create_application_includes_explicit_correspondence_recipient(
+    client, auth_token
+):
+    body = _make_request_body()
+    body["isClientCorrespondenceRecipient"] = False
+    body["correspondenceRecipient"] = {
+        "recipientType": "ORGANISATION",
+        "recipientName": "Inquests Support Org",
+    }
+
+    response = client.post(
+        "/applications",
+        json=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.json()["isClientCorrespondenceRecipient"] is False
+    assert response.json()["correspondenceRecipient"] == {
+        "recipientType": "ORGANISATION",
+        "recipientName": "Inquests Support Org",
+    }
+
+
+def test_422_rejected_when_client_is_recipient_and_correspondence_recipient_provided(
+    client, auth_token
+):
+    body = _make_request_body()
+    body["correspondenceRecipient"] = {
+        "recipientType": "PERSON",
+        "recipientName": "Someone Else",
+    }
+
+    response = client.post(
+        "/applications",
+        json=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_422_rejected_when_client_is_not_recipient_and_correspondence_recipient_missing(
+    client, auth_token
+):
+    body = _make_request_body()
+    body["isClientCorrespondenceRecipient"] = False
+
+    response = client.post(
+        "/applications",
+        json=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_422_rejected_when_is_client_correspondence_recipient_is_missing(
+    client, auth_token
+):
+    body = _make_request_body()
+    del body["isClientCorrespondenceRecipient"]
+
+    response = client.post(
+        "/applications",
+        json=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422

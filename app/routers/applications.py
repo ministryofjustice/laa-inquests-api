@@ -128,6 +128,19 @@ def create_application(
         deceased_id=new_deceased.deceased_id,
         proceedings=proceedings_to_add,
         public_bodies=public_bodies_to_add,
+        is_client_correspondence_recipient=request.is_client_correspondence_recipient,
+        correspondence_recipient_type=(
+            request.correspondence_recipient.recipient_type
+            if not request.is_client_correspondence_recipient
+            and request.correspondence_recipient is not None
+            else None
+        ),
+        correspondence_recipient_name=(
+            request.correspondence_recipient.recipient_name
+            if not request.is_client_correspondence_recipient
+            and request.correspondence_recipient is not None
+            else None
+        ),
     )
     session.add(new_application)
     session.commit()

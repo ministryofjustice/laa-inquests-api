@@ -6,6 +6,7 @@ from sqlmodel import Field, Relationship, SQLModel, Enum
 from datetime import datetime, UTC
 from app.models.application.enums import (
     AddressSource,
+    CorrespondenceRecipientType,
     MeritsDecision,
     ProceedingId,
     PublicBodyId,
@@ -107,6 +108,7 @@ class ApplicationBase(SQLModel):
     application_type: str | None = "INITIAL"
     auto_grant: bool | None = True
     overall_decision: str | None = "PENDING"
+    is_client_correspondence_recipient: bool = True
 
 
 class Deceased(DeceasedBase, table=True):
@@ -128,9 +130,33 @@ class Application(ApplicationBase, table=True):
     client_id: int | None = Field(default=None, foreign_key="client.client_id")
     client: Client | None = Relationship(back_populates="applications")
     deceased_id: int = Field(foreign_key="deceased.deceased_id")
+    correspondence_recipient_type: CorrespondenceRecipientType | None = Field(
+        default=None,
+        sa_column=Column(Enum(CorrespondenceRecipientType), nullable=True),
+    )
+    correspondence_recipient_name: str | None = None
     deceased: Deceased | None = Relationship(
         sa_relationship_kwargs={"uselist": False}, back_populates="application"
     )
+
+    @property
+    def correspondence_recipient(self) -> Optional["CorrespondenceRecipientResponse"]:
+        if self.is_client_correspondence_recipient:
+            return None
+
+        if (
+            self.correspondence_recipient_type is not None
+            and self.correspondence_recipient_name is not None
+        ):
+            return CorrespondenceRecipientResponse(
+                recipient_type=self.correspondence_recipient_type,
+                recipient_name=self.correspondence_recipient_name,
+            )
+
+        if self.client is None:
+            return None
+
+        return None
 
 
 class ApplicationPublicBody(SQLModel, table=True):
@@ -267,6 +293,16 @@ class PublicBodyCreate(BaseModel):
     public_body_id: str
 
 
+class CorrespondenceRecipientCreate(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+    recipient_type: CorrespondenceRecipientType
+    recipient_name: str
+
+
 class ApplicationCreate(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -279,6 +315,24 @@ class ApplicationCreate(BaseModel):
     deceased: DeceasedCreate
     publicBodies: list[PublicBodyCreate]
     proceedings: list[ProceedingCreate]
+    is_client_correspondence_recipient: bool
+    correspondence_recipient: CorrespondenceRecipientCreate | None = None
+
+    @model_validator(mode="after")
+    def validate_correspondence_recipient(self) -> "ApplicationCreate":
+        if self.is_client_correspondence_recipient:
+            if self.correspondence_recipient is not None:
+                raise ValueError(
+                    "correspondence_recipient must not be provided when is_client_correspondence_recipient is true"
+                )
+            return self
+
+        if self.correspondence_recipient is None:
+            raise ValueError(
+                "correspondence_recipient is required when is_client_correspondence_recipient is false"
+            )
+
+        return self
 
 
 class MeritsDecisionUpdate(BaseModel):
@@ -321,6 +375,16 @@ class ClientResponse(BaseModel):
     has_applied_previously: bool = False
     prev_application_reference: Optional[str] = None
     has_no_fixed_abode: bool = False
+
+
+class CorrespondenceRecipientResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+    recipient_type: CorrespondenceRecipientType
+    recipient_name: str
 
 
 class PublicBodyResponse(BaseModel):
@@ -382,7 +446,9 @@ class ApplicationResponse(BaseModel):
     application_type: str
     auto_grant: bool
     overall_decision: str
+    is_client_correspondence_recipient: bool
     proceedings: list[ProceedingResponse] = []
     public_bodies: list[PublicBodyResponse] = []
+    correspondence_recipient: CorrespondenceRecipientResponse | None = None
     client: ClientResponse
     deceased: DeceasedResponse
