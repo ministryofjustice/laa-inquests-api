@@ -1,0 +1,11 @@
+version: v1.5.0
+ignore:
+    "SNYK-DEBIAN13-PERL-17037371":
+        - "*":
+            reason: "Issue in base image"
+    "SNYK-DEBIAN13-PERL-17037374":
+        - "*":
+            reason: "Issue in base image"
+    "SNYK-DEBIAN13-PERL-17037434":
+        - "*":
+            reason: "Issue in base image"

@@ -51,8 +51,8 @@ services:
       - ./app:/home/app/laa-inquests-api/app
       - ./tests:/home/app/laa-inquests-api/tests
     depends_on:
-      db:
-        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
 
   migrations:
     build: .

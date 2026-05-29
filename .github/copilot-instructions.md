@@ -14,7 +14,7 @@
 - **Run tests after every change.** New tests must fail first, then pass after implementation. Fix code, not tests, if refactoring breaks them.
 - **NEVER install a new dependency.** Stop and recommend a dependency for the user to add to the appropriate `requirements/source/*.in` file.
 - **All code MUST match the architecture** — keep business logic out of routers. Routers handle HTTP only.
-- **If a database schema change is required**, create an Alembic migration: `alembic revision --autogenerate -m "description"`.
+- **If a database schema change is required**, e.g. any time a model is changed, create an Alembic migration: `alembic revision --autogenerate -m "description"`.
 - **When finished**, run all checks and update documentation.
 
 ### Checks before completing any task

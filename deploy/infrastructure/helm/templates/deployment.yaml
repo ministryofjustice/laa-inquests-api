@@ -30,6 +30,13 @@ spec:
       serviceAccountName: {{ include "laa-inquests-api.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: run-migrations
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: [ "alembic", "upgrade", "head" ]
+          env:
+            {{ include "laa-inquests-api.app.vars" . | nindent 12 }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:

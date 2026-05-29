@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, model_validator, Field as PydanticField
 from pydantic.alias_generators import to_camel
 from sqlalchemy import Column
 from sqlmodel import Field, Relationship, SQLModel, Enum
@@ -222,7 +222,7 @@ class ProceedingCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    proceeding_id: str
+    proceeding_id: str = PydanticField(examples=["IQ001"])
 
 
 class AddressCreate(BaseModel):
@@ -231,11 +231,11 @@ class AddressCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    address_line_1: str
-    address_line_2: Optional[str] = None
-    town_or_city: str
-    county: Optional[str] = None
-    postcode: str
+    address_line_1: str = PydanticField(examples=["123 Example Street"])
+    address_line_2: Optional[str] = PydanticField(default=None, examples=["Jones"])
+    town_or_city: str = PydanticField(examples=["Example Town"])
+    county: Optional[str] = PydanticField(default=None, examples=["Jones"])
+    postcode: str = PydanticField(examples=["AA1 1AA"])
 
 
 class ClientCreate(BaseModel):
@@ -244,17 +244,25 @@ class ClientCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    client_first_name: str
-    client_last_name: str
-    client_last_name_at_birth: Optional[str] = None
-    date_of_birth: str
-    national_insurance_number: Optional[str] = None
-    correspondence_address_source: str
+    client_first_name: str = PydanticField(examples=["Jane"])
+    client_last_name: str = PydanticField(examples=["Smith"])
+    client_last_name_at_birth: Optional[str] = PydanticField(
+        default=None, examples=["Jones"]
+    )
+    date_of_birth: str = PydanticField(examples=["2000-01-01"])
+    national_insurance_number: Optional[str] = PydanticField(
+        default=None, examples=["AA123456A"]
+    )
+    has_applied_previously: bool = PydanticField(default=False, examples=[False])
+    prev_application_reference: Optional[str] = PydanticField(
+        default=None, examples=["TBD"]
+    )
+    correspondence_address_source: str = PydanticField(
+        examples=["USE_CLIENT_HOME_ADDRESS"]
+    )
     correspondence_address: Optional[AddressCreate] = None
     home_address: Optional[AddressCreate] = None
-    has_applied_previously: bool = False
-    prev_application_reference: Optional[str] = None
-    has_no_fixed_abode: bool = False
+    has_no_fixed_abode: bool = PydanticField(default=False, examples=[False])
 
     @model_validator(mode="after")
     def validate_home_address_against_fixed_abode(self) -> "ClientCreate":
@@ -275,13 +283,15 @@ class DeceasedCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    deceased_first_name: str
-    deceased_last_name: str
-    deceased_date_of_birth: str
-    deceased_date_of_death: str
-    coroners_reference: str
-    further_information: str | None
-    client_relationship_to_deceased: str
+    deceased_first_name: str = PydanticField(examples=["John"])
+    deceased_last_name: str = PydanticField(examples=["Smith"])
+    deceased_date_of_birth: str = PydanticField(examples=["2000-01-01"])
+    deceased_date_of_death: str = PydanticField(examples=["2025-01-01"])
+    coroners_reference: str = PydanticField(examples=["Example refence number"])
+    further_information: str | None = PydanticField(
+        default=None, examples=["Further information."]
+    )
+    client_relationship_to_deceased: str = PydanticField(examples=["Spouse"])
 
 
 class PublicBodyCreate(BaseModel):
@@ -290,7 +300,7 @@ class PublicBodyCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    public_body_id: str
+    public_body_id: str = PydanticField(examples=["Department of Health & Social Care"])
 
 
 class CorrespondenceRecipientCreate(BaseModel):

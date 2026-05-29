@@ -1,12 +1,11 @@
-from sqlalchemy import text
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.dialects.postgresql import insert
-from sqlmodel import SQLModel, create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlmodel import create_engine
+
 from app.config import Config
 from app.db.session import CustomSession
-from app.models.application.index import Proceeding, PublicBody
 from app.models.application.enums import ProceedingId, PublicBodyId
-
+from app.models.application.index import Proceeding, PublicBody
 
 db_url = f"postgresql://{Config.DB_USER}:{Config.DB_PASSWORD}@{Config.DB_HOST}:{Config.DB_PORT}/{Config.DB_NAME}"
 
@@ -19,8 +18,6 @@ CustomSessionLocal = sessionmaker(
 
 
 def get_session():
-    SQLModel.metadata.create_all(engine)
-
     proceedings = [
         {
             "proceeding_id": "PC049",
@@ -80,12 +77,6 @@ def get_session():
     ]
 
     with CustomSessionLocal() as db_session:
-        print(
-            db_session.execute(
-                text("SELECT unnest(enum_range(NULL::publicbodyid))")
-            ).all()
-        )
-
         for proceeding in proceedings:
             stmt = (
                 insert(Proceeding)
