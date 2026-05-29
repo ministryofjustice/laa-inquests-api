@@ -2,6 +2,7 @@
 # found by Alembic when auto-generating migrations.
 
 from .application.index import (
+    Address,
     Application,
     ApplicationProceeding,
     Proceeding,
@@ -13,6 +14,7 @@ from .application.index import (
 from .user import User  # noqa: F401
 
 __all__ = [
+    "Address",
     "Proceeding",
     "PublicBody",
     "Deceased",

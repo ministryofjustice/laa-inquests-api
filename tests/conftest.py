@@ -8,6 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from app.auth.security import get_password_hash
 from app.models import User
 from app.models.application.index import (
+    Address,
     Application,
     ApplicationPublicBody,
     Client,
@@ -63,10 +64,21 @@ def session_fixture():
         application_public_bodies = [
             ApplicationPublicBody(public_body_id=PublicBodyId.DEPARTMENT_FOR_TRANSPORT)
         ]
+        home_address = Address(
+            address_line_1="1 Example Lane",
+            town_or_city="London",
+            postcode="SW1A 1AA",
+        )
+        db_session.add(home_address)
+        db_session.commit()
+        db_session.refresh(home_address)
         new_client = Client(
             client_first_name="Test",
             client_last_name="Surname",
             date_of_birth="01-02-2003",
+            correspondence_address_source="USE_CLIENT_HOME_ADDRESS",
+            correspondence_address_id=None,
+            home_address_id=home_address.address_id,
         )
         db_session.add(new_client)
         db_session.commit()
