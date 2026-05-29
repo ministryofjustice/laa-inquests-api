@@ -107,6 +107,19 @@ To run the web server run:
 uvicorn app:api --reload
 ```
 
+### Keeping migrations in sync
+
+1. **When you change a model, run `alembic revision --autogenerate` immediately** as part of the same PR:
+   ```bash
+   alembic revision --autogenerate -m "describe the change"
+   ```
+2. **Review the generated file** — autogenerate isn't perfect (it misses some things like check constraints), so check the output before committing.
+3. **Verify you haven't missed anything** by running:
+   ```bash
+   alembic check
+   ```
+   This will error if your models and migrations are out of sync.
+
 ---
 ## Docs
 Swagger API documentation can be found at the `/` or `/docs` endpoint.
