@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field as PydanticField
 from pydantic.alias_generators import to_camel
 from sqlalchemy import Column
 from sqlmodel import Field, Relationship, SQLModel, Enum
@@ -167,7 +167,7 @@ class ProceedingCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    proceeding_id: str
+    proceeding_id: str = PydanticField(examples=["IQ001"])
 
 
 class ClientCreate(BaseModel):
@@ -176,15 +176,25 @@ class ClientCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    client_first_name: str
-    client_last_name: str
-    client_last_name_at_birth: Optional[str] = None
-    date_of_birth: str
-    national_insurance_number: Optional[str] = None
-    correspondence_address: Optional[str] = None
-    home_address: Optional[str] = None
-    has_applied_previously: bool = False
-    prev_application_reference: Optional[str] = None
+    client_first_name: str = PydanticField(examples=["Jane"])
+    client_last_name: str = PydanticField(examples=["Smith"])
+    client_last_name_at_birth: Optional[str] = PydanticField(
+        default=None, examples=["Jones"]
+    )
+    date_of_birth: str = PydanticField(examples=["2000-01-01"])
+    national_insurance_number: Optional[str] = PydanticField(
+        default=None, examples=["AA123456A"]
+    )
+    correspondence_address: Optional[str] = PydanticField(
+        default=None, examples=["123 Example Street, Example, AA1 1AA"]
+    )
+    home_address: Optional[str] = PydanticField(
+        default=None, examples=["123 Example Street, Example, AA1 1AA"]
+    )
+    has_applied_previously: bool = PydanticField(default=False, examples=[False])
+    prev_application_reference: Optional[str] = PydanticField(
+        default=None, examples=["TBD"]
+    )
 
 
 class DeceasedCreate(BaseModel):
@@ -193,13 +203,15 @@ class DeceasedCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    deceased_first_name: str
-    deceased_last_name: str
-    deceased_date_of_birth: str
-    deceased_date_of_death: str
-    coroners_reference: str
-    further_information: str | None
-    client_relationship_to_deceased: str
+    deceased_first_name: str = PydanticField(examples=["John"])
+    deceased_last_name: str = PydanticField(examples=["Smith"])
+    deceased_date_of_birth: str = PydanticField(examples=["2000-01-01"])
+    deceased_date_of_death: str = PydanticField(examples=["2025-01-01"])
+    coroners_reference: str = PydanticField(examples=["Example refence number"])
+    further_information: str | None = PydanticField(
+        default=None, examples=["Further information."]
+    )
+    client_relationship_to_deceased: str = PydanticField(examples=["Spouse"])
 
 
 class PublicBodyCreate(BaseModel):
@@ -208,7 +220,7 @@ class PublicBodyCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    public_body_id: str
+    public_body_id: str = PydanticField(examples=["Department of Health & Social Care"])
 
 
 class ApplicationCreate(BaseModel):
