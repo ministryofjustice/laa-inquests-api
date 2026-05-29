@@ -94,6 +94,7 @@ class Client(ClientBase, table=True):
     home_address: Optional["Address"] = Relationship(
         sa_relationship_kwargs={"foreign_keys": "[Client.home_address_id]"}
     )
+    is_client_correspondence_recipient: bool = True
 
 
 class ApplicationBase(SQLModel):
@@ -108,7 +109,6 @@ class ApplicationBase(SQLModel):
     application_type: str | None = "INITIAL"
     auto_grant: bool | None = True
     overall_decision: str | None = "PENDING"
-    is_client_correspondence_recipient: bool = True
 
 
 class Deceased(DeceasedBase, table=True):
@@ -141,7 +141,7 @@ class Application(ApplicationBase, table=True):
 
     @property
     def correspondence_recipient(self) -> Optional["CorrespondenceRecipientResponse"]:
-        if self.is_client_correspondence_recipient:
+        if self.client.is_client_correspondence_recipient:
             return None
 
         if (
@@ -263,6 +263,7 @@ class ClientCreate(BaseModel):
     correspondence_address: Optional[AddressCreate] = None
     home_address: Optional[AddressCreate] = None
     has_no_fixed_abode: bool = PydanticField(default=False, examples=[False])
+    is_client_correspondence_recipient: bool
 
     @model_validator(mode="after")
     def validate_home_address_against_fixed_abode(self) -> "ClientCreate":
@@ -325,12 +326,11 @@ class ApplicationCreate(BaseModel):
     deceased: DeceasedCreate
     publicBodies: list[PublicBodyCreate]
     proceedings: list[ProceedingCreate]
-    is_client_correspondence_recipient: bool
     correspondence_recipient: CorrespondenceRecipientCreate | None = None
 
     @model_validator(mode="after")
     def validate_correspondence_recipient(self) -> "ApplicationCreate":
-        if self.is_client_correspondence_recipient:
+        if self.client.is_client_correspondence_recipient:
             if self.correspondence_recipient is not None:
                 raise ValueError(
                     "correspondence_recipient must not be provided when is_client_correspondence_recipient is true"
@@ -385,6 +385,7 @@ class ClientResponse(BaseModel):
     has_applied_previously: bool = False
     prev_application_reference: Optional[str] = None
     has_no_fixed_abode: bool = False
+    is_client_correspondence_recipient: bool
 
 
 class CorrespondenceRecipientResponse(BaseModel):
@@ -456,7 +457,6 @@ class ApplicationResponse(BaseModel):
     application_type: str
     auto_grant: bool
     overall_decision: str
-    is_client_correspondence_recipient: bool
     proceedings: list[ProceedingResponse] = []
     public_bodies: list[PublicBodyResponse] = []
     correspondence_recipient: CorrespondenceRecipientResponse | None = None
