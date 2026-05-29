@@ -82,7 +82,7 @@ def test_200_returns_client_correspondence_recipient_flag_when_client_is_recipie
     )
 
     requested_application = response.json()
-    assert requested_application["isClientCorrespondenceRecipient"] is True
+    assert requested_application["client"]["isClientCorrespondenceRecipient"] is True
     assert requested_application["correspondenceRecipient"] is None
 
 
@@ -93,7 +93,6 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
         "/applications",
         json={
             "proceedings": [{"proceedingId": "TEST1"}],
-            "isClientCorrespondenceRecipient": False,
             "client": {
                 "clientFirstName": "Test",
                 "clientLastName": "Surname",
@@ -105,6 +104,7 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
                     "townOrCity": "London",
                     "postcode": "SW1A 1AA",
                 },
+                "isClientCorrespondenceRecipient": False,
                 "hasNoFixedAbode": False,
                 "homeAddress": {
                     "addressLine1": "1 Example Lane",
@@ -147,7 +147,7 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
     )
 
     requested_application = response.json()
-    assert requested_application["isClientCorrespondenceRecipient"] is False
+    assert requested_application["client"]["isClientCorrespondenceRecipient"] is False
     assert requested_application["correspondenceRecipient"] == {
         "recipientType": "ORGANISATION",
         "recipientName": "Inquests Support Org",
