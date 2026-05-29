@@ -7,8 +7,6 @@ ARG REQUIREMENTS=requirements-production.txt
 RUN adduser --disabled-password app -u 1000 && \
     cp /usr/share/zoneinfo/Europe/London /etc/localtime
 
-RUN apt-get update
-
 RUN mkdir /home/app/laa-inquests-api
 WORKDIR /home/app/laa-inquests-api
 
