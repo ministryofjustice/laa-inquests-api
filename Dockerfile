@@ -3,6 +3,10 @@ FROM $BASE_IMAGE AS base
 
 ARG REQUIREMENTS=requirements-production.txt
 
+RUN apt-get update && \
+    apt-get upgrade -y perl-base && \
+    rm -rf /var/lib/apt/lists/*
+
 # Create a non-root user
 RUN adduser --disabled-password app -u 1000 && \
     cp /usr/share/zoneinfo/Europe/London /etc/localtime
