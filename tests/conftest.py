@@ -1,5 +1,5 @@
 import pytest
-from sqlmodel import create_engine, Session, StaticPool
+from sqlmodel import SQLModel, create_engine, Session, StaticPool
 from app import api
 from app.db import get_session
 from app.db.session import CustomSession
@@ -30,6 +30,7 @@ def session_fixture():
     test_session = sessionmaker(
         autocommit=False, autoflush=False, bind=engine, class_=CustomSession
     )
+    SQLModel.metadata.create_all(engine)
     users_to_add = [
         {"username": "test_user", "password": "test_password", "disabled": False},
         {"username": "jane_doe", "password": "password", "disabled": True},
