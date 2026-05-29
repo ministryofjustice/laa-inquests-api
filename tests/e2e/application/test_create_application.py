@@ -1,20 +1,29 @@
-def test_201_create_application_response_contains_expected_base_properties(
-    client, auth_token
-):
-    request_body = {
-        "proceedings": [
-            {
-                "proceedingId": "TEST1",
-            }
-        ],
-        "client": {
-            "clientFirstName": "Test",
-            "clientLastName": "Surname",
-            "dateOfBirth": "01-01-1990",
-            "nationalInsuranceNumber": "AB12345A",
-            "correspondenceAddress": "2 Example Lane, London",
-            "homeAddress": "1 Example Lane, London",
+def _make_request_body(client_overrides=None):
+    client = {
+        "clientFirstName": "Test",
+        "clientLastName": "Surname",
+        "dateOfBirth": "01-01-1990",
+        "nationalInsuranceNumber": "AB12345A",
+        "correspondenceAddressSource": "USE_SPECIFIED_ADDRESS",
+        "correspondenceAddress": {
+            "addressLine1": "2 Example Lane",
+            "townOrCity": "London",
+            "postcode": "SW1A 1AA",
         },
+        "hasNoFixedAbode": False,
+        "homeAddress": {
+            "addressLine1": "1 Example Lane",
+            "addressLine2": "Flat 2",
+            "townOrCity": "London",
+            "county": "Greater London",
+            "postcode": "SW1A 1AA",
+        },
+    }
+    if client_overrides:
+        client.update(client_overrides)
+    return {
+        "proceedings": [{"proceedingId": "TEST1"}],
+        "client": client,
         "publicBodies": [{"publicBodyId": "Department for Transport"}],
         "deceased": {
             "deceasedFirstName": "Test",
@@ -25,15 +34,22 @@ def test_201_create_application_response_contains_expected_base_properties(
             "furtherInformation": "Further details to be confirmed",
             "clientRelationshipToDeceased": "guardian",
         },
+        "isClientCorrespondenceRecipient": True,
     }
+
+
+def test_201_create_application_response_contains_expected_base_properties(
+    client, auth_token
+):
     response = client.post(
         "/applications",
-        json=request_body,
+        json=_make_request_body(),
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {auth_token}",
         },
     )
+    assert response.status_code == 201
     new_application = response.json()
     assert isinstance(new_application["laaReference"], int)
     assert isinstance(new_application["createdAt"], str)
@@ -49,34 +65,9 @@ def test_201_create_application_response_contains_expected_base_properties(
 def test_201_create_application_response_contains_expected_proceeding_information(
     client, auth_token
 ):
-    request_body = {
-        "proceedings": [
-            {
-                "proceedingId": "TEST1",
-            }
-        ],
-        "client": {
-            "clientFirstName": "Test",
-            "clientLastName": "Surname",
-            "dateOfBirth": "01-01-1990",
-            "nationalInsuranceNumber": "AB12345A",
-            "correspondenceAddress": "2 Example Lane, London",
-            "homeAddress": "1 Example Lane, London",
-        },
-        "publicBodies": [{"publicBodyId": "Department for Transport"}],
-        "deceased": {
-            "deceasedFirstName": "Test",
-            "deceasedLastName": "Surname",
-            "deceasedDateOfBirth": "01-01-2000",
-            "deceasedDateOfDeath": "01-01-2025",
-            "coronersReference": "COR-2025-001",
-            "furtherInformation": "Further details to be confirmed",
-            "clientRelationshipToDeceased": "guardian",
-        },
-    }
     response = client.post(
         "/applications",
-        json=request_body,
+        json=_make_request_body(),
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {auth_token}",
@@ -97,33 +88,9 @@ def test_201_create_application_response_contains_expected_proceeding_informatio
 
 
 def test_201_responds_with_expected_client_details(client, auth_token):
-    request_body = {
-        "proceedings": [
-            {
-                "proceedingId": "TEST1",
-            }
-        ],
-        "client": {
-            "clientFirstName": "Test",
-            "clientLastName": "Surname",
-            "dateOfBirth": "01-01-1990",
-            "correspondenceAddress": "2 Example Lane, London",
-            "homeAddress": "1 Example Lane, London",
-        },
-        "publicBodies": [{"publicBodyId": "Department for Transport"}],
-        "deceased": {
-            "deceasedFirstName": "Test",
-            "deceasedLastName": "Surname",
-            "deceasedDateOfBirth": "01-01-2000",
-            "deceasedDateOfDeath": "01-01-2025",
-            "coronersReference": "COR-2025-001",
-            "furtherInformation": "Further details to be confirmed",
-            "clientRelationshipToDeceased": "guardian",
-        },
-    }
     response = client.post(
         "/applications",
-        json=request_body,
+        json=_make_request_body(),
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {auth_token}",
@@ -136,42 +103,54 @@ def test_201_responds_with_expected_client_details(client, auth_token):
     assert client["clientLastName"] == "Surname"
     assert client["clientLastNameAtBirth"] is None
     assert client["dateOfBirth"] == "01-01-1990"
-    assert client["nationalInsuranceNumber"] is None
-    assert client["correspondenceAddress"] == "2 Example Lane, London"
-    assert client["homeAddress"] == "1 Example Lane, London"
+    assert client["nationalInsuranceNumber"] == "AB12345A"
+    assert client["correspondenceAddressSource"] == "USE_SPECIFIED_ADDRESS"
+    assert client["correspondenceAddress"] == {
+        "addressLine1": "2 Example Lane",
+        "addressLine2": None,
+        "townOrCity": "London",
+        "county": None,
+        "postcode": "SW1A 1AA",
+    }
+    assert new_application["isClientCorrespondenceRecipient"] is True
+    assert new_application["correspondenceRecipient"] is None
+    assert client["homeAddress"] == {
+        "addressLine1": "1 Example Lane",
+        "addressLine2": "Flat 2",
+        "townOrCity": "London",
+        "county": "Greater London",
+        "postcode": "SW1A 1AA",
+    }
     assert not client["hasAppliedPreviously"]
+
+
+def test_201_create_application_can_omit_correspondence_address(client, auth_token):
+    request_body = _make_request_body(
+        {"correspondenceAddressSource": "USE_CLIENT_HOME_ADDRESS"}
+    )
+    request_body["client"].pop("correspondenceAddress")
+
+    response = client.post(
+        "/applications",
+        json=request_body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    client_details = response.json()["client"]
+    assert client_details["correspondenceAddressSource"] == "USE_CLIENT_HOME_ADDRESS"
+    assert client_details["correspondenceAddress"] is None
 
 
 def test_201_create_application_responds_with_expected_public_body_details(
     client, auth_token
 ):
-    request_body = {
-        "proceedings": [
-            {
-                "proceedingId": "TEST1",
-            }
-        ],
-        "client": {
-            "clientFirstName": "Test",
-            "clientLastName": "Surname",
-            "dateOfBirth": "01-01-1990",
-            "correspondenceAddress": "2 Example Lane, London",
-            "homeAddress": "1 Example Lane, London",
-        },
-        "publicBodies": [{"publicBodyId": "Department for Transport"}],
-        "deceased": {
-            "deceasedFirstName": "Test",
-            "deceasedLastName": "Surname",
-            "deceasedDateOfBirth": "01-01-2000",
-            "deceasedDateOfDeath": "01-01-2025",
-            "coronersReference": "COR-2025-001",
-            "furtherInformation": "Further details to be confirmed",
-            "clientRelationshipToDeceased": "guardian",
-        },
-    }
     response = client.post(
         "/applications",
-        json=request_body,
+        json=_make_request_body(),
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {auth_token}",
@@ -184,33 +163,9 @@ def test_201_create_application_responds_with_expected_public_body_details(
 
 
 def test_201_create_application_response_includes_deceased_details(client, auth_token):
-    request_body = {
-        "proceedings": [
-            {
-                "proceedingId": "TEST1",
-            }
-        ],
-        "client": {
-            "clientFirstName": "Test",
-            "clientLastName": "Surname",
-            "dateOfBirth": "01-01-1990",
-            "correspondenceAddress": "2 Example Lane, London",
-            "homeAddress": "1 Example Lane, London",
-        },
-        "publicBodies": [{"publicBodyId": "Department for Transport"}],
-        "deceased": {
-            "deceasedFirstName": "Test",
-            "deceasedLastName": "Surname",
-            "deceasedDateOfBirth": "01-01-2000",
-            "deceasedDateOfDeath": "01-01-2025",
-            "coronersReference": "COR-2025-001",
-            "furtherInformation": "Further details to be confirmed",
-            "clientRelationshipToDeceased": "guardian",
-        },
-    }
     response = client.post(
         "/applications",
-        json=request_body,
+        json=_make_request_body(),
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {auth_token}",
@@ -226,3 +181,169 @@ def test_201_create_application_response_includes_deceased_details(client, auth_
     assert deceased["coronersReference"] == "COR-2025-001"
     assert deceased["furtherInformation"] == "Further details to be confirmed"
     assert deceased["clientRelationshipToDeceased"] == "guardian"
+
+
+def test_422_rejected_when_has_no_fixed_abode_is_false_and_home_address_is_absent(
+    client, auth_token
+):
+    body = _make_request_body(
+        {"correspondenceAddressSource": "USE_CLIENT_HOME_ADDRESS", "homeAddress": None}
+    )
+    del body["client"]["correspondenceAddress"]
+
+    response = client.post(
+        "/applications",
+        json=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_422_rejected_when_has_no_fixed_abode_is_true_and_home_address_is_provided(
+    client, auth_token
+):
+    body = _make_request_body({"hasNoFixedAbode": True})
+
+    response = client.post(
+        "/applications",
+        json=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_201_accepted_when_has_no_fixed_abode_is_true_and_no_home_address_provided(
+    client, auth_token
+):
+    body = _make_request_body(
+        {
+            "hasNoFixedAbode": True,
+            "correspondenceAddressSource": "USE_SPECIFIED_ADDRESS",
+        }
+    )
+    body["client"].pop("homeAddress")
+
+    response = client.post(
+        "/applications",
+        json=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    client_data = response.json()["client"]
+    assert client_data["hasNoFixedAbode"] is True
+    assert client_data["homeAddress"] is None
+
+
+def test_201_accepted_when_has_no_fixed_abode_is_false_and_home_address_is_provided(
+    client, auth_token
+):
+    response = client.post(
+        "/applications",
+        json=_make_request_body({"hasNoFixedAbode": False}),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    client_data = response.json()["client"]
+    assert client_data["hasNoFixedAbode"] is False
+    assert client_data["homeAddress"] is not None
+    assert client_data["homeAddress"]["addressLine1"] == "1 Example Lane"
+
+
+def test_201_create_application_includes_explicit_correspondence_recipient(
+    client, auth_token
+):
+    body = _make_request_body()
+    body["isClientCorrespondenceRecipient"] = False
+    body["correspondenceRecipient"] = {
+        "recipientType": "ORGANISATION",
+        "recipientName": "Inquests Support Org",
+    }
+
+    response = client.post(
+        "/applications",
+        json=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.json()["isClientCorrespondenceRecipient"] is False
+    assert response.json()["correspondenceRecipient"] == {
+        "recipientType": "ORGANISATION",
+        "recipientName": "Inquests Support Org",
+    }
+
+
+def test_422_rejected_when_client_is_recipient_and_correspondence_recipient_provided(
+    client, auth_token
+):
+    body = _make_request_body()
+    body["correspondenceRecipient"] = {
+        "recipientType": "PERSON",
+        "recipientName": "Someone Else",
+    }
+
+    response = client.post(
+        "/applications",
+        json=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_422_rejected_when_client_is_not_recipient_and_correspondence_recipient_missing(
+    client, auth_token
+):
+    body = _make_request_body()
+    body["isClientCorrespondenceRecipient"] = False
+
+    response = client.post(
+        "/applications",
+        json=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_422_rejected_when_is_client_correspondence_recipient_is_missing(
+    client, auth_token
+):
+    body = _make_request_body()
+    del body["isClientCorrespondenceRecipient"]
+
+    response = client.post(
+        "/applications",
+        json=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
