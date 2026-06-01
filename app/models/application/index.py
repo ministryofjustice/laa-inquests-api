@@ -263,7 +263,7 @@ class ClientCreate(BaseModel):
     correspondence_address: Optional[AddressCreate] = None
     home_address: Optional[AddressCreate] = None
     has_no_fixed_abode: bool = PydanticField(default=False, examples=[False])
-    is_client_correspondence_recipient: bool
+    is_client_correspondence_recipient: bool = PydanticField(examples=[False])
 
     @model_validator(mode="after")
     def validate_home_address_against_fixed_abode(self) -> "ClientCreate":
