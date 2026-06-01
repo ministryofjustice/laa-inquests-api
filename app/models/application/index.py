@@ -258,7 +258,7 @@ class ClientCreate(BaseModel):
         default=None, examples=["TBD"]
     )
     correspondence_address_source: str = PydanticField(
-        examples=["USE_CLIENT_HOME_ADDRESS"]
+        examples=["USE_SPECIFIED_ADDRESS"]
     )
     correspondence_address: Optional[AddressCreate] = None
     home_address: Optional[AddressCreate] = None
