@@ -238,6 +238,16 @@ class AddressCreate(BaseModel):
     postcode: str = PydanticField(examples=["AA1 1AA"])
 
 
+class CorrespondenceRecipientCreate(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+    recipient_type: CorrespondenceRecipientType
+    recipient_name: str
+
+
 class ClientCreate(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -264,6 +274,23 @@ class ClientCreate(BaseModel):
     home_address: Optional[AddressCreate] = None
     has_no_fixed_abode: bool = PydanticField(default=False, examples=[False])
     is_client_correspondence_recipient: bool = PydanticField(examples=[False])
+    correspondence_recipient: CorrespondenceRecipientCreate | None = None
+
+    @model_validator(mode="after")
+    def validate_correspondence_recipient(self) -> "ClientCreate":
+        if self.is_client_correspondence_recipient:
+            if self.correspondence_recipient is not None:
+                raise ValueError(
+                    "correspondence_recipient must not be provided when is_client_correspondence_recipient is true"
+                )
+            return self
+
+        if self.correspondence_recipient is None:
+            raise ValueError(
+                "correspondence_recipient is required when is_client_correspondence_recipient is false"
+            )
+
+        return self
 
     @model_validator(mode="after")
     def validate_home_address_against_fixed_abode(self) -> "ClientCreate":
@@ -304,16 +331,6 @@ class PublicBodyCreate(BaseModel):
     public_body_id: str = PydanticField(examples=["Department of Health & Social Care"])
 
 
-class CorrespondenceRecipientCreate(BaseModel):
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
-    )
-    recipient_type: CorrespondenceRecipientType
-    recipient_name: str
-
-
 class ApplicationCreate(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -326,23 +343,6 @@ class ApplicationCreate(BaseModel):
     deceased: DeceasedCreate
     publicBodies: list[PublicBodyCreate]
     proceedings: list[ProceedingCreate]
-    correspondence_recipient: CorrespondenceRecipientCreate | None = None
-
-    @model_validator(mode="after")
-    def validate_correspondence_recipient(self) -> "ApplicationCreate":
-        if self.client.is_client_correspondence_recipient:
-            if self.correspondence_recipient is not None:
-                raise ValueError(
-                    "correspondence_recipient must not be provided when is_client_correspondence_recipient is true"
-                )
-            return self
-
-        if self.correspondence_recipient is None:
-            raise ValueError(
-                "correspondence_recipient is required when is_client_correspondence_recipient is false"
-            )
-
-        return self
 
 
 class MeritsDecisionUpdate(BaseModel):
