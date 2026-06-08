@@ -83,7 +83,7 @@ def test_200_returns_client_correspondence_recipient_flag_when_client_is_recipie
 
     requested_application = response.json()
     assert requested_application["client"]["isClientCorrespondenceRecipient"] is True
-    assert requested_application["correspondenceRecipient"] is None
+    assert requested_application["client"]["correspondenceRecipient"] is None
 
 
 def test_200_returns_explicit_correspondence_recipient_from_stored_application(
@@ -105,6 +105,10 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
                     "postcode": "SW1A 1AA",
                 },
                 "isClientCorrespondenceRecipient": False,
+                "correspondenceRecipient": {
+                    "recipientType": "ORGANISATION",
+                    "recipientName": "Inquests Support Org",
+                },
                 "hasNoFixedAbode": False,
                 "homeAddress": {
                     "addressLine1": "1 Example Lane",
@@ -123,10 +127,6 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
                 "coronersReference": "COR-2025-001",
                 "furtherInformation": "Further details to be confirmed",
                 "clientRelationshipToDeceased": "guardian",
-            },
-            "correspondenceRecipient": {
-                "recipientType": "ORGANISATION",
-                "recipientName": "Inquests Support Org",
             },
         },
         headers={
@@ -148,7 +148,7 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
 
     requested_application = response.json()
     assert requested_application["client"]["isClientCorrespondenceRecipient"] is False
-    assert requested_application["correspondenceRecipient"] == {
+    assert requested_application["client"]["correspondenceRecipient"] == {
         "recipientType": "ORGANISATION",
         "recipientName": "Inquests Support Org",
     }

@@ -113,7 +113,7 @@ def test_201_responds_with_expected_client_details(client, auth_token):
         "postcode": "SW1A 1AA",
     }
     assert new_application["client"]["isClientCorrespondenceRecipient"] is True
-    assert new_application["correspondenceRecipient"] is None
+    assert new_application["client"]["correspondenceRecipient"] is None
     assert client["homeAddress"] == {
         "addressLine1": "1 Example Lane",
         "addressLine2": "Flat 2",
@@ -270,7 +270,7 @@ def test_201_create_application_includes_explicit_correspondence_recipient(
 ):
     body = _make_request_body()
     body["client"]["isClientCorrespondenceRecipient"] = False
-    body["correspondenceRecipient"] = {
+    body["client"]["correspondenceRecipient"] = {
         "recipientType": "ORGANISATION",
         "recipientName": "Inquests Support Org",
     }
@@ -286,7 +286,7 @@ def test_201_create_application_includes_explicit_correspondence_recipient(
 
     assert response.status_code == 201
     assert response.json()["client"]["isClientCorrespondenceRecipient"] is False
-    assert response.json()["correspondenceRecipient"] == {
+    assert response.json()["client"]["correspondenceRecipient"] == {
         "recipientType": "ORGANISATION",
         "recipientName": "Inquests Support Org",
     }
@@ -296,7 +296,7 @@ def test_422_rejected_when_client_is_recipient_and_correspondence_recipient_prov
     client, auth_token
 ):
     body = _make_request_body()
-    body["correspondenceRecipient"] = {
+    body["client"]["correspondenceRecipient"] = {
         "recipientType": "PERSON",
         "recipientName": "Someone Else",
     }

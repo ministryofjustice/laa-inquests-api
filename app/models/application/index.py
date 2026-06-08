@@ -95,6 +95,27 @@ class Client(ClientBase, table=True):
         sa_relationship_kwargs={"foreign_keys": "[Client.home_address_id]"}
     )
     is_client_correspondence_recipient: bool = True
+    correspondence_recipient_type: CorrespondenceRecipientType | None = Field(
+        default=None,
+        sa_column=Column(Enum(CorrespondenceRecipientType), nullable=True),
+    )
+    correspondence_recipient_name: str | None = None
+
+    @property
+    def correspondence_recipient(self) -> Optional["CorrespondenceRecipientResponse"]:
+        if self.is_client_correspondence_recipient:
+            return None
+
+        if (
+            self.correspondence_recipient_type is not None
+            and self.correspondence_recipient_name is not None
+        ):
+            return CorrespondenceRecipientResponse(
+                recipient_type=self.correspondence_recipient_type,
+                recipient_name=self.correspondence_recipient_name,
+            )
+
+        return None
 
 
 class ApplicationBase(SQLModel):
@@ -130,33 +151,9 @@ class Application(ApplicationBase, table=True):
     client_id: int | None = Field(default=None, foreign_key="client.client_id")
     client: Client | None = Relationship(back_populates="applications")
     deceased_id: int = Field(foreign_key="deceased.deceased_id")
-    correspondence_recipient_type: CorrespondenceRecipientType | None = Field(
-        default=None,
-        sa_column=Column(Enum(CorrespondenceRecipientType), nullable=True),
-    )
-    correspondence_recipient_name: str | None = None
     deceased: Deceased | None = Relationship(
         sa_relationship_kwargs={"uselist": False}, back_populates="application"
     )
-
-    @property
-    def correspondence_recipient(self) -> Optional["CorrespondenceRecipientResponse"]:
-        if self.client.is_client_correspondence_recipient:
-            return None
-
-        if (
-            self.correspondence_recipient_type is not None
-            and self.correspondence_recipient_name is not None
-        ):
-            return CorrespondenceRecipientResponse(
-                recipient_type=self.correspondence_recipient_type,
-                recipient_name=self.correspondence_recipient_name,
-            )
-
-        if self.client is None:
-            return None
-
-        return None
 
 
 class ApplicationPublicBody(SQLModel, table=True):
@@ -238,6 +235,16 @@ class AddressCreate(BaseModel):
     postcode: str = PydanticField(examples=["AA1 1AA"])
 
 
+class CorrespondenceRecipientCreate(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+    recipient_type: CorrespondenceRecipientType
+    recipient_name: str
+
+
 class ClientCreate(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -264,6 +271,23 @@ class ClientCreate(BaseModel):
     home_address: Optional[AddressCreate] = None
     has_no_fixed_abode: bool = PydanticField(default=False, examples=[False])
     is_client_correspondence_recipient: bool = PydanticField(examples=[False])
+    correspondence_recipient: CorrespondenceRecipientCreate | None = None
+
+    @model_validator(mode="after")
+    def validate_correspondence_recipient(self) -> "ClientCreate":
+        if self.is_client_correspondence_recipient:
+            if self.correspondence_recipient is not None:
+                raise ValueError(
+                    "correspondence_recipient must not be provided when is_client_correspondence_recipient is true"
+                )
+            return self
+
+        if self.correspondence_recipient is None:
+            raise ValueError(
+                "correspondence_recipient is required when is_client_correspondence_recipient is false"
+            )
+
+        return self
 
     @model_validator(mode="after")
     def validate_home_address_against_fixed_abode(self) -> "ClientCreate":
@@ -304,16 +328,6 @@ class PublicBodyCreate(BaseModel):
     public_body_id: str = PydanticField(examples=["Department of Health & Social Care"])
 
 
-class CorrespondenceRecipientCreate(BaseModel):
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
-    )
-    recipient_type: CorrespondenceRecipientType
-    recipient_name: str
-
-
 class ApplicationCreate(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -326,23 +340,6 @@ class ApplicationCreate(BaseModel):
     deceased: DeceasedCreate
     publicBodies: list[PublicBodyCreate]
     proceedings: list[ProceedingCreate]
-    correspondence_recipient: CorrespondenceRecipientCreate | None = None
-
-    @model_validator(mode="after")
-    def validate_correspondence_recipient(self) -> "ApplicationCreate":
-        if self.client.is_client_correspondence_recipient:
-            if self.correspondence_recipient is not None:
-                raise ValueError(
-                    "correspondence_recipient must not be provided when is_client_correspondence_recipient is true"
-                )
-            return self
-
-        if self.correspondence_recipient is None:
-            raise ValueError(
-                "correspondence_recipient is required when is_client_correspondence_recipient is false"
-            )
-
-        return self
 
 
 class MeritsDecisionUpdate(BaseModel):
@@ -367,6 +364,16 @@ class AddressResponse(BaseModel):
     postcode: str
 
 
+class CorrespondenceRecipientResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+    recipient_type: CorrespondenceRecipientType
+    recipient_name: str
+
+
 class ClientResponse(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -386,16 +393,7 @@ class ClientResponse(BaseModel):
     prev_application_reference: Optional[str] = None
     has_no_fixed_abode: bool = False
     is_client_correspondence_recipient: bool
-
-
-class CorrespondenceRecipientResponse(BaseModel):
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
-    )
-    recipient_type: CorrespondenceRecipientType
-    recipient_name: str
+    correspondence_recipient: CorrespondenceRecipientResponse | None = None
 
 
 class PublicBodyResponse(BaseModel):
@@ -459,6 +457,5 @@ class ApplicationResponse(BaseModel):
     overall_decision: str
     proceedings: list[ProceedingResponse] = []
     public_bodies: list[PublicBodyResponse] = []
-    correspondence_recipient: CorrespondenceRecipientResponse | None = None
     client: ClientResponse
     deceased: DeceasedResponse
