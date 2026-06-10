@@ -118,6 +118,15 @@ class Client(ClientBase, table=True):
         return None
 
 
+class ProviderBase(SQLModel):
+    firm_code: str
+    office_id: str
+
+
+class Provider(ProviderBase, table=True):
+    provider_id: int | None = Field(default=None, primary_key=True)
+
+
 class ApplicationBase(SQLModel):
     laa_reference: int | None = Field(default_factory=None, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
@@ -154,6 +163,8 @@ class Application(ApplicationBase, table=True):
     deceased: Deceased | None = Relationship(
         sa_relationship_kwargs={"uselist": False}, back_populates="application"
     )
+    provider_id: int = Field(foreign_key="provider.provider_id")
+    provider: Provider | None = Relationship(sa_relationship_kwargs={"uselist": False})
 
 
 class ApplicationPublicBody(SQLModel, table=True):
@@ -328,6 +339,16 @@ class PublicBodyCreate(BaseModel):
     public_body_id: str = PydanticField(examples=["Department of Health & Social Care"])
 
 
+class ProviderCreate(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+    firm_code: str = PydanticField(examples=["0A123B"])
+    office_id: str = PydanticField(examples=["001"])
+
+
 class ApplicationCreate(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -335,11 +356,11 @@ class ApplicationCreate(BaseModel):
         from_attributes=True,
     )
     # documents: list[Document]
-    # provider: Provider
     client: ClientCreate
     deceased: DeceasedCreate
     publicBodies: list[PublicBodyCreate]
     proceedings: list[ProceedingCreate]
+    provider: ProviderCreate
 
 
 class MeritsDecisionUpdate(BaseModel):

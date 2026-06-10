@@ -128,6 +128,10 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
                 "furtherInformation": "Further details to be confirmed",
                 "clientRelationshipToDeceased": "guardian",
             },
+            "provider": {
+                "firmCode": "0A123B",
+                "officeId": "001",
+            },
         },
         headers={
             "Content-Type": "application/json",
