@@ -35,6 +35,10 @@ def _make_request_body(client_overrides=None):
             "furtherInformation": "Further details to be confirmed",
             "clientRelationshipToDeceased": "guardian",
         },
+        "provider": {
+            "firmCode": "0A123B",
+            "officeId": "001",
+        },
     }
 
 
@@ -336,6 +340,54 @@ def test_422_rejected_when_is_client_correspondence_recipient_is_missing(
 ):
     body = _make_request_body()
     del body["client"]["isClientCorrespondenceRecipient"]
+
+    response = client.post(
+        "/applications",
+        json=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_422_create_application_fails_without_provider(client, auth_token):
+    body = _make_request_body()
+    del body["provider"]
+
+    response = client.post(
+        "/applications",
+        json=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_422_create_application_fails_without_firm_code(client, auth_token):
+    body = _make_request_body()
+    del body["provider"]["firmCode"]
+
+    response = client.post(
+        "/applications",
+        json=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_422_create_application_fails_without_office_id(client, auth_token):
+    body = _make_request_body()
+    del body["provider"]["officeId"]
 
     response = client.post(
         "/applications",

@@ -16,6 +16,7 @@ from app.models.application.index import (
     Proceeding,
     ProceedingId,
     ApplicationProceeding,
+    Provider,
     PublicBody,
     PublicBodyId,
 )
@@ -99,11 +100,17 @@ def session_fixture():
         db_session.commit()
         db_session.refresh(new_deceased)
 
+        new_provider = Provider(firm_code="0A123B", office_id="001")
+        db_session.add(new_provider)
+        db_session.commit()
+        db_session.refresh(new_provider)
+
         new_application = Application(
             proceedings=application_proceedings_to_add,
             client_id=new_client.client_id,
             deceased_id=new_deceased.deceased_id,
             public_bodies=application_public_bodies,
+            provider_id=new_provider.provider_id,
         )
 
         db_session.add(new_application)
