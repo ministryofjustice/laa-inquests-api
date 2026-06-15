@@ -168,3 +168,52 @@ def test_404_read_application_returns_404_when_not_found(client, auth_token):
     )
 
     assert response.status_code == 404
+
+
+def test_200_provider_details_included_on_application_response(
+    session, client, auth_token
+):
+    first_application_row = session.exec(select(Application)).first()
+    first_application_laa_reference = first_application_row.__dict__["laa_reference"]
+
+    response = client.get(
+        f"/applications/{first_application_laa_reference}",
+        headers={
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    provider = response.json()["provider"]
+    assert provider["firmName"] == "Test Firm Name"
+    assert provider["accountNumber"] == "001"
+
+
+def test_200_firm_name_is_null_when_firm_details_api_unavailable(session, auth_token):
+    from unittest.mock import MagicMock
+    from app import api
+    from app.db import get_session
+    from app.routers.applications import get_provider_details_port
+    from fastapi.testclient import TestClient
+
+    mock_port = MagicMock()
+    mock_port.get_firm_name.return_value = None
+
+    original_overrides = api.dependency_overrides.copy()
+    api.dependency_overrides[get_provider_details_port] = lambda: mock_port
+
+    try:
+        with TestClient(api) as test_client:
+            api.dependency_overrides[get_session] = lambda: session
+            first_application_row = session.exec(select(Application)).first()
+            response = test_client.get(
+                f"/applications/{first_application_row.laa_reference}",
+                headers={
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "Authorization": f"Bearer {auth_token}",
+                },
+            )
+    finally:
+        api.dependency_overrides = original_overrides
+
+    assert response.json()["provider"]["firmName"] is None
