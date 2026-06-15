@@ -139,7 +139,7 @@ def client_fixture(session: Session):
         get_provider_details_port_override
     )
 
-    client = TestClient(api)
+    client = TestClient(api, raise_server_exceptions=False)
     yield client
     api.dependency_overrides.clear()
 

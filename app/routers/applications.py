@@ -19,12 +19,15 @@ from app.models.application.index import (
     Provider,
     PublicBodyId,
 )
+
 from app.adapters.provider_details_adapter import ProviderDetailsAdapter
 from app.config import Config
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.exceptions import ApplicationNotFoundError
 from app.use_cases.read_application import ReadApplicationUseCase
 # from app.models.user import User
+from app.adapters.govnotify import GovNotifyClient
+from app.use_cases.send_application_confirmation import send_application_confirmation
 
 
 router = APIRouter(
@@ -103,11 +106,11 @@ def create_application(
     if request.client.home_address is not None:
         home_address_to_add = Address(**request.client.home_address.model_dump())
         session.add(home_address_to_add)
-        session.commit()
+        session.flush()
         session.refresh(home_address_to_add)
         home_address_id = home_address_to_add.address_id
     else:
-        session.commit()
+        session.flush()
 
     correspondence_address_id = None
     if correspondence_address is not None:
@@ -139,7 +142,7 @@ def create_application(
         ),
     )
     session.add(new_client)
-    session.commit()
+    session.flush()
     session.refresh(new_client)
 
     new_deceased = Deceased(
@@ -153,7 +156,7 @@ def create_application(
         client_id=new_client.client_id,
     )
     session.add(new_deceased)
-    session.commit()
+    session.flush()
     session.refresh(new_deceased)
 
     new_provider = Provider(
@@ -162,7 +165,7 @@ def create_application(
         email_address=request.provider.email_address,
     )
     session.add(new_provider)
-    session.commit()
+    session.flush()
     session.refresh(new_provider)
 
     new_application = Application(
@@ -173,7 +176,24 @@ def create_application(
         provider_id=new_provider.provider_id,
     )
     session.add(new_application)
-    session.commit()
+
+    # Flush to generate laa_reference without committing transaction
+    session.flush()
+    session.refresh(new_application)
+
+    try:
+        # Send confirmation email via GovNotify
+        # If this fails, rollback all database changes
+        govnotify_adapter = GovNotifyClient()
+        send_application_confirmation(new_application, govnotify_adapter)
+
+        # Commit only if email was sent successfully
+        session.commit()
+    except Exception:
+        # Rollback all database changes if email fails
+        session.rollback()
+        raise
+
     session.refresh(new_application)
     return new_application
 

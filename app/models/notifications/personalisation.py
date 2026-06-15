@@ -1,0 +1,64 @@
+"""Pydantic models for email personalisation data."""
+
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class EmailPersonalisation(BaseModel):
+    """
+    Email personalisation data for GovNotify templates.
+
+    All fields are strings as required by GovNotify API.
+    Optional fields default to "N/A" for display purposes.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    # LAA reference
+    laa_reference: str = Field(..., description="Application LAA reference number")
+
+    # Client details
+    client_first_name: str = Field(..., description="Client's first name")
+    client_last_name: str = Field(..., description="Client's last name")
+    client_last_name_at_birth: str = Field(
+        default="N/A", description="Client's last name at birth"
+    )
+    date_of_birth: str = Field(..., description="Client's date of birth")
+    national_insurance_number: str = Field(
+        default="N/A", description="Client's National Insurance number"
+    )
+    has_applied_previously: str = Field(
+        ..., description="Whether client has applied previously (Yes/No)"
+    )
+    prev_application_reference: str = Field(
+        default="N/A", description="Previous application reference number"
+    )
+    client_home_address: str = Field(..., description="Client's home address")
+    correspondence_address: str = Field(..., description="Correspondence address")
+    correspondence_recipient: str = Field(..., description="Correspondence recipient")
+    client_relationship_to_deceased: str = Field(
+        ..., description="Client's relationship to deceased"
+    )
+
+    # Proceeding details
+    proceeding_description: str = Field(..., description="Proceeding description")
+    matter_type: str = Field(..., description="Matter type")
+
+    # Deceased details
+    deceased_first_name: str = Field(..., description="Deceased person's first name")
+    deceased_last_name: str = Field(..., description="Deceased person's last name")
+    deceased_date_of_birth: str = Field(
+        ..., description="Deceased person's date of birth"
+    )
+    deceased_date_of_death: str = Field(
+        ..., description="Deceased person's date of death"
+    )
+    coroners_reference: str = Field(..., description="Coroner's reference number")
+
+    # Public authority details
+    public_body_description: str = Field(..., description="Public body description")
+
+    # Evidence (not currently tracked in model)
+    file_name: str = Field(default="N/A", description="Uploaded file names")
+
+    # Feedback link
+    feedback_link: str = Field(..., description="Feedback URL")
