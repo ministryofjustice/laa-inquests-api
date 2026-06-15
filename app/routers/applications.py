@@ -19,6 +19,11 @@ from app.models.application.index import (
     Provider,
     PublicBodyId,
 )
+from app.adapters.provider_details_adapter import ProviderDetailsAdapter
+from app.config import Config
+from app.ports.provider_details_port import ProviderDetailsPort
+from app.use_cases.exceptions import ApplicationNotFoundError
+from app.use_cases.read_application import ReadApplicationUseCase
 # from app.models.user import User
 
 
@@ -29,17 +34,30 @@ router = APIRouter(
 )
 
 
+def get_provider_details_port() -> ProviderDetailsPort:
+    return ProviderDetailsAdapter(base_url=Config.PROVIDER_API_BASE_URL)
+
+
+def get_read_application_use_case(
+    session: Session = Depends(get_session),
+    provider_details_port: ProviderDetailsPort = Depends(get_provider_details_port),
+) -> ReadApplicationUseCase:
+    return ReadApplicationUseCase(
+        session=session, provider_details_port=provider_details_port
+    )
+
+
 @router.get("/{laa_reference}", response_model=ApplicationResponse)
 async def read_application(
     laa_reference: str,
-    session: Session = Depends(get_session),
+    use_case: ReadApplicationUseCase = Depends(get_read_application_use_case),
     # current_user: User = Depends(get_current_active_user),
-) -> Application:
+) -> ApplicationResponse:
     """Get information about a given application."""
-    application = session.get(Application, int(laa_reference))
-    if application is None:
+    try:
+        return use_case.execute(laa_reference)
+    except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
-    return application
 
 
 @router.get("/")

@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import MagicMock
 from sqlmodel import SQLModel, create_engine, Session, StaticPool
 from app import api
 from app.db import get_session
@@ -6,6 +7,7 @@ from app.db.session import CustomSession
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
 from app.auth.security import get_password_hash
+from app.routers.applications import get_provider_details_port
 from app.models import User
 from app.models.application.index import (
     Address,
@@ -125,7 +127,15 @@ def client_fixture(session: Session):
     def get_session_override():
         return session
 
+    def get_provider_details_port_override():
+        mock_port = MagicMock()
+        mock_port.get_firm_name.return_value = "Test Firm Name"
+        return mock_port
+
     api.dependency_overrides[get_session] = get_session_override
+    api.dependency_overrides[get_provider_details_port] = (
+        get_provider_details_port_override
+    )
 
     client = TestClient(api)
     yield client

@@ -462,6 +462,16 @@ class DeceasedResponse(BaseModel):
     client_relationship_to_deceased: str
 
 
+class ProviderResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+    firm_name: str | None = None
+    account_number: str | None = None
+
+
 class ApplicationResponse(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -480,3 +490,4 @@ class ApplicationResponse(BaseModel):
     public_bodies: list[PublicBodyResponse] = []
     client: ClientResponse
     deceased: DeceasedResponse
+    provider: ProviderResponse
