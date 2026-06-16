@@ -74,6 +74,7 @@ jobs:
   unit-tests:
     name: Pytest Unit Tests
     uses: ./.github/workflows/unit-tests.yaml
+    secrets: inherit
 
   deploy-uat:
     if: ${{ !contains(github.actor, '[bot]') }}
