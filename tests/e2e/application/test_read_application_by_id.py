@@ -190,7 +190,9 @@ def test_200_provider_details_included_on_application_response(
     assert provider["emailAddress"] == "test@example.com"
 
 
-def test_200_provider_fields_are_null_when_provider_api_unavailable(session, auth_token):
+def test_200_provider_fields_are_null_when_provider_api_unavailable(
+    session, auth_token
+):
     from unittest.mock import MagicMock
     from app import api
     from app.db import get_session

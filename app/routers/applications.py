@@ -35,7 +35,9 @@ router = APIRouter(
 
 
 def get_provider_details_port() -> ProviderDetailsPort:
-    return ProviderDetailsAdapter(base_url=Config.PROVIDER_API_BASE_URL, api_key=Config.PROVIDER_API_KEY)
+    return ProviderDetailsAdapter(
+        base_url=Config.PROVIDER_API_BASE_URL, api_key=Config.PROVIDER_API_KEY
+    )
 
 
 def get_read_application_use_case(
