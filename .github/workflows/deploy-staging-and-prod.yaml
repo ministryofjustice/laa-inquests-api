@@ -18,6 +18,11 @@ jobs:
         uses: ./.github/actions/deploy
         with:
           app-environment: staging
+          db-host: ${{ secrets.DB_HOST}}
+          db-name: ${{ secrets.DB_NAME }}
+          db-password: ${{ secrets.DB_PASSWORD }}
+          db-port: ${{ secrets.DB_PORT }}
+          db-user: ${{ secrets.DB_USER }}
           ecr-repository: ${{ vars.ECR_REPOSITORY }}
           ecr-region: ${{ vars.ECR_REGION }}
           ecr-registry_url: ${{ secrets.ECR_REGISTRY_URL }}
@@ -61,6 +66,11 @@ jobs:
         uses: ./.github/actions/deploy
         with:
           app-environment: production
+          db-host: ${{ secrets.DB_HOST}}
+          db-name: ${{ secrets.DB_NAME }}
+          db-password: ${{ secrets.DB_PASSWORD }}
+          db-port: ${{ secrets.DB_PORT }}
+          db-user: ${{ secrets.DB_USER }}
           ecr-repository: ${{ vars.ECR_REPOSITORY }}
           ecr-region: ${{ vars.ECR_REGION }}
           ecr-registry_url: ${{ secrets.ECR_REGISTRY_URL }}
