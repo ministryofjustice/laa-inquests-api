@@ -27,6 +27,8 @@ deploy_branch() {
                 --set env.DB_USER="$DB_USER" \
                 --set env.DEPARTMENT_NAME="$DEPARTMENT_NAME" \
                 --set env.DEPARTMENT_URL="$DEPARTMENT_URL" \
+                --set env.GOV_NOTIFY_API_KEY="$GOV_NOTIFY_API_KEY" \
+                --set env.GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID="$GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID" \
                 --set env.CONTACT_EMAIL="$CONTACT_EMAIL" \
                 --set env.CONTACT_PHONE="$CONTACT_PHONE" \
                 --set env.NODE_ENV="$NODE_ENV" \
@@ -58,6 +60,8 @@ deploy_main() {
                 --set env.DB_USER="$DB_USER" \
                 --set env.DEPARTMENT_NAME="$DEPARTMENT_NAME" \
                 --set env.DEPARTMENT_URL="$DEPARTMENT_URL" \
+                --set env.GOV_NOTIFY_API_KEY="$GOV_NOTIFY_API_KEY" \
+                --set env.GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID="$GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID" \
                 --set env.CONTACT_EMAIL="$CONTACT_EMAIL" \
                 --set env.CONTACT_PHONE="$CONTACT_PHONE" \
                 --set env.NODE_ENV="$NODE_ENV" \
