@@ -187,9 +187,10 @@ def test_200_provider_details_included_on_application_response(
     provider = response.json()["provider"]
     assert provider["firmName"] == "Test Firm Name"
     assert provider["accountNumber"] == "001"
+    assert provider["emailAddress"] == "test@example.com"
 
 
-def test_200_firm_name_is_null_when_firm_details_api_unavailable(session, auth_token):
+def test_200_provider_fields_are_null_when_provider_api_unavailable(session, auth_token):
     from unittest.mock import MagicMock
     from app import api
     from app.db import get_session
@@ -198,6 +199,7 @@ def test_200_firm_name_is_null_when_firm_details_api_unavailable(session, auth_t
 
     mock_port = MagicMock()
     mock_port.get_firm_name.return_value = None
+    mock_port.get_office_email.return_value = None
 
     original_overrides = api.dependency_overrides.copy()
     api.dependency_overrides[get_provider_details_port] = lambda: mock_port
@@ -217,3 +219,4 @@ def test_200_firm_name_is_null_when_firm_details_api_unavailable(session, auth_t
         api.dependency_overrides = original_overrides
 
     assert response.json()["provider"]["firmName"] is None
+    assert response.json()["provider"]["emailAddress"] is None

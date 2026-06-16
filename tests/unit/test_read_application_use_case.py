@@ -49,38 +49,44 @@ def test_execute_raises_application_not_found_error_when_application_not_found()
 
 def test_execute_calls_provider_details_port_with_firm_code():
     session = MagicMock()
-    session.get.return_value = _make_application(firm_code="0A123B")
+    session.get.return_value = _make_application(firm_code="0A123B", office_id="001")
     port = MagicMock(spec=ProviderDetailsPort)
     port.get_firm_name.return_value = "Test Firm"
+    port.get_office_email.return_value = None
 
     use_case = ReadApplicationUseCase(session=session, provider_details_port=port)
     use_case.execute("1")
 
     port.get_firm_name.assert_called_once_with("0A123B")
+    port.get_office_email.assert_called_once_with("0A123B", "001")
 
 
 def test_execute_returns_application_response_with_firm_name():
     session = MagicMock()
     session.get.return_value = _make_application()
     port = MagicMock(spec=ProviderDetailsPort)
-    port.get_firm_name.return_value = "Smith & Co"
+    port.get_firm_name.return_value = "Test Firm"
+    port.get_office_email.return_value = "test@example.com"
 
     use_case = ReadApplicationUseCase(session=session, provider_details_port=port)
     result = use_case.execute("1")
 
-    assert result.provider.firm_name == "Smith & Co"
+    assert result.provider.firm_name == "Test Firm"
+    assert result.provider.email_address == "test@example.com"
 
 
-def test_execute_returns_firm_name_as_none_when_port_returns_none():
+def test_execute_returns_provider_fields_as_none_when_port_returns_none():
     session = MagicMock()
     session.get.return_value = _make_application()
     port = MagicMock(spec=ProviderDetailsPort)
     port.get_firm_name.return_value = None
+    port.get_office_email.return_value = None
 
     use_case = ReadApplicationUseCase(session=session, provider_details_port=port)
     result = use_case.execute("1")
 
     assert result.provider.firm_name is None
+    assert result.provider.email_address is None
 
 
 def test_execute_returns_correct_account_number():
@@ -88,6 +94,7 @@ def test_execute_returns_correct_account_number():
     session.get.return_value = _make_application(office_id="042")
     port = MagicMock(spec=ProviderDetailsPort)
     port.get_firm_name.return_value = "Test Firm"
+    port.get_office_email.return_value = None
 
     use_case = ReadApplicationUseCase(session=session, provider_details_port=port)
     result = use_case.execute("1")

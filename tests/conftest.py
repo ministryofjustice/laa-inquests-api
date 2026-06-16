@@ -130,6 +130,7 @@ def client_fixture(session: Session):
     def get_provider_details_port_override():
         mock_port = MagicMock()
         mock_port.get_firm_name.return_value = "Test Firm Name"
+        mock_port.get_office_email.return_value = "test@example.com"
         return mock_port
 
     api.dependency_overrides[get_session] = get_session_override

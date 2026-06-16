@@ -16,3 +16,14 @@ class ProviderDetailsAdapter:
             return response.json()["firm"]["firmName"]
         except Exception:
             return None
+
+    def get_office_email(self, firm_code: str, office_code: str) -> str | None:
+        try:
+            response = httpx.get(
+                f"{self.base_url}/api/v1/provider-firms/{firm_code}/provider-offices/{office_code}",
+                headers={"X-Authorization": self.api_key},
+            )
+            response.raise_for_status()
+            return response.json()["offices"][0]["emailAddress"]
+        except Exception:
+            return None
