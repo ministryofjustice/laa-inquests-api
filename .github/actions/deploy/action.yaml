@@ -22,8 +22,17 @@ inputs:
   ecr-registry_url:
     description: "ECR registry url"
     required: true
+  ecr-region:
+    description: "AWS region for ECR"
+    required: true
+  ecr-role-to-assume:
+    description: "AWS role to assume for ECR and cluster access"
+    required: true
   ecr-repository:
     description: "ECR repository"
+    required: true
+  image-tag:
+    description: "Container image tag"
     required: true
   kube-cert:
     description: "Kubernetes cluster authentication certificate"
@@ -109,7 +118,7 @@ runs:
         GITHUB_SHA: ${{ github.sha }}
         GITHUB_REF_NAME: ${{ github.ref_name }}
         GITHUB_HEAD_REF: ${{ github.head_ref }}
-        IMAGE_TAG: ${{ github.sha }}
+        IMAGE_TAG: ${{ inputs.image-tag }}
         K8S_NAMESPACE: ${{ inputs.kube-namespace }}
         REGISTRY: ${{ inputs.ecr-registry_url }}
         REPOSITORY: ${{ inputs.ecr-repository }}

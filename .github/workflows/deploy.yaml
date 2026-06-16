@@ -110,6 +110,11 @@ jobs:
           kube-token: ${{ secrets.KUBE_TOKEN }}
           kube-cluster: ${{ secrets.KUBE_CLUSTER }}
           kube-namespace: ${{ secrets.KUBE_NAMESPACE }}
+          ratelimit_max: ${{ vars.RATE_LIMIT_MAX }}
+          ratewindow_ms: ${{ vars.RATE_WINDOW_MS }}
+          service_name: ${{ vars.SERVICE_NAME }}
+          session_name: ${{ vars.SESSION_NAME}}
+          session_secret: ${{ secrets.SESSION_SECRET }}
   notify-slack:
     environment: uat
     needs: deploy-uat
