@@ -39,7 +39,7 @@ class GovNotifyClient:
 
     def __init__(self):
         """Initialize the GovNotify client with API key from config."""
-        self.client = NotificationsAPIClient(Config.GOVNOTIFY_API_KEY)
+        self.client = NotificationsAPIClient(Config.GOV_NOTIFY_API_KEY)
 
     def send_email(
         self,

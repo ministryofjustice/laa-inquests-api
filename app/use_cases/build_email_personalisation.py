@@ -2,7 +2,6 @@
 
 from app.models.application.index import Application, Address
 from app.models.notifications.personalisation import EmailPersonalisation
-from app.config import Config
 
 
 def build_email_personalisation(application: Application) -> EmailPersonalisation:
@@ -102,6 +101,4 @@ def build_email_personalisation(application: Application) -> EmailPersonalisatio
         public_body_description=public_body_description,
         # Evidence (not currently tracked in model)
         file_name="N/A",
-        # Feedback link (from config)
-        feedback_link=Config.FEEDBACK_LINK,
     )

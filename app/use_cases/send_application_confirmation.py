@@ -30,6 +30,6 @@ def send_application_confirmation(
     # Send email via adapter
     adapter.send_email(
         email_address=Config.GOVNOTIFY_PROVIDER_EMAIL,
-        template_id=Config.GOVNOTIFY_TEMPLATE_ID,
+        template_id=Config.GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID,
         personalisation=personalisation,
     )

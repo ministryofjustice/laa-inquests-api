@@ -64,6 +64,3 @@ class EmailPersonalisation(BaseModel):
 
     # Evidence (not currently tracked in model)
     file_name: str = Field(default="N/A", description="Uploaded file names")
-
-    # Feedback link
-    feedback_link: str = Field(description="Feedback URL")

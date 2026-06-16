@@ -36,7 +36,6 @@ def test_govnotify_client_sends_email_successfully():
         deceased_related_applications_information="Stuff",
         coroners_reference="COR-123",
         public_body_description="Test Department",
-        feedback_link="https://example.com",
     )
 
     with patch(
@@ -54,7 +53,7 @@ def test_govnotify_client_sends_email_successfully():
         )
 
         # Assert
-        mock_api_client_class.assert_called_once_with(Config.GOVNOTIFY_API_KEY)
+        mock_api_client_class.assert_called_once_with(Config.GOV_NOTIFY_API_KEY)
         mock_notifications_client.send_email_notification.assert_called_once_with(
             email_address="test@example.com",
             template_id="test-template-id",
@@ -92,7 +91,6 @@ def test_govnotify_client_raises_exception_on_api_error():
         deceased_related_applications_information="Stuff",
         coroners_reference="COR-123",
         public_body_description="Test Department",
-        feedback_link="https://example.com",
     )
 
     with patch(
@@ -129,7 +127,7 @@ def test_govnotify_client_uses_config_api_key():
         GovNotifyClient()
 
         # Assert - verify API key from config is used
-        mock_api_client_class.assert_called_once_with(Config.GOVNOTIFY_API_KEY)
+        mock_api_client_class.assert_called_once_with(Config.GOV_NOTIFY_API_KEY)
 
 
 def test_email_personalisation_rejects_missing_required_fields():
@@ -169,6 +167,5 @@ def test_email_personalisation_rejects_extra_fields():
             deceased_date_of_death="01-01-2025",
             coroners_reference="COR-123",
             public_body_description="Test Department",
-            feedback_link="https://example.com",
             unexpected_field="This should not be allowed",
         )

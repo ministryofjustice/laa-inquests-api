@@ -18,8 +18,10 @@ class Config(object):
     SECRET_KEY = os.environ.get("SECRET_KEY", "TEST_KEY")
 
     # GovNotify Configuration
-    GOVNOTIFY_API_KEY = os.environ.get("GOVNOTIFY_API_KEY")
-    GOVNOTIFY_TEMPLATE_ID = os.environ.get("GOVNOTIFY_TEMPLATE_ID")
+    GOV_NOTIFY_API_KEY = os.environ.get("GOV_NOTIFY_API_KEY")
+    GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID = os.environ.get(
+        "GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID"
+    )
     # TODO: Replace with dynamic provider email when user management is implemented
     GOVNOTIFY_PROVIDER_EMAIL = os.environ.get(
         "GOVNOTIFY_PROVIDER_EMAIL", "provider@example.com"

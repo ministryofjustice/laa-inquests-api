@@ -14,7 +14,6 @@ from app.models.application.index import (
 from app.models.application.enums import AddressSource, CorrespondenceRecipientType
 from app.use_cases.build_email_personalisation import build_email_personalisation
 from app.models.notifications.personalisation import EmailPersonalisation
-from app.config import Config
 
 
 def test_build_email_personalisation_returns_all_required_fields():
@@ -150,7 +149,6 @@ def test_build_email_personalisation_returns_all_required_fields():
     assert result.coroners_reference == "COR-2025-123"
     assert result.public_body_description == "Department for Transport"
     assert result.file_name == "N/A"
-    assert result.feedback_link == Config.FEEDBACK_LINK
 
 
 def test_build_email_personalisation_handles_optional_fields():

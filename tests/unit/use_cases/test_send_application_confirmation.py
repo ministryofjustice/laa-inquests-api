@@ -112,7 +112,10 @@ def test_send_application_confirmation_calls_adapter_with_correct_parameters():
     # Verify call parameters
     call_args = mock_adapter.send_email.call_args
     assert call_args.kwargs["email_address"] == Config.GOVNOTIFY_PROVIDER_EMAIL
-    assert call_args.kwargs["template_id"] == Config.GOVNOTIFY_TEMPLATE_ID
+    assert (
+        call_args.kwargs["template_id"]
+        == Config.GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID
+    )
 
     # Verify personalisation is EmailPersonalisation instance
     personalisation = call_args.kwargs["personalisation"]
@@ -164,7 +167,6 @@ def test_send_application_confirmation_builds_complete_personalisation():
     assert personalisation.deceased_first_name == "Robert"
     assert personalisation.proceeding_description == "Inquest into death"
     assert personalisation.public_body_description == "Department for Transport"
-    assert personalisation.feedback_link is not None
 
 
 def test_send_application_confirmation_uses_config_values():
@@ -181,4 +183,7 @@ def test_send_application_confirmation_uses_config_values():
     # Assert
     call_args = mock_adapter.send_email.call_args
     assert call_args.kwargs["email_address"] == Config.GOVNOTIFY_PROVIDER_EMAIL
-    assert call_args.kwargs["template_id"] == Config.GOVNOTIFY_TEMPLATE_ID
+    assert (
+        call_args.kwargs["template_id"]
+        == Config.GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID
+    )
