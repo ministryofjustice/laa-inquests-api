@@ -33,7 +33,10 @@ def build_email_personalisation(application: Application) -> EmailPersonalisatio
         return "\n".join(part for part in parts if part)
 
     # Get home address
-    home_address = format_address(client.home_address)
+    if client.home_address:
+        home_address = format_address(client.home_address)
+    else:
+        home_address = "No fixed abode"
 
     # Get correspondence address
     if client.correspondence_address:
@@ -73,12 +76,12 @@ def build_email_personalisation(application: Application) -> EmailPersonalisatio
         # Client details
         client_first_name=client.client_first_name,
         client_last_name=client.client_last_name,
-        client_last_name_at_birth=client.client_last_name_at_birth or "N/A",
+        client_last_name_at_birth=client.client_last_name_at_birth or "Not provided",
         date_of_birth=client.date_of_birth,
-        national_insurance_number=client.national_insurance_number or "N/A",
+        national_insurance_number=client.national_insurance_number or "Not provided",
         has_applied_previously="Yes" if client.has_applied_previously else "No",
-        prev_application_reference=client.prev_application_reference or "N/A",
-        client_home_address=home_address,
+        prev_application_reference=client.prev_application_reference or "Not provided",
+        client_home_address=home_address or "No fixed abode",
         correspondence_address=correspondence_address,
         correspondence_recipient=correspondence_recipient,
         client_relationship_to_deceased=deceased.client_relationship_to_deceased,
@@ -90,6 +93,10 @@ def build_email_personalisation(application: Application) -> EmailPersonalisatio
         deceased_last_name=deceased.deceased_last_name,
         deceased_date_of_birth=deceased.deceased_date_of_birth,
         deceased_date_of_death=deceased.deceased_date_of_death,
+        deceased_related_applications_information=deceased.further_information or "",
+        deceased_has_other_related_applications="Yes"
+        if deceased.further_information
+        else "No",
         coroners_reference=deceased.coroners_reference,
         # Public authority details
         public_body_description=public_body_description,

@@ -145,6 +145,8 @@ def test_build_email_personalisation_returns_all_required_fields():
     assert result.deceased_last_name == "Johnson"
     assert result.deceased_date_of_birth == "01-01-1950"
     assert result.deceased_date_of_death == "31-12-2025"
+    assert result.deceased_related_applications_information == "Additional context"
+    assert result.deceased_has_other_related_applications == "Yes"
     assert result.coroners_reference == "COR-2025-123"
     assert result.public_body_description == "Department for Transport"
     assert result.file_name == "N/A"
@@ -232,12 +234,14 @@ def test_build_email_personalisation_handles_optional_fields():
 
     # Assert - verify optional fields are handled
     assert isinstance(result, EmailPersonalisation)
-    assert result.client_last_name_at_birth == "N/A"
-    assert result.national_insurance_number == "N/A"
+    assert result.client_last_name_at_birth == "Not provided"
+    assert result.national_insurance_number == "Not provided"
     assert result.has_applied_previously == "No"
-    assert result.prev_application_reference == "N/A"
+    assert result.prev_application_reference == "Not provided"
     assert result.correspondence_address == "Same as home address"
     assert result.correspondence_recipient == "Client"
+    assert result.deceased_related_applications_information == ""
+    assert result.deceased_has_other_related_applications == "No"
 
 
 def test_build_email_personalisation_formats_address_correctly():
@@ -325,3 +329,106 @@ def test_build_email_personalisation_formats_address_correctly():
     assert isinstance(result, EmailPersonalisation)
     expected_address = "123 Test Street\nFloor 2\nTest City\nTest County\nTC1 1TC"
     assert result.client_home_address == expected_address
+
+
+def test_default_home_address_value_set_to_no_fixed_abode_when_not_provided():
+    """
+    Test that default value for home address is set correctly.
+    """
+    # Arrange - create test application with all related data
+    home_address = None
+
+    correspondence_address = Address(
+        address_id=2,
+        address_line_1="456 Oak Ave",
+        town_or_city="Manchester",
+        county="Greater Manchester",
+        postcode="M1 1AA",
+    )
+
+    client = Client(
+        client_id=1,
+        client_first_name="Jane",
+        client_last_name="Doe",
+        client_last_name_at_birth="Smith",
+        date_of_birth="15-06-1985",
+        national_insurance_number="AB123456C",
+        has_applied_previously=True,
+        prev_application_reference="LAA-2024-001",
+        correspondence_address_source=AddressSource.USE_SPECIFIED_ADDRESS,
+        home_address=home_address,
+        correspondence_address_id=2,
+        correspondence_address=correspondence_address,
+        is_client_correspondence_recipient=False,
+        correspondence_recipient_type=CorrespondenceRecipientType.PERSON,
+        correspondence_recipient_name="John Smith",
+    )
+
+    deceased = Deceased(
+        deceased_id=1,
+        client_id=1,
+        deceased_first_name="Robert",
+        deceased_last_name="Johnson",
+        deceased_date_of_birth="01-01-1950",
+        deceased_date_of_death="31-12-2025",
+        coroners_reference="COR-2025-123",
+        further_information="Additional context",
+        client_relationship_to_deceased="Son",
+    )
+
+    proceeding = Proceeding(
+        id=1,
+        proceeding_id=ProceedingId.TEST1,
+        proceeding_description="Inquest into death",
+        matter_type="INQUESTS",
+    )
+
+    application_proceeding = ApplicationProceeding(
+        application_proceeding_id=1,
+        laa_reference=12345,
+        proceeding_id=ProceedingId.TEST1,
+        proceeding=proceeding,
+    )
+
+    public_body = PublicBody(
+        id=1,
+        public_body_id=PublicBodyId.DEPARTMENT_FOR_TRANSPORT,
+        public_body_description="Department for Transport",
+    )
+
+    application_public_body = ApplicationPublicBody(
+        application_public_body_id=1,
+        laa_reference=12345,
+        public_body_id=PublicBodyId.DEPARTMENT_FOR_TRANSPORT,
+        public_body=public_body,
+    )
+
+    provider = Provider(
+        provider_id=1,
+        firm_code="ABC123",
+        office_id="001",
+    )
+
+    application = Application(
+        laa_reference=12345,
+        client_id=1,
+        client=client,
+        deceased_id=1,
+        deceased=deceased,
+        provider_id=1,
+        provider=provider,
+        proceedings=[application_proceeding],
+        public_bodies=[application_public_body],
+    )
+
+    # Act
+    result = build_email_personalisation(application)
+
+    # Assert - verify result is EmailPersonalisation model
+    assert isinstance(result, EmailPersonalisation)
+
+    # Assert - verify all template fields are present and correct
+    assert result.client_home_address == "No fixed abode"
+    assert "456 Oak Ave" in result.correspondence_address
+    assert "Manchester" in result.correspondence_address
+    assert "M1 1AA" in result.correspondence_address
