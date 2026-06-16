@@ -18,3 +18,4 @@ class Config(object):
     SECRET_KEY = os.environ.get("SECRET_KEY", "TEST_KEY")
 
     PROVIDER_API_BASE_URL = os.environ.get("PROVIDER_API_BASE_URL", "")
+    PROVIDER_API_KEY = os.environ.get("PROVIDER_API_KEY", "")

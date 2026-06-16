@@ -49,6 +49,8 @@ inputs:
     description: "Session secret"
   provider-api-base-url:
     description: "Base URL for the provider details API"
+  provider-api-key:
+    description: "API key for the provider details API"
 runs:
   using: "composite"
   steps:
@@ -109,6 +111,7 @@ runs:
         DB_PORT: ${{ inputs.db-port }}
         DB_USER: ${{ inputs.db-user }}
         PROVIDER_API_BASE_URL: ${{ inputs.provider-api-base-url }}
+        PROVIDER_API_KEY: ${{ inputs.provider-api-key }}
         GITHUB_SHA: ${{ github.sha }}
         GITHUB_REF_NAME: ${{ github.ref_name }}
         GITHUB_HEAD_REF: ${{ github.head_ref }}

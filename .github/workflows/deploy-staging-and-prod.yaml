@@ -33,6 +33,7 @@ jobs:
           session_name: ${{ vars.SESSION_NAME}}
           session_secret: ${{ secrets.SESSION_SECRET }}
           provider-api-base-url: ${{ vars.PROVIDER_API_BASE_URL }}
+          provider-api-key: ${{ secrets.PROVIDER_API_KEY }}
   notify-slack-staging:
     environment: staging
     needs: deploy-staging
@@ -77,6 +78,7 @@ jobs:
           session_name: ${{ vars.SESSION_NAME}}
           session_secret: ${{ secrets.SESSION_SECRET }}
           provider-api-base-url: ${{ vars.PROVIDER_API_BASE_URL }}
+          provider-api-key: ${{ secrets.PROVIDER_API_KEY }}
   notify-slack-prod:
     environment: production
     needs: deploy-production
