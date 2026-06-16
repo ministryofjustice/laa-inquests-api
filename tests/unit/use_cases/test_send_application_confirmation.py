@@ -16,7 +16,7 @@ from app.models.application.index import (
     PublicBodyId,
 )
 from app.models.application.enums import AddressSource
-from app.models.notify_templates.application_submit_personalisation import (
+from app.models.gov_notify_templates.application_submit_personalisation import (
     NotifyApplicationSubmitTemplatePersonalisation,
 )
 from app.use_cases.send_application_confirmation import send_application_confirmation

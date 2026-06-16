@@ -439,7 +439,7 @@ def test_422_create_application_fails_without_office_id(client, auth_token):
     assert response.status_code == 422
 
 
-def test_500_create_application_rolls_back_when_govnotify_fails(
+def test_500_create_application_rolls_back_when_gov_notify_fails(
     client, auth_token, session
 ):
     """

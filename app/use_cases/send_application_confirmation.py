@@ -1,7 +1,7 @@
 """Use case for sending application confirmation emails."""
 
 from app.models.application.index import Application
-from app.adapters.govnotify import GovNotifyAdapter
+from app.adapters.gov_notify import GovNotifyAdapter
 from app.use_cases.populate_application_submission_template import (
     populate_application_submission_template,
 )

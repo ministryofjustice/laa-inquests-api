@@ -2,14 +2,14 @@
 
 from unittest.mock import Mock, patch
 import pytest
-from app.adapters.govnotify import GovNotifyClient
-from app.models.notify_templates.application_submit_personalisation import (
+from app.adapters.gov_notify import GovNotifyClient
+from app.models.gov_notify_templates.application_submit_personalisation import (
     NotifyApplicationSubmitTemplatePersonalisation,
 )
 from app.config import Config
 
 
-def test_govnotify_client_sends_email_successfully():
+def test_gov_notify_client_sends_email_successfully():
     """
     Test that GovNotifyClient successfully sends an email via the notifications API.
     """
@@ -41,7 +41,7 @@ def test_govnotify_client_sends_email_successfully():
     )
 
     with patch(
-        "app.adapters.govnotify.NotificationsAPIClient"
+        "app.adapters.gov_notify.NotificationsAPIClient"
     ) as mock_api_client_class:
         mock_api_client_class.return_value = mock_notifications_client
 
@@ -63,7 +63,7 @@ def test_govnotify_client_sends_email_successfully():
         )
 
 
-def test_govnotify_client_raises_exception_on_api_error():
+def test_gov_notify_client_raises_exception_on_api_error():
     """
     Test that GovNotifyClient raises an exception when the API returns an error.
     """
@@ -96,7 +96,7 @@ def test_govnotify_client_raises_exception_on_api_error():
     )
 
     with patch(
-        "app.adapters.govnotify.NotificationsAPIClient"
+        "app.adapters.gov_notify.NotificationsAPIClient"
     ) as mock_api_client_class:
         mock_api_client_class.return_value = mock_notifications_client
 
@@ -113,7 +113,7 @@ def test_govnotify_client_raises_exception_on_api_error():
         assert "API Error: Invalid API key" in str(exc_info.value)
 
 
-def test_govnotify_client_uses_config_api_key():
+def test_gov_notify_client_uses_config_api_key():
     """
     Test that GovNotifyClient uses the API key from Config.
     """
@@ -121,7 +121,7 @@ def test_govnotify_client_uses_config_api_key():
     mock_notifications_client = Mock()
 
     with patch(
-        "app.adapters.govnotify.NotificationsAPIClient"
+        "app.adapters.gov_notify.NotificationsAPIClient"
     ) as mock_api_client_class:
         mock_api_client_class.return_value = mock_notifications_client
 

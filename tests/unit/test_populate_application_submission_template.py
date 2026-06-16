@@ -15,7 +15,7 @@ from app.models.application.enums import AddressSource, CorrespondenceRecipientT
 from app.use_cases.populate_application_submission_template import (
     populate_application_submission_template,
 )
-from app.models.notify_templates.application_submit_personalisation import (
+from app.models.gov_notify_templates.application_submit_personalisation import (
     NotifyApplicationSubmitTemplatePersonalisation,
 )
 

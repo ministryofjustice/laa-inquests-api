@@ -26,7 +26,7 @@ from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.exceptions import ApplicationNotFoundError
 from app.use_cases.read_application import ReadApplicationUseCase
 # from app.models.user import User
-from app.adapters.govnotify import GovNotifyClient
+from app.adapters.gov_notify import GovNotifyClient
 from app.use_cases.send_application_confirmation import send_application_confirmation
 
 
@@ -184,8 +184,8 @@ def create_application(
     try:
         # Send confirmation email via GovNotify
         # If this fails, rollback all database changes
-        govnotify_adapter = GovNotifyClient()
-        send_application_confirmation(new_application, govnotify_adapter)
+        gov_notify_adapter = GovNotifyClient()
+        send_application_confirmation(new_application, gov_notify_adapter)
 
         # Commit only if email was sent successfully
         session.commit()
