@@ -110,6 +110,7 @@ jobs:
           kube-token: ${{ secrets.KUBE_TOKEN }}
           kube-cluster: ${{ secrets.KUBE_CLUSTER }}
           kube-namespace: ${{ secrets.KUBE_NAMESPACE }}
+          provider-api-base-url: ${{ vars.PROVIDER_API_BASE_URL }}
   notify-slack:
     environment: uat
     needs: deploy-uat
