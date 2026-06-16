@@ -3,12 +3,12 @@
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class EmailPersonalisation(BaseModel):
+class NotifyApplicationSubmitTemplatePersonalisation(BaseModel):
     """
-    Email personalisation data for GovNotify templates.
+    Application data formatted to fill in GovNotify email template for submission confirmation.
 
-    All fields are strings as required by GovNotify API.
-    Optional fields default to "N/A" for display purposes.
+    All fields are strings as required by the "Application submission" email template viewable in the LAA Inquests team in GovNotify.
+    See the template page in Confluence for details on default values.
     """
 
     model_config = ConfigDict(extra="forbid")

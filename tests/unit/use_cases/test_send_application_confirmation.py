@@ -16,7 +16,9 @@ from app.models.application.index import (
     PublicBodyId,
 )
 from app.models.application.enums import AddressSource
-from app.models.notifications.personalisation import EmailPersonalisation
+from app.models.notify_templates.application_submit_personalisation import (
+    NotifyApplicationSubmitTemplatePersonalisation,
+)
 from app.use_cases.send_application_confirmation import send_application_confirmation
 from app.config import Config
 
@@ -117,9 +119,9 @@ def test_send_application_confirmation_calls_adapter_with_correct_parameters():
         == Config.GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID
     )
 
-    # Verify personalisation is EmailPersonalisation instance
+    # Verify personalisation is NotifyApplicationSubmitTemplatePersonalisation instance
     personalisation = call_args.kwargs["personalisation"]
-    assert isinstance(personalisation, EmailPersonalisation)
+    assert isinstance(personalisation, NotifyApplicationSubmitTemplatePersonalisation)
     assert personalisation.laa_reference == "12345"
     assert personalisation.client_first_name == "Jane"
     assert personalisation.client_last_name == "Doe"
@@ -158,9 +160,9 @@ def test_send_application_confirmation_builds_complete_personalisation():
     # Assert - check that all required template fields are in personalisation
     personalisation = mock_adapter.send_email.call_args.kwargs["personalisation"]
 
-    assert isinstance(personalisation, EmailPersonalisation)
+    assert isinstance(personalisation, NotifyApplicationSubmitTemplatePersonalisation)
 
-    # Verify key fields exist (EmailPersonalisation model ensures all required fields)
+    # Verify key fields exist (NotifyApplicationSubmitTemplatePersonalisation model ensures all required fields)
     assert personalisation.laa_reference == "99999"
     assert personalisation.client_first_name == "Jane"
     assert personalisation.client_last_name == "Doe"

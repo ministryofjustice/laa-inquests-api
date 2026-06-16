@@ -3,7 +3,9 @@
 from unittest.mock import Mock, patch
 import pytest
 from app.adapters.govnotify import GovNotifyClient
-from app.models.notifications.personalisation import EmailPersonalisation
+from app.models.notify_templates.application_submit_personalisation import (
+    NotifyApplicationSubmitTemplatePersonalisation,
+)
 from app.config import Config
 
 
@@ -16,7 +18,7 @@ def test_govnotify_client_sends_email_successfully():
     mock_response = {"id": "test-notification-id", "content": {"body": "test"}}
     mock_notifications_client.send_email_notification.return_value = mock_response
 
-    personalisation = EmailPersonalisation(
+    personalisation = NotifyApplicationSubmitTemplatePersonalisation(
         laa_reference="12345",
         client_first_name="Test",
         client_last_name="User",
@@ -71,7 +73,7 @@ def test_govnotify_client_raises_exception_on_api_error():
         "API Error: Invalid API key"
     )
 
-    personalisation = EmailPersonalisation(
+    personalisation = NotifyApplicationSubmitTemplatePersonalisation(
         laa_reference="12345",
         client_first_name="Test",
         client_last_name="User",
@@ -132,11 +134,11 @@ def test_govnotify_client_uses_config_api_key():
 
 def test_email_personalisation_rejects_missing_required_fields():
     """
-    Test that EmailPersonalisation model rejects creation with missing required fields.
+    Test that NotifyApplicationSubmitTemplatePersonalisation model rejects creation with missing required fields.
     """
     # Act & Assert - missing required fields should raise validation error
     with pytest.raises(Exception):  # Pydantic ValidationError
-        EmailPersonalisation(
+        NotifyApplicationSubmitTemplatePersonalisation(
             laa_reference="12345",
             client_first_name="Test",
             # Missing many required fields
@@ -145,11 +147,11 @@ def test_email_personalisation_rejects_missing_required_fields():
 
 def test_email_personalisation_rejects_extra_fields():
     """
-    Test that EmailPersonalisation model rejects extra/unexpected fields.
+    Test that NotifyApplicationSubmitTemplatePersonalisation model rejects extra/unexpected fields.
     """
     # Act & Assert - extra fields should raise validation error
     with pytest.raises(Exception):  # Pydantic ValidationError
-        EmailPersonalisation(
+        NotifyApplicationSubmitTemplatePersonalisation(
             laa_reference="12345",
             client_first_name="Test",
             client_last_name="User",

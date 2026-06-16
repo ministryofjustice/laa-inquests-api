@@ -2,7 +2,9 @@
 
 from app.models.application.index import Application
 from app.adapters.govnotify import GovNotifyAdapter
-from app.use_cases.build_email_personalisation import build_email_personalisation
+from app.use_cases.populate_application_submission_template import (
+    populate_application_submission_template,
+)
 from app.config import Config
 
 
@@ -25,7 +27,7 @@ def send_application_confirmation(
         Exception: If email sending fails (triggers transaction rollback)
     """
     # Build personalisation dict from application data
-    personalisation = build_email_personalisation(application)
+    personalisation = populate_application_submission_template(application)
 
     # Send email via adapter
     adapter.send_email(

@@ -1,18 +1,22 @@
 """Use case for building email personalisation data from Application objects."""
 
 from app.models.application.index import Application, Address
-from app.models.notifications.personalisation import EmailPersonalisation
+from app.models.notify_templates.application_submit_personalisation import (
+    NotifyApplicationSubmitTemplatePersonalisation,
+)
 
 
-def build_email_personalisation(application: Application) -> EmailPersonalisation:
+def populate_application_submission_template(
+    application: Application,
+) -> NotifyApplicationSubmitTemplatePersonalisation:
     """
-    Build personalisation dictionary for GovNotify email template from Application.
+    Build dictionary for populating GovNotify application submission email template.
 
     Args:
         application: Application object with all relationships loaded
 
     Returns:
-        Dictionary with all template variables required by GovNotify template
+        Dictionary with all template variables required by GovNotify application submission email template
     """
     client = application.client
     deceased = application.deceased
@@ -69,7 +73,7 @@ def build_email_personalisation(application: Application) -> EmailPersonalisatio
     else:
         public_body_description = "N/A"
 
-    return EmailPersonalisation(
+    return NotifyApplicationSubmitTemplatePersonalisation(
         # LAA reference
         laa_reference=str(application.laa_reference),
         # Client details

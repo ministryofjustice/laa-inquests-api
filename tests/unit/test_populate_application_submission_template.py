@@ -12,13 +12,17 @@ from app.models.application.index import (
     PublicBodyId,
 )
 from app.models.application.enums import AddressSource, CorrespondenceRecipientType
-from app.use_cases.build_email_personalisation import build_email_personalisation
-from app.models.notifications.personalisation import EmailPersonalisation
+from app.use_cases.populate_application_submission_template import (
+    populate_application_submission_template,
+)
+from app.models.notify_templates.application_submit_personalisation import (
+    NotifyApplicationSubmitTemplatePersonalisation,
+)
 
 
-def test_build_email_personalisation_returns_all_required_fields():
+def test_populate_application_submission_template_returns_all_required_fields():
     """
-    Test that build_email_personalisation returns all fields required by the GovNotify template.
+    Test that populate_application_submission_template returns all fields required by the GovNotify template.
     """
     # Arrange - create test application with all related data
     home_address = Address(
@@ -115,10 +119,10 @@ def test_build_email_personalisation_returns_all_required_fields():
     )
 
     # Act
-    result = build_email_personalisation(application)
+    result = populate_application_submission_template(application)
 
-    # Assert - verify result is EmailPersonalisation model
-    assert isinstance(result, EmailPersonalisation)
+    # Assert - verify result is NotifyApplicationSubmitTemplatePersonalisation model
+    assert isinstance(result, NotifyApplicationSubmitTemplatePersonalisation)
 
     # Assert - verify all template fields are present and correct
     assert result.laa_reference == "12345"
@@ -151,9 +155,9 @@ def test_build_email_personalisation_returns_all_required_fields():
     assert result.file_name == "N/A"
 
 
-def test_build_email_personalisation_handles_optional_fields():
+def test_populate_application_submission_template_handles_optional_fields():
     """
-    Test that build_email_personalisation handles missing/optional fields correctly.
+    Test that populate_application_submission_template handles missing/optional fields correctly.
     """
     # Arrange - minimal application data
     home_address = Address(
@@ -228,10 +232,10 @@ def test_build_email_personalisation_handles_optional_fields():
     )
 
     # Act
-    result = build_email_personalisation(application)
+    result = populate_application_submission_template(application)
 
     # Assert - verify optional fields are handled
-    assert isinstance(result, EmailPersonalisation)
+    assert isinstance(result, NotifyApplicationSubmitTemplatePersonalisation)
     assert result.client_last_name_at_birth == "Not provided"
     assert result.national_insurance_number == "Not provided"
     assert result.has_applied_previously == "No"
@@ -242,7 +246,7 @@ def test_build_email_personalisation_handles_optional_fields():
     assert result.deceased_has_other_related_applications == "No"
 
 
-def test_build_email_personalisation_formats_address_correctly():
+def test_populate_application_submission_template_formats_address_correctly():
     """
     Test that addresses are formatted correctly with line breaks.
     """
@@ -321,10 +325,10 @@ def test_build_email_personalisation_formats_address_correctly():
     )
 
     # Act
-    result = build_email_personalisation(application)
+    result = populate_application_submission_template(application)
 
     # Assert - address should be formatted with line breaks
-    assert isinstance(result, EmailPersonalisation)
+    assert isinstance(result, NotifyApplicationSubmitTemplatePersonalisation)
     expected_address = "123 Test Street\nFloor 2\nTest City\nTest County\nTC1 1TC"
     assert result.client_home_address == expected_address
 
@@ -420,10 +424,10 @@ def test_default_home_address_value_set_to_no_fixed_abode_when_not_provided():
     )
 
     # Act
-    result = build_email_personalisation(application)
+    result = populate_application_submission_template(application)
 
-    # Assert - verify result is EmailPersonalisation model
-    assert isinstance(result, EmailPersonalisation)
+    # Assert - verify result is NotifyApplicationSubmitTemplatePersonalisation model
+    assert isinstance(result, NotifyApplicationSubmitTemplatePersonalisation)
 
     # Assert - verify all template fields are present and correct
     assert result.client_home_address == "No fixed abode"

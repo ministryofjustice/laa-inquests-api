@@ -3,7 +3,9 @@
 from typing import Protocol
 from notifications_python_client.notifications import NotificationsAPIClient
 from app.config import Config
-from app.models.notifications.personalisation import EmailPersonalisation
+from app.models.notify_templates.application_submit_personalisation import (
+    NotifyApplicationSubmitTemplatePersonalisation,
+)
 
 
 class GovNotifyAdapter(Protocol):
@@ -13,7 +15,7 @@ class GovNotifyAdapter(Protocol):
         self,
         email_address: str,
         template_id: str,
-        personalisation: EmailPersonalisation,
+        personalisation: NotifyApplicationSubmitTemplatePersonalisation,
     ) -> None:
         """
         Send an email via GovNotify.
@@ -45,7 +47,7 @@ class GovNotifyClient:
         self,
         email_address: str,
         template_id: str,
-        personalisation: EmailPersonalisation,
+        personalisation: NotifyApplicationSubmitTemplatePersonalisation,
     ) -> None:
         """
         Send an email via GovNotify.
