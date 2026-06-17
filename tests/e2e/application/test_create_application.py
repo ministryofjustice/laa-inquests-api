@@ -38,6 +38,7 @@ def _make_request_body(client_overrides=None):
         "provider": {
             "firmCode": "0A123B",
             "officeId": "001",
+            "email": "provider@example.com",
         },
     }
 
@@ -304,6 +305,38 @@ def test_422_rejected_when_client_is_recipient_and_correspondence_recipient_prov
         "recipientType": "PERSON",
         "recipientName": "Someone Else",
     }
+
+    response = client.post(
+        "/applications",
+        json=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_201_create_application_response_includes_provider_email(client, auth_token):
+    response = client.post(
+        "/applications",
+        json=_make_request_body(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.json()["provider"]["email"] == "provider@example.com"
+
+
+def test_422_create_application_rejected_when_provider_email_missing(
+    client, auth_token
+):
+    body = _make_request_body()
+    del body["provider"]["email"]
 
     response = client.post(
         "/applications",
