@@ -38,7 +38,9 @@ deploy_branch() {
                 --set env.SERVICE_PHASE="$SERVICE_PHASE" \
                 --set env.SESSION_NAME="$SESSION_NAME" \
                 --set env.SESSION_SECRET="$SESSION_SECRET" \
-                --set env.SERVICE_URL="$SERVICE_URL"
+                --set env.SERVICE_URL="$SERVICE_URL" \
+                --set env.PROVIDER_API_BASE_URL="$PROVIDER_API_BASE_URL" \
+                --set env.PROVIDER_API_KEY="$PROVIDER_API_KEY"
 }
 
 deploy_main() {
@@ -67,7 +69,9 @@ deploy_main() {
                 --set env.SERVICE_PHASE="$SERVICE_PHASE" \
                 --set env.SESSION_NAME="$SESSION_NAME" \
                 --set env.SESSION_SECRET="$SESSION_SECRET" \
-                --set env.SERVICE_URL="$SERVICE_URL"
+                --set env.SERVICE_URL="$SERVICE_URL" \
+                --set env.PROVIDER_API_BASE_URL="$PROVIDER_API_BASE_URL" \
+                --set env.PROVIDER_API_KEY="$PROVIDER_API_KEY"
 }
 
 releaseTag="^[0-9]+[.][0-9]+[.][0-9]+$"

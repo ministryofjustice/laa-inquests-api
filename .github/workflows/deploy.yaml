@@ -110,6 +110,8 @@ jobs:
           kube-token: ${{ secrets.KUBE_TOKEN }}
           kube-cluster: ${{ secrets.KUBE_CLUSTER }}
           kube-namespace: ${{ secrets.KUBE_NAMESPACE }}
+          provider-api-base-url: ${{ vars.PROVIDER_API_BASE_URL }}
+          provider-api-key: ${{ secrets.PROVIDER_API_KEY }}
           ratelimit_max: ${{ vars.RATE_LIMIT_MAX }}
           ratewindow_ms: ${{ vars.RATE_WINDOW_MS }}
           service_name: ${{ vars.SERVICE_NAME }}

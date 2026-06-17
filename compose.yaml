@@ -44,6 +44,9 @@ services:
     command: uvicorn app:api --host 0.0.0.0 --port 8027 --reload
     ports:
       - "8027:8027"
+    env_file:
+      - path: ../.env.api
+        required: false
     environment:
       SECRET_KEY: "TEST_KEY"
       <<: *app_db_env
