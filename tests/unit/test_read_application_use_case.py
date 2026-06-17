@@ -9,9 +9,13 @@ from app.use_cases.exceptions import ApplicationNotFoundError
 
 
 def _make_application(
-    firm_code: str = "0A123B", office_id: str = "001", email_address: str = "test@example.com"
+    firm_code: str = "0A123B",
+    office_id: str = "001",
+    email_address: str = "test@example.com",
 ) -> Application:
-    provider = Provider(firm_code=firm_code, office_id=office_id, email_address=email_address)
+    provider = Provider(
+        firm_code=firm_code, office_id=office_id, email_address=email_address
+    )
     client = Client(
         client_id=1,
         client_first_name="Test",
