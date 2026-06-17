@@ -23,13 +23,9 @@ class ReadApplicationUseCase:
         firm_name = self.provider_details_port.get_firm_name(
             application.provider.firm_code
         )
-        email_address = self.provider_details_port.get_office_email(
-            application.provider.firm_code, application.provider.office_id
-        )
         provider_response = ProviderResponse(
             firm_name=firm_name,
             account_number=application.provider.office_id,
-            email_address=email_address,
         )
         response = ApplicationResponse.model_validate(application)
         response.provider = provider_response

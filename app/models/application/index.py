@@ -470,7 +470,6 @@ class ProviderResponse(BaseModel):
     )
     firm_name: str | None = None
     account_number: str | None = None
-    email_address: str | None = None
 
 
 class ApplicationResponse(BaseModel):
