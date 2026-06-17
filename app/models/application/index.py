@@ -494,3 +494,14 @@ class ApplicationResponse(BaseModel):
     client: ClientResponse
     deceased: DeceasedResponse
     provider: ProviderResponse
+
+
+class CoronersLetterRequest(BaseModel):
+    coroners_letter: str
+    file_name: str
+
+
+class CoronersLetterResponse(BaseModel):
+    id: str
+    status: int
+    file_name: str
