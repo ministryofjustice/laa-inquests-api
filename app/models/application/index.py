@@ -121,6 +121,7 @@ class Client(ClientBase, table=True):
 class ProviderBase(SQLModel):
     firm_code: str
     office_id: str
+    email_address: str
 
 
 class Provider(ProviderBase, table=True):
@@ -347,6 +348,7 @@ class ProviderCreate(BaseModel):
     )
     firm_code: str = PydanticField(examples=["0A123B"])
     office_id: str = PydanticField(examples=["001"])
+    email_address: str = PydanticField(examples=["provider@example.com"])
 
 
 class ApplicationCreate(BaseModel):
@@ -470,6 +472,7 @@ class ProviderResponse(BaseModel):
     )
     firm_name: str | None = None
     account_number: str | None = None
+    email_address: str
 
 
 class ApplicationResponse(BaseModel):

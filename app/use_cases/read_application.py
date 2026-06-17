@@ -26,6 +26,7 @@ class ReadApplicationUseCase:
         provider_response = ProviderResponse(
             firm_name=firm_name,
             account_number=application.provider.office_id,
+            email_address=application.provider.email_address,
         )
         response = ApplicationResponse.model_validate(application)
         response.provider = provider_response

@@ -131,6 +131,7 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
             "provider": {
                 "firmCode": "0A123B",
                 "officeId": "001",
+                "emailAddress": "provider@example.com",
             },
         },
         headers={
@@ -168,6 +169,22 @@ def test_404_read_application_returns_404_when_not_found(client, auth_token):
     )
 
     assert response.status_code == 404
+
+
+def test_200_get_application_includes_provider_email(session, client, auth_token):
+    first_application_row = session.exec(select(Application)).first()
+    laa_reference = first_application_row.__dict__["laa_reference"]
+
+    response = client.get(
+        f"/applications/{laa_reference}",
+        headers={
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["provider"]["emailAddress"] == "test@example.com"
 
 
 def test_200_provider_details_included_on_application_response(

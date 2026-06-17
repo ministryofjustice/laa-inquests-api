@@ -8,8 +8,14 @@ from app.use_cases.read_application import ReadApplicationUseCase
 from app.use_cases.exceptions import ApplicationNotFoundError
 
 
-def _make_application(firm_code: str = "0A123B", office_id: str = "001") -> Application:
-    provider = Provider(firm_code=firm_code, office_id=office_id)
+def _make_application(
+    firm_code: str = "0A123B",
+    office_id: str = "001",
+    email_address: str = "test@example.com",
+) -> Application:
+    provider = Provider(
+        firm_code=firm_code, office_id=office_id, email_address=email_address
+    )
     client = Client(
         client_id=1,
         client_first_name="Test",
@@ -93,3 +99,15 @@ def test_execute_returns_correct_account_number():
     result = use_case.execute("1")
 
     assert result.provider.account_number == "042"
+
+
+def test_execute_returns_provider_email_in_response():
+    session = MagicMock()
+    session.get.return_value = _make_application(email_address="provider@example.com")
+    port = MagicMock(spec=ProviderDetailsPort)
+    port.get_firm_name.return_value = "Test Firm"
+
+    use_case = ReadApplicationUseCase(session=session, provider_details_port=port)
+    result = use_case.execute("1")
+
+    assert result.provider.email_address == "provider@example.com"
