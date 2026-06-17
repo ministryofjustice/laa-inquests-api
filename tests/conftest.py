@@ -103,7 +103,7 @@ def session_fixture():
         db_session.refresh(new_deceased)
 
         new_provider = Provider(
-            firm_code="0A123B", office_id="001", email="test@example.com"
+            firm_code="0A123B", office_id="001", email_address="test@example.com"
         )
         db_session.add(new_provider)
         db_session.commit()

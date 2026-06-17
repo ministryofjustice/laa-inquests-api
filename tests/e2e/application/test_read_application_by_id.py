@@ -131,7 +131,7 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
             "provider": {
                 "firmCode": "0A123B",
                 "officeId": "001",
-                "email": "provider@example.com",
+                "emailAddress": "provider@example.com",
             },
         },
         headers={
@@ -184,7 +184,7 @@ def test_200_get_application_includes_provider_email(session, client, auth_token
     )
 
     assert response.status_code == 200
-    assert response.json()["provider"]["email"] == "test@example.com"
+    assert response.json()["provider"]["emailAddress"] == "test@example.com"
 
 
 def test_200_provider_details_included_on_application_response(

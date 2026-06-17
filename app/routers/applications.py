@@ -159,7 +159,7 @@ def create_application(
     new_provider = Provider(
         firm_code=request.provider.firm_code,
         office_id=request.provider.office_id,
-        email=request.provider.email,
+        email_address=request.provider.email_address,
     )
     session.add(new_provider)
     session.commit()

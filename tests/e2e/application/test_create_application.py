@@ -38,7 +38,7 @@ def _make_request_body(client_overrides=None):
         "provider": {
             "firmCode": "0A123B",
             "officeId": "001",
-            "email": "provider@example.com",
+            "emailAddress": "provider@example.com",
         },
     }
 
@@ -329,14 +329,14 @@ def test_201_create_application_response_includes_provider_email(client, auth_to
     )
 
     assert response.status_code == 201
-    assert response.json()["provider"]["email"] == "provider@example.com"
+    assert response.json()["provider"]["emailAddress"] == "provider@example.com"
 
 
 def test_422_create_application_rejected_when_provider_email_missing(
     client, auth_token
 ):
     body = _make_request_body()
-    del body["provider"]["email"]
+    del body["provider"]["emailAddress"]
 
     response = client.post(
         "/applications",
