@@ -92,6 +92,10 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
     create_response = client.post(
         "/applications",
         json={
+            "coronersLetter": {
+                "coronersLetter": "dGVzdCBjb250ZW50",
+                "fileName": "coroners_letter.pdf",
+            },
             "proceedings": [{"proceedingId": "TEST1"}],
             "client": {
                 "clientFirstName": "Test",

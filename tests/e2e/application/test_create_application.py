@@ -1,3 +1,11 @@
+import base64
+
+from unittest.mock import MagicMock
+
+from app.routers.applications import get_sds_port
+from app.use_cases.exceptions import CoronersLetterSaveError
+
+
 def _make_request_body(client_overrides=None):
     client = {
         "clientFirstName": "Test",
@@ -23,6 +31,12 @@ def _make_request_body(client_overrides=None):
     if client_overrides:
         client.update(client_overrides)
     return {
+        "coronersLetter": {
+            "coronersLetter": base64.b64encode(
+                b"test coroners letter content"
+            ).decode(),
+            "fileName": "coroners_letter.pdf",
+        },
         "proceedings": [{"proceedingId": "TEST1"}],
         "client": client,
         "publicBodies": [{"publicBodyId": "Department for Transport"}],
@@ -399,3 +413,29 @@ def test_422_create_application_fails_without_office_id(client, auth_token):
     )
 
     assert response.status_code == 422
+
+
+def test_500_returns_error_when_coroners_letter_save_fails(client, auth_token):
+    from app import api
+
+    def failing_sds_port():
+        mock_sds = MagicMock()
+        mock_sds.save_coroners_letter.side_effect = CoronersLetterSaveError(
+            "SDS unavailable"
+        )
+        return mock_sds
+
+    api.dependency_overrides[get_sds_port] = failing_sds_port
+    try:
+        response = client.post(
+            "/applications",
+            json=_make_request_body(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+    finally:
+        del api.dependency_overrides[get_sds_port]
+
+    assert response.status_code == 500

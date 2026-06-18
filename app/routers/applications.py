@@ -5,25 +5,21 @@ from typing import Sequence
 # from app.auth.security import get_current_active_user
 from app.db import get_session
 from app.models.application.index import (
-    Address,
     Application,
     ApplicationCreate,
-    ApplicationProceeding,
-    ApplicationPublicBody,
     ApplicationResponse,
-    AddressSource,
-    Client,
-    Deceased,
+    CoronersLetterRequest,
     MeritsDecisionUpdate,
-    ProceedingId,
-    Provider,
-    PublicBodyId,
 )
 from app.adapters.provider_details_adapter import ProviderDetailsAdapter
+from app.adapters.sds_adapter import SdsAdapter
 from app.config import Config
 from app.ports.provider_details_port import ProviderDetailsPort
-from app.use_cases.exceptions import ApplicationNotFoundError
+from app.ports.sds_port import SdsPort
+from app.use_cases.create_application import CreateApplicationUseCase
+from app.use_cases.exceptions import ApplicationNotFoundError, CoronersLetterSaveError
 from app.use_cases.read_application import ReadApplicationUseCase
+from app.use_cases.save_coroners_letter import SaveCoronersLetterUseCase
 # from app.models.user import User
 
 
@@ -40,6 +36,16 @@ def get_provider_details_port() -> ProviderDetailsPort:
     )
 
 
+def get_sds_port() -> SdsPort:
+    return SdsAdapter(
+        base_url=Config.SDS_BASE_URL,
+        tenant_id=Config.SDS_TENANT_ID,
+        client_id=Config.SDS_CLIENT_ID,
+        client_secret=Config.SDS_CLIENT_SECRET,
+        scope=Config.SDS_SCOPE,
+    )
+
+
 def get_read_application_use_case(
     session: Session = Depends(get_session),
     provider_details_port: ProviderDetailsPort = Depends(get_provider_details_port),
@@ -47,6 +53,18 @@ def get_read_application_use_case(
     return ReadApplicationUseCase(
         session=session, provider_details_port=provider_details_port
     )
+
+
+def get_save_coroners_letter_use_case(
+    sds_port: SdsPort = Depends(get_sds_port),
+) -> SaveCoronersLetterUseCase:
+    return SaveCoronersLetterUseCase(sds_port=sds_port)
+
+
+def get_create_application_use_case(
+    session: Session = Depends(get_session),
+) -> CreateApplicationUseCase:
+    return CreateApplicationUseCase(session=session)
 
 
 @router.get("/{laa_reference}", response_model=ApplicationResponse)
@@ -75,106 +93,25 @@ async def read_all_applications(
 @router.post("/", response_model=ApplicationResponse, status_code=201)
 def create_application(
     request: ApplicationCreate,
-    session: Session = Depends(get_session),
+    save_letter_use_case: SaveCoronersLetterUseCase = Depends(
+        get_save_coroners_letter_use_case
+    ),
+    create_use_case: CreateApplicationUseCase = Depends(
+        get_create_application_use_case
+    ),
     # current_user: User = Depends(get_current_active_user),
 ) -> Application:
     """Creates a new application with proceedings, public bodies."""
-    proceedings_to_add = []
-    public_bodies_to_add = []
-
-    for proceeding in request.proceedings:
-        code_str = proceeding.proceeding_id
-        proceeding_to_add = ApplicationProceeding(proceeding_id=ProceedingId(code_str))
-        proceedings_to_add.append(proceeding_to_add)
-
-    for public_body in request.publicBodies:
-        public_body_enum = PublicBodyId(public_body.public_body_id)
-        public_body_to_add = ApplicationPublicBody(public_body_id=public_body_enum)
-        public_bodies_to_add.append(public_body_to_add)
-
-    correspondence_address = None
-    if request.client.correspondence_address is not None:
-        correspondence_address = Address(
-            **request.client.correspondence_address.model_dump()
+    try:
+        save_letter_use_case.execute(
+            CoronersLetterRequest(
+                coroners_letter=request.coroners_letter.coroners_letter,
+                file_name=request.coroners_letter.file_name,
+            )
         )
-        session.add(correspondence_address)
-
-    home_address_id = None
-    if request.client.home_address is not None:
-        home_address_to_add = Address(**request.client.home_address.model_dump())
-        session.add(home_address_to_add)
-        session.commit()
-        session.refresh(home_address_to_add)
-        home_address_id = home_address_to_add.address_id
-    else:
-        session.commit()
-
-    correspondence_address_id = None
-    if correspondence_address is not None:
-        session.refresh(correspondence_address)
-        correspondence_address_id = correspondence_address.address_id
-
-    client_data = request.client.model_dump(
-        exclude={"correspondence_address", "home_address"}
-    )
-    client_data["correspondence_address_source"] = AddressSource(
-        client_data["correspondence_address_source"]
-    )
-
-    new_client = Client(
-        **client_data,
-        correspondence_address_id=correspondence_address_id,
-        home_address_id=home_address_id,
-        correspondence_recipient_type=(
-            request.client.correspondence_recipient.recipient_type
-            if not request.client.is_client_correspondence_recipient
-            and request.client.correspondence_recipient is not None
-            else None
-        ),
-        correspondence_recipient_name=(
-            request.client.correspondence_recipient.recipient_name
-            if not request.client.is_client_correspondence_recipient
-            and request.client.correspondence_recipient is not None
-            else None
-        ),
-    )
-    session.add(new_client)
-    session.commit()
-    session.refresh(new_client)
-
-    new_deceased = Deceased(
-        deceased_first_name=request.deceased.deceased_first_name,
-        deceased_last_name=request.deceased.deceased_last_name,
-        deceased_date_of_birth=request.deceased.deceased_date_of_birth,
-        deceased_date_of_death=request.deceased.deceased_date_of_death,
-        coroners_reference=request.deceased.coroners_reference,
-        further_information=request.deceased.further_information,
-        client_relationship_to_deceased=request.deceased.client_relationship_to_deceased,
-        client_id=new_client.client_id,
-    )
-    session.add(new_deceased)
-    session.commit()
-    session.refresh(new_deceased)
-
-    new_provider = Provider(
-        firm_code=request.provider.firm_code,
-        office_id=request.provider.office_id,
-    )
-    session.add(new_provider)
-    session.commit()
-    session.refresh(new_provider)
-
-    new_application = Application(
-        client_id=new_client.client_id,
-        deceased_id=new_deceased.deceased_id,
-        proceedings=proceedings_to_add,
-        public_bodies=public_bodies_to_add,
-        provider_id=new_provider.provider_id,
-    )
-    session.add(new_application)
-    session.commit()
-    session.refresh(new_application)
-    return new_application
+    except CoronersLetterSaveError:
+        raise HTTPException(status_code=500, detail="Failed to save coroners letter")
+    return create_use_case.execute(request)
 
 
 @router.patch("/{laa_reference}/merits-decision", status_code=204)
