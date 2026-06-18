@@ -1,0 +1,1 @@
+"""Notification-related models."""

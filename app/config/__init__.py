@@ -17,5 +17,12 @@ class Config(object):
 
     SECRET_KEY = os.environ.get("SECRET_KEY", "TEST_KEY")
 
+    GOV_NOTIFY_API_KEY = os.environ.get("GOV_NOTIFY_API_KEY")
+    GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID = os.environ.get(
+        "GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID"
+    )
+    GOV_NOTIFY_CALLBACK_BEARER_TOKEN = os.environ.get(
+        "GOV_NOTIFY_CALLBACK_BEARER_TOKEN"
+    )
     PROVIDER_API_BASE_URL = os.environ.get("PROVIDER_API_BASE_URL", "")
     PROVIDER_API_KEY = os.environ.get("PROVIDER_API_KEY", "")

@@ -1,3 +1,8 @@
+from unittest.mock import patch, Mock
+from sqlmodel import select
+from app.models.application.index import Application
+
+
 def _make_request_body(client_overrides=None):
     client = {
         "clientFirstName": "Test",
@@ -432,3 +437,43 @@ def test_422_create_application_fails_without_office_id(client, auth_token):
     )
 
     assert response.status_code == 422
+
+
+def test_500_create_application_rolls_back_when_gov_notify_fails(
+    client, auth_token, session
+):
+    """
+    Test that application creation rolls back when GovNotify email sending fails.
+
+    This test verifies the critical requirement that email sending is atomic with
+    application creation - if the email fails, the entire transaction must rollback.
+
+    Verifies:
+    - 500 response when GovNotify fails
+    - Application is NOT created in database
+    - Transaction rollback occurs correctly
+    """
+    initial_count = len(session.exec(select(Application)).all())
+
+    with patch("app.routers.applications.GovNotifyClient") as mock_client_class:
+        mock_instance = Mock()
+        mock_instance.send_email.side_effect = Exception("GovNotify API unavailable")
+        mock_client_class.return_value = mock_instance
+
+        response = client.post(
+            "/applications",
+            json=_make_request_body(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 500
+        assert response.json() == {"detail": "An internal server error occurred"}
+
+        final_count = len(session.exec(select(Application)).all())
+        assert final_count == initial_count, (
+            f"Application was created despite email failure. "
+            f"Initial count: {initial_count}, Final count: {final_count}"
+        )
