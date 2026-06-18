@@ -29,7 +29,9 @@ def test_create_application_calls_save_letter_then_create():
     )
 
     save_letter_use_case.execute.assert_called_once()
-    create_use_case.execute.assert_called_once_with(request)
+    create_use_case.execute.assert_called_once_with(
+        request, save_letter_use_case.execute.return_value
+    )
 
 
 def test_create_application_returns_500_and_does_not_create_when_letter_save_fails():

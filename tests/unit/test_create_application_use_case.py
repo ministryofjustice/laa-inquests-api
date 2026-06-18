@@ -6,7 +6,9 @@ from app.models.application.index import (
     ApplicationCreate,
     Client,
     ClientCreate,
+    CoronersLetter,
     CoronersLetterCreate,
+    CoronersLetterResponse,
     Deceased,
     DeceasedCreate,
     Provider,
@@ -74,6 +76,8 @@ def _make_session() -> MagicMock:
             obj.deceased_id = 1
         elif isinstance(obj, Provider):
             obj.provider_id = 1
+        elif isinstance(obj, CoronersLetter):
+            obj.coroners_letter_id = 1
         elif isinstance(obj, Application):
             obj.laa_reference = 1
 
@@ -81,11 +85,19 @@ def _make_session() -> MagicMock:
     return session
 
 
+def _make_coroners_letter_response() -> CoronersLetterResponse:
+    return CoronersLetterResponse(
+        id="sds-abc123",
+        status=201,
+        file_name="letter.pdf",
+    )
+
+
 def test_execute_returns_application_when_letter_save_succeeds():
     session = _make_session()
     use_case = CreateApplicationUseCase(session=session)
 
-    result = use_case.execute(_make_request())
+    result = use_case.execute(_make_request(), _make_coroners_letter_response())
 
     assert isinstance(result, Application)
 
@@ -101,15 +113,15 @@ def test_execute_handles_no_home_address():
         }
     )
 
-    use_case.execute(request)
+    use_case.execute(request, _make_coroners_letter_response())
 
     added_objects = [args[0] for args, _ in session.add.call_args_list]
     assert not any(
         isinstance(obj, Address) and not hasattr(obj, "address_line_1")
         for obj in added_objects
     )
-    # No home address — only correspondence address + client + deceased + provider + application
-    assert session.add.call_count == 5
+    # No home address — correspondence address + client + deceased + provider + coroners_letter + application
+    assert session.add.call_count == 6
 
 
 def test_execute_handles_no_correspondence_address():
@@ -122,8 +134,20 @@ def test_execute_handles_no_correspondence_address():
         }
     )
 
-    use_case.execute(request)
+    use_case.execute(request, _make_coroners_letter_response())
 
     added_objects = [args[0] for args, _ in session.add.call_args_list]
     client_obj = next(obj for obj in added_objects if isinstance(obj, Client))
     assert client_obj.correspondence_address_id is None
+
+
+def test_execute_saves_coroners_letter_to_db():
+    session = _make_session()
+    use_case = CreateApplicationUseCase(session=session)
+
+    use_case.execute(_make_request(), _make_coroners_letter_response())
+
+    added_objects = [args[0] for args, _ in session.add.call_args_list]
+    letter_obj = next(obj for obj in added_objects if isinstance(obj, CoronersLetter))
+    assert letter_obj.sds_id == "sds-abc123"
+    assert letter_obj.file_name == "letter.pdf"

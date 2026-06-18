@@ -517,6 +517,16 @@ class CoronersLetterResponse(BaseModel):
     file_name: str
 
 
+class CoronersLetterApplicationResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+    id: str = PydanticField(validation_alias="sds_id")
+    file_name: str
+
+
 class ApplicationResponse(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -536,4 +546,4 @@ class ApplicationResponse(BaseModel):
     client: ClientResponse
     deceased: DeceasedResponse
     provider: ProviderResponse
-    coroners_letter: Optional[CoronersLetterResponse] = None
+    coroners_letter: Optional[CoronersLetterApplicationResponse] = None

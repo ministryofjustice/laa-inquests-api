@@ -103,7 +103,7 @@ def create_application(
 ) -> Application:
     """Creates a new application with proceedings, public bodies."""
     try:
-        save_letter_use_case.execute(
+        letter_response = save_letter_use_case.execute(
             CoronersLetterRequest(
                 coroners_letter=request.coroners_letter.coroners_letter,
                 file_name=request.coroners_letter.file_name,
@@ -111,7 +111,7 @@ def create_application(
         )
     except CoronersLetterSaveError:
         raise HTTPException(status_code=500, detail="Failed to save coroners letter")
-    return create_use_case.execute(request)
+    return create_use_case.execute(request, letter_response)
 
 
 @router.patch("/{laa_reference}/merits-decision", status_code=204)

@@ -8,6 +8,8 @@ from app.models.application.index import (
     ApplicationProceeding,
     ApplicationPublicBody,
     Client,
+    CoronersLetter,
+    CoronersLetterResponse,
     Deceased,
     ProceedingId,
     Provider,
@@ -19,7 +21,11 @@ class CreateApplicationUseCase:
     def __init__(self, session: Session) -> None:
         self.session = session
 
-    def execute(self, request: ApplicationCreate) -> Application:
+    def execute(
+        self,
+        request: ApplicationCreate,
+        coroners_letter_response: CoronersLetterResponse,
+    ) -> Application:
         proceedings_to_add = []
         public_bodies_to_add = []
 
@@ -107,12 +113,21 @@ class CreateApplicationUseCase:
         self.session.commit()
         self.session.refresh(new_provider)
 
+        new_coroners_letter = CoronersLetter(
+            sds_id=coroners_letter_response.id,
+            file_name=coroners_letter_response.file_name,
+        )
+        self.session.add(new_coroners_letter)
+        self.session.commit()
+        self.session.refresh(new_coroners_letter)
+
         new_application = Application(
             client_id=new_client.client_id,
             deceased_id=new_deceased.deceased_id,
             proceedings=proceedings_to_add,
             public_bodies=public_bodies_to_add,
             provider_id=new_provider.provider_id,
+            coroners_letter_id=new_coroners_letter.coroners_letter_id,
         )
         self.session.add(new_application)
         self.session.commit()
