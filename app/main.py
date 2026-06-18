@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from app.routers import applications, security
+from app.routers import applications, notifications, security
 from app.config.docs import docs_config
 
 
@@ -17,5 +17,6 @@ def create_app():
 
     app.include_router(security)
     app.include_router(applications)
+    app.include_router(notifications)
 
     return app

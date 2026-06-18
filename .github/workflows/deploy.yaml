@@ -104,6 +104,7 @@ jobs:
           ecr-region: ${{ vars.ECR_REGION }}
           gov-notify-api-key: ${{ secrets.GOV_NOTIFY_API_KEY }}
           gov-notify-application-submit-template-id: ${{ secrets.GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID }}
+          gov-notify-callback-bearer-token: ${{ secrets.GOV_NOTIFY_CALLBACK_BEARER_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           github-sha: ${{ github.sha }}
           github-ref-name: ${{ github.ref_name }}

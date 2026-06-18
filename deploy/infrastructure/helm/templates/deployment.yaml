@@ -47,6 +47,21 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             {{ include "laa-inquests-api.app.vars" . | nindent 12 }}
+            - name: GOV_NOTIFY_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.env.AWS_SECRETS_GOV_NOTIFY_API_KEY }}
+                  key: GOV_NOTIFY_API_KEY
+            - name: GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.env.AWS_SECRETS_GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID }}
+                  key: GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID
+            - name: GOV_NOTIFY_CALLBACK_BEARER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.env.AWS_SECRETS_GOV_NOTIFY_CALLBACK_BEARER_TOKEN }}
+                  key: GOV_NOTIFY_CALLBACK_BEARER_TOKEN
           ports:
             - name: http
               containerPort: 8027

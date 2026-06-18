@@ -37,6 +37,9 @@ inputs:
   gov-notify-application-submit-template-id:
     description: "Gov Notify application submit template ID"
     required: true
+  gov-notify-callback-bearer-token:
+    description: "Gov Notify callback bearer token"
+    required: true
   image-tag:
     description: "Container image tag"
     required: true
@@ -127,6 +130,7 @@ runs:
         DB_USER: ${{ inputs.db-user }}
         GOV_NOTIFY_API_KEY: ${{ inputs.gov-notify-api-key }}
         GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID: ${{ inputs.gov-notify-application-submit-template-id }}
+        GOV_NOTIFY_CALLBACK_BEARER_TOKEN: ${{ inputs.gov-notify-callback-bearer-token }}
         PROVIDER_API_BASE_URL: ${{ inputs.provider-api-base-url }}
         PROVIDER_API_KEY: ${{ inputs.provider-api-key }}
         GITHUB_SHA: ${{ github.sha }}

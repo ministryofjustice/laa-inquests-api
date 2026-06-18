@@ -22,6 +22,9 @@ class Config(object):
     GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID = os.environ.get(
         "GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID"
     )
+    GOV_NOTIFY_CALLBACK_BEARER_TOKEN = os.environ.get(
+        "GOV_NOTIFY_CALLBACK_BEARER_TOKEN"
+    )
     # TODO: Replace with dynamic provider email when user management is implemented
     GOVNOTIFY_PROVIDER_EMAIL = os.environ.get(
         "GOVNOTIFY_PROVIDER_EMAIL", "provider@example.com"
