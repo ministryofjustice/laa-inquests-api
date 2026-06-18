@@ -8,6 +8,7 @@ from app.models.application.enums import (
     AddressSource,
     CorrespondenceRecipientType,
     MeritsDecision,
+    ReasonForRefusal,
     ProceedingId,
     PublicBodyId,
 )
@@ -200,6 +201,8 @@ class ApplicationProceeding(SQLModel, table=True):
     application_proceeding_id: int | None = Field(default=None, primary_key=True)
     client_involvement_type: str | None = "RESPONDENT"
     merits_decision: str | None = "PENDING"
+    reason_for_refusal: str | None = None
+    justification: str | None = None
     laa_reference: int = Field(foreign_key="application.laa_reference")
     proceeding_id: ProceedingId = Field(foreign_key="proceeding.proceeding_id")
     proceeding: Proceeding = Relationship(back_populates="application_proceedings")
@@ -385,6 +388,21 @@ class MeritsDecisionUpdate(BaseModel):
         populate_by_name=True,
     )
     merits_decision: MeritsDecision
+    reason_for_refusal: ReasonForRefusal | None = None
+    justification: str | None = None
+
+    @model_validator(mode="after")
+    def validate_refusal_fields(self) -> "MeritsDecisionUpdate":
+        if self.merits_decision == MeritsDecision.REFUSED:
+            if self.reason_for_refusal is None:
+                raise ValueError(
+                    "reason_for_refusal is required when merits_decision is REFUSED"
+                )
+            if self.justification is None or not self.justification.strip():
+                raise ValueError(
+                    "justification is required when merits_decision is REFUSED"
+                )
+        return self
 
 
 # RESPONSE BODY

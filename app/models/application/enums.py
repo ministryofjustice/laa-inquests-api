@@ -7,6 +7,12 @@ class MeritsDecision(str, enum.Enum):
     GRANTED = "GRANTED"
 
 
+class ReasonForRefusal(str, enum.Enum):
+    NOT_IN_SCOPE = "NOT_IN_SCOPE"
+    INSUFFICIENT_INFORMATION = "INSUFFICIENT_INFORMATION"
+    DUPLICATE_CASE = "DUPLICATE_CASE"
+
+
 class AddressSource(str, enum.Enum):
     USE_CLIENT_HOME_ADDRESS = "USE_CLIENT_HOME_ADDRESS"
     USE_PROVIDER_ADDRESS = "USE_PROVIDER_ADDRESS"

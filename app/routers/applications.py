@@ -22,6 +22,7 @@ from app.models.application.index import (
     PublicBodyId,
     UploadCoronersLetterResponse,
 )
+from app.models.application.enums import MeritsDecision
 
 from app.adapters.provider_details_adapter import ProviderDetailsAdapter
 from app.config import Config
@@ -34,6 +35,7 @@ from app.use_cases.read_application import ReadApplicationUseCase
 from app.adapters.gov_notify import GovNotifyAdapter, GovNotifyClient
 from app.use_cases.save_coroners_letter import SaveCoronersLetterUseCase
 from app.use_cases.send_application_confirmation import send_application_confirmation
+from app.use_cases.send_application_refusal import send_application_refusal
 
 
 router = APIRouter(
@@ -271,10 +273,29 @@ def patch_merits_decision(
 
     proceeding = application.proceedings[0]
     proceeding.merits_decision = request.merits_decision
+    proceeding.reason_for_refusal = (
+        request.reason_for_refusal.value if request.reason_for_refusal else None
+    )
+    proceeding.justification = request.justification
 
     application.overall_decision = request.merits_decision
 
     session.add(application)
     session.add(proceeding)
-    session.commit()
+
+    try:
+        if request.merits_decision == MeritsDecision.REFUSED:
+            gov_notify_adapter = GovNotifyClient()
+            send_application_refusal(
+                gov_notify_adapter,
+                application,
+                proceeding,
+                application.provider.email_address,
+            )
+
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+
     return Response(status_code=204)
