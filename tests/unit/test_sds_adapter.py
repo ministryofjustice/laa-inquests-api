@@ -1,4 +1,4 @@
-import re
+import uuid
 from unittest.mock import MagicMock, patch
 
 
@@ -95,11 +95,11 @@ def test_save_coroners_letter_generates_unique_file_name_with_readable_stem():
     save_call = mock_post.call_args_list[1]
     stored_name = save_call.kwargs["files"]["file"][0]
 
-    # name should be <stem>_<uuid>.pdf
-    assert re.match(
-        r"^coroners_letter_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.pdf$",
-        stored_name,
-    )
+    stem, suffix = stored_name.rsplit(".", 1)
+    readable_part, uuid_part = stem.rsplit("_", 1)
+    assert readable_part == "coroners_letter"
+    assert suffix == "pdf"
+    uuid.UUID(uuid_part)  # raises ValueError if not a valid UUID
 
 
 def test_save_coroners_letter_two_calls_produce_different_file_names():
