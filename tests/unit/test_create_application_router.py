@@ -1,51 +1,61 @@
-from unittest.mock import MagicMock
+import asyncio
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import HTTPException
 
-from app.models.application.index import CoronersLetterCreate
-from app.routers.applications import create_application
+from app.models.application.index import CoronersLetterResponse
+from app.routers.applications import create_application, upload_coroners_letter
 from app.use_cases.exceptions import CoronersLetterSaveError
 
 
 def _make_request():
     request = MagicMock()
-    request.coroners_letter = CoronersLetterCreate(
-        coroners_letter=b"test content",
-        file_name="letter.pdf",
-    )
+    request.coroners_letter_id = "test-file_abc123.pdf"
     return request
 
 
-def test_create_application_calls_save_letter_then_create():
+def test_create_application_calls_create_use_case():
     request = _make_request()
-    save_letter_use_case = MagicMock()
     create_use_case = MagicMock()
 
-    create_application(
-        request,
-        save_letter_use_case=save_letter_use_case,
-        create_use_case=create_use_case,
+    create_application(request, create_use_case=create_use_case)
+
+    create_use_case.execute.assert_called_once_with(request)
+
+
+# upload_coroners_letter tests
+
+
+def _make_upload_file(content: bytes = b"pdf content", filename: str = "letter.pdf"):
+    mock_file = MagicMock()
+    mock_file.filename = filename
+    mock_file.read = AsyncMock(return_value=content)
+    return mock_file
+
+
+def _make_sds_response() -> CoronersLetterResponse:
+    return CoronersLetterResponse(
+        id="test-file_abc123.pdf", status=201, file_name="test-file_abc123.pdf"
     )
 
-    save_letter_use_case.execute.assert_called_once()
-    create_use_case.execute.assert_called_once_with(
-        request, save_letter_use_case.execute.return_value
+
+def test_upload_coroners_letter_returns_file_id():
+    use_case = MagicMock()
+    use_case.execute.return_value = _make_sds_response()
+
+    result = asyncio.run(
+        upload_coroners_letter(file=_make_upload_file(), use_case=use_case)
     )
 
+    assert result.file_id == "test-file_abc123.pdf"
 
-def test_create_application_returns_500_and_does_not_create_when_letter_save_fails():
-    request = _make_request()
-    save_letter_use_case = MagicMock()
-    save_letter_use_case.execute.side_effect = CoronersLetterSaveError("SDS failed")
-    create_use_case = MagicMock()
+
+def test_upload_coroners_letter_returns_500_when_sds_fails():
+    use_case = MagicMock()
+    use_case.execute.side_effect = CoronersLetterSaveError("SDS failed")
 
     with pytest.raises(HTTPException) as exc:
-        create_application(
-            request,
-            save_letter_use_case=save_letter_use_case,
-            create_use_case=create_use_case,
-        )
+        asyncio.run(upload_coroners_letter(file=_make_upload_file(), use_case=use_case))
 
     assert exc.value.status_code == 500
-    create_use_case.execute.assert_not_called()

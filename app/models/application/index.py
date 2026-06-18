@@ -373,23 +373,13 @@ class ProviderCreate(BaseModel):
     office_id: str = PydanticField(examples=["001"])
 
 
-class CoronersLetterCreate(BaseModel):
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
-    )
-    coroners_letter: bytes
-    file_name: str
-
-
 class ApplicationCreate(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
         populate_by_name=True,
         from_attributes=True,
     )
-    coroners_letter: CoronersLetterCreate
+    coroners_letter_id: str
     client: ClientCreate
     deceased: DeceasedCreate
     publicBodies: list[PublicBodyCreate]
@@ -504,6 +494,14 @@ class ProviderResponse(BaseModel):
     )
     firm_name: str | None = None
     account_number: str | None = None
+
+
+class UploadCoronersLetterResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+    file_id: str
 
 
 class CoronersLetterResponse(BaseModel):

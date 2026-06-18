@@ -9,7 +9,6 @@ from app.models.application.index import (
     ApplicationPublicBody,
     Client,
     CoronersLetter,
-    CoronersLetterResponse,
     Deceased,
     ProceedingId,
     Provider,
@@ -24,7 +23,6 @@ class CreateApplicationUseCase:
     def execute(
         self,
         request: ApplicationCreate,
-        coroners_letter_response: CoronersLetterResponse,
     ) -> Application:
         proceedings_to_add = []
         public_bodies_to_add = []
@@ -114,8 +112,8 @@ class CreateApplicationUseCase:
         self.session.refresh(new_provider)
 
         new_coroners_letter = CoronersLetter(
-            sds_id=coroners_letter_response.id,
-            file_name=coroners_letter_response.file_name,
+            sds_id=request.coroners_letter_id,
+            file_name=request.coroners_letter_id,
         )
         self.session.add(new_coroners_letter)
         self.session.commit()

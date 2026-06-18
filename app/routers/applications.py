@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from sqlmodel import Session, select
 from typing import Sequence
 
@@ -10,6 +10,7 @@ from app.models.application.index import (
     ApplicationResponse,
     CoronersLetterRequest,
     MeritsDecisionUpdate,
+    UploadCoronersLetterResponse,
 )
 from app.adapters.provider_details_adapter import ProviderDetailsAdapter
 from app.adapters.sds_adapter import SdsAdapter
@@ -20,7 +21,6 @@ from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.exceptions import ApplicationNotFoundError, CoronersLetterSaveError
 from app.use_cases.read_application import ReadApplicationUseCase
 from app.use_cases.save_coroners_letter import SaveCoronersLetterUseCase
-# from app.models.user import User
 
 
 router = APIRouter(
@@ -67,6 +67,30 @@ def get_create_application_use_case(
     return CreateApplicationUseCase(session=session)
 
 
+@router.post(
+    "/upload-coroners-letter",
+    response_model=UploadCoronersLetterResponse,
+    status_code=201,
+)
+async def upload_coroners_letter(
+    file: UploadFile = File(...),
+    use_case: SaveCoronersLetterUseCase = Depends(get_save_coroners_letter_use_case),
+    # current_user: User = Depends(get_current_active_user),
+) -> UploadCoronersLetterResponse:
+    """Upload a coroner's letter to document storage and return its file ID."""
+    contents = await file.read()
+    try:
+        response = use_case.execute(
+            CoronersLetterRequest(
+                coroners_letter=contents,
+                file_name=file.filename,
+            )
+        )
+    except CoronersLetterSaveError:
+        raise HTTPException(status_code=500, detail="Failed to save coroners letter")
+    return UploadCoronersLetterResponse(file_id=response.id)
+
+
 @router.get("/{laa_reference}", response_model=ApplicationResponse)
 async def read_application(
     laa_reference: str,
@@ -93,25 +117,13 @@ async def read_all_applications(
 @router.post("/", response_model=ApplicationResponse, status_code=201)
 def create_application(
     request: ApplicationCreate,
-    save_letter_use_case: SaveCoronersLetterUseCase = Depends(
-        get_save_coroners_letter_use_case
-    ),
     create_use_case: CreateApplicationUseCase = Depends(
         get_create_application_use_case
     ),
     # current_user: User = Depends(get_current_active_user),
 ) -> Application:
     """Creates a new application with proceedings, public bodies."""
-    try:
-        letter_response = save_letter_use_case.execute(
-            CoronersLetterRequest(
-                coroners_letter=request.coroners_letter.coroners_letter,
-                file_name=request.coroners_letter.file_name,
-            )
-        )
-    except CoronersLetterSaveError:
-        raise HTTPException(status_code=500, detail="Failed to save coroners letter")
-    return create_use_case.execute(request, letter_response)
+    return create_use_case.execute(request)
 
 
 @router.patch("/{laa_reference}/merits-decision", status_code=204)
