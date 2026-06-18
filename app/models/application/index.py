@@ -494,7 +494,7 @@ class ApplicationResponse(BaseModel):
 
 
 class CoronersLetterRequest(BaseModel):
-    coroners_letter: str
+    coroners_letter: bytes
     file_name: str
 
 

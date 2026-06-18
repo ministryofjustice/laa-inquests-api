@@ -7,11 +7,11 @@ from app.models.application.index import CoronersLetterResponse, CoronersLetterR
 from app.use_cases.exceptions import CoronersLetterSaveError
 
 request_body = CoronersLetterRequest(
-    coroners_letter="test",
+    coroners_letter=b"test",
     file_name="test_file.pdf",
 )
 body = CoronersLetterResponse(
-    id="random46748.pdf",
+    id="test_file.pdf",
     status=201,
     file_name="test_file.pdf",
 )

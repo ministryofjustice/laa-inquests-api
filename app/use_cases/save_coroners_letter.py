@@ -10,8 +10,10 @@ class SaveCoronersLetterUseCase:
     def execute(
         self, coronersLetterRequest: CoronersLetterRequest
     ) -> CoronersLetterResponse:
-        coroners_letter = coronersLetterRequest.coroners_letter
-        response_body = self.sds_port.save_coroners_letter(coroners_letter)
+        response_body = self.sds_port.save_coroners_letter(
+            coronersLetterRequest.coroners_letter,
+            coronersLetterRequest.file_name,
+        )
 
         if response_body.status == 201:
             response = CoronersLetterResponse.model_validate(response_body)
