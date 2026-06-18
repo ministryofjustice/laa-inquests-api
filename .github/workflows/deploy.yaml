@@ -74,8 +74,9 @@ jobs:
     name: Pytest Unit Tests
     uses: ./.github/workflows/unit-tests.yaml
     with:
-      GOV_NOTIFY_API_KEY: ${{ vars.GOV_NOTIFY_API_KEY }}
-      GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID: ${{ vars.GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID }}
+      gov-notify-api-key: ${{ vars.GOV_NOTIFY_API_KEY }}
+      gov-notify-application-submit-template-id: ${{ vars.GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID }}
+      gov-notify-callback-bearer-token: ${{ vars.GOV_NOTIFY_CALLBACK_BEARER_TOKEN }}
 
   deploy-uat:
     if: ${{ !contains(github.actor, '[bot]') }}
