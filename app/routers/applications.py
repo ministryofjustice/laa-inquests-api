@@ -183,15 +183,13 @@ def create_application(
     session.refresh(new_application)
 
     try:
-        # Send confirmation email via GovNotify
-        # If this fails, rollback all database changes
         gov_notify_adapter = GovNotifyClient()
-        send_application_confirmation(new_application, gov_notify_adapter)
-
-        # Commit only if email was sent successfully
+        send_application_confirmation(
+            gov_notify_adapter, new_application, request.provider.email_address
+        )
         session.commit()
     except Exception:
-        # Rollback all database changes if email fails
+        # Rollback database changes if email fails
         session.rollback()
         raise
 

@@ -17,7 +17,6 @@ class Config(object):
 
     SECRET_KEY = os.environ.get("SECRET_KEY", "TEST_KEY")
 
-    # GovNotify Configuration
     GOV_NOTIFY_API_KEY = os.environ.get("GOV_NOTIFY_API_KEY")
     GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID = os.environ.get(
         "GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID"
@@ -25,10 +24,5 @@ class Config(object):
     GOV_NOTIFY_CALLBACK_BEARER_TOKEN = os.environ.get(
         "GOV_NOTIFY_CALLBACK_BEARER_TOKEN"
     )
-    # TODO: Replace with provider email from create_application request
-    GOVNOTIFY_PROVIDER_EMAIL = os.environ.get(
-        "GOVNOTIFY_PROVIDER_EMAIL", "provider@example.com"
-    )
-
     PROVIDER_API_BASE_URL = os.environ.get("PROVIDER_API_BASE_URL", "")
     PROVIDER_API_KEY = os.environ.get("PROVIDER_API_KEY", "")

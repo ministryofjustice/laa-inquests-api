@@ -24,7 +24,6 @@ def test_populate_application_submission_template_returns_all_required_fields():
     """
     Test that populate_application_submission_template returns all fields required by the GovNotify template.
     """
-    # Arrange - create test application with all related data
     home_address = Address(
         address_id=1,
         address_line_1="123 Main St",
@@ -118,13 +117,10 @@ def test_populate_application_submission_template_returns_all_required_fields():
         public_bodies=[application_public_body],
     )
 
-    # Act
     result = populate_application_submission_template(application)
 
-    # Assert - verify result is NotifyApplicationSubmitTemplatePersonalisation model
     assert isinstance(result, NotifyApplicationSubmitTemplatePersonalisation)
 
-    # Assert - verify all template fields are present and correct
     assert result.laa_reference == "12345"
     assert result.client_first_name == "Jane"
     assert result.client_last_name == "Doe"
@@ -159,7 +155,6 @@ def test_populate_application_submission_template_handles_optional_fields():
     """
     Test that populate_application_submission_template handles missing/optional fields correctly.
     """
-    # Arrange - minimal application data
     home_address = Address(
         address_id=1,
         address_line_1="1 Test Lane",
@@ -231,10 +226,8 @@ def test_populate_application_submission_template_handles_optional_fields():
         public_bodies=[application_public_body],
     )
 
-    # Act
     result = populate_application_submission_template(application)
 
-    # Assert - verify optional fields are handled
     assert isinstance(result, NotifyApplicationSubmitTemplatePersonalisation)
     assert result.client_last_name_at_birth == "Not provided"
     assert result.national_insurance_number == "Not provided"
@@ -250,7 +243,6 @@ def test_populate_application_submission_template_formats_address_correctly():
     """
     Test that addresses are formatted correctly with line breaks.
     """
-    # Arrange
     home_address = Address(
         address_id=1,
         address_line_1="123 Test Street",
@@ -324,10 +316,8 @@ def test_populate_application_submission_template_formats_address_correctly():
         public_bodies=[application_public_body],
     )
 
-    # Act
     result = populate_application_submission_template(application)
 
-    # Assert - address should be formatted with line breaks
     assert isinstance(result, NotifyApplicationSubmitTemplatePersonalisation)
     expected_address = "123 Test Street\nFloor 2\nTest City\nTest County\nTC1 1TC"
     assert result.client_home_address == expected_address
@@ -337,7 +327,6 @@ def test_default_home_address_value_set_to_no_fixed_abode_when_not_provided():
     """
     Test that default value for home address is set correctly.
     """
-    # Arrange - create test application with all related data
     home_address = None
 
     correspondence_address = Address(
@@ -423,13 +412,10 @@ def test_default_home_address_value_set_to_no_fixed_abode_when_not_provided():
         public_bodies=[application_public_body],
     )
 
-    # Act
     result = populate_application_submission_template(application)
 
-    # Assert - verify result is NotifyApplicationSubmitTemplatePersonalisation model
     assert isinstance(result, NotifyApplicationSubmitTemplatePersonalisation)
 
-    # Assert - verify all template fields are present and correct
     assert result.client_home_address == "No fixed abode"
     assert "456 Oak Ave" in result.correspondence_address
     assert "Manchester" in result.correspondence_address

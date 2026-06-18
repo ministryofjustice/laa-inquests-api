@@ -101,47 +101,33 @@ def test_send_application_confirmation_calls_adapter_with_correct_parameters():
     """
     Test that send_application_confirmation calls the adapter with correct email and data.
     """
-    # Arrange
     application = _create_test_application(laa_reference=12345)
     mock_adapter = Mock()
+    provider_email = "provider@example.com"
 
-    # Act
-    send_application_confirmation(application, mock_adapter)
+    send_application_confirmation(mock_adapter, application, provider_email)
 
-    # Assert - verify adapter was called once
     assert mock_adapter.send_email.call_count == 1
 
-    # Verify call parameters
     call_args = mock_adapter.send_email.call_args
-    assert call_args.kwargs["email_address"] == Config.GOVNOTIFY_PROVIDER_EMAIL
+    assert call_args.kwargs["email_address"] == "provider@example.com"
     assert (
         call_args.kwargs["template_id"]
         == Config.GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID
     )
-
-    # Verify personalisation is NotifyApplicationSubmitTemplatePersonalisation instance
-    personalisation = call_args.kwargs["personalisation"]
-    assert isinstance(personalisation, NotifyApplicationSubmitTemplatePersonalisation)
-    assert personalisation.laa_reference == "12345"
-    assert personalisation.client_first_name == "Jane"
-    assert personalisation.client_last_name == "Doe"
-    assert personalisation.deceased_first_name == "Robert"
-    assert personalisation.proceeding_description == "Inquest into death"
-    assert personalisation.public_body_description == "Department for Transport"
 
 
 def test_send_application_confirmation_propagates_adapter_exceptions():
     """
     Test that send_application_confirmation propagates exceptions from the adapter.
     """
-    # Arrange
     application = _create_test_application()
     mock_adapter = Mock()
+    provider_email = "provider@example.com"
     mock_adapter.send_email.side_effect = Exception("GovNotify API error")
 
-    # Act & Assert
     with pytest.raises(Exception) as exc_info:
-        send_application_confirmation(application, mock_adapter)
+        send_application_confirmation(mock_adapter, application, provider_email)
 
     assert "GovNotify API error" in str(exc_info.value)
 
@@ -150,42 +136,19 @@ def test_send_application_confirmation_builds_complete_personalisation():
     """
     Test that send_application_confirmation builds personalisation with all template fields.
     """
-    # Arrange
     application = _create_test_application(laa_reference=99999)
     mock_adapter = Mock()
+    provider_email = "provider@example.com"
 
-    # Act
-    send_application_confirmation(application, mock_adapter)
+    send_application_confirmation(mock_adapter, application, provider_email)
 
-    # Assert - check that all required template fields are in personalisation
     personalisation = mock_adapter.send_email.call_args.kwargs["personalisation"]
 
     assert isinstance(personalisation, NotifyApplicationSubmitTemplatePersonalisation)
 
-    # Verify key fields exist (NotifyApplicationSubmitTemplatePersonalisation model ensures all required fields)
     assert personalisation.laa_reference == "99999"
     assert personalisation.client_first_name == "Jane"
     assert personalisation.client_last_name == "Doe"
     assert personalisation.deceased_first_name == "Robert"
     assert personalisation.proceeding_description == "Inquest into death"
     assert personalisation.public_body_description == "Department for Transport"
-
-
-def test_send_application_confirmation_uses_config_values():
-    """
-    Test that send_application_confirmation uses provider email and template ID from config.
-    """
-    # Arrange
-    application = _create_test_application()
-    mock_adapter = Mock()
-
-    # Act
-    send_application_confirmation(application, mock_adapter)
-
-    # Assert
-    call_args = mock_adapter.send_email.call_args
-    assert call_args.kwargs["email_address"] == Config.GOVNOTIFY_PROVIDER_EMAIL
-    assert (
-        call_args.kwargs["template_id"]
-        == Config.GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID
-    )

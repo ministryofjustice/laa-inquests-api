@@ -13,7 +13,6 @@ def test_gov_notify_client_sends_email_successfully():
     """
     Test that GovNotifyClient successfully sends an email via the notifications API.
     """
-    # Arrange
     mock_notifications_client = Mock()
     mock_response = {"id": "test-notification-id", "content": {"body": "test"}}
     mock_notifications_client.send_email_notification.return_value = mock_response
@@ -47,14 +46,12 @@ def test_gov_notify_client_sends_email_successfully():
 
         client = GovNotifyClient()
 
-        # Act
         client.send_email(
             email_address="test@example.com",
             template_id="test-template-id",
             personalisation=personalisation,
         )
 
-        # Assert
         mock_api_client_class.assert_called_once_with(Config.GOV_NOTIFY_API_KEY)
         mock_notifications_client.send_email_notification.assert_called_once_with(
             email_address="test@example.com",
@@ -67,7 +64,6 @@ def test_gov_notify_client_raises_exception_on_api_error():
     """
     Test that GovNotifyClient raises an exception when the API returns an error.
     """
-    # Arrange
     mock_notifications_client = Mock()
     mock_notifications_client.send_email_notification.side_effect = Exception(
         "API Error: Invalid API key"
@@ -102,7 +98,6 @@ def test_gov_notify_client_raises_exception_on_api_error():
 
         client = GovNotifyClient()
 
-        # Act & Assert
         with pytest.raises(Exception) as exc_info:
             client.send_email(
                 email_address="test@example.com",
@@ -117,7 +112,6 @@ def test_gov_notify_client_uses_config_api_key():
     """
     Test that GovNotifyClient uses the API key from Config.
     """
-    # Arrange
     mock_notifications_client = Mock()
 
     with patch(
@@ -125,10 +119,8 @@ def test_gov_notify_client_uses_config_api_key():
     ) as mock_api_client_class:
         mock_api_client_class.return_value = mock_notifications_client
 
-        # Act
         GovNotifyClient()
 
-        # Assert - verify API key from config is used
         mock_api_client_class.assert_called_once_with(Config.GOV_NOTIFY_API_KEY)
 
 
@@ -136,12 +128,10 @@ def test_email_personalisation_rejects_missing_required_fields():
     """
     Test that NotifyApplicationSubmitTemplatePersonalisation model rejects creation with missing required fields.
     """
-    # Act & Assert - missing required fields should raise validation error
-    with pytest.raises(Exception):  # Pydantic ValidationError
+    with pytest.raises(Exception):
         NotifyApplicationSubmitTemplatePersonalisation(
             laa_reference="12345",
             client_first_name="Test",
-            # Missing many required fields
         )
 
 
@@ -149,8 +139,7 @@ def test_email_personalisation_rejects_extra_fields():
     """
     Test that NotifyApplicationSubmitTemplatePersonalisation model rejects extra/unexpected fields.
     """
-    # Act & Assert - extra fields should raise validation error
-    with pytest.raises(Exception):  # Pydantic ValidationError
+    with pytest.raises(Exception):
         NotifyApplicationSubmitTemplatePersonalisation(
             laa_reference="12345",
             client_first_name="Test",

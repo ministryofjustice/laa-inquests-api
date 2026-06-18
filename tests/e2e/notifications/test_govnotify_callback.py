@@ -52,7 +52,6 @@ def test_200_callback_accepts_valid_bearer_token_and_payload(
 
     assert response.status_code == 200
 
-    # Verify logging occurred
     mock_logger.info.assert_called_once()
     log_call = mock_logger.info.call_args[0][0]
     assert "GovNotify callback received" in log_call
@@ -91,7 +90,7 @@ def test_422_callback_rejects_invalid_payload_missing_required_fields(
     client, gov_notify_bearer_token
 ):
     """Test callback endpoint rejects payload with missing required fields."""
-    payload = {"id": "test-id"}  # Missing required fields
+    payload = {"id": "test-id"}
 
     response = client.post(
         "/notifications/callback",
