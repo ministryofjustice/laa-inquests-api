@@ -64,9 +64,9 @@ deploy_main() {
                 --set env.DB_USER="$DB_USER" \
                 --set env.DEPARTMENT_NAME="$DEPARTMENT_NAME" \
                 --set env.DEPARTMENT_URL="$DEPARTMENT_URL" \
-                --set env.AWS_SECRETS_GOV_NOTIFY_API_KEY="$GOV_NOTIFY_API_KEY" \
-                --set env.AWS_SECRETS_GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID="$GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID" \
-                --set env.AWS_SECRETS_GOV_NOTIFY_CALLBACK_BEARER_TOKEN="$GOV_NOTIFY_CALLBACK_BEARER_TOKEN" \
+                --set env.AWS_SECRETS_GOV_NOTIFY_API_KEY="gov-notify-api-key-$ENVIRONMENT" \
+                --set env.AWS_SECRETS_GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID="gov-notify-application-submit-template-id-$ENVIRONMENT" \
+                --set env.AWS_SECRETS_GOV_NOTIFY_CALLBACK_BEARER_TOKEN="gov-notify-callback-bearer-token-$ENVIRONMENT" \
                 --set env.CONTACT_EMAIL="$CONTACT_EMAIL" \
                 --set env.CONTACT_PHONE="$CONTACT_PHONE" \
                 --set env.NODE_ENV="$NODE_ENV" \
