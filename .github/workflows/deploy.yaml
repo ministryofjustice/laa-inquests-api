@@ -8,7 +8,6 @@ on:
     # From docs: if no activity types are specified, the workflow runs when a pull request is opened or reopened or when the head branch of the pull request is updated.
     paths:
       - "deploy/**"
-      - ".github/**"
       - "app/**"
       - "tests/**"
       - "Dockerfile"
