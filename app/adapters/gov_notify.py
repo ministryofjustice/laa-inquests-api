@@ -63,5 +63,5 @@ class GovNotifyClient:
         self.client.send_email_notification(
             email_address=email_address,
             template_id=template_id,
-            personalisation=personalisation.model_dump(),  # Convert Pydantic model to dict
+            personalisation=personalisation.model_dump(),
         )

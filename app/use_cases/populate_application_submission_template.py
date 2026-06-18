@@ -21,7 +21,6 @@ def populate_application_submission_template(
     client = application.client
     deceased = application.deceased
 
-    # Helper to format addresses
     def format_address(address: Address | None) -> str:
         if not address:
             return "N/A"
@@ -35,19 +34,16 @@ def populate_application_submission_template(
         ]
         return "\n".join(part for part in parts if part)
 
-    # Get home address
     if client.home_address:
         home_address = format_address(client.home_address)
     else:
         home_address = "No fixed abode"
 
-    # Get correspondence address
     if client.correspondence_address:
         correspondence_address = format_address(client.correspondence_address)
     else:
         correspondence_address = "Same as home address"
 
-    # Get correspondence recipient
     if client.is_client_correspondence_recipient:
         correspondence_recipient = "Client"
     else:
@@ -59,12 +55,10 @@ def populate_application_submission_template(
         recipient_name = client.correspondence_recipient_name or "Unknown"
         correspondence_recipient = f"{recipient_name} ({recipient_type})"
 
-    # Get first proceeding (template expects single proceeding)
     proceeding = application.proceedings[0] if application.proceedings else None
     proceeding_description = proceeding.proceeding_description if proceeding else "N/A"
     matter_type = proceeding.matter_type if proceeding else "N/A"
 
-    # Get first public body (template expects single public body or comma-separated list)
     if application.public_bodies:
         public_body_descriptions = [
             pb.public_body_description for pb in application.public_bodies
@@ -74,9 +68,7 @@ def populate_application_submission_template(
         public_body_description = "N/A"
 
     return NotifyApplicationSubmitTemplatePersonalisation(
-        # LAA reference
         laa_reference=str(application.laa_reference),
-        # Client details
         client_first_name=client.client_first_name,
         client_last_name=client.client_last_name,
         client_last_name_at_birth=client.client_last_name_at_birth or "Not provided",
@@ -88,10 +80,8 @@ def populate_application_submission_template(
         correspondence_address=correspondence_address,
         correspondence_recipient=correspondence_recipient,
         client_relationship_to_deceased=deceased.client_relationship_to_deceased,
-        # Proceeding details
         proceeding_description=proceeding_description,
         matter_type=matter_type,
-        # Deceased details
         deceased_first_name=deceased.deceased_first_name,
         deceased_last_name=deceased.deceased_last_name,
         deceased_date_of_birth=deceased.deceased_date_of_birth,
@@ -101,8 +91,6 @@ def populate_application_submission_template(
         if deceased.further_information
         else "No",
         coroners_reference=deceased.coroners_reference,
-        # Public authority details
         public_body_description=public_body_description,
-        # Evidence (not currently tracked in model)
         file_name="N/A",
     )

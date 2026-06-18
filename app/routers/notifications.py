@@ -68,7 +68,6 @@ async def gov_notify_callback(
     """
     verify_bearer_token(authorization)
 
-    # Extract environment and LAA reference from reference field if present
     environment = "unknown"
     laa_reference = "unknown"
 
@@ -78,7 +77,6 @@ async def gov_notify_callback(
             environment = parts[0]
             laa_reference = parts[1]
 
-    # Log the delivery status
     logger.info(
         f"GovNotify callback received: "
         f"notification_id={payload.id}, "
