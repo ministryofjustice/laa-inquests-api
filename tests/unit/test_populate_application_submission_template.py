@@ -12,7 +12,7 @@ from app.models.application.index import (
     PublicBodyId,
 )
 from app.models.application.enums import AddressSource, CorrespondenceRecipientType
-from app.use_cases.populate_application_submission_template import (
+from app.use_cases.notify.populate_application_submission_template import (
     populate_application_submission_template,
 )
 from app.models.gov_notify_templates.application_submit_personalisation import (

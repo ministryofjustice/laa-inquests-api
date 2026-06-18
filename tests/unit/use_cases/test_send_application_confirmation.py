@@ -19,7 +19,9 @@ from app.models.application.enums import AddressSource
 from app.models.gov_notify_templates.application_submit_personalisation import (
     NotifyApplicationSubmitTemplatePersonalisation,
 )
-from app.use_cases.send_application_confirmation import send_application_confirmation
+from app.use_cases.notify.send_application_confirmation import (
+    send_application_confirmation,
+)
 from app.config import Config
 
 
