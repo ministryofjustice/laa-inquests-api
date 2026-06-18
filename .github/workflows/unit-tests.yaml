@@ -26,8 +26,8 @@ jobs:
         coverage run -m pytest
         coverage xml
       env:
-        GOV_NOTIFY_API_KEY: ${{ secrets.GOV_NOTIFY_API_KEY }}
-        GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID: ${{ secrets.GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID }}
+        GOV_NOTIFY_API_KEY: ${{ vars.GOV_NOTIFY_API_KEY }}
+        GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID: ${{ vars.GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID }}
 
     - name: Upload coverage report
       uses: actions/upload-artifact@v4
