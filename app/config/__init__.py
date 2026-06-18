@@ -29,9 +29,6 @@ class Config(object):
     GOVNOTIFY_PROVIDER_EMAIL = os.environ.get(
         "GOVNOTIFY_PROVIDER_EMAIL", "provider@example.com"
     )
-    FEEDBACK_LINK = os.environ.get(
-        "FEEDBACK_LINK", "https://www.gov.uk/government/organisations/legal-aid-agency"
-    )
 
     PROVIDER_API_BASE_URL = os.environ.get("PROVIDER_API_BASE_URL", "")
     PROVIDER_API_KEY = os.environ.get("PROVIDER_API_KEY", "")
