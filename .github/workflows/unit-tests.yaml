@@ -16,6 +16,13 @@ jobs:
       with:
         python-version: '3.12'
 
+    - name: Set environment variables
+      shell: bash
+      run: |
+        echo "GOV_NOTIFY_API_KEY=${{ inputs.gov-notify-api-key || ''}}" >> $GITHUB_ENV
+        echo "GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID=${{ inputs.gov-notify-application-submit-template-id || ''}}" >> $GITHUB_ENV
+        echo "GOV_NOTIFY_CALLBACK_BEARER_TOKEN=${{ inputs.gov-notify-callback-bearer-token || ''}}" >> $GITHUB_ENV
+
     - name: Install dependencies
       run: |
         python -m pip install -r requirements/generated/requirements-testing.txt --upgrade pip
@@ -26,9 +33,9 @@ jobs:
         coverage run -m pytest
         coverage xml
       env:
-        GOV_NOTIFY_API_KEY: ${{ vars.GOV_NOTIFY_API_KEY }}
-        GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID: ${{ vars.GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID }}
-        GOV_NOTIFY_CALLBACK_BEARER_TOKEN: ${{ vars.GOV_NOTIFY_CALLBACK_BEARER_TOKEN }}
+        GOV_NOTIFY_API_KEY: ${{ env.GOV_NOTIFY_API_KEY }}
+        GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID: ${{ env.GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID }}
+        GOV_NOTIFY_CALLBACK_BEARER_TOKEN: ${{ env.GOV_NOTIFY_CALLBACK_BEARER_TOKEN }}
 
     - name: Upload coverage report
       uses: actions/upload-artifact@v4
