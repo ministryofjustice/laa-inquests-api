@@ -34,8 +34,11 @@ from app.use_cases.read_application import ReadApplicationUseCase
 # from app.models.user import User
 from app.adapters.gov_notify import GovNotifyAdapter, GovNotifyClient
 from app.use_cases.save_coroners_letter import SaveCoronersLetterUseCase
-from app.use_cases.send_application_confirmation import send_application_confirmation
-from app.use_cases.send_application_refusal import send_application_refusal
+from app.adapters.gov_notify import GovNotifyClient
+from app.use_cases.notify.send_application_confirmation import (
+    send_application_confirmation,
+)
+from app.use_cases.notify.send_application_refusal import send_application_refusal
 
 
 router = APIRouter(

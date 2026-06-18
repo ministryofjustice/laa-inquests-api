@@ -5,6 +5,7 @@ from sqlmodel import select
 from app.models.application.index import Application, ApplicationProceeding
 
 
+#  TODO: rename _refused_payload to _refuse_decision_payload
 def _refused_payload(overrides=None):
     payload = {
         "meritsDecision": "REFUSED",

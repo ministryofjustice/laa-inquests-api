@@ -2,7 +2,7 @@
 
 from app.models.application.index import Application
 from app.adapters.gov_notify import GovNotifyAdapter
-from app.use_cases.populate_application_submission_template import (
+from app.use_cases.notify.populate_application_submission_template import (
     populate_application_submission_template,
 )
 from app.config import Config

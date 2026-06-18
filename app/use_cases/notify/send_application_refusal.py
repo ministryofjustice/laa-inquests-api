@@ -2,7 +2,7 @@
 
 from app.models.application.index import Application, ApplicationProceeding
 from app.adapters.gov_notify import GovNotifyAdapter
-from app.use_cases.populate_application_refusal_template import (
+from app.use_cases.notify.populate_application_refusal_template import (
     populate_application_refusal_template,
 )
 from app.config import Config
