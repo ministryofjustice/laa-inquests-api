@@ -327,7 +327,7 @@ class DeceasedCreate(BaseModel):
     deceased_last_name: str = PydanticField(examples=["Smith"])
     deceased_date_of_birth: str = PydanticField(examples=["2000-01-01"])
     deceased_date_of_death: str = PydanticField(examples=["2025-01-01"])
-    coroners_reference: str = PydanticField(examples=["Example refence number"])
+    coroners_reference: str = PydanticField(examples=["Example reference number"])
     further_information: str | None = PydanticField(
         default=None, examples=["Further information."]
     )
@@ -368,17 +368,21 @@ class ApplicationCreate(BaseModel):
     provider: ProviderCreate
 
 
-class MeritsDecisionUpdate(BaseModel):
+class MeritsDecisionUpdateRefuse(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
         populate_by_name=True,
     )
-    merits_decision: MeritsDecision
-    reason_for_refusal: ReasonForRefusal | None = None
-    justification: str | None = None
+    merits_decision: MeritsDecision = PydanticField(examples=["REFUSED"])
+    reason_for_refusal: ReasonForRefusal | None = PydanticField(
+        examples=["NOT_IN_SCOPE"]
+    )
+    justification: str | None = PydanticField(
+        examples=["The requested proceeding is out of scope."]
+    )
 
     @model_validator(mode="after")
-    def validate_refusal_fields(self) -> "MeritsDecisionUpdate":
+    def validate_refusal_fields(self) -> "MeritsDecisionUpdateRefuse":
         if self.merits_decision == MeritsDecision.REFUSED:
             if self.reason_for_refusal is None:
                 raise ValueError(

@@ -7,8 +7,7 @@ from app.models.application.index import Application, ApplicationProceeding
 pytestmark = pytest.mark.usefixtures("mock_gov_notify")
 
 
-#  TODO: rename _refused_payload to _refuse_decision_payload
-def _refused_payload(overrides=None):
+def _refuse_decision_payload(overrides=None):
     payload = {
         "meritsDecision": "REFUSED",
         "reasonForRefusal": "NOT_IN_SCOPE",
@@ -25,7 +24,7 @@ def test_204_patch_merits_decision_to_refused(session, client, auth_token):
 
     response = client.patch(
         f"/applications/{laa_reference}/merits-decision",
-        json=_refused_payload(),
+        json=_refuse_decision_payload(),
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {auth_token}",
@@ -51,7 +50,7 @@ def test_422_patch_merits_decision_with_invalid_value(client, auth_token):
 def test_404_patch_merits_decision_application_not_found(client, auth_token):
     response = client.patch(
         "/applications/99999/merits-decision",
-        json=_refused_payload(),
+        json=_refuse_decision_payload(),
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {auth_token}",
@@ -67,7 +66,7 @@ def test_204_patch_merits_decision_updates_db(session, client, auth_token):
 
     client.patch(
         f"/applications/{laa_reference}/merits-decision",
-        json=_refused_payload(),
+        json=_refuse_decision_payload(),
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {auth_token}",
@@ -144,7 +143,7 @@ def test_422_patch_merits_decision_refused_with_invalid_reason(client, auth_toke
     assert response.status_code == 422
 
 
-def test_500_patch_merits_decision_rolls_back_when_notify_fails(
+def test_204_patch_merits_decision_persists_when_notify_fails(
     session, client, auth_token, mock_gov_notify
 ):
     application = session.exec(select(Application)).first()
@@ -154,14 +153,14 @@ def test_500_patch_merits_decision_rolls_back_when_notify_fails(
 
     response = client.patch(
         f"/applications/{laa_reference}/merits-decision",
-        json=_refused_payload(),
+        json=_refuse_decision_payload(),
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {auth_token}",
         },
     )
 
-    assert response.status_code == 500
+    assert response.status_code == 204
 
     session.expire_all()
     proceeding = session.exec(
@@ -169,11 +168,14 @@ def test_500_patch_merits_decision_rolls_back_when_notify_fails(
             ApplicationProceeding.laa_reference == laa_reference
         )
     ).first()
-    assert proceeding.merits_decision == "PENDING"
-    assert getattr(proceeding, "reason_for_refusal", None) is None
-    assert getattr(proceeding, "justification", None) is None
+    assert proceeding.merits_decision == "REFUSED"
+    assert getattr(proceeding, "reason_for_refusal", None) == "NOT_IN_SCOPE"
+    assert (
+        getattr(proceeding, "justification", None)
+        == "The matter does not meet scope requirements."
+    )
 
     application = session.exec(
         select(Application).where(Application.laa_reference == laa_reference)
     ).first()
-    assert application.overall_decision == "PENDING"
+    assert application.overall_decision == "REFUSED"

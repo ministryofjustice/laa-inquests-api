@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlmodel import Session, select
 from typing import Sequence
@@ -14,7 +16,7 @@ from app.models.application.index import (
     AddressSource,
     Client,
     Deceased,
-    MeritsDecisionUpdate,
+    MeritsDecisionUpdateRefuse,
     ProceedingId,
     Provider,
     PublicBodyId,
@@ -40,6 +42,8 @@ router = APIRouter(
     tags=["Applications"],
     responses={404: {"description": "Not found"}},
 )
+
+logger = logging.getLogger(__name__)
 
 
 def get_provider_details_port() -> ProviderDetailsPort:
@@ -204,7 +208,7 @@ def create_application(
 @router.patch("/{laa_reference}/merits-decision", status_code=204)
 def patch_merits_decision(
     laa_reference: str,
-    request: MeritsDecisionUpdate,
+    request: MeritsDecisionUpdateRefuse,
     session: Session = Depends(get_session),
     # current_user: User = Depends(get_current_active_user),
 ) -> Response:
@@ -230,8 +234,16 @@ def patch_merits_decision(
     session.add(application)
     session.add(proceeding)
 
+    decision = MeritsDecision(request.merits_decision)
+
     try:
-        if request.merits_decision == MeritsDecision.REFUSED:
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+
+    if decision == MeritsDecision.REFUSED:
+        try:
             gov_notify_adapter = GovNotifyClient()
             send_application_refusal(
                 gov_notify_adapter,
@@ -239,10 +251,11 @@ def patch_merits_decision(
                 proceeding,
                 application.provider.email_address,
             )
-
-        session.commit()
-    except Exception:
-        session.rollback()
-        raise
+        except Exception:
+            logger.warning(
+                "Failed to send refusal email for application %s",
+                application.laa_reference,
+                exc_info=True,
+            )
 
     return Response(status_code=204)
