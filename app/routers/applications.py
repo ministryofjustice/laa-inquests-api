@@ -76,6 +76,7 @@ def get_read_application_use_case(
         session=session, provider_details_port=provider_details_port
     )
 
+
 def get_save_coroners_letter_use_case(
     sds_port: SdsPort = Depends(get_sds_port),
 ) -> SaveCoronersLetterUseCase:
@@ -123,6 +124,7 @@ async def upload_coroners_letter(
     except CoronersLetterSaveError:
         raise HTTPException(status_code=500, detail="Failed to save coroners letter")
     return UploadCoronersLetterResponse(file_id=response.sds_id)
+
 
 
 @router.post("/", response_model=ApplicationResponse, status_code=201)
