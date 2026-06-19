@@ -6,7 +6,7 @@ from app.models.gov_notify_templates.application_submit_personalisation import (
 )
 
 
-def populate_application_submission_template(
+def create_application_submission_email_personalisation(
     application: Application,
 ) -> NotifyApplicationSubmitTemplatePersonalisation:
     """

@@ -11,7 +11,7 @@ def _format_submitted_at(submitted_at) -> str:
     return f"{submitted_at.day} {submitted_at.strftime('%B %Y %H:%M UTC')}"
 
 
-def populate_application_refusal_template(
+def create_application_refusal_email_personalisation(
     application: Application,
     proceeding: ApplicationProceeding,
 ) -> NotifyApplicationRefuseTemplatePersonalisation:
