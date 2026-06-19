@@ -20,9 +20,7 @@ from app.models.application.index import (
     Provider,
     PublicBody,
 )
-from app.models.gov_notify_templates.application_refuse_personalisation import (
-    NotifyApplicationRefuseTemplatePersonalisation,
-)
+
 from app.models.gov_notify_templates.application_submit_personalisation import (
     NotifyApplicationSubmitTemplatePersonalisation,
 )
@@ -125,13 +123,10 @@ def test_gov_notify_adapter_sends_refusal_email_successfully():
         call_kwargs = mock_notifications_client.send_email_notification.call_args.kwargs
         assert call_kwargs["email_address"] == "provider@example.com"
         assert call_kwargs["template_id"] == "test-refuse-template-id"
-        assert isinstance(
-            call_kwargs["personalisation"],
-            NotifyApplicationRefuseTemplatePersonalisation,
-        )
-        assert call_kwargs["personalisation"].laa_reference == "12345"
+        assert isinstance(call_kwargs["personalisation"], dict)
+        assert call_kwargs["personalisation"]["laa_reference"] == "12345"
         assert (
-            call_kwargs["personalisation"].application_submitted_at
+            call_kwargs["personalisation"]["application_submitted_at"]
             == "18 June 2026 14:03 UTC"
         )
 
@@ -203,7 +198,7 @@ def test_gov_notify_adapter_uses_config_api_key():
         mock_api_client.assert_called_once_with(Config.GOV_NOTIFY_API_KEY)
 
 
-def test_email_personalisation_rejects_missing_required_fields():
+def test_application_submit_email_personalisation_rejects_missing_required_fields():
     """
     Test that NotifyApplicationSubmitTemplatePersonalisation model rejects creation with missing required fields.
     """
@@ -214,7 +209,7 @@ def test_email_personalisation_rejects_missing_required_fields():
         )
 
 
-def test_email_personalisation_rejects_extra_fields():
+def test_application_submit_email_personalisation_rejects_extra_fields():
     """
     Test that NotifyApplicationSubmitTemplatePersonalisation model rejects extra/unexpected fields.
     """

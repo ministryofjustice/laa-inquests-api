@@ -32,7 +32,7 @@ class GovNotifyAdapter(GovNotifyPort):
         self.client.send_email_notification(
             email_address=recipient_email,
             template_id=Config.GOV_NOTIFY_APPLICATION_REFUSE_TEMPLATE_ID,
-            personalisation=personalisation,
+            personalisation=personalisation.model_dump(),
         )
 
     def send_application_submit_confirmation_email(
