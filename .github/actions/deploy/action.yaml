@@ -69,16 +69,6 @@ inputs:
     description: "Base URL for the provider details API"
   provider-api-key:
     description: "API key for the provider details API"
-  sds-base-url:
-    description: "Base URL for the SDS API"
-  sds-tenant-id:
-    description: "Tenant ID for the SDS API"
-  sds-client-id:
-    description: "Client ID for the SDS API"
-  sds-client-secret:
-    description: "Client secret for the SDS API"
-  sds-scope:
-    description: "Scope for the SDS API"
 runs:
   using: "composite"
   steps:
@@ -131,11 +121,6 @@ runs:
         echo "SERVICE_NAME=${{ inputs.service_name || 'Inquests' }}" >> $GITHUB_ENV
         echo "SESSION_NAME=${{ inputs.session_name || 'sessionId' }}" >> $GITHUB_ENV
         echo "SESSION_SECRET=${{ inputs.session_secret || 'default-session-secret' }}" >> $GITHUB_ENV
-        echo "SDS_BASE_URL=${{ inputs.sds-base-url || '' }}" >> $GITHUB_ENV
-        echo "SDS_TENANT_ID=${{ inputs.sds-tenant-id || '' }}" >> $GITHUB_ENV
-        echo "SDS_CLIENT_ID=${{ inputs.sds-client-id || '' }}" >> $GITHUB_ENV
-        echo "SDS_CLIENT_SECRET=${{ inputs.sds-client-secret || '' }}" >> $GITHUB_ENV
-        echo "SDS_SCOPE=${{ inputs.sds-scope || '' }}" >> $GITHUB_ENV
 
     - name: Deploy using Helm
       shell: bash
