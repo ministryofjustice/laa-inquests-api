@@ -121,6 +121,11 @@ runs:
         echo "SERVICE_NAME=${{ inputs.service_name || 'Inquests' }}" >> $GITHUB_ENV
         echo "SESSION_NAME=${{ inputs.session_name || 'sessionId' }}" >> $GITHUB_ENV
         echo "SESSION_SECRET=${{ inputs.session_secret || 'default-session-secret' }}" >> $GITHUB_ENV
+        echo "SDS_BASE_URL=${{ inputs.sds-base-url || '' }}" >> $GITHUB_ENV
+        echo "SDS_TENANT_ID=${{ inputs.sds-tenant-id || '' }}" >> $GITHUB_ENV
+        echo "SDS_CLIENT_ID=${{ inputs.sds-client-id || '' }}" >> $GITHUB_ENV
+        echo "SDS_CLIENT_SECRET=${{ inputs.sds-client-secret || '' }}" >> $GITHUB_ENV
+        echo "SDS_SCOPE=${{ inputs.sds-scope || '' }}" >> $GITHUB_ENV
 
     - name: Deploy using Helm
       shell: bash

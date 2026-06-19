@@ -120,6 +120,11 @@ jobs:
           service_name: ${{ vars.SERVICE_NAME }}
           session_name: ${{ vars.SESSION_NAME}}
           session_secret: ${{ secrets.SESSION_SECRET }}
+          sds-base-url: ${{ secrets.SDS_BASE_URL }}
+          sds-tenant-id: ${{ secrets.SDS_TENANT_ID }}
+          sds-client-id: ${{ secrets.SDS_CLIENT_ID }}
+          sds-client-secret: ${{ secrets.SDS_CLIENT_SECRET }}
+          sds-scope: ${{ secrets.SDS_SCOPE }}
   notify-slack:
     environment: uat
     needs: deploy-uat

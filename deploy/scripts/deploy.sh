@@ -23,6 +23,11 @@ deploy_branch() {
                 --set env.AWS_SECRETS_GOV_NOTIFY_API_KEY="gov-notify-api-key-$ENVIRONMENT" \
                 --set env.AWS_SECRETS_GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID="gov-notify-application-submit-template-id-$ENVIRONMENT" \
                 --set env.AWS_SECRETS_GOV_NOTIFY_CALLBACK_BEARER_TOKEN="gov-notify-callback-bearer-token-$ENVIRONMENT" \
+                --set env.AWS_SECRETS_SDS_BASE_URL="sds-base-url-$ENVIRONMENT" \
+                --set env.AWS_SECRETS_SDS_TENANT_ID="sds-tenant-id-$ENVIRONMENT" \
+                --set env.AWS_SECRETS_SDS_CLIENT_ID="sds-client-app-id-$ENVIRONMENT" \
+                --set env.AWS_SECRETS_SDS_CLIENT_SECRET="sds-client-secret-$ENVIRONMENT" \
+                --set env.AWS_SECRETS_SDS_SCOPE="sds-scope-$ENVIRONMENT" \
                 --set env.DB_HOST="$DB_HOST" \
                 --set env.DB_NAME="$DB_NAME" \
                 --set env.DB_PASSWORD="$DB_PASSWORD" \
@@ -46,7 +51,12 @@ deploy_branch() {
                 --set env.SESSION_SECRET="$SESSION_SECRET" \
                 --set env.SERVICE_URL="$SERVICE_URL" \
                 --set env.PROVIDER_API_BASE_URL="$PROVIDER_API_BASE_URL" \
-                --set env.PROVIDER_API_KEY="$PROVIDER_API_KEY"
+                --set env.PROVIDER_API_KEY="$PROVIDER_API_KEY" \
+                --set env.SDS_BASE_URL="$SDS_BASE_URL" \
+                --set env.SDS_TENANT_ID="$SDS_TENANT_ID" \
+                --set env.SDS_CLIENT_ID="$SDS_CLIENT_ID" \
+                --set env.SDS_CLIENT_SECRET="$SDS_CLIENT_SECRET" \
+                --set env.SDS_SCOPE="$SDS_SCOPE"
 }
 
 deploy_main() {
@@ -67,6 +77,11 @@ deploy_main() {
                 --set env.AWS_SECRETS_GOV_NOTIFY_API_KEY="gov-notify-api-key-$ENVIRONMENT" \
                 --set env.AWS_SECRETS_GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID="gov-notify-application-submit-template-id-$ENVIRONMENT" \
                 --set env.AWS_SECRETS_GOV_NOTIFY_CALLBACK_BEARER_TOKEN="gov-notify-callback-bearer-token-$ENVIRONMENT" \
+                --set env.AWS_SECRETS_SDS_BASE_URL="sds-base-url-$ENVIRONMENT" \
+                --set env.AWS_SECRETS_SDS_TENANT_ID="sds-tenant-id-$ENVIRONMENT" \
+                --set env.AWS_SECRETS_SDS_CLIENT_ID="sds-client-app-id-$ENVIRONMENT" \
+                --set env.AWS_SECRETS_SDS_CLIENT_SECRET="sds-client-secret-$ENVIRONMENT" \
+                --set env.AWS_SECRETS_SDS_SCOPE="sds-scope-$ENVIRONMENT" \
                 --set env.CONTACT_EMAIL="$CONTACT_EMAIL" \
                 --set env.CONTACT_PHONE="$CONTACT_PHONE" \
                 --set env.NODE_ENV="$NODE_ENV" \
