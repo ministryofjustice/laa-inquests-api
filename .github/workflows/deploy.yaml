@@ -101,8 +101,12 @@ jobs:
           ecr-role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
           ecr-region: ${{ vars.ECR_REGION }}
           gov-notify-api-key: ${{ vars.GOV_NOTIFY_API_KEY }}
-          gov-notify-application-submit-template-id: ${{ vars.GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID }}
-          gov-notify-callback-bearer-token: ${{ vars.GOV_NOTIFY_CALLBACK_BEARER_TOKEN }}
+          gov-notify-application-submit-template-id:
+            ${{ vars.GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID }}
+          gov-notify-application-refuse-template-id:
+            ${{ vars.GOV_NOTIFY_APPLICATION_REFUSE_TEMPLATE_ID }}
+          gov-notify-callback-bearer-token:
+            ${{ vars.GOV_NOTIFY_CALLBACK_BEARER_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           github-sha: ${{ github.sha }}
           github-ref-name: ${{ github.ref_name }}

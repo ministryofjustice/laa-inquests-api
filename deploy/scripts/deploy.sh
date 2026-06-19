@@ -21,13 +21,8 @@ deploy_branch() {
                 --set ingress.annotations."external-dns\.alpha\.kubernetes\.io/set-identifier"="$IDENTIFIER" \
                 --set ingress.hosts[0].host="$RELEASE_HOST" \
                 --set env.AWS_SECRETS_GOV_NOTIFY_API_KEY="gov-notify-api-key-$ENVIRONMENT" \
-                --set env.AWS_SECRETS_GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID="gov-notify-application-submit-template-id-$ENVIRONMENT" \
+                --set env.AWS_SECRETS_GOV_NOTIFY_TEMPLATE_IDS="gov-notify-template-ids-$ENVIRONMENT" \
                 --set env.AWS_SECRETS_GOV_NOTIFY_CALLBACK_BEARER_TOKEN="gov-notify-callback-bearer-token-$ENVIRONMENT" \
-                --set env.AWS_SECRETS_SDS_BASE_URL="sds-base-url-$ENVIRONMENT" \
-                --set env.AWS_SECRETS_SDS_TENANT_ID="sds-tenant-id-$ENVIRONMENT" \
-                --set env.AWS_SECRETS_SDS_CLIENT_ID="sds-client-app-id-$ENVIRONMENT" \
-                --set env.AWS_SECRETS_SDS_CLIENT_SECRET="sds-client-secret-$ENVIRONMENT" \
-                --set env.AWS_SECRETS_SDS_SCOPE="sds-scope-$ENVIRONMENT" \
                 --set env.DB_HOST="$DB_HOST" \
                 --set env.DB_NAME="$DB_NAME" \
                 --set env.DB_PASSWORD="$DB_PASSWORD" \
@@ -70,7 +65,6 @@ deploy_main() {
                 --set env.DEPARTMENT_NAME="$DEPARTMENT_NAME" \
                 --set env.DEPARTMENT_URL="$DEPARTMENT_URL" \
                 --set env.AWS_SECRETS_GOV_NOTIFY_API_KEY="gov-notify-api-key-$ENVIRONMENT" \
-                --set env.AWS_SECRETS_GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID="gov-notify-application-submit-template-id-$ENVIRONMENT" \
                 --set env.AWS_SECRETS_GOV_NOTIFY_CALLBACK_BEARER_TOKEN="gov-notify-callback-bearer-token-$ENVIRONMENT" \
                 --set env.AWS_SECRETS_SDS_BASE_URL="sds-base-url-$ENVIRONMENT" \
                 --set env.AWS_SECRETS_SDS_TENANT_ID="sds-tenant-id-$ENVIRONMENT" \
