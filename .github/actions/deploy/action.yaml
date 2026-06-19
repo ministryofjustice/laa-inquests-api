@@ -32,15 +32,6 @@ inputs:
   ecr-repository:
     description: "ECR repository"
     required: true
-  gov-notify-api-key:
-    description: "Gov Notify API key"
-    required: true
-  gov-notify-application-submit-template-id:
-    description: "Gov Notify application submit template ID"
-    required: true
-  gov-notify-callback-bearer-token:
-    description: "Gov Notify callback bearer token"
-    required: true
   image-tag:
     description: "Container image tag"
     required: true
@@ -113,10 +104,6 @@ runs:
     - name: Set environment variables
       shell: bash
       run: |
-        echo "GOV_NOTIFY_API_KEY=${{ inputs.gov-notify-api-key || ''}}" >> $GITHUB_ENV
-        echo "GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID=${{ inputs.gov-notify-application-submit-template-id || ''}}" >> $GITHUB_ENV
-        echo "GOV_NOTIFY_APPLICATION_REFUSE_TEMPLATE_ID=${{ inputs.gov-notify-application-refuse-template-id || ''}}" >> $GITHUB_ENV
-        echo "GOV_NOTIFY_CALLBACK_BEARER_TOKEN=${{ inputs.gov-notify-callback-bearer-token || ''}}" >> $GITHUB_ENV
         echo "NODE_ENV=production" >> $GITHUB_ENV
         echo "RATE_LIMIT_MAX=${{ inputs.ratelimit_max || '10000' }}" >> $GITHUB_ENV
         echo "RATE_WINDOW_MS=${{ inputs.ratewindow_ms || '900000' }}" >> $GITHUB_ENV
