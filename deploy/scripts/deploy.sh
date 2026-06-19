@@ -71,6 +71,7 @@ deploy_main() {
                 --set env.GOV_NOTIFY_API_KEY="$GOV_NOTIFY_API_KEY" \
                 --set env.GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID="$GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID" \
                 --set env.GOV_NOTIFY_APPLICATION_REFUSE_TEMPLATE_ID="$GOV_NOTIFY_APPLICATION_REFUSE_TEMPLATE_ID" \
+                --set env.GOV_NOTIFY_CALLBACK_BEARER_TOKEN="$GOV_NOTIFY_CALLBACK_BEARER_TOKEN" \
                 --set env.CONTACT_EMAIL="$CONTACT_EMAIL" \
                 --set env.CONTACT_PHONE="$CONTACT_PHONE" \
                 --set env.NODE_ENV="$NODE_ENV" \
