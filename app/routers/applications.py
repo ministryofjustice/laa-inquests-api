@@ -193,7 +193,7 @@ def create_application(
     session.refresh(new_application)
 
     try:
-        gov_notify_port.send_confirmation_notification(
+        gov_notify_port.send_application_submit_confirmation_email(
             new_application, request.provider.email_address
         )
         session.commit()
@@ -246,7 +246,7 @@ def patch_merits_decision(
 
     if decision == MeritsDecision.REFUSED:
         try:
-            gov_notify_port.send_refusal_notification(
+            gov_notify_port.send_application_refused_decision_email(
                 application, proceeding, application.provider.email_address
             )
         except Exception:

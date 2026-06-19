@@ -43,6 +43,6 @@ class GovNotifyAdapter(GovNotifyPort):
         )
         self.client.send_email_notification(
             email_address=recipient_email,
-            template_id=Config.GOV_NOTIFY_APPLICATION_REFUSE_TEMPLATE_ID,
+            template_id=Config.GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID,
             personalisation=personalisation.model_dump(),
         )

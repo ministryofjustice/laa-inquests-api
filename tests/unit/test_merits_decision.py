@@ -166,7 +166,7 @@ def test_patch_merits_decision_returns_204_when_notify_fails_after_commit():
     session = MagicMock()
     session.get.return_value = application
     gov_notify_port = MagicMock()
-    gov_notify_port.send_refusal_notification.side_effect = RuntimeError(
+    gov_notify_port.send_application_refused_decision_email.side_effect = RuntimeError(
         "Gov Notify is unavailable"
     )
 
