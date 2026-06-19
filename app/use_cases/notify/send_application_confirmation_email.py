@@ -2,8 +2,8 @@
 
 from app.models.application.index import Application
 from app.adapters.gov_notify import GovNotifyAdapter
-from app.use_cases.notify.populate_application_submission_template import (
-    populate_application_submission_template,
+from app.use_cases.notify.create_application_submission_email_personalisation import (
+    create_application_submission_email_personalisation,
 )
 from app.config import Config
 
@@ -24,7 +24,7 @@ def send_application_confirmation_email(
         provider_email: Email address of the provider we want to send the email to
 
     """
-    personalisation = populate_application_submission_template(application)
+    personalisation = create_application_submission_email_personalisation(application)
 
     notifyAdapter.send_email(
         email_address=provider_email,
