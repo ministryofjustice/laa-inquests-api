@@ -55,8 +55,13 @@ spec:
             - name: GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.env.AWS_SECRETS_GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID }}
+                  name: {{ .Values.env.AWS_SECRETS_GOV_NOTIFY_TEMPLATE_IDS }}
                   key: GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID
+            - name: GOV_NOTIFY_APPLICATION_REFUSE_TEMPLATE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{.Values.env.AWS_SECRETS_GOV_NOTIFY_TEMPLATE_IDS}}
+                  key: GOV_NOTIFY_APPLICATION_REFUSE_TEMPLATE_ID
             - name: GOV_NOTIFY_CALLBACK_BEARER_TOKEN
               valueFrom:
                 secretKeyRef:
