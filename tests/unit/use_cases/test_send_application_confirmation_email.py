@@ -19,8 +19,8 @@ from app.models.application.enums import AddressSource
 from app.models.gov_notify_templates.application_submit_personalisation import (
     NotifyApplicationSubmitTemplatePersonalisation,
 )
-from app.use_cases.notify.send_application_confirmation import (
-    send_application_confirmation,
+from app.use_cases.notify.send_application_confirmation_email import (
+    send_application_confirmation_email,
 )
 from app.config import Config
 
@@ -107,7 +107,7 @@ def test_send_application_confirmation_calls_adapter_with_correct_parameters():
     mock_adapter = Mock()
     provider_email = "provider@example.com"
 
-    send_application_confirmation(mock_adapter, application, provider_email)
+    send_application_confirmation_email(mock_adapter, application, provider_email)
 
     assert mock_adapter.send_email.call_count == 1
 
@@ -129,7 +129,7 @@ def test_send_application_confirmation_propagates_adapter_exceptions():
     mock_adapter.send_email.side_effect = Exception("GovNotify API error")
 
     with pytest.raises(Exception) as exc_info:
-        send_application_confirmation(mock_adapter, application, provider_email)
+        send_application_confirmation_email(mock_adapter, application, provider_email)
 
     assert "GovNotify API error" in str(exc_info.value)
 
@@ -142,7 +142,7 @@ def test_send_application_confirmation_builds_complete_personalisation():
     mock_adapter = Mock()
     provider_email = "provider@example.com"
 
-    send_application_confirmation(mock_adapter, application, provider_email)
+    send_application_confirmation_email(mock_adapter, application, provider_email)
 
     personalisation = mock_adapter.send_email.call_args.kwargs["personalisation"]
 
