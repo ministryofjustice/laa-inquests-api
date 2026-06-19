@@ -499,7 +499,6 @@ class ProviderResponse(BaseModel):
     email_address: str
 
 
-
 class UploadCoronersLetterResponse(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,

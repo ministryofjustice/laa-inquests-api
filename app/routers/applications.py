@@ -30,7 +30,6 @@ from app.use_cases.read_application import ReadApplicationUseCase
 
 # from app.models.user import User
 from app.adapters.gov_notify import GovNotifyClient
-from app.use_cases.save_coroners_letter import SaveCoronersLetterUseCase
 from app.use_cases.send_application_confirmation import send_application_confirmation
 
 
@@ -46,6 +45,7 @@ def get_provider_details_port() -> ProviderDetailsPort:
         base_url=Config.PROVIDER_API_BASE_URL, api_key=Config.PROVIDER_API_KEY
     )
 
+
 def get_sds_port() -> SdsPort:
     return SdsAdapter(
         base_url=Config.SDS_BASE_URL,
@@ -54,6 +54,7 @@ def get_sds_port() -> SdsPort:
         client_secret=Config.SDS_CLIENT_SECRET,
         scope=Config.SDS_SCOPE,
     )
+
 
 def get_read_application_use_case(
     session: Session = Depends(get_session),
@@ -90,7 +91,6 @@ async def read_all_applications(
 @router.post("/", response_model=ApplicationResponse, status_code=201)
 def create_application(
     request: ApplicationCreate,
-    use_case: SaveCoronersLetterUseCase = Depends(get_save_coroners_letter_use_case),
     session: Session = Depends(get_session),
     # current_user: User = Depends(get_current_active_user),
 ) -> Application:
