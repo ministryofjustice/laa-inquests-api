@@ -1,5 +1,10 @@
+import pytest
+
 from app.models.application.index import Application
 from sqlmodel import select
+
+
+pytestmark = pytest.mark.usefixtures("mock_gov_notify")
 
 
 def test_200_read_application_by_reference_returns_expected_application(
@@ -141,6 +146,7 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
         },
     )
 
+    assert create_response.status_code == 201
     created_application = create_response.json()
     laa_reference = created_application["laaReference"]
 
