@@ -1,67 +1,48 @@
-"""Adapter for GovNotify email service."""
+"""Gov Notify adapter for application emails."""
 
-from typing import Protocol
 from notifications_python_client.notifications import NotificationsAPIClient
+
 from app.config import Config
-from app.models.gov_notify_templates.application_submit_personalisation import (
-    NotifyApplicationSubmitTemplatePersonalisation,
+from app.models.application.index import Application, ApplicationProceeding
+
+from app.ports.gov_notify_port import GovNotifyPort
+from app.use_cases.notify.create_application_refusal_email_personalisation import (
+    create_application_refusal_email_personalisation,
+)
+from app.use_cases.notify.create_application_submission_email_personalisation import (
+    create_application_submission_email_personalisation,
 )
 
 
-class GovNotifyAdapter(Protocol):
-    """Protocol defining the interface for GovNotify email adapter."""
+class GovNotifyAdapter(GovNotifyPort):
+    """Gov Notify adapter for application email notifications."""
 
-    def send_email(
-        self,
-        email_address: str,
-        template_id: str,
-        personalisation: NotifyApplicationSubmitTemplatePersonalisation,
-    ) -> None:
-        """
-        Send an email via GovNotify.
-
-        Args:
-            email_address: Recipient email address
-            template_id: GovNotify template ID
-            personalisation: Dict of template variables
-
-        Raises:
-            Exception: If email sending fails
-        """
-        ...
-
-
-class GovNotifyClient:
-    """
-    Concrete implementation of GovNotify adapter using notifications-python-client.
-
-    This adapter wraps the official GOV.UK Notify Python client and provides
-    a simplified interface for sending emails with template personalisation.
-    """
-
-    def __init__(self):
-        """Initialize the GovNotify client with API key from config."""
+    def __init__(self) -> None:
         self.client = NotificationsAPIClient(Config.GOV_NOTIFY_API_KEY)
 
-    def send_email(
+    def send_application_refused_decision_email(
         self,
-        email_address: str,
-        template_id: str,
-        personalisation: NotifyApplicationSubmitTemplatePersonalisation,
+        application: Application,
+        proceeding: ApplicationProceeding,
+        recipient_email: str,
     ) -> None:
-        """
-        Send an email via GovNotify.
-
-        Args:
-            email_address: Recipient email address
-            template_id: GovNotify template ID
-            personalisation: Dict of template variables
-
-        Raises:
-            Exception: If GovNotify API returns an error
-        """
+        personalisation = create_application_refusal_email_personalisation(
+            application, proceeding
+        )
         self.client.send_email_notification(
-            email_address=email_address,
-            template_id=template_id,
+            email_address=recipient_email,
+            template_id=Config.GOV_NOTIFY_APPLICATION_REFUSE_TEMPLATE_ID,
+            personalisation=personalisation,
+        )
+
+    def send_application_submit_confirmation_email(
+        self, application: Application, recipient_email: str
+    ) -> None:
+        personalisation = create_application_submission_email_personalisation(
+            application
+        )
+        self.client.send_email_notification(
+            email_address=recipient_email,
+            template_id=Config.GOV_NOTIFY_APPLICATION_REFUSE_TEMPLATE_ID,
             personalisation=personalisation.model_dump(),
         )

@@ -36,6 +36,7 @@ from app.use_cases.read_application import ReadApplicationUseCase
 # from app.models.user import User
 from app.adapters.gov_notify import GovNotifyAdapter, GovNotifyClient
 from app.use_cases.save_coroners_letter import SaveCoronersLetterUseCase
+from app.ports.gov_notify_port import GovNotifyPort
 from app.use_cases.notify.send_application_confirmation_email import (
     send_application_confirmation_email,
 )
@@ -57,6 +58,10 @@ def get_provider_details_port() -> ProviderDetailsPort:
     return ProviderDetailsAdapter(
         base_url=Config.PROVIDER_API_BASE_URL, api_key=Config.PROVIDER_API_KEY
     )
+
+
+def get_gov_notify_port() -> GovNotifyPort:
+    return GovNotifyAdapter()
 
 
 def get_sds_port() -> SdsPort:
@@ -136,6 +141,7 @@ async def upload_coroners_letter(
 def create_application(
     request: ApplicationCreate,
     session: Session = Depends(get_session),
+    gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
     gov_notify_adapter: GovNotifyAdapter = Depends(get_gov_notify_adapter),
     # current_user: User = Depends(get_current_active_user),
 ) -> Application:
@@ -249,9 +255,8 @@ def create_application(
     session.refresh(new_application)
 
     try:
-        gov_notify_adapter = GovNotifyClient()
-        send_application_confirmation_email(
-            gov_notify_adapter, new_application, request.provider.email_address
+        gov_notify_port.send_confirmation_notification(
+            new_application, request.provider.email_address
         )
         session.commit()
     except Exception:
@@ -268,6 +273,7 @@ def patch_merits_decision(
     laa_reference: str,
     request: MeritsDecisionUpdateRefuse,
     session: Session = Depends(get_session),
+    gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
     # current_user: User = Depends(get_current_active_user),
 ) -> Response:
     """Set the merits decision on the single proceeding for a given application."""

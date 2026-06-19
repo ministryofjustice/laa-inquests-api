@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi import HTTPException
@@ -66,8 +66,9 @@ def test_patch_merits_decision_calls_session_add_and_commit():
     )
     session = MagicMock()
     session.get.return_value = application
+    gov_notify_port = MagicMock()
 
-    patch_merits_decision("1", _make_request("REFUSED"), session)
+    patch_merits_decision("1", _make_request("REFUSED"), session, gov_notify_port)
 
     session.add.assert_any_call(application)
     session.add.assert_any_call(proceeding)
@@ -93,10 +94,9 @@ def test_patch_merits_decision_sets_merits_decision_to_refused():
     )
     session = MagicMock()
     session.get.return_value = application
+    gov_notify_port = MagicMock()
 
-    with patch("app.routers.applications.GovNotifyClient") as mock_client_class:
-        mock_client_class.return_value.send_email.return_value = None
-        patch_merits_decision("1", _make_request("REFUSED"), session)
+    patch_merits_decision("1", _make_request("REFUSED"), session, gov_notify_port)
 
     assert proceeding.merits_decision == "REFUSED"
 
@@ -140,10 +140,9 @@ def test_patch_merits_decision_sets_overall_decision_on_application():
     )
     session = MagicMock()
     session.get.return_value = application
+    gov_notify_port = MagicMock()
 
-    with patch("app.routers.applications.GovNotifyClient") as mock_client_class:
-        mock_client_class.return_value.send_email.return_value = None
-        patch_merits_decision("1", _make_request("REFUSED"), session)
+    patch_merits_decision("1", _make_request("REFUSED"), session, gov_notify_port)
 
     assert application.overall_decision == "REFUSED"
 
@@ -166,12 +165,14 @@ def test_patch_merits_decision_returns_204_when_notify_fails_after_commit():
     )
     session = MagicMock()
     session.get.return_value = application
+    gov_notify_port = MagicMock()
+    gov_notify_port.send_refusal_notification.side_effect = RuntimeError(
+        "Gov Notify is unavailable"
+    )
 
-    with patch("app.routers.applications.GovNotifyClient") as mock_client_class:
-        mock_client_class.return_value.send_email.side_effect = RuntimeError(
-            "Gov Notify is unavailable"
-        )
-        response = patch_merits_decision("1", _make_request("REFUSED"), session)
+    response = patch_merits_decision(
+        "1", _make_request("REFUSED"), session, gov_notify_port
+    )
 
     assert response.status_code == 204
     session.commit.assert_called_once()

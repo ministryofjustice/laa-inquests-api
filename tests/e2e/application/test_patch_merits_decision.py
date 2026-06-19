@@ -149,7 +149,9 @@ def test_204_patch_merits_decision_persists_when_notify_fails(
     application = session.exec(select(Application)).first()
     laa_reference = application.laa_reference
 
-    mock_gov_notify.send_email.side_effect = RuntimeError("Gov Notify is unavailable")
+    mock_gov_notify.send_refusal_notification.side_effect = RuntimeError(
+        "Gov Notify is unavailable"
+    )
 
     response = client.patch(
         f"/applications/{laa_reference}/merits-decision",
