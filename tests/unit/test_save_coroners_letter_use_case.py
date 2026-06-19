@@ -3,14 +3,14 @@ from unittest.mock import MagicMock
 
 from app.ports.sds_port import SdsPort
 from app.use_cases.save_coroners_letter import SaveCoronersLetterUseCase
-from app.models.application.index import CoronersLetterResponse
+from app.models.application.index import SDSUploadCoronersLetterResponse
 from app.use_cases.exceptions import CoronersLetterSaveError
 
 request_body = {
     "coroners_letter": b"test",
     "file_name": "test_file.pdf",
 }
-body = CoronersLetterResponse(id="test_file.pdf", status=201)
+body = SDSUploadCoronersLetterResponse(sds_id="test_file.pdf", status="201")
 
 
 def test_execute_returns_response_body_when_call_is_successful():
@@ -22,7 +22,7 @@ def test_execute_returns_response_body_when_call_is_successful():
         request_body["coroners_letter"], request_body["file_name"]
     )
 
-    assert result.id == "test_file.pdf"
+    assert result.sds_id == "test_file.pdf"
 
 
 def test_execute_raises_an_error_when_sds_fails():

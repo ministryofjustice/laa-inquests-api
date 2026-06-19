@@ -14,7 +14,6 @@ from app.models.application.index import (
     Application,
     ApplicationPublicBody,
     Client,
-    CoronersLetterResponse,
     Deceased,
     Proceeding,
     ProceedingId,
@@ -22,6 +21,7 @@ from app.models.application.index import (
     Provider,
     PublicBody,
     PublicBodyId,
+    SDSUploadCoronersLetterResponse,
 )
 
 SECRET_KEY = "TEST_KEY"
@@ -137,10 +137,9 @@ def client_fixture(session: Session):
 
     def get_sds_port_override():
         mock_sds = MagicMock()
-        mock_sds.save_coroners_letter.return_value = CoronersLetterResponse(
-            id="test-file_abc123.pdf",
-            status=201,
-            file_name="test-file_abc123.pdf",
+        mock_sds.save_coroners_letter.return_value = SDSUploadCoronersLetterResponse(
+            sds_id="test-file_abc123.pdf",
+            status="201",
         )
         return mock_sds
 

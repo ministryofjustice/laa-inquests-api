@@ -131,6 +131,6 @@ def test_save_coroners_letter_returns_response_with_correct_fields():
     ):
         result = adapter.save_coroners_letter(b"content", "letter.pdf")
 
-    assert result.status == 201
-    assert result.id.startswith("letter_")
-    assert result.id.endswith(".pdf")
+    assert result.status == "201"
+    assert result.sds_id.startswith("letter_")
+    assert result.sds_id.endswith(".pdf")

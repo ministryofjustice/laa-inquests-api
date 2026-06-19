@@ -19,8 +19,13 @@ class SaveCoronersLetterUseCase:
         )
 
         # Port shouldn't be not return web state
-        if response_body.status == 201:
+        print(f"Response from SDS: {response_body.status}")
+        print(f"Response is string: {isinstance(response_body.status, str)}")
+        if response_body.status == "201":
+            print(f"Response body: {response_body}")
             response = CoronersLetterResponse.model_validate(response_body)
+            print(f"Response from SDS: {response}")
+
             return response
         else:
             raise CoronersLetterSaveError(

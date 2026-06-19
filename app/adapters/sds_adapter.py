@@ -3,7 +3,7 @@ from pathlib import Path
 
 import httpx
 
-from app.models.application.index import CoronersLetterResponse
+from app.models.application.index import SDSUploadCoronersLetterResponse
 
 
 class SdsAdapter:
@@ -36,7 +36,7 @@ class SdsAdapter:
 
     def save_coroners_letter(
         self, coroners_letter: bytes, file_name: str
-    ) -> CoronersLetterResponse:
+    ) -> SDSUploadCoronersLetterResponse:
         path = Path(file_name)
         unique_file_name = f"{path.stem}_{uuid.uuid4()}{path.suffix}"
         token = self._get_token()
@@ -52,7 +52,7 @@ class SdsAdapter:
             headers={"Authorization": f"Bearer {token}"},
         )
         response.raise_for_status()
-        return CoronersLetterResponse(
-            id=unique_file_name,
-            status=response.status_code,
+        return SDSUploadCoronersLetterResponse(
+            sds_id=unique_file_name,
+            status=str(response.status_code),
         )

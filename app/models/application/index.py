@@ -503,8 +503,8 @@ class CoronersLetterResponse(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    id: str
-    status: int
+    sds_id: str
+    status: str
 
 
 class CoronersLetterApplicationResponse(BaseModel):
@@ -537,3 +537,14 @@ class ApplicationResponse(BaseModel):
     deceased: DeceasedResponse
     provider: ProviderResponse
     coroners_letter: Optional[CoronersLetterApplicationResponse] = None
+
+
+# Use case models
+class SDSUploadCoronersLetterResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        from_attributes=True,
+        populate_by_name=True,
+    )
+    sds_id: str
+    status: str

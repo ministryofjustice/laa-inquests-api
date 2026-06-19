@@ -119,7 +119,7 @@ async def upload_coroners_letter(
         )
     except CoronersLetterSaveError:
         raise HTTPException(status_code=500, detail="Failed to save coroners letter")
-    return UploadCoronersLetterResponse(file_id=response.id)
+    return UploadCoronersLetterResponse(file_id=response.sds_id)
 
 
 @router.post("/", response_model=ApplicationResponse, status_code=201)
