@@ -505,7 +505,6 @@ class CoronersLetterResponse(BaseModel):
     )
     id: str
     status: int
-    file_name: str
 
 
 class CoronersLetterApplicationResponse(BaseModel):

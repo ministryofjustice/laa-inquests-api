@@ -55,5 +55,4 @@ class SdsAdapter:
         return CoronersLetterResponse(
             id=unique_file_name,
             status=response.status_code,
-            file_name=unique_file_name,
         )

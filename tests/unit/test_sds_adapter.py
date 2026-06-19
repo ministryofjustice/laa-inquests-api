@@ -134,4 +134,3 @@ def test_save_coroners_letter_returns_response_with_correct_fields():
     assert result.status == 201
     assert result.id.startswith("letter_")
     assert result.id.endswith(".pdf")
-    assert result.file_name == result.id
