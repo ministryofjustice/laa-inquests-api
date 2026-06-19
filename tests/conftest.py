@@ -1,7 +1,8 @@
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from sqlmodel import SQLModel, create_engine, Session, StaticPool
 from app import api
+from app.config import Config
 from app.db import get_session
 from app.db.session import CustomSession
 from fastapi.testclient import TestClient
@@ -180,3 +181,30 @@ def auth_token_disabled_user(client):
     token_data = response.json()
     assert "access_token" in token_data
     return token_data["access_token"]
+
+
+@pytest.fixture
+def mock_gov_notify():
+    """Mock Gov Notify client and template IDs for E2E tests."""
+    with (
+        patch.object(
+            Config,
+            "GOV_NOTIFY_API_KEY",
+            "test-gov-notify-api-key",
+        ),
+        patch.object(
+            Config,
+            "GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID",
+            "test-submit-template-id",
+        ),
+        patch.object(
+            Config,
+            "GOV_NOTIFY_APPLICATION_REFUSE_TEMPLATE_ID",
+            "test-refuse-template-id",
+        ),
+        patch("app.routers.applications.GovNotifyClient") as mock_client_class,
+    ):
+        mock_client = MagicMock()
+        mock_client.send_email.return_value = None
+        mock_client_class.return_value = mock_client
+        yield mock_client
