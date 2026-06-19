@@ -69,6 +69,16 @@ inputs:
     description: "Base URL for the provider details API"
   provider-api-key:
     description: "API key for the provider details API"
+  sds-base-url:
+    description: "Base URL for the SDS API"
+  sds-tenant-id:
+    description: "Tenant ID for the SDS API"
+  sds-client-id:
+    description: "Client ID for the SDS API"
+  sds-client-secret:
+    description: "Client secret for the SDS API"
+  sds-scope:
+    description: "Scope for the SDS API"
 runs:
   using: "composite"
   steps:
