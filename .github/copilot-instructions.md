@@ -75,7 +75,7 @@ This project is a **FastAPI REST API** using **SQLModel** (SQLAlchemy + Pydantic
 | URL paths                  | `kebab-case`       | `/applications/{laa_reference}`     |
 | Test files                 | `test_[name].py`   | `test_create_application.py`        |
 | Model base classes         | `[Resource]Base`   | `ClientBase`, `ApplicationBase`     |
-| Request schemas            | `[Resource]Create` / `[Resource]Update` | `ApplicationCreate`, `MeritsDecisionUpdate` |
+| Request schemas            | `[Resource]Create` / `[Resource]Update` | `ApplicationCreate`, `MeritsDecisionUpdateRefuse` |
 | Response schemas           | `[Resource]Response` | `ApplicationResponse`             |
 
 ## 5. Testing Standards

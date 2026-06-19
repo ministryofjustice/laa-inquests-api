@@ -9,37 +9,22 @@ from app.models.application.index import (
     Application,
     ApplicationProceeding,
     Client,
-    MeritsDecisionUpdate,
+    MeritsDecisionUpdateRefuse,
     Provider,
 )
 from app.routers.applications import patch_merits_decision
 
 
-def _make_request(value="GRANTED"):
+def _make_request(value):
     request_data = {"merits_decision": value}
     if value == "REFUSED":
         request_data["reason_for_refusal"] = "NOT_IN_SCOPE"
         request_data["justification"] = "The matter is not in scope."
-    return MeritsDecisionUpdate(**request_data)
-
-
-def test_merits_decision_defaults_to_pending():
-    proceeding = ApplicationProceeding(
-        laa_reference=1, proceeding_id=ProceedingId.TEST1
-    )
-    assert proceeding.merits_decision == "PENDING"
-
-
-def test_merits_decision_can_be_set_to_refused():
-    proceeding = ApplicationProceeding(
-        laa_reference=1, proceeding_id=ProceedingId.TEST1
-    )
-    proceeding.merits_decision = "REFUSED"
-    assert proceeding.merits_decision == "REFUSED"
+    return MeritsDecisionUpdateRefuse(**request_data)
 
 
 def test_merits_decision_update_parses_camel_case():
-    update = MeritsDecisionUpdate.model_validate(
+    update = MeritsDecisionUpdateRefuse.model_validate(
         {
             "meritsDecision": "REFUSED",
             "reasonForRefusal": "NOT_IN_SCOPE",
@@ -50,7 +35,7 @@ def test_merits_decision_update_parses_camel_case():
 
 
 def test_merits_decision_update_parses_snake_case():
-    update = MeritsDecisionUpdate(
+    update = MeritsDecisionUpdateRefuse(
         merits_decision="REFUSED",
         reason_for_refusal="NOT_IN_SCOPE",
         justification="The matter is not in scope.",
@@ -60,23 +45,29 @@ def test_merits_decision_update_parses_snake_case():
 
 def test_merits_decision_update_rejects_invalid_value():
     with pytest.raises(ValidationError):
-        MeritsDecisionUpdate(merits_decision="INVALID_VALUE")
-
-
-def test_merits_decision_update_accepts_granted():
-    update = MeritsDecisionUpdate(merits_decision="GRANTED")
-    assert update.merits_decision == "GRANTED"
+        MeritsDecisionUpdateRefuse(merits_decision="INVALID_VALUE")
 
 
 def test_patch_merits_decision_calls_session_add_and_commit():
     proceeding = ApplicationProceeding(
         laa_reference=1, proceeding_id=ProceedingId.TEST1
     )
-    application = Application(proceedings=[proceeding])
+    client = Client(
+        client_first_name="Test",
+        client_last_name="Client",
+        date_of_birth="01-01-1990",
+        correspondence_address_source="USE_CLIENT_HOME_ADDRESS",
+    )
+    provider = Provider(
+        firm_code="0A123B", office_id="001", email_address="test@example.com"
+    )
+    application = Application(
+        proceedings=[proceeding], provider=provider, client=client
+    )
     session = MagicMock()
     session.get.return_value = application
 
-    patch_merits_decision("1", _make_request("GRANTED"), session)
+    patch_merits_decision("1", _make_request("REFUSED"), session)
 
     session.add.assert_any_call(application)
     session.add.assert_any_call(proceeding)
@@ -115,7 +106,7 @@ def test_patch_merits_decision_raises_404_when_application_not_found():
     session.get.return_value = None
 
     with pytest.raises(HTTPException) as exc:
-        patch_merits_decision("99999", _make_request("GRANTED"), session)
+        patch_merits_decision("99999", _make_request("REFUSED"), session)
 
     assert exc.value.status_code == 404
 
@@ -126,7 +117,7 @@ def test_patch_merits_decision_raises_404_when_no_proceedings():
     session.get.return_value = application
 
     with pytest.raises(HTTPException) as exc:
-        patch_merits_decision("1", _make_request("GRANTED"), session)
+        patch_merits_decision("1", _make_request("REFUSED"), session)
 
     assert exc.value.status_code == 404
 
@@ -155,3 +146,33 @@ def test_patch_merits_decision_sets_overall_decision_on_application():
         patch_merits_decision("1", _make_request("REFUSED"), session)
 
     assert application.overall_decision == "REFUSED"
+
+
+def test_patch_merits_decision_returns_204_when_notify_fails_after_commit():
+    proceeding = ApplicationProceeding(
+        laa_reference=1, proceeding_id=ProceedingId.TEST1
+    )
+    client = Client(
+        client_first_name="Test",
+        client_last_name="Client",
+        date_of_birth="01-01-1990",
+        correspondence_address_source="USE_CLIENT_HOME_ADDRESS",
+    )
+    provider = Provider(
+        firm_code="0A123B", office_id="001", email_address="test@example.com"
+    )
+    application = Application(
+        proceedings=[proceeding], provider=provider, client=client
+    )
+    session = MagicMock()
+    session.get.return_value = application
+
+    with patch("app.routers.applications.GovNotifyClient") as mock_client_class:
+        mock_client_class.return_value.send_email.side_effect = RuntimeError(
+            "Gov Notify is unavailable"
+        )
+        response = patch_merits_decision("1", _make_request("REFUSED"), session)
+
+    assert response.status_code == 204
+    session.commit.assert_called_once()
+    session.rollback.assert_not_called()
