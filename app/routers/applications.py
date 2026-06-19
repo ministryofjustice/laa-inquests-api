@@ -34,8 +34,7 @@ from app.use_cases.exceptions import ApplicationNotFoundError, CoronersLetterSav
 from app.use_cases.read_application import ReadApplicationUseCase
 
 # from app.models.user import User
-from app.adapters.gov_notify import GovNotifyAdapter, GovNotifyClient
-from app.use_cases.save_coroners_letter import SaveCoronersLetterUseCase
+from app.adapters.gov_notify import GovNotifyAdapter
 from app.ports.gov_notify_port import GovNotifyPort
 from app.use_cases.save_coroners_letter import SaveCoronersLetterUseCase
 from app.use_cases.send_application_confirmation import send_application_confirmation
@@ -69,7 +68,6 @@ def get_sds_port() -> SdsPort:
         scope=Config.SDS_SCOPE,
     )
 
-
 def get_read_application_use_case(
     session: Session = Depends(get_session),
     provider_details_port: ProviderDetailsPort = Depends(get_provider_details_port),
@@ -78,16 +76,10 @@ def get_read_application_use_case(
         session=session, provider_details_port=provider_details_port
     )
 
-
 def get_save_coroners_letter_use_case(
     sds_port: SdsPort = Depends(get_sds_port),
 ) -> SaveCoronersLetterUseCase:
     return SaveCoronersLetterUseCase(sds_port=sds_port)
-
-
-def get_gov_notify_adapter() -> GovNotifyAdapter:
-    return GovNotifyClient()
-
 
 @router.get("/{laa_reference}", response_model=ApplicationResponse)
 async def read_application(
