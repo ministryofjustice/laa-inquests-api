@@ -52,11 +52,6 @@ deploy_branch() {
                 --set env.SERVICE_URL="$SERVICE_URL" \
                 --set env.PROVIDER_API_BASE_URL="$PROVIDER_API_BASE_URL" \
                 --set env.PROVIDER_API_KEY="$PROVIDER_API_KEY" \
-                --set env.SDS_BASE_URL="$SDS_BASE_URL" \
-                --set env.SDS_TENANT_ID="$SDS_TENANT_ID" \
-                --set env.SDS_CLIENT_ID="$SDS_CLIENT_ID" \
-                --set env.SDS_CLIENT_SECRET="$SDS_CLIENT_SECRET" \
-                --set env.SDS_SCOPE="$SDS_SCOPE"
 }
 
 deploy_main() {
