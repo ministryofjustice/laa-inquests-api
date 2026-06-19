@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from sqlmodel import SQLModel, create_engine, Session, StaticPool
 from app import api
 from app.db import get_session

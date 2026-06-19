@@ -166,7 +166,7 @@ def test_gov_notify_adapter_sends_confirmation_email_successfully():
         mock_api_client.assert_called_once_with(Config.GOV_NOTIFY_API_KEY)
         call_kwargs = mock_notifications_client.send_email_notification.call_args.kwargs
         assert call_kwargs["email_address"] == "provider@example.com"
-        assert call_kwargs["template_id"] == "test-refuse-template-id"
+        assert call_kwargs["template_id"] == "test-submit-template-id"
         assert isinstance(call_kwargs["personalisation"], dict)
         assert call_kwargs["personalisation"]["laa_reference"] == "12345"
         assert call_kwargs["personalisation"]["client_first_name"] == "Jane"
