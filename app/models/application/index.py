@@ -151,6 +151,13 @@ class Deceased(DeceasedBase, table=True):
     )
 
 
+class CoronersLetter(SQLModel, table=True):
+    __tablename__ = "coroners_letter"
+    coroners_letter_id: int | None = Field(primary_key=True)
+    sds_id: str
+    file_name: str
+
+
 class Application(ApplicationBase, table=True):
     proceedings: list["ApplicationProceeding"] = Relationship(
         back_populates="application"
@@ -166,6 +173,13 @@ class Application(ApplicationBase, table=True):
     )
     provider_id: int = Field(foreign_key="provider.provider_id")
     provider: Provider | None = Relationship(sa_relationship_kwargs={"uselist": False})
+
+    coroners_letter_id: int | None = Field(
+        default=None, foreign_key="coroners_letter.coroners_letter_id"
+    )
+    coroners_letter: CoronersLetter | None = Relationship(
+        sa_relationship_kwargs={"uselist": False}
+    )
 
 
 class ApplicationPublicBody(SQLModel, table=True):
@@ -340,6 +354,16 @@ class PublicBodyCreate(BaseModel):
     public_body_id: str = PydanticField(examples=["Department of Health & Social Care"])
 
 
+class CoronersLetterRequest(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+    coroners_letter: bytes
+    file_name: str
+
+
 class ProviderCreate(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -357,7 +381,7 @@ class ApplicationCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    # documents: list[Document]
+    coroners_letter_id: str
     client: ClientCreate
     deceased: DeceasedCreate
     publicBodies: list[PublicBodyCreate]
@@ -475,6 +499,36 @@ class ProviderResponse(BaseModel):
     email_address: str
 
 
+
+class UploadCoronersLetterResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+    file_id: str
+
+
+class CoronersLetterResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+    id: str
+    status: int
+    file_name: str
+
+
+class CoronersLetterApplicationResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+    id: str = PydanticField(validation_alias="sds_id")
+    file_name: str
+
+
 class ApplicationResponse(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -494,14 +548,4 @@ class ApplicationResponse(BaseModel):
     client: ClientResponse
     deceased: DeceasedResponse
     provider: ProviderResponse
-
-
-class CoronersLetterRequest(BaseModel):
-    coroners_letter: bytes
-    file_name: str
-
-
-class CoronersLetterResponse(BaseModel):
-    id: str
-    status: int
-    file_name: str
+    coroners_letter: Optional[CoronersLetterApplicationResponse] = None
