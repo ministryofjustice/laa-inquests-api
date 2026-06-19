@@ -8,13 +8,16 @@ class SaveCoronersLetterUseCase:
         self.sds_port = sds_port
 
     def execute(
-        self, coronersLetterRequest: CoronersLetterRequest
+        # Don't pass in the request object
+        self,
+        coronersLetterRequest: CoronersLetterRequest,
     ) -> CoronersLetterResponse:
         response_body = self.sds_port.save_coroners_letter(
             coronersLetterRequest.coroners_letter,
             coronersLetterRequest.file_name,
         )
 
+        # Port shouldn't be not return web state
         if response_body.status == 201:
             response = CoronersLetterResponse.model_validate(response_body)
             return response
