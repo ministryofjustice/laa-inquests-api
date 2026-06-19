@@ -31,10 +31,12 @@ from app.use_cases.read_application import ReadApplicationUseCase
 
 # from app.models.user import User
 from app.adapters.gov_notify import GovNotifyClient
-from app.use_cases.notify.send_application_confirmation import (
-    send_application_confirmation,
+from app.use_cases.notify.send_application_confirmation_email import (
+    send_application_confirmation_email,
 )
-from app.use_cases.notify.send_application_refusal import send_application_refusal
+from app.use_cases.notify.send_application_refusal_email import (
+    send_application_refusal_email,
+)
 
 
 router = APIRouter(
@@ -192,7 +194,7 @@ def create_application(
 
     try:
         gov_notify_adapter = GovNotifyClient()
-        send_application_confirmation(
+        send_application_confirmation_email(
             gov_notify_adapter, new_application, request.provider.email_address
         )
         session.commit()
@@ -245,7 +247,7 @@ def patch_merits_decision(
     if decision == MeritsDecision.REFUSED:
         try:
             gov_notify_adapter = GovNotifyClient()
-            send_application_refusal(
+            send_application_refusal_email(
                 gov_notify_adapter,
                 application,
                 proceeding,

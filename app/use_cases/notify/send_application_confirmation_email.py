@@ -8,7 +8,7 @@ from app.use_cases.notify.populate_application_submission_template import (
 from app.config import Config
 
 
-def send_application_confirmation(
+def send_application_confirmation_email(
     notifyAdapter: GovNotifyAdapter, application: Application, provider_email=str
 ) -> None:
     """

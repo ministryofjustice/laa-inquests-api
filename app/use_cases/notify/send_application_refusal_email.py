@@ -8,7 +8,7 @@ from app.use_cases.notify.populate_application_refusal_template import (
 from app.config import Config
 
 
-def send_application_refusal(
+def send_application_refusal_email(
     notify_adapter: GovNotifyAdapter,
     application: Application,
     proceeding: ApplicationProceeding,
