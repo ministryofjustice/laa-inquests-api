@@ -8,6 +8,11 @@ x-db-port: &db_port 5432
 x-gov-notify-api-key: &gov_notify_api_key ${GOV_NOTIFY_API_KEY}
 x-gov-notify-application-submit-template-id: &gov_notify_application_submit_template_id ${GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID}
 x-gov-notify-callback-bearer-token: &gov_notify_callback_bearer_token ${GOV_NOTIFY_CALLBACK_BEARER_TOKEN}
+x-sds-base-url: &sds_base_url ${SDS_BASE_URL}
+x-sds-tenant-id: &sds_tenant_id ${SDS_TENANT_ID}
+x-sds-client-id: &sds_client_id ${SDS_CLIENT_ID}
+x-sds-client-secret: &sds_client_secret ${SDS_CLIENT_SECRET}
+x-sds-scope: &sds_scope ${SDS_SCOPE}
 
 x-postgres_init_env: &postgres_init_env
   POSTGRES_USER: *db_user
@@ -24,6 +29,12 @@ x-app_db_env: &app_db_env
   GOV_NOTIFY_API_KEY: *gov_notify_api_key
   GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID: *gov_notify_application_submit_template_id
   GOV_NOTIFY_CALLBACK_BEARER_TOKEN: *gov_notify_callback_bearer_token
+  SDS_BASE_URL: *sds_base_url
+  SDS_TENANT_ID: *sds_tenant_id
+  SDS_CLIENT_ID: *sds_client_id
+  SDS_CLIENT_SECRET: *sds_client_secret
+  SDS_SCOPE: *sds_scope
+  
 
 services:
   db:
