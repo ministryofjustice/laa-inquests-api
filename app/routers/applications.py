@@ -14,6 +14,7 @@ from app.models.application.index import (
     ApplicationResponse,
     AddressSource,
     Client,
+    CoronersLetter,
     CoronersLetterRequest,
     Deceased,
     MeritsDecisionUpdate,
@@ -31,7 +32,7 @@ from app.use_cases.exceptions import ApplicationNotFoundError, CoronersLetterSav
 from app.use_cases.read_application import ReadApplicationUseCase
 
 # from app.models.user import User
-from app.adapters.gov_notify import GovNotifyClient
+from app.adapters.gov_notify import GovNotifyAdapter, GovNotifyClient
 from app.use_cases.save_coroners_letter import SaveCoronersLetterUseCase
 from app.use_cases.send_application_confirmation import send_application_confirmation
 
@@ -71,6 +72,10 @@ def get_save_coroners_letter_use_case(
     sds_port: SdsPort = Depends(get_sds_port),
 ) -> SaveCoronersLetterUseCase:
     return SaveCoronersLetterUseCase(sds_port=sds_port)
+
+
+def get_gov_notify_adapter() -> GovNotifyAdapter:
+    return GovNotifyClient()
 
 @router.get("/{laa_reference}", response_model=ApplicationResponse)
 async def read_application(
@@ -119,6 +124,7 @@ async def upload_coroners_letter(
 def create_application(
     request: ApplicationCreate,
     session: Session = Depends(get_session),
+    gov_notify_adapter: GovNotifyAdapter = Depends(get_gov_notify_adapter),
     # current_user: User = Depends(get_current_active_user),
 ) -> Application:
     """Creates a new application with proceedings, public bodies."""
@@ -208,12 +214,21 @@ def create_application(
     session.flush()
     session.refresh(new_provider)
 
+    new_coroners_letter = CoronersLetter(
+        sds_id=request.coroners_letter_id,
+        file_name=request.coroners_letter_id,
+    )
+    session.add(new_coroners_letter)
+    session.flush()
+    session.refresh(new_coroners_letter)
+
     new_application = Application(
         client_id=new_client.client_id,
         deceased_id=new_deceased.deceased_id,
         proceedings=proceedings_to_add,
         public_bodies=public_bodies_to_add,
         provider_id=new_provider.provider_id,
+        coroners_letter_id=new_coroners_letter.coroners_letter_id,
     )
     session.add(new_application)
 
@@ -222,7 +237,6 @@ def create_application(
     session.refresh(new_application)
 
     try:
-        gov_notify_adapter = GovNotifyClient()
         send_application_confirmation(
             gov_notify_adapter, new_application, request.provider.email_address
         )
