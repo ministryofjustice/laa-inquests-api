@@ -1,5 +1,4 @@
-from click import File
-from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File
 from sqlmodel import Session, select
 from typing import Sequence
 
