@@ -51,7 +51,7 @@ deploy_branch() {
                 --set env.SESSION_SECRET="$SESSION_SECRET" \
                 --set env.SERVICE_URL="$SERVICE_URL" \
                 --set env.PROVIDER_API_BASE_URL="$PROVIDER_API_BASE_URL" \
-                --set env.PROVIDER_API_KEY="$PROVIDER_API_KEY" \
+                --set env.PROVIDER_API_KEY="$PROVIDER_API_KEY"
 }
 
 deploy_main() {
