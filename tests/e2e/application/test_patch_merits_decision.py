@@ -1,8 +1,10 @@
-from unittest.mock import Mock, patch
-
+import pytest
 from sqlmodel import select
 
 from app.models.application.index import Application, ApplicationProceeding
+
+
+pytestmark = pytest.mark.usefixtures("mock_gov_notify")
 
 
 #  TODO: rename _refused_payload to _refuse_decision_payload
@@ -21,16 +23,14 @@ def test_204_patch_merits_decision_to_refused(session, client, auth_token):
     application = session.exec(select(Application)).first()
     laa_reference = application.laa_reference
 
-    with patch("app.routers.applications.GovNotifyClient") as mock_client_class:
-        mock_client_class.return_value.send_email.return_value = None
-        response = client.patch(
-            f"/applications/{laa_reference}/merits-decision",
-            json=_refused_payload(),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
-            },
-        )
+    response = client.patch(
+        f"/applications/{laa_reference}/merits-decision",
+        json=_refused_payload(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
 
     assert response.status_code == 204
 
@@ -65,16 +65,14 @@ def test_204_patch_merits_decision_updates_db(session, client, auth_token):
     application = session.exec(select(Application)).first()
     laa_reference = application.laa_reference
 
-    with patch("app.routers.applications.GovNotifyClient") as mock_client_class:
-        mock_client_class.return_value.send_email.return_value = None
-        client.patch(
-            f"/applications/{laa_reference}/merits-decision",
-            json=_refused_payload(),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
-            },
-        )
+    client.patch(
+        f"/applications/{laa_reference}/merits-decision",
+        json=_refused_payload(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
 
     session.expire_all()
     proceeding = session.exec(
@@ -147,23 +145,21 @@ def test_422_patch_merits_decision_refused_with_invalid_reason(client, auth_toke
 
 
 def test_500_patch_merits_decision_rolls_back_when_notify_fails(
-    session, client, auth_token
+    session, client, auth_token, mock_gov_notify
 ):
     application = session.exec(select(Application)).first()
     laa_reference = application.laa_reference
 
-    mock_notify = Mock()
-    mock_notify.send_email.side_effect = RuntimeError("Gov Notify is unavailable")
+    mock_gov_notify.send_email.side_effect = RuntimeError("Gov Notify is unavailable")
 
-    with patch("app.routers.applications.GovNotifyClient", return_value=mock_notify):
-        response = client.patch(
-            f"/applications/{laa_reference}/merits-decision",
-            json=_refused_payload(),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
-            },
-        )
+    response = client.patch(
+        f"/applications/{laa_reference}/merits-decision",
+        json=_refused_payload(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
 
     assert response.status_code == 500
 

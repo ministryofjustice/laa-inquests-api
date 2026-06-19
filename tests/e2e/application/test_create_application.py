@@ -1,6 +1,9 @@
-from unittest.mock import patch, Mock
+import pytest
 from sqlmodel import select
 from app.models.application.index import Application
+
+
+pytestmark = pytest.mark.usefixtures("mock_gov_notify")
 
 
 def _make_request_body(client_overrides=None):
@@ -440,7 +443,7 @@ def test_422_create_application_fails_without_office_id(client, auth_token):
 
 
 def test_500_create_application_rolls_back_when_gov_notify_fails(
-    client, auth_token, session
+    client, auth_token, session, mock_gov_notify
 ):
     """
     Test that application creation rolls back when GovNotify email sending fails.
@@ -455,25 +458,22 @@ def test_500_create_application_rolls_back_when_gov_notify_fails(
     """
     initial_count = len(session.exec(select(Application)).all())
 
-    with patch("app.routers.applications.GovNotifyClient") as mock_client_class:
-        mock_instance = Mock()
-        mock_instance.send_email.side_effect = Exception("GovNotify API unavailable")
-        mock_client_class.return_value = mock_instance
+    mock_gov_notify.send_email.side_effect = Exception("GovNotify API unavailable")
 
-        response = client.post(
-            "/applications",
-            json=_make_request_body(),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
-            },
-        )
+    response = client.post(
+        "/applications",
+        json=_make_request_body(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
 
-        assert response.status_code == 500
-        assert response.json() == {"detail": "An internal server error occurred"}
+    assert response.status_code == 500
+    assert response.json() == {"detail": "An internal server error occurred"}
 
-        final_count = len(session.exec(select(Application)).all())
-        assert final_count == initial_count, (
-            f"Application was created despite email failure. "
-            f"Initial count: {initial_count}, Final count: {final_count}"
-        )
+    final_count = len(session.exec(select(Application)).all())
+    assert final_count == initial_count, (
+        f"Application was created despite email failure. "
+        f"Initial count: {initial_count}, Final count: {final_count}"
+    )
