@@ -458,7 +458,9 @@ def test_500_create_application_rolls_back_when_gov_notify_fails(
     """
     initial_count = len(session.exec(select(Application)).all())
 
-    mock_gov_notify.send_email.side_effect = Exception("GovNotify API unavailable")
+    mock_gov_notify.send_confirmation_notification.side_effect = Exception(
+        "GovNotify API unavailable"
+    )
 
     response = client.post(
         "/applications",
