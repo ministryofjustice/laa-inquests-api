@@ -15,7 +15,6 @@ from app.models.application.index import (
     AddressSource,
     Client,
     CoronersLetter,
-    CoronersLetterRequest,
     Deceased,
     MeritsDecisionUpdate,
     ProceedingId,
@@ -68,6 +67,7 @@ def get_read_application_use_case(
         session=session, provider_details_port=provider_details_port
     )
 
+
 def get_save_coroners_letter_use_case(
     sds_port: SdsPort = Depends(get_sds_port),
 ) -> SaveCoronersLetterUseCase:
@@ -76,6 +76,7 @@ def get_save_coroners_letter_use_case(
 
 def get_gov_notify_adapter() -> GovNotifyAdapter:
     return GovNotifyClient()
+
 
 @router.get("/{laa_reference}", response_model=ApplicationResponse)
 async def read_application(
@@ -99,6 +100,7 @@ async def read_all_applications(
     applications = session.exec(select(Application)).all()
     return applications
 
+
 @router.post(
     "/upload-coroners-letter",
     response_model=UploadCoronersLetterResponse,
@@ -106,19 +108,19 @@ async def read_all_applications(
 )
 async def upload_coroners_letter(
     file: UploadFile = File(...),
-    use_case: SaveCoronersLetterUseCase = Depends(get_save_coroners_letter_use_case)) -> UploadCoronersLetterResponse:
+    use_case: SaveCoronersLetterUseCase = Depends(get_save_coroners_letter_use_case),
+) -> UploadCoronersLetterResponse:
     """Upload a coroner's letter to document storage and return its file ID."""
     contents = await file.read()
     try:
         response = use_case.execute(
-            CoronersLetterRequest(
-                coroners_letter=contents,
-                file_name=file.filename,
-            )
+            contents,
+            file.filename,
         )
     except CoronersLetterSaveError:
         raise HTTPException(status_code=500, detail="Failed to save coroners letter")
     return UploadCoronersLetterResponse(file_id=response.id)
+
 
 @router.post("/", response_model=ApplicationResponse, status_code=201)
 def create_application(

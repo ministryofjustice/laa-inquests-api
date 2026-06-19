@@ -3,13 +3,13 @@ from unittest.mock import MagicMock
 
 from app.ports.sds_port import SdsPort
 from app.use_cases.save_coroners_letter import SaveCoronersLetterUseCase
-from app.models.application.index import CoronersLetterResponse, CoronersLetterRequest
+from app.models.application.index import CoronersLetterResponse
 from app.use_cases.exceptions import CoronersLetterSaveError
 
-request_body = CoronersLetterRequest(
-    coroners_letter=b"test",
-    file_name="test_file.pdf",
-)
+request_body = {
+    "coroners_letter": b"test",
+    "file_name": "test_file.pdf",
+}
 body = CoronersLetterResponse(
     id="test_file.pdf",
     status=201,
@@ -22,7 +22,9 @@ def test_execute_returns_response_body_when_call_is_successful():
     port.save_coroners_letter.return_value = body
 
     use_case = SaveCoronersLetterUseCase(sds_port=port)
-    result = use_case.execute(request_body)
+    result = use_case.execute(
+        request_body["coroners_letter"], request_body["file_name"]
+    )
 
     assert result.file_name == "test_file.pdf"
 
@@ -35,4 +37,4 @@ def test_execute_raises_an_error_when_sds_fails():
     use_case = SaveCoronersLetterUseCase(sds_port=port)
 
     with pytest.raises(CoronersLetterSaveError):
-        use_case.execute(request_body)
+        use_case.execute(request_body["coroners_letter"], request_body["file_name"])

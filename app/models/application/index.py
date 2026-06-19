@@ -354,16 +354,6 @@ class PublicBodyCreate(BaseModel):
     public_body_id: str = PydanticField(examples=["Department of Health & Social Care"])
 
 
-class CoronersLetterRequest(BaseModel):
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
-    )
-    coroners_letter: bytes
-    file_name: str
-
-
 class ProviderCreate(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,

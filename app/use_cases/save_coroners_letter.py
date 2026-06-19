@@ -1,4 +1,4 @@
-from app.models.application.index import CoronersLetterRequest, CoronersLetterResponse
+from app.models.application.index import CoronersLetterResponse
 from app.ports.sds_port import SdsPort
 from app.use_cases.exceptions import CoronersLetterSaveError
 
@@ -10,11 +10,12 @@ class SaveCoronersLetterUseCase:
     def execute(
         # Don't pass in the request object
         self,
-        coronersLetterRequest: CoronersLetterRequest,
+        coroners_letter: bytes,
+        file_name: str,
     ) -> CoronersLetterResponse:
         response_body = self.sds_port.save_coroners_letter(
-            coronersLetterRequest.coroners_letter,
-            coronersLetterRequest.file_name,
+            coroners_letter,
+            file_name,
         )
 
         # Port shouldn't be not return web state
@@ -23,5 +24,5 @@ class SaveCoronersLetterUseCase:
             return response
         else:
             raise CoronersLetterSaveError(
-                f"Coroners letter {response_body.file_name} was not uploaded successfully"
+                f"Coroners letter {file_name} was not uploaded successfully"
             )
