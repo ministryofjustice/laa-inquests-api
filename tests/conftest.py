@@ -7,13 +7,14 @@ from app.db.session import CustomSession
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
 from app.auth.security import get_password_hash
-from app.routers.applications import get_provider_details_port
+from app.routers.applications import get_provider_details_port, get_sds_port
 from app.models import User
 from app.models.application.index import (
     Address,
     Application,
     ApplicationPublicBody,
     Client,
+    CoronersLetterResponse,
     Deceased,
     Proceeding,
     ProceedingId,
@@ -134,10 +135,20 @@ def client_fixture(session: Session):
         mock_port.get_firm_name.return_value = "Test Firm Name"
         return mock_port
 
+    def get_sds_port_override():
+        mock_sds = MagicMock()
+        mock_sds.save_coroners_letter.return_value = CoronersLetterResponse(
+            id="test-file_abc123.pdf",
+            status=201,
+            file_name="test-file_abc123.pdf",
+        )
+        return mock_sds
+
     api.dependency_overrides[get_session] = get_session_override
     api.dependency_overrides[get_provider_details_port] = (
         get_provider_details_port_override
     )
+    api.dependency_overrides[get_sds_port] = get_sds_port_override
 
     client = TestClient(api, raise_server_exceptions=False)
     yield client
