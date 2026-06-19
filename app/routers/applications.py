@@ -38,6 +38,7 @@ from app.adapters.gov_notify import GovNotifyAdapter, GovNotifyClient
 from app.use_cases.save_coroners_letter import SaveCoronersLetterUseCase
 from app.ports.gov_notify_port import GovNotifyPort
 from app.use_cases.save_coroners_letter import SaveCoronersLetterUseCase
+from app.use_cases.send_application_confirmation import send_application_confirmation
 
 
 router = APIRouter(
