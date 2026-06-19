@@ -37,12 +37,7 @@ from app.use_cases.read_application import ReadApplicationUseCase
 from app.adapters.gov_notify import GovNotifyAdapter, GovNotifyClient
 from app.use_cases.save_coroners_letter import SaveCoronersLetterUseCase
 from app.ports.gov_notify_port import GovNotifyPort
-from app.use_cases.notify.send_application_confirmation_email import (
-    send_application_confirmation_email,
-)
-from app.use_cases.notify.send_application_refusal_email import (
-    send_application_refusal_email,
-)
+from app.use_cases.save_coroners_letter import SaveCoronersLetterUseCase
 
 
 router = APIRouter(
@@ -140,9 +135,9 @@ async def upload_coroners_letter(
 @router.post("/", response_model=ApplicationResponse, status_code=201)
 def create_application(
     request: ApplicationCreate,
+    use_case: SaveCoronersLetterUseCase = Depends(get_save_coroners_letter_use_case),
     session: Session = Depends(get_session),
     gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
-    gov_notify_adapter: GovNotifyAdapter = Depends(get_gov_notify_adapter),
     # current_user: User = Depends(get_current_active_user),
 ) -> Application:
     """Creates a new application with proceedings, public bodies."""
