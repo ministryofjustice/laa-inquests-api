@@ -10,7 +10,7 @@ request_body = {
     "coroners_letter": b"test",
     "file_name": "test_file.pdf",
 }
-body = SDSUploadCoronersLetterResponse(sds_id="test_file.pdf", status="201")
+body = SDSUploadCoronersLetterResponse(sds_id="test_file.pdf", status="SUCCESS")
 
 
 def test_execute_returns_response_body_when_call_is_successful():
@@ -27,7 +27,7 @@ def test_execute_returns_response_body_when_call_is_successful():
 
 def test_execute_raises_an_error_when_sds_fails():
     port = MagicMock(spec=SdsPort)
-    body.status = 400
+    body.status = "FAILURE"
     port.save_coroners_letter.return_value = body
 
     use_case = SaveCoronersLetterUseCase(sds_port=port)

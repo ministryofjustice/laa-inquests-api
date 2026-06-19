@@ -139,7 +139,7 @@ def client_fixture(session: Session):
         mock_sds = MagicMock()
         mock_sds.save_coroners_letter.return_value = SDSUploadCoronersLetterResponse(
             sds_id="test-file_abc123.pdf",
-            status="201",
+            status="SUCCESS",
         )
         return mock_sds
 

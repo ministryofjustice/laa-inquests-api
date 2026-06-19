@@ -30,6 +30,16 @@ def _mock_save_response() -> MagicMock:
     return mock
 
 
+def _mock_save_failure_response() -> MagicMock:
+    mock = MagicMock()
+    mock.status_code = 500
+    mock.json.return_value = {
+        "error": "Internal Server Error",
+        "message": "File could not be saved",
+    }
+    return mock
+
+
 def test_get_token_posts_client_credentials_to_correct_url():
     adapter = _make_adapter()
     token_response = _mock_token_response()
@@ -131,6 +141,20 @@ def test_save_coroners_letter_returns_response_with_correct_fields():
     ):
         result = adapter.save_coroners_letter(b"content", "letter.pdf")
 
-    assert result.status == "201"
+    assert result.status == "SUCCESS"
+    assert result.sds_id.startswith("letter_")
+    assert result.sds_id.endswith(".pdf")
+
+
+def test_save_coroners_letter_returns_failure_when_sds_fails():
+    adapter = _make_adapter()
+
+    with patch(
+        "httpx.post",
+        side_effect=[_mock_token_response(), _mock_save_failure_response()],
+    ):
+        result = adapter.save_coroners_letter(b"content", "letter.pdf")
+
+    assert result.status == "FAILURE"
     assert result.sds_id.startswith("letter_")
     assert result.sds_id.endswith(".pdf")

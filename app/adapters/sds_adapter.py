@@ -51,8 +51,14 @@ class SdsAdapter:
             },
             headers={"Authorization": f"Bearer {token}"},
         )
-        response.raise_for_status()
+
+        if response.status_code != 201:
+            return SDSUploadCoronersLetterResponse(
+                sds_id=unique_file_name,
+                status="FAILURE",
+            )
+
         return SDSUploadCoronersLetterResponse(
             sds_id=unique_file_name,
-            status=str(response.status_code),
+            status="SUCCESS",
         )
