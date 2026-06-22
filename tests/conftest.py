@@ -12,7 +12,6 @@ from app.routers.applications import (
     get_gov_notify_port,
     get_sds_port,
 )
-from app.routers.applications import get_provider_details_port, get_gov_notify_port
 from app.models import User
 from app.models.application.index import (
     Address,
