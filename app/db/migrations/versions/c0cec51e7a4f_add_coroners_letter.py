@@ -1,7 +1,7 @@
 """Add coroners letter
 
 Revision ID: c0cec51e7a4f
-Revises: 630fc3479944
+Revises: 9f3a7f3c1e21
 Create Date: 2026-06-19 08:43:53.988486
 
 """
@@ -15,7 +15,7 @@ import sqlmodel
 
 # revision identifiers, used by Alembic.
 revision: str = "c0cec51e7a4f"
-down_revision: Union[str, None] = "630fc3479944"
+down_revision: Union[str, None] = "9f3a7f3c1e21"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
