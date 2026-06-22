@@ -31,6 +31,7 @@ def _make_request_body(client_overrides=None):
     if client_overrides:
         client.update(client_overrides)
     return {
+        "coronersLetterId": "test-file_abc123.pdf",
         "proceedings": [{"proceedingId": "TEST1"}],
         "client": client,
         "publicBodies": [{"publicBodyId": "Department for Transport"}],
@@ -194,6 +195,22 @@ def test_201_create_application_response_includes_deceased_details(client, auth_
     assert deceased["coronersReference"] == "COR-2025-001"
     assert deceased["furtherInformation"] == "Further details to be confirmed"
     assert deceased["clientRelationshipToDeceased"] == "guardian"
+
+
+def test_201_create_application_response_contains_coroners_letter(client, auth_token):
+    response = client.post(
+        "/applications",
+        json=_make_request_body(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+    assert response.status_code == 201
+    new_application = response.json()
+    assert new_application["coronersLetter"] is not None
+    assert new_application["coronersLetter"]["id"] == "test-file_abc123.pdf"
+    assert new_application["coronersLetter"]["fileName"] == "test-file_abc123.pdf"
 
 
 def test_422_rejected_when_has_no_fixed_abode_is_false_and_home_address_is_absent(

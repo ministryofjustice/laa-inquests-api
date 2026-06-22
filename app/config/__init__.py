@@ -29,3 +29,9 @@ class Config(object):
     )
     PROVIDER_API_BASE_URL = os.environ.get("PROVIDER_API_BASE_URL", "")
     PROVIDER_API_KEY = os.environ.get("PROVIDER_API_KEY", "")
+
+    SDS_BASE_URL = os.environ.get("SDS_BASE_URL", "")
+    SDS_TENANT_ID = os.environ.get("SDS_TENANT_ID", "")
+    SDS_CLIENT_ID = os.environ.get("SDS_CLIENT_ID", "")
+    SDS_CLIENT_SECRET = os.environ.get("SDS_CLIENT_SECRET", "")
+    SDS_SCOPE = os.environ.get("SDS_SCOPE", "")

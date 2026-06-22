@@ -7,7 +7,11 @@ from app.db.session import CustomSession
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
 from app.auth.security import get_password_hash
-from app.routers.applications import get_provider_details_port, get_gov_notify_port
+from app.routers.applications import (
+    get_provider_details_port,
+    get_gov_notify_port,
+    get_sds_port,
+)
 from app.models import User
 from app.models.application.index import (
     Address,
@@ -21,6 +25,7 @@ from app.models.application.index import (
     Provider,
     PublicBody,
     PublicBodyId,
+    SDSUploadCoronersLetterResponse,
 )
 
 SECRET_KEY = "TEST_KEY"
@@ -141,11 +146,20 @@ def client_fixture(session: Session):
     def get_gov_notify_port_override():
         return mock_gov_notify_port
 
+    def get_sds_port_override():
+        mock_sds = MagicMock()
+        mock_sds.save_coroners_letter.return_value = SDSUploadCoronersLetterResponse(
+            sds_id="test-file_abc123.pdf",
+            status="SUCCESS",
+        )
+        return mock_sds
+
     api.dependency_overrides[get_session] = get_session_override
     api.dependency_overrides[get_provider_details_port] = (
         get_provider_details_port_override
     )
     api.dependency_overrides[get_gov_notify_port] = get_gov_notify_port_override
+    api.dependency_overrides[get_sds_port] = get_sds_port_override
 
     client = TestClient(api, raise_server_exceptions=False)
     yield client

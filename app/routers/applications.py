@@ -1,10 +1,11 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File
 from sqlmodel import Session, select
 from typing import Sequence
 
 # from app.auth.security import get_current_active_user
+from app.adapters.sds_adapter import SdsAdapter
 from app.db import get_session
 from app.models.application.index import (
     Address,
@@ -15,23 +16,27 @@ from app.models.application.index import (
     ApplicationResponse,
     AddressSource,
     Client,
+    CoronersLetter,
     Deceased,
     MeritsDecisionUpdateRefuse,
     ProceedingId,
     Provider,
     PublicBodyId,
+    UploadCoronersLetterResponse,
 )
 from app.models.application.enums import MeritsDecision
 
 from app.adapters.provider_details_adapter import ProviderDetailsAdapter
 from app.config import Config
 from app.ports.provider_details_port import ProviderDetailsPort
-from app.use_cases.exceptions import ApplicationNotFoundError
+from app.ports.sds_port import SdsPort
+from app.use_cases.exceptions import ApplicationNotFoundError, CoronersLetterSaveError
 from app.use_cases.read_application import ReadApplicationUseCase
 
 # from app.models.user import User
 from app.adapters.gov_notify import GovNotifyAdapter
 from app.ports.gov_notify_port import GovNotifyPort
+from app.use_cases.save_coroners_letter import SaveCoronersLetterUseCase
 
 
 router = APIRouter(
@@ -53,6 +58,16 @@ def get_gov_notify_port() -> GovNotifyPort:
     return GovNotifyAdapter()
 
 
+def get_sds_port() -> SdsPort:
+    return SdsAdapter(
+        base_url=Config.SDS_BASE_URL,
+        tenant_id=Config.SDS_TENANT_ID,
+        client_id=Config.SDS_CLIENT_ID,
+        client_secret=Config.SDS_CLIENT_SECRET,
+        scope=Config.SDS_SCOPE,
+    )
+
+
 def get_read_application_use_case(
     session: Session = Depends(get_session),
     provider_details_port: ProviderDetailsPort = Depends(get_provider_details_port),
@@ -60,6 +75,12 @@ def get_read_application_use_case(
     return ReadApplicationUseCase(
         session=session, provider_details_port=provider_details_port
     )
+
+
+def get_save_coroners_letter_use_case(
+    sds_port: SdsPort = Depends(get_sds_port),
+) -> SaveCoronersLetterUseCase:
+    return SaveCoronersLetterUseCase(sds_port=sds_port)
 
 
 @router.get("/{laa_reference}", response_model=ApplicationResponse)
@@ -85,9 +106,31 @@ async def read_all_applications(
     return applications
 
 
+@router.post(
+    "/upload-coroners-letter",
+    response_model=UploadCoronersLetterResponse,
+    status_code=201,
+)
+async def upload_coroners_letter(
+    file: UploadFile = File(...),
+    use_case: SaveCoronersLetterUseCase = Depends(get_save_coroners_letter_use_case),
+) -> UploadCoronersLetterResponse:
+    """Upload a coroner's letter to document storage and return its file ID."""
+    contents = await file.read()
+    try:
+        response = use_case.execute(
+            contents,
+            file.filename,
+        )
+    except CoronersLetterSaveError:
+        raise HTTPException(status_code=500, detail="Failed to save coroners letter")
+    return UploadCoronersLetterResponse(file_id=response.sds_id)
+
+
 @router.post("/", response_model=ApplicationResponse, status_code=201)
 def create_application(
     request: ApplicationCreate,
+    use_case: SaveCoronersLetterUseCase = Depends(get_save_coroners_letter_use_case),
     session: Session = Depends(get_session),
     gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
     # current_user: User = Depends(get_current_active_user),
@@ -179,12 +222,21 @@ def create_application(
     session.flush()
     session.refresh(new_provider)
 
+    new_coroners_letter = CoronersLetter(
+        sds_id=request.coroners_letter_id,
+        file_name=request.coroners_letter_id,
+    )
+    session.add(new_coroners_letter)
+    session.flush()
+    session.refresh(new_coroners_letter)
+
     new_application = Application(
         client_id=new_client.client_id,
         deceased_id=new_deceased.deceased_id,
         proceedings=proceedings_to_add,
         public_bodies=public_bodies_to_add,
         provider_id=new_provider.provider_id,
+        coroners_letter_id=new_coroners_letter.coroners_letter_id,
     )
     session.add(new_application)
 
