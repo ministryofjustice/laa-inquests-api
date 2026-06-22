@@ -2,7 +2,8 @@ name: "Deploy"
 description: "Deploy docker image to namespace"
 inputs:
   app-environment:
-    description: "Environment to which the app is being deployed [staging, production, etc]"
+    description:
+      "Environment to which the app is being deployed [staging, production, etc]"
     required: true
   db-user:
     description: "Username needed to connect to Inquests database"
@@ -30,15 +31,6 @@ inputs:
     required: true
   ecr-repository:
     description: "ECR repository"
-    required: true
-  gov-notify-api-key:
-    description: "Gov Notify API key"
-    required: true
-  gov-notify-application-submit-template-id:
-    description: "Gov Notify application submit template ID"
-    required: true
-  gov-notify-callback-bearer-token:
-    description: "Gov Notify callback bearer token"
     required: true
   image-tag:
     description: "Container image tag"
@@ -112,9 +104,6 @@ runs:
     - name: Set environment variables
       shell: bash
       run: |
-        echo "GOV_NOTIFY_API_KEY=${{ inputs.gov-notify-api-key || ''}}" >> $GITHUB_ENV
-        echo "GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID=${{ inputs.gov-notify-application-submit-template-id || ''}}" >> $GITHUB_ENV
-        echo "GOV_NOTIFY_CALLBACK_BEARER_TOKEN=${{ inputs.gov-notify-callback-bearer-token || ''}}" >> $GITHUB_ENV
         echo "NODE_ENV=production" >> $GITHUB_ENV
         echo "RATE_LIMIT_MAX=${{ inputs.ratelimit_max || '10000' }}" >> $GITHUB_ENV
         echo "RATE_WINDOW_MS=${{ inputs.ratewindow_ms || '900000' }}" >> $GITHUB_ENV

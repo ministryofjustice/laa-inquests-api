@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlmodel import Session, select
 from typing import Sequence
@@ -14,11 +16,12 @@ from app.models.application.index import (
     AddressSource,
     Client,
     Deceased,
-    MeritsDecisionUpdate,
+    MeritsDecisionUpdateRefuse,
     ProceedingId,
     Provider,
     PublicBodyId,
 )
+from app.models.application.enums import MeritsDecision
 
 from app.adapters.provider_details_adapter import ProviderDetailsAdapter
 from app.config import Config
@@ -27,8 +30,8 @@ from app.use_cases.exceptions import ApplicationNotFoundError
 from app.use_cases.read_application import ReadApplicationUseCase
 
 # from app.models.user import User
-from app.adapters.gov_notify import GovNotifyClient
-from app.use_cases.send_application_confirmation import send_application_confirmation
+from app.adapters.gov_notify import GovNotifyAdapter
+from app.ports.gov_notify_port import GovNotifyPort
 
 
 router = APIRouter(
@@ -37,11 +40,17 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+logger = logging.getLogger(__name__)
+
 
 def get_provider_details_port() -> ProviderDetailsPort:
     return ProviderDetailsAdapter(
         base_url=Config.PROVIDER_API_BASE_URL, api_key=Config.PROVIDER_API_KEY
     )
+
+
+def get_gov_notify_port() -> GovNotifyPort:
+    return GovNotifyAdapter()
 
 
 def get_read_application_use_case(
@@ -80,6 +89,7 @@ async def read_all_applications(
 def create_application(
     request: ApplicationCreate,
     session: Session = Depends(get_session),
+    gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
     # current_user: User = Depends(get_current_active_user),
 ) -> Application:
     """Creates a new application with proceedings, public bodies."""
@@ -183,9 +193,8 @@ def create_application(
     session.refresh(new_application)
 
     try:
-        gov_notify_adapter = GovNotifyClient()
-        send_application_confirmation(
-            gov_notify_adapter, new_application, request.provider.email_address
+        gov_notify_port.send_application_submit_confirmation_email(
+            new_application, request.provider.email_address
         )
         session.commit()
     except Exception:
@@ -200,8 +209,9 @@ def create_application(
 @router.patch("/{laa_reference}/merits-decision", status_code=204)
 def patch_merits_decision(
     laa_reference: str,
-    request: MeritsDecisionUpdate,
+    request: MeritsDecisionUpdateRefuse,
     session: Session = Depends(get_session),
+    gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
     # current_user: User = Depends(get_current_active_user),
 ) -> Response:
     """Set the merits decision on the single proceeding for a given application."""
@@ -216,10 +226,34 @@ def patch_merits_decision(
 
     proceeding = application.proceedings[0]
     proceeding.merits_decision = request.merits_decision
+    proceeding.reason_for_refusal = (
+        request.reason_for_refusal.value if request.reason_for_refusal else None
+    )
+    proceeding.justification = request.justification
 
     application.overall_decision = request.merits_decision
 
     session.add(application)
     session.add(proceeding)
-    session.commit()
+
+    decision = MeritsDecision(request.merits_decision)
+
+    try:
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+
+    if decision == MeritsDecision.REFUSED:
+        try:
+            gov_notify_port.send_application_refused_decision_email(
+                application, proceeding, application.provider.email_address
+            )
+        except Exception:
+            logger.warning(
+                "Failed to send refusal email for application %s",
+                application.laa_reference,
+                exc_info=True,
+            )
+
     return Response(status_code=204)

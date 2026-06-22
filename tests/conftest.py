@@ -7,7 +7,7 @@ from app.db.session import CustomSession
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
 from app.auth.security import get_password_hash
-from app.routers.applications import get_provider_details_port
+from app.routers.applications import get_provider_details_port, get_gov_notify_port
 from app.models import User
 from app.models.application.index import (
     Address,
@@ -126,6 +126,10 @@ def session_fixture():
 
 @pytest.fixture(name="client")
 def client_fixture(session: Session):
+    mock_gov_notify_port = MagicMock()
+    mock_gov_notify_port.send_application_submit_confirmation_email.return_value = None
+    mock_gov_notify_port.send_application_refused_decision_email.return_value = None
+
     def get_session_override():
         return session
 
@@ -134,10 +138,14 @@ def client_fixture(session: Session):
         mock_port.get_firm_name.return_value = "Test Firm Name"
         return mock_port
 
+    def get_gov_notify_port_override():
+        return mock_gov_notify_port
+
     api.dependency_overrides[get_session] = get_session_override
     api.dependency_overrides[get_provider_details_port] = (
         get_provider_details_port_override
     )
+    api.dependency_overrides[get_gov_notify_port] = get_gov_notify_port_override
 
     client = TestClient(api, raise_server_exceptions=False)
     yield client
@@ -170,3 +178,9 @@ def auth_token_disabled_user(client):
     token_data = response.json()
     assert "access_token" in token_data
     return token_data["access_token"]
+
+
+@pytest.fixture
+def mock_gov_notify(client):
+    """Return the shared mock Gov Notify port for E2E tests."""
+    return api.dependency_overrides[get_gov_notify_port]()
