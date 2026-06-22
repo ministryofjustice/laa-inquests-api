@@ -7,7 +7,11 @@ from app.db.session import CustomSession
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
 from app.auth.security import get_password_hash
-from app.routers.applications import get_provider_details_port, get_sds_port, get_gov_notify_port
+from app.routers.applications import (
+    get_provider_details_port,
+    get_sds_port,
+    get_gov_notify_port,
+)
 from app.models import User
 from app.models.application.index import (
     Address,
