@@ -12,17 +12,17 @@ from app.models.application.index import (
     PublicBodyId,
 )
 from app.models.application.enums import AddressSource, CorrespondenceRecipientType
-from app.use_cases.populate_application_submission_template import (
-    populate_application_submission_template,
+from app.use_cases.notify.create_application_submission_email_personalisation import (
+    create_application_submission_email_personalisation,
 )
 from app.models.gov_notify_templates.application_submit_personalisation import (
     NotifyApplicationSubmitTemplatePersonalisation,
 )
 
 
-def test_populate_application_submission_template_returns_all_required_fields():
+def test_create_application_submission_email_personalisation_returns_all_required_fields():
     """
-    Test that populate_application_submission_template returns all fields required by the GovNotify template.
+    Test that create_application_submission_email_personalisation returns all fields required by the GovNotify template.
     """
     home_address = Address(
         address_id=1,
@@ -117,7 +117,7 @@ def test_populate_application_submission_template_returns_all_required_fields():
         public_bodies=[application_public_body],
     )
 
-    result = populate_application_submission_template(application)
+    result = create_application_submission_email_personalisation(application)
 
     assert isinstance(result, NotifyApplicationSubmitTemplatePersonalisation)
 
@@ -151,9 +151,9 @@ def test_populate_application_submission_template_returns_all_required_fields():
     assert result.file_name == "N/A"
 
 
-def test_populate_application_submission_template_handles_optional_fields():
+def test_create_application_submission_email_personalisation_handles_optional_fields():
     """
-    Test that populate_application_submission_template handles missing/optional fields correctly.
+    Test that create_application_submission_email_personalisation handles missing/optional fields correctly.
     """
     home_address = Address(
         address_id=1,
@@ -226,7 +226,7 @@ def test_populate_application_submission_template_handles_optional_fields():
         public_bodies=[application_public_body],
     )
 
-    result = populate_application_submission_template(application)
+    result = create_application_submission_email_personalisation(application)
 
     assert isinstance(result, NotifyApplicationSubmitTemplatePersonalisation)
     assert result.client_last_name_at_birth == "Not provided"
@@ -239,7 +239,7 @@ def test_populate_application_submission_template_handles_optional_fields():
     assert result.deceased_has_other_related_applications == "No"
 
 
-def test_populate_application_submission_template_formats_address_correctly():
+def test_create_application_submission_email_personalisation_formats_address_correctly():
     """
     Test that addresses are formatted correctly with line breaks.
     """
@@ -316,7 +316,7 @@ def test_populate_application_submission_template_formats_address_correctly():
         public_bodies=[application_public_body],
     )
 
-    result = populate_application_submission_template(application)
+    result = create_application_submission_email_personalisation(application)
 
     assert isinstance(result, NotifyApplicationSubmitTemplatePersonalisation)
     expected_address = "123 Test Street\nFloor 2\nTest City\nTest County\nTC1 1TC"
@@ -412,7 +412,7 @@ def test_default_home_address_value_set_to_no_fixed_abode_when_not_provided():
         public_bodies=[application_public_body],
     )
 
-    result = populate_application_submission_template(application)
+    result = create_application_submission_email_personalisation(application)
 
     assert isinstance(result, NotifyApplicationSubmitTemplatePersonalisation)
 

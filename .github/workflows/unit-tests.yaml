@@ -25,10 +25,6 @@ jobs:
         pip install pytest pytest-cov
         coverage run -m pytest
         coverage xml
-      env:
-        GOV_NOTIFY_API_KEY: ${{ secrets.TEST_GOV_NOTIFY_API_KEY }}
-        GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID: ${{ secrets.TEST_GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID }}
-        GOV_NOTIFY_CALLBACK_BEARER_TOKEN: ${{ secrets.TEST_GOV_NOTIFY_CALLBACK_BEARER_TOKEN }}
 
     - name: Upload coverage report
       uses: actions/upload-artifact@v4
