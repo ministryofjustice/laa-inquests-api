@@ -37,7 +37,6 @@ from app.use_cases.read_application import ReadApplicationUseCase
 from app.adapters.gov_notify import GovNotifyAdapter
 from app.ports.gov_notify_port import GovNotifyPort
 from app.use_cases.save_coroners_letter import SaveCoronersLetterUseCase
-from app.use_cases.send_application_confirmation import send_application_confirmation
 
 
 router = APIRouter(
@@ -68,6 +67,7 @@ def get_sds_port() -> SdsPort:
         scope=Config.SDS_SCOPE,
     )
 
+
 def get_read_application_use_case(
     session: Session = Depends(get_session),
     provider_details_port: ProviderDetailsPort = Depends(get_provider_details_port),
@@ -81,6 +81,7 @@ def get_save_coroners_letter_use_case(
     sds_port: SdsPort = Depends(get_sds_port),
 ) -> SaveCoronersLetterUseCase:
     return SaveCoronersLetterUseCase(sds_port=sds_port)
+
 
 @router.get("/{laa_reference}", response_model=ApplicationResponse)
 async def read_application(
@@ -124,7 +125,6 @@ async def upload_coroners_letter(
     except CoronersLetterSaveError:
         raise HTTPException(status_code=500, detail="Failed to save coroners letter")
     return UploadCoronersLetterResponse(file_id=response.sds_id)
-
 
 
 @router.post("/", response_model=ApplicationResponse, status_code=201)

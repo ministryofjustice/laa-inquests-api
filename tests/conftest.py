@@ -9,8 +9,8 @@ from sqlalchemy.orm import sessionmaker
 from app.auth.security import get_password_hash
 from app.routers.applications import (
     get_provider_details_port,
-    get_sds_port,
     get_gov_notify_port,
+    get_sds_port,
 )
 from app.models import User
 from app.models.application.index import (
@@ -131,6 +131,10 @@ def session_fixture():
 
 @pytest.fixture(name="client")
 def client_fixture(session: Session):
+    mock_gov_notify_port = MagicMock()
+    mock_gov_notify_port.send_application_submit_confirmation_email.return_value = None
+    mock_gov_notify_port.send_application_refused_decision_email.return_value = None
+
     def get_session_override():
         return session
 
@@ -138,6 +142,9 @@ def client_fixture(session: Session):
         mock_port = MagicMock()
         mock_port.get_firm_name.return_value = "Test Firm Name"
         return mock_port
+
+    def get_gov_notify_port_override():
+        return mock_gov_notify_port
 
     def get_sds_port_override():
         mock_sds = MagicMock()
@@ -151,6 +158,7 @@ def client_fixture(session: Session):
     api.dependency_overrides[get_provider_details_port] = (
         get_provider_details_port_override
     )
+    api.dependency_overrides[get_gov_notify_port] = get_gov_notify_port_override
     api.dependency_overrides[get_sds_port] = get_sds_port_override
 
     client = TestClient(api, raise_server_exceptions=False)
