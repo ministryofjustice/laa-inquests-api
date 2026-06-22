@@ -16,13 +16,12 @@ def create_application_refusal_email_personalisation(
     proceeding: ApplicationProceeding,
 ) -> NotifyApplicationRefuseTemplatePersonalisation:
     """Build personalisation payload for refusal decision notification."""
-    reason_for_refusal = proceeding.reason_for_refusal or ""
 
     return NotifyApplicationRefuseTemplatePersonalisation(
         client_first_name=application.client.client_first_name,
         client_last_name=application.client.client_last_name,
         laa_reference=str(application.laa_reference),
         application_submitted_at=_format_submitted_at(application.created_at),
-        reason_for_refusal=reason_for_refusal,
-        justification=proceeding.justification or "",
+        reason_for_refusal=proceeding.reason_for_refusal,
+        justification=proceeding.justification,
     )
