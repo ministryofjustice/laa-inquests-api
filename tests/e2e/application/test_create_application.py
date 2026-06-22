@@ -196,6 +196,7 @@ def test_201_create_application_response_includes_deceased_details(client, auth_
     assert deceased["furtherInformation"] == "Further details to be confirmed"
     assert deceased["clientRelationshipToDeceased"] == "guardian"
 
+
 def test_201_create_application_response_contains_coroners_letter(client, auth_token):
     response = client.post(
         "/applications",
@@ -210,6 +211,7 @@ def test_201_create_application_response_contains_coroners_letter(client, auth_t
     assert new_application["coronersLetter"] is not None
     assert new_application["coronersLetter"]["id"] == "test-file_abc123.pdf"
     assert new_application["coronersLetter"]["fileName"] == "test-file_abc123.pdf"
+
 
 def test_422_rejected_when_has_no_fixed_abode_is_false_and_home_address_is_absent(
     client, auth_token
