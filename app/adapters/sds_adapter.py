@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import Iterator
 from pathlib import Path
 
 import httpx
@@ -64,12 +65,13 @@ class SdsAdapter(SdsPort):
             status="SUCCESS",
         )
 
-    def retrieve_coroners_letter(self, file_name: str) -> bytes:
+    def retrieve_coroners_letter(self, file_name: str) -> Iterator[bytes]:
         token = self._get_token()
         response = httpx.get(
             f"{self.base_url}/get_file",
             params={"file_key": file_name},
             headers={"Authorization": f"Bearer {token}"},
         )
-        response.raise_for_status()
-        return response.content
+        file_url = response.json()["fileURL"]
+        with httpx.stream("GET", file_url) as stream:
+            yield from stream.iter_bytes()

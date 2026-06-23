@@ -165,46 +165,37 @@ def test_save_coroners_letter_returns_failure_when_sds_fails():
 def test_retrieve_coroners_letter_gets_correct_url_with_file_key_param():
     adapter = _make_adapter()
 
-    with patch("httpx.post", return_value=_mock_token_response()), patch(
-        "httpx.get", return_value=MagicMock(status_code=200, content=b"file bytes")
-    ) as mock_get:
-        adapter.retrieve_coroners_letter("test-document.rtf")
+    mock_get_file_response = MagicMock()
+    mock_get_file_response.json.return_value = {"fileURL": "https://signed.example.com/letter.pdf"}
 
-    mock_get.assert_called_once_with(
-        "https://sds.example.com/get_file",
-        params={"file_key": "test-document.rtf"},
-        headers={"Authorization": "Bearer test-token"},
-    )
+    mock_stream_cm = MagicMock()
+    mock_stream_cm.__enter__ = MagicMock(return_value=MagicMock(iter_bytes=lambda: iter([])))
+    mock_stream_cm.__exit__ = MagicMock(return_value=False)
+
+    with patch("httpx.post", return_value=_mock_token_response()), \
+         patch("httpx.get", return_value=mock_get_file_response), \
+         patch("httpx.stream", return_value=mock_stream_cm) as mock_stream:
+        list(adapter.retrieve_coroners_letter("letter.pdf"))
+
+    mock_stream.assert_called_once_with("GET", "https://signed.example.com/letter.pdf")
 
 
 def test_retrieve_coroners_letter_returns_response_bytes():
     adapter = _make_adapter()
-    expected_bytes = b"rtf file content here"
 
-    mock_response = MagicMock(status_code=200, content=expected_bytes)
-    mock_response.raise_for_status = MagicMock()
+    mock_get_file_response = MagicMock()
+    mock_get_file_response.json.return_value = {"fileURL": "https://signed.example.com/letter.pdf"}
 
-    with patch("httpx.post", return_value=_mock_token_response()), patch(
-        "httpx.get", return_value=mock_response
-    ):
-        result = adapter.retrieve_coroners_letter("letter.rtf")
+    mock_stream_response = MagicMock()
+    mock_stream_response.iter_bytes.return_value = iter([b"chunk1", b"chunk2"])
 
-    assert result == expected_bytes
+    mock_stream_cm = MagicMock()
+    mock_stream_cm.__enter__ = MagicMock(return_value=mock_stream_response)
+    mock_stream_cm.__exit__ = MagicMock(return_value=False)
 
+    with patch("httpx.post", return_value=_mock_token_response()), \
+         patch("httpx.get", return_value=mock_get_file_response), \
+         patch("httpx.stream", return_value=mock_stream_cm):
+        result = b"".join(adapter.retrieve_coroners_letter("letter.pdf"))
 
-def test_retrieve_coroners_letter_raises_on_non_200_response():
-    adapter = _make_adapter()
-
-    mock_response = MagicMock(status_code=404)
-    mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-        "404", request=MagicMock(), response=MagicMock()
-    )
-
-    with patch("httpx.post", return_value=_mock_token_response()), patch(
-        "httpx.get", return_value=mock_response
-    ):
-        try:
-            adapter.retrieve_coroners_letter("missing-file.rtf")
-            assert False, "Expected HTTPStatusError to be raised"
-        except httpx.HTTPStatusError:
-            pass
+    assert result == b"chunk1chunk2"

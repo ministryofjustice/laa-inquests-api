@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections.abc import Iterator
 
 from app.models.application.index import SDSUploadCoronersLetterResponse
 
@@ -9,4 +10,4 @@ class SdsPort(ABC):
         self, coroners_letter: bytes, file_name: str
     ) -> SDSUploadCoronersLetterResponse: ...
 
-    def retrieve_coroners_letter(self, file_name: str) -> bytes: ...
+    def retrieve_coroners_letter(self, file_name: str) -> Iterator[bytes]: ...
