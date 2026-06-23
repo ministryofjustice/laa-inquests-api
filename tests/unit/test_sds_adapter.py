@@ -1,6 +1,8 @@
 import uuid
 from unittest.mock import MagicMock, patch
 
+import httpx
+
 
 def _make_adapter():
     from app.adapters.sds_adapter import SdsAdapter
@@ -158,3 +160,51 @@ def test_save_coroners_letter_returns_failure_when_sds_fails():
     assert result.status == "FAILURE"
     assert result.sds_file_name.startswith("letter_")
     assert result.sds_file_name.endswith(".pdf")
+
+
+def test_retrieve_coroners_letter_gets_correct_url_with_file_key_param():
+    adapter = _make_adapter()
+
+    with patch("httpx.post", return_value=_mock_token_response()), patch(
+        "httpx.get", return_value=MagicMock(status_code=200, content=b"file bytes")
+    ) as mock_get:
+        adapter.retrieve_coroners_letter("test-document.rtf")
+
+    mock_get.assert_called_once_with(
+        "https://sds.example.com/get_file",
+        params={"file_key": "test-document.rtf"},
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+
+def test_retrieve_coroners_letter_returns_response_bytes():
+    adapter = _make_adapter()
+    expected_bytes = b"rtf file content here"
+
+    mock_response = MagicMock(status_code=200, content=expected_bytes)
+    mock_response.raise_for_status = MagicMock()
+
+    with patch("httpx.post", return_value=_mock_token_response()), patch(
+        "httpx.get", return_value=mock_response
+    ):
+        result = adapter.retrieve_coroners_letter("letter.rtf")
+
+    assert result == expected_bytes
+
+
+def test_retrieve_coroners_letter_raises_on_non_200_response():
+    adapter = _make_adapter()
+
+    mock_response = MagicMock(status_code=404)
+    mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+        "404", request=MagicMock(), response=MagicMock()
+    )
+
+    with patch("httpx.post", return_value=_mock_token_response()), patch(
+        "httpx.get", return_value=mock_response
+    ):
+        try:
+            adapter.retrieve_coroners_letter("missing-file.rtf")
+            assert False, "Expected HTTPStatusError to be raised"
+        except httpx.HTTPStatusError:
+            pass

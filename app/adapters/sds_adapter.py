@@ -63,3 +63,13 @@ class SdsAdapter(SdsPort):
             sds_file_name=unique_file_name,
             status="SUCCESS",
         )
+
+    def retrieve_coroners_letter(self, file_name: str) -> bytes:
+        token = self._get_token()
+        response = httpx.get(
+            f"{self.base_url}/get_file",
+            params={"file_key": file_name},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        response.raise_for_status()
+        return response.content
