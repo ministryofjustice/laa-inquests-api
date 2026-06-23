@@ -166,15 +166,21 @@ def test_retrieve_coroners_letter_gets_correct_url_with_file_key_param():
     adapter = _make_adapter()
 
     mock_get_file_response = MagicMock()
-    mock_get_file_response.json.return_value = {"fileURL": "https://signed.example.com/letter.pdf"}
+    mock_get_file_response.json.return_value = {
+        "fileURL": "https://signed.example.com/letter.pdf"
+    }
 
     mock_stream_cm = MagicMock()
-    mock_stream_cm.__enter__ = MagicMock(return_value=MagicMock(iter_bytes=lambda: iter([])))
+    mock_stream_cm.__enter__ = MagicMock(
+        return_value=MagicMock(iter_bytes=lambda: iter([]))
+    )
     mock_stream_cm.__exit__ = MagicMock(return_value=False)
 
-    with patch("httpx.post", return_value=_mock_token_response()), \
-         patch("httpx.get", return_value=mock_get_file_response), \
-         patch("httpx.stream", return_value=mock_stream_cm) as mock_stream:
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.get", return_value=mock_get_file_response),
+        patch("httpx.stream", return_value=mock_stream_cm) as mock_stream,
+    ):
         list(adapter.retrieve_coroners_letter("letter.pdf"))
 
     mock_stream.assert_called_once_with("GET", "https://signed.example.com/letter.pdf")
@@ -184,7 +190,9 @@ def test_retrieve_coroners_letter_returns_response_bytes():
     adapter = _make_adapter()
 
     mock_get_file_response = MagicMock()
-    mock_get_file_response.json.return_value = {"fileURL": "https://signed.example.com/letter.pdf"}
+    mock_get_file_response.json.return_value = {
+        "fileURL": "https://signed.example.com/letter.pdf"
+    }
 
     mock_stream_response = MagicMock()
     mock_stream_response.iter_bytes.return_value = iter([b"chunk1", b"chunk2"])
@@ -193,9 +201,11 @@ def test_retrieve_coroners_letter_returns_response_bytes():
     mock_stream_cm.__enter__ = MagicMock(return_value=mock_stream_response)
     mock_stream_cm.__exit__ = MagicMock(return_value=False)
 
-    with patch("httpx.post", return_value=_mock_token_response()), \
-         patch("httpx.get", return_value=mock_get_file_response), \
-         patch("httpx.stream", return_value=mock_stream_cm):
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.get", return_value=mock_get_file_response),
+        patch("httpx.stream", return_value=mock_stream_cm),
+    ):
         result = b"".join(adapter.retrieve_coroners_letter("letter.pdf"))
 
     assert result == b"chunk1chunk2"

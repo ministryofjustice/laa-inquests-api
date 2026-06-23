@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File
 from sqlmodel import Session
+from fastapi.responses import StreamingResponse
+from sqlmodel import Session
 from typing import Sequence
 
 # from app.auth.security import get_current_active_user
@@ -37,6 +39,7 @@ from app.ports.gov_notify_port import GovNotifyPort
 from app.use_cases.list_applications import ListApplicationsUseCase
 from app.use_cases.make_merits_decision import MakeMeritsDecisionUseCase
 from app.use_cases.upload_coroners_letter import UploadCoronersLetterUseCase
+from app.use_cases.retrieve_coroners_letter import RetrieveCoronersLetterUseCase
 
 
 router = APIRouter(
@@ -121,6 +124,31 @@ def get_upload_coroners_letter_use_case(
     return UploadCoronersLetterUseCase(
         sds_port=sds_port,
         upload_coroners_letter_port=upload_coroners_letter_port,
+    )
+
+
+def get_coroners_letter_use_case(
+    session: Session = Depends(get_session),
+    sds_port: SdsPort = Depends(get_sds_port),
+) -> RetrieveCoronersLetterUseCase:
+    return RetrieveCoronersLetterUseCase(session=session, sds_port=sds_port)
+
+
+@router.get(
+    "/{laa_reference}/coroners-letter",
+    response_class=StreamingResponse,
+    responses={200: {"content": {"application/octet-stream": {}}}},
+)
+def retrieve_coroners_letter(
+    laa_reference: str,
+    use_case: RetrieveCoronersLetterUseCase = Depends(get_coroners_letter_use_case),
+) -> StreamingResponse:
+    """Stream the coroner's letter for a given application."""
+    result = use_case.execute(laa_reference)
+    return StreamingResponse(
+        result.content,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": f'attachment; filename="{result.file_name}"'},
     )
 
 
