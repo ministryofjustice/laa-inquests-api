@@ -11,6 +11,7 @@ on:
       - "app/**"
       - "tests/**"
       - "Dockerfile"
+      - "compose.yaml"
   workflow_dispatch:
     inputs:
       environment:
