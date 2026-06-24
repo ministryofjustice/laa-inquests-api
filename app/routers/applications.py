@@ -29,13 +29,13 @@ from app.adapters.provider_details_adapter import ProviderDetailsAdapter
 from app.config import Config
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.ports.sds_port import SdsPort
-from app.use_cases.exceptions import ApplicationNotFoundError, CoronersLetterSaveError
+from app.use_cases.exceptions import ApplicationNotFoundError, CoronersLetterUploadError
 from app.use_cases.read_application import ReadApplicationUseCase
 
 # from app.models.user import User
 from app.adapters.gov_notify import GovNotifyAdapter
 from app.ports.gov_notify_port import GovNotifyPort
-from app.use_cases.save_coroners_letter import SaveCoronersLetterUseCase
+from app.use_cases.upload_coroners_letter import UploadCoronersLetterUseCase
 
 
 router = APIRouter(
@@ -76,11 +76,11 @@ def get_read_application_use_case(
     )
 
 
-def get_save_coroners_letter_use_case(
+def get_upload_coroners_letter_use_case(
     sds_port: SdsPort = Depends(get_sds_port),
     session: Session = Depends(get_session),
-) -> SaveCoronersLetterUseCase:
-    return SaveCoronersLetterUseCase(sds_port=sds_port, session=session)
+) -> UploadCoronersLetterUseCase:
+    return UploadCoronersLetterUseCase(sds_port=sds_port, session=session)
 
 
 @router.get("/{laa_reference}", response_model=ApplicationResponse)
@@ -113,20 +113,22 @@ async def read_all_applications(
 )
 async def upload_coroners_letter(
     file: UploadFile = File(...),
-    use_case: SaveCoronersLetterUseCase = Depends(get_save_coroners_letter_use_case),
+    use_case: UploadCoronersLetterUseCase = Depends(
+        get_upload_coroners_letter_use_case
+    ),
 ) -> UploadCoronersLetterResponse:
     """Upload a coroner's letter to document storage and return its file ID."""
     contents = await file.read()
     file_name = file.filename
     try:
-        response = use_case.execute(
+        coroners_letter_id = use_case.execute(
             contents,
             file_name,
         )
-    except CoronersLetterSaveError:
-        raise HTTPException(status_code=500, detail="Failed to save coroners letter")
+    except CoronersLetterUploadError:
+        raise HTTPException(status_code=500, detail="Failed to upload coroners letter")
 
-    return UploadCoronersLetterResponse(coroners_letter_id=response.coroners_letter_id)
+    return UploadCoronersLetterResponse(coroners_letter_id=coroners_letter_id)
 
 
 @router.post("/", response_model=ApplicationResponse, status_code=201)

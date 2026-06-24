@@ -1,11 +1,12 @@
-from app.models.application.index import CoronersLetterResponse
+import uuid
+
 from app.ports.sds_port import SdsPort
-from app.use_cases.exceptions import CoronersLetterSaveError
+from app.use_cases.exceptions import CoronersLetterUploadError
 from sqlmodel import Session
 from app.models.application.index import CoronersLetter
 
 
-class SaveCoronersLetterUseCase:
+class UploadCoronersLetterUseCase:
     def __init__(self, sds_port: SdsPort, session: Session) -> None:
         self.sds_port = sds_port
         self.session = session
@@ -15,7 +16,7 @@ class SaveCoronersLetterUseCase:
         self,
         coroners_letter: bytes,
         file_name: str,
-    ) -> CoronersLetterResponse:
+    ) -> uuid.UUID:
         response_body = self.sds_port.save_coroners_letter(
             coroners_letter,
             file_name,
@@ -32,8 +33,8 @@ class SaveCoronersLetterUseCase:
             coroners_letter_id = new_coroners_letter.coroners_letter_id
             self.session.commit()
 
-            return CoronersLetterResponse(coroners_letter_id=coroners_letter_id)
+            return coroners_letter_id
         else:
-            raise CoronersLetterSaveError(
+            raise CoronersLetterUploadError(
                 f"Coroners letter {file_name} was not uploaded successfully"
             )
