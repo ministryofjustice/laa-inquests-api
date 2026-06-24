@@ -523,8 +523,7 @@ class CoronersLetterResponse(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    sds_file_name: str
-    status: str
+    coroners_letter_id: uuid.UUID
 
 
 class ApplicationResponse(BaseModel):
