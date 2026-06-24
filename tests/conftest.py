@@ -149,7 +149,7 @@ def client_fixture(session: Session):
     def get_sds_port_override():
         mock_sds = MagicMock()
         mock_sds.save_coroners_letter.return_value = SDSUploadCoronersLetterResponse(
-            sds_id="test-file_abc123.pdf",
+            sds_file_name="test-file_abc123.pdf",
             status="SUCCESS",
         )
         return mock_sds

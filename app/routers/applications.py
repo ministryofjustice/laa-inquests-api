@@ -148,18 +148,30 @@ async def read_all_applications(
 )
 async def upload_coroners_letter(
     file: UploadFile = File(...),
+    session: Session = Depends(get_session),
     use_case: SaveCoronersLetterUseCase = Depends(get_save_coroners_letter_use_case),
 ) -> UploadCoronersLetterResponse:
     """Upload a coroner's letter to document storage and return its file ID."""
     contents = await file.read()
+    file_name = file.filename
     try:
         response = use_case.execute(
             contents,
-            file.filename,
+            file_name,
         )
     except CoronersLetterSaveError:
         raise HTTPException(status_code=500, detail="Failed to save coroners letter")
-    return UploadCoronersLetterResponse(file_id=response.sds_id)
+
+    new_coroners_letter = CoronersLetter(
+        sds_file_name=response.sds_file_name,
+        file_name=file_name,
+    )
+    session.add(new_coroners_letter)
+    session.flush()
+    coroners_letter_id = new_coroners_letter.coroners_letter_id
+    session.commit()
+
+    return UploadCoronersLetterResponse(coroners_letter_id=coroners_letter_id)
 
 
 @router.post("/", response_model=ApplicationResponse, status_code=201)

@@ -12,6 +12,7 @@ from app.models.application.enums import (
     ProceedingId,
     PublicBodyId,
 )
+import uuid
 
 
 # RELATIONS
@@ -154,8 +155,8 @@ class Deceased(DeceasedBase, table=True):
 
 class CoronersLetter(SQLModel, table=True):
     __tablename__ = "coroners_letter"
-    coroners_letter_id: int | None = Field(primary_key=True)
-    sds_id: str
+    coroners_letter_id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    sds_file_name: str
     file_name: str
 
 
@@ -175,11 +176,8 @@ class Application(ApplicationBase, table=True):
     provider_id: int = Field(foreign_key="provider.provider_id")
     provider: Provider | None = Relationship(sa_relationship_kwargs={"uselist": False})
 
-    coroners_letter_id: int | None = Field(
+    coroners_letter_id: uuid.UUID | None = Field(
         default=None, foreign_key="coroners_letter.coroners_letter_id"
-    )
-    coroners_letter: CoronersLetter | None = Relationship(
-        sa_relationship_kwargs={"uselist": False}
     )
 
 
@@ -374,7 +372,7 @@ class ApplicationCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    coroners_letter_id: str
+    coroners_letter_id: uuid.UUID
     client: ClientCreate
     deceased: DeceasedCreate
     publicBodies: list[PublicBodyCreate]
@@ -516,7 +514,7 @@ class UploadCoronersLetterResponse(BaseModel):
         alias_generator=to_camel,
         populate_by_name=True,
     )
-    file_id: str
+    coroners_letter_id: uuid.UUID
 
 
 class CoronersLetterResponse(BaseModel):
@@ -525,18 +523,8 @@ class CoronersLetterResponse(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    sds_id: str
+    sds_file_name: str
     status: str
-
-
-class CoronersLetterApplicationResponse(BaseModel):
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
-    )
-    id: str = PydanticField(validation_alias="sds_id")
-    file_name: str
 
 
 class ApplicationResponse(BaseModel):
@@ -558,7 +546,7 @@ class ApplicationResponse(BaseModel):
     client: ClientResponse
     deceased: DeceasedResponse
     provider: ProviderResponse
-    coroners_letter: Optional[CoronersLetterApplicationResponse] = None
+    coroners_letter_id: uuid.UUID | None = None
 
 
 # Use case models
@@ -568,5 +556,5 @@ class SDSUploadCoronersLetterResponse(BaseModel):
         from_attributes=True,
         populate_by_name=True,
     )
-    sds_id: str
+    sds_file_name: str
     status: str
