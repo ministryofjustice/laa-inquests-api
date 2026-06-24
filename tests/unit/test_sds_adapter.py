@@ -1,7 +1,13 @@
 import uuid
 from unittest.mock import MagicMock, patch
 
-import httpx
+import pytest
+
+from app.use_cases.exceptions import (
+    CoronersLetterNotFoundError,
+    CoronersLetterRetrievalError,
+    InvalidCoronersLetterDocumentIdError,
+)
 
 
 def _make_adapter():
@@ -39,6 +45,15 @@ def _mock_save_failure_response() -> MagicMock:
         "error": "Internal Server Error",
         "message": "File could not be saved",
     }
+    return mock
+
+
+def _mock_retrieve_metadata_response(
+    status_code: int = 200, file_url: str = "https://signed.example.com/letter.pdf"
+) -> MagicMock:
+    mock = MagicMock()
+    mock.status_code = status_code
+    mock.json.return_value = {"fileURL": file_url}
     return mock
 
 
@@ -165,10 +180,7 @@ def test_save_coroners_letter_returns_failure_when_sds_fails():
 def test_retrieve_coroners_letter_gets_correct_url_with_file_key_param():
     adapter = _make_adapter()
 
-    mock_get_file_response = MagicMock()
-    mock_get_file_response.json.return_value = {
-        "fileURL": "https://signed.example.com/letter.pdf"
-    }
+    mock_get_file_response = _mock_retrieve_metadata_response()
 
     mock_stream_cm = MagicMock()
     mock_stream_cm.__enter__ = MagicMock(
@@ -189,10 +201,7 @@ def test_retrieve_coroners_letter_gets_correct_url_with_file_key_param():
 def test_retrieve_coroners_letter_returns_response_bytes():
     adapter = _make_adapter()
 
-    mock_get_file_response = MagicMock()
-    mock_get_file_response.json.return_value = {
-        "fileURL": "https://signed.example.com/letter.pdf"
-    }
+    mock_get_file_response = _mock_retrieve_metadata_response()
 
     mock_stream_response = MagicMock()
     mock_stream_response.iter_bytes.return_value = iter([b"chunk1", b"chunk2"])
@@ -209,3 +218,69 @@ def test_retrieve_coroners_letter_returns_response_bytes():
         result = b"".join(adapter.retrieve_coroners_letter("letter.pdf"))
 
     assert result == b"chunk1chunk2"
+
+
+def test_retrieve_coroners_letter_raises_not_found_for_sds_404(caplog):
+    adapter = _make_adapter()
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.get", return_value=_mock_retrieve_metadata_response(404)),
+        pytest.raises(CoronersLetterNotFoundError),
+    ):
+        list(adapter.retrieve_coroners_letter("missing.pdf"))
+
+    assert "SDS returned 404" in caplog.text
+
+
+def test_retrieve_coroners_letter_raises_invalid_id_for_sds_400(caplog):
+    adapter = _make_adapter()
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.get", return_value=_mock_retrieve_metadata_response(400)),
+        pytest.raises(InvalidCoronersLetterDocumentIdError),
+    ):
+        list(adapter.retrieve_coroners_letter("bad-id"))
+
+    assert "SDS returned 400" in caplog.text
+
+
+def test_retrieve_coroners_letter_logs_and_raises_for_other_sds_4xx(caplog):
+    adapter = _make_adapter()
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.get", return_value=_mock_retrieve_metadata_response(403)),
+        pytest.raises(CoronersLetterRetrievalError),
+    ):
+        list(adapter.retrieve_coroners_letter("forbidden.pdf"))
+
+    assert "SDS returned 403" in caplog.text
+
+
+def test_retrieve_coroners_letter_raises_error_when_stream_fails():
+    adapter = _make_adapter()
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.get", return_value=_mock_retrieve_metadata_response()),
+        patch("httpx.stream", side_effect=RuntimeError("stream failed")),
+        pytest.raises(CoronersLetterRetrievalError),
+    ):
+        list(adapter.retrieve_coroners_letter("letter.pdf"))
+
+
+def test_retrieve_coroners_letter_raises_error_when_file_url_missing():
+    adapter = _make_adapter()
+
+    bad_metadata = MagicMock()
+    bad_metadata.status_code = 200
+    bad_metadata.json.return_value = {}
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.get", return_value=bad_metadata),
+        pytest.raises(CoronersLetterRetrievalError),
+    ):
+        list(adapter.retrieve_coroners_letter("letter.pdf"))

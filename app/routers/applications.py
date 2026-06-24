@@ -26,12 +26,14 @@ from app.ports.provider_details_port import ProviderDetailsPort
 from app.ports.sds_port import SdsPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 from app.use_cases.create_application import CreateApplicationUseCase
+from app.use_cases.get_application import GetApplicationUseCase
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
-    ProceedingsNotFoundError,
+    CoronersLetterUploadError,
+    CoronersLetterNotFoundError,
+    CoronersLetterRetrievalError,
+    InvalidCoronersLetterDocumentIdError,
 )
-from app.use_cases.get_application import GetApplicationUseCase
-from app.use_cases.exceptions import CoronersLetterUploadError
 
 # from app.models.user import User
 from app.adapters.gov_notify import GovNotifyAdapter
@@ -144,7 +146,20 @@ def retrieve_coroners_letter(
     use_case: RetrieveCoronersLetterUseCase = Depends(get_coroners_letter_use_case),
 ) -> StreamingResponse:
     """Stream the coroner's letter for a given application."""
-    result = use_case.execute(laa_reference)
+    try:
+        result = use_case.execute(laa_reference)
+    except CoronersLetterNotFoundError:
+        raise HTTPException(status_code=404, detail="Coroners letter not found")
+    except InvalidCoronersLetterDocumentIdError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid coroners letter document id",
+        )
+    except CoronersLetterRetrievalError:
+        raise HTTPException(
+            status_code=500, detail="Failed to retrieve coroners letter"
+        )
+
     return StreamingResponse(
         result.content,
         media_type="application/octet-stream",

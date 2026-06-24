@@ -1,7 +1,14 @@
 from unittest.mock import MagicMock
 
+import pytest
+
 from app.models.application.index import Application, CoronersLetter
 from app.ports.sds_port import SdsPort
+from app.use_cases.exceptions import (
+    CoronersLetterNotFoundError,
+    CoronersLetterRetrievalError,
+    InvalidCoronersLetterDocumentIdError,
+)
 
 
 def _make_coroners_letter(
@@ -66,3 +73,57 @@ def test_execute_returns_iterator_from_port():
     result = b"".join(use_case.execute("1").content)
 
     assert result == b"chunk1chunk2"
+
+
+def test_execute_raises_error_when_sds_id_is_none():
+    session = MagicMock()
+    session.get.return_value = _make_application(
+        coroners_letter=_make_coroners_letter(sds_id=None)
+    )
+    sds_port = MagicMock(spec=SdsPort)
+    use_case = _make_use_case(session, sds_port)
+
+    with pytest.raises(InvalidCoronersLetterDocumentIdError):
+        use_case.execute("1")
+
+    sds_port.retrieve_coroners_letter.assert_not_called()
+
+
+def test_execute_raises_error_when_sds_id_is_blank():
+    session = MagicMock()
+    session.get.return_value = _make_application(
+        coroners_letter=_make_coroners_letter(sds_id="   ")
+    )
+    sds_port = MagicMock(spec=SdsPort)
+    use_case = _make_use_case(session, sds_port)
+
+    with pytest.raises(InvalidCoronersLetterDocumentIdError):
+        use_case.execute("1")
+
+    sds_port.retrieve_coroners_letter.assert_not_called()
+
+
+def test_execute_reraises_not_found_error_from_port():
+    session = MagicMock()
+    session.get.return_value = _make_application(
+        coroners_letter=_make_coroners_letter(sds_id="letter_abc123.pdf")
+    )
+    sds_port = MagicMock(spec=SdsPort)
+    sds_port.retrieve_coroners_letter.side_effect = CoronersLetterNotFoundError()
+    use_case = _make_use_case(session, sds_port)
+
+    with pytest.raises(CoronersLetterNotFoundError):
+        use_case.execute("1")
+
+
+def test_execute_reraises_retrieval_error_from_port():
+    session = MagicMock()
+    session.get.return_value = _make_application(
+        coroners_letter=_make_coroners_letter(sds_id="letter_abc123.pdf")
+    )
+    sds_port = MagicMock(spec=SdsPort)
+    sds_port.retrieve_coroners_letter.side_effect = CoronersLetterRetrievalError()
+    use_case = _make_use_case(session, sds_port)
+
+    with pytest.raises(CoronersLetterRetrievalError):
+        use_case.execute("1")
