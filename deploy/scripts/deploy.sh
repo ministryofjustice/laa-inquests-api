@@ -98,7 +98,7 @@ if [ -z "$branch_name" ]; then
 fi
 
 if [[ ("$ENVIRONMENT" == 'uat') && "$branch_name" == "main" ]] || \
-   [[ (("$ENVIRONMENT" == 'staging' || "$ENVIRONMENT" == 'production') && "$branch_name" =~ $releaseTag) ]]
+   [[ (("$ENVIRONMENT" == 'staging' || "$ENVIRONMENT" == 'prod') && "$branch_name" =~ $releaseTag) ]]
 then
   deploy_main
 else
