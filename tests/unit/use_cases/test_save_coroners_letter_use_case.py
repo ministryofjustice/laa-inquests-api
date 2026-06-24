@@ -10,7 +10,7 @@ request_body = {
     "coroners_letter": b"test",
     "file_name": "test_file.pdf",
 }
-body = SDSUploadCoronersLetterResponse(sds_id="test_file.pdf", status="SUCCESS")
+body = SDSUploadCoronersLetterResponse(sds_file_name="test_file.pdf", status="SUCCESS")
 
 
 def test_execute_returns_response_body_when_call_is_successful():
@@ -22,7 +22,7 @@ def test_execute_returns_response_body_when_call_is_successful():
         request_body["coroners_letter"], request_body["file_name"]
     )
 
-    assert result.sds_id == "test_file.pdf"
+    assert result.sds_file_name == "test_file.pdf"
 
 
 def test_execute_raises_an_error_when_sds_fails():

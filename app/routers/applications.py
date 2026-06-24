@@ -113,24 +113,35 @@ async def read_all_applications(
 )
 async def upload_coroners_letter(
     file: UploadFile = File(...),
+    session: Session = Depends(get_session),
     use_case: SaveCoronersLetterUseCase = Depends(get_save_coroners_letter_use_case),
 ) -> UploadCoronersLetterResponse:
     """Upload a coroner's letter to document storage and return its file ID."""
     contents = await file.read()
+    file_name = file.filename
     try:
         response = use_case.execute(
             contents,
-            file.filename,
+            file_name,
         )
     except CoronersLetterSaveError:
         raise HTTPException(status_code=500, detail="Failed to save coroners letter")
-    return UploadCoronersLetterResponse(file_id=response.sds_id)
+
+    new_coroners_letter = CoronersLetter(
+        sds_file_name=response.sds_file_name,
+        file_name=file_name,
+    )
+    session.add(new_coroners_letter)
+    session.flush()
+    coroners_letter_id = new_coroners_letter.coroners_letter_id
+    session.commit()
+
+    return UploadCoronersLetterResponse(coroners_letter_id=coroners_letter_id)
 
 
 @router.post("/", response_model=ApplicationResponse, status_code=201)
 def create_application(
     request: ApplicationCreate,
-    use_case: SaveCoronersLetterUseCase = Depends(get_save_coroners_letter_use_case),
     session: Session = Depends(get_session),
     gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
     # current_user: User = Depends(get_current_active_user),
@@ -222,21 +233,13 @@ def create_application(
     session.flush()
     session.refresh(new_provider)
 
-    new_coroners_letter = CoronersLetter(
-        sds_id=request.coroners_letter_id,
-        file_name=request.coroners_letter_id,
-    )
-    session.add(new_coroners_letter)
-    session.flush()
-    session.refresh(new_coroners_letter)
-
     new_application = Application(
         client_id=new_client.client_id,
         deceased_id=new_deceased.deceased_id,
         proceedings=proceedings_to_add,
         public_bodies=public_bodies_to_add,
         provider_id=new_provider.provider_id,
-        coroners_letter_id=new_coroners_letter.coroners_letter_id,
+        coroners_letter_id=request.coroners_letter_id,
     )
     session.add(new_application)
 

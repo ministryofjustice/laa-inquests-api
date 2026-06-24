@@ -54,11 +54,11 @@ class SdsAdapter:
 
         if response.status_code != 201:
             return SDSUploadCoronersLetterResponse(
-                sds_id=unique_file_name,
+                sds_file_name=unique_file_name,
                 status="FAILURE",
             )
 
         return SDSUploadCoronersLetterResponse(
-            sds_id=unique_file_name,
+            sds_file_name=unique_file_name,
             status="SUCCESS",
         )

@@ -1,6 +1,7 @@
 import pytest
 from sqlmodel import select
 from app.models.application.index import Application
+import uuid
 
 
 pytestmark = pytest.mark.usefixtures("mock_gov_notify")
@@ -31,7 +32,7 @@ def _make_request_body(client_overrides=None):
     if client_overrides:
         client.update(client_overrides)
     return {
-        "coronersLetterId": "test-file_abc123.pdf",
+        "coronersLetterId": str(uuid.uuid4()),
         "proceedings": [{"proceedingId": "TEST1"}],
         "client": client,
         "publicBodies": [{"publicBodyId": "Department for Transport"}],
@@ -198,9 +199,20 @@ def test_201_create_application_response_includes_deceased_details(client, auth_
 
 
 def test_201_create_application_response_contains_coroners_letter(client, auth_token):
+    upload_response = client.post(
+        "/applications/upload-coroners-letter",
+        files={"file": ("test-file_abc123.pdf", b"test content", "application/pdf")},
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+    assert upload_response.status_code == 201
+    coroners_letter_id = upload_response.json()["coronersLetterId"]
+
+    body = _make_request_body()
+    body["coronersLetterId"] = coroners_letter_id
+
     response = client.post(
         "/applications",
-        json=_make_request_body(),
+        json=body,
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {auth_token}",
@@ -208,9 +220,8 @@ def test_201_create_application_response_contains_coroners_letter(client, auth_t
     )
     assert response.status_code == 201
     new_application = response.json()
-    assert new_application["coronersLetter"] is not None
-    assert new_application["coronersLetter"]["id"] == "test-file_abc123.pdf"
-    assert new_application["coronersLetter"]["fileName"] == "test-file_abc123.pdf"
+    assert new_application["coronersLetterId"] is not None
+    assert new_application["coronersLetterId"] == coroners_letter_id
 
 
 def test_422_rejected_when_has_no_fixed_abode_is_false_and_home_address_is_absent(
