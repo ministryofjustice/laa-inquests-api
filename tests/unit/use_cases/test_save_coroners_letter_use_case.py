@@ -13,16 +13,16 @@ request_body = {
 body = SDSUploadCoronersLetterResponse(sds_file_name="test_file.pdf", status="SUCCESS")
 
 
-def test_execute_returns_response_body_when_call_is_successful():
+def test_execute_returns_coroners_letter_id_when_call_is_successful():
     port = MagicMock(spec=SdsPort)
     port.save_coroners_letter.return_value = body
 
-    use_case = SaveCoronersLetterUseCase(sds_port=port)
+    use_case = SaveCoronersLetterUseCase(sds_port=port, session=MagicMock())
     result = use_case.execute(
         request_body["coroners_letter"], request_body["file_name"]
     )
 
-    assert result.sds_file_name == "test_file.pdf"
+    assert result.coroners_letter_id is not None
 
 
 def test_execute_raises_an_error_when_sds_fails():
@@ -30,7 +30,7 @@ def test_execute_raises_an_error_when_sds_fails():
     body.status = "FAILURE"
     port.save_coroners_letter.return_value = body
 
-    use_case = SaveCoronersLetterUseCase(sds_port=port)
+    use_case = SaveCoronersLetterUseCase(sds_port=port, session=MagicMock())
 
     with pytest.raises(CoronersLetterSaveError):
         use_case.execute(request_body["coroners_letter"], request_body["file_name"])

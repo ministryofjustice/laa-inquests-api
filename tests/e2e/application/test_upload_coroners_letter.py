@@ -10,7 +10,7 @@ def is_valid_uuid(val):
         return False
 
 
-def test_201_upload_coroners_letter_returns_file_id(client, auth_token):
+def test_201_upload_coroners_letter_returns_coroners_letter_id_id(client, auth_token):
     response = client.post(
         "/applications/upload-coroners-letter",
         files={

@@ -114,8 +114,9 @@ def get_make_merits_decision_use_case(
 
 def get_save_coroners_letter_use_case(
     sds_port: SdsPort = Depends(get_sds_port),
+    session: Session = Depends(get_session),
 ) -> SaveCoronersLetterUseCase:
-    return SaveCoronersLetterUseCase(sds_port=sds_port)
+    return SaveCoronersLetterUseCase(sds_port=sds_port, session=session)
 
 
 @router.get("/{laa_reference}", response_model=ApplicationResponse)
@@ -148,7 +149,6 @@ async def read_all_applications(
 )
 async def upload_coroners_letter(
     file: UploadFile = File(...),
-    session: Session = Depends(get_session),
     use_case: SaveCoronersLetterUseCase = Depends(get_save_coroners_letter_use_case),
 ) -> UploadCoronersLetterResponse:
     """Upload a coroner's letter to document storage and return its file ID."""
@@ -162,16 +162,7 @@ async def upload_coroners_letter(
     except CoronersLetterSaveError:
         raise HTTPException(status_code=500, detail="Failed to save coroners letter")
 
-    new_coroners_letter = CoronersLetter(
-        sds_file_name=response.sds_file_name,
-        file_name=file_name,
-    )
-    session.add(new_coroners_letter)
-    session.flush()
-    coroners_letter_id = new_coroners_letter.coroners_letter_id
-    session.commit()
-
-    return UploadCoronersLetterResponse(coroners_letter_id=coroners_letter_id)
+    return UploadCoronersLetterResponse(coroners_letter_id=response.coroners_letter_id)
 
 
 @router.post("/", response_model=ApplicationResponse, status_code=201)
