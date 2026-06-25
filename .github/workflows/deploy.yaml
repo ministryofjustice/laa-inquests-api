@@ -75,7 +75,7 @@ jobs:
     uses: ./.github/workflows/unit-tests.yaml
 
   get-allowlist:
-    uses: ministryofjustice/laa-ip-allowlist/.github/workflows/generate-allowlist.yml@v1.1.0
+    uses: ministryofjustice/laa-ip-allowlist/.github/workflows/generate-allowlist.yml@b8e6a4c4c0e0c52bd9b37500865167583515a69c
     with:
       # Separate tags within a group with spaces, separate groups with semicolons
       groups: "internal staff;nat cp"
