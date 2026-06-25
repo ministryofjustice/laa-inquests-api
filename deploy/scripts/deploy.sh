@@ -12,6 +12,8 @@ deploy_branch() {
   echo "Github ref: $branch_name; release name: $BRANCH_RELEASE_NAME; identifier: $IDENTIFIER; release host: $RELEASE_HOST"
   echo "Deploying commit: $GITHUB_SHA under release name: '$BRANCH_RELEASE_NAME'..."
 
+  echo "IPs $ALLOW_LIST"
+
   helm upgrade "$BRANCH_RELEASE_NAME" ./deploy/infrastructure/helm/. \
                 --install --wait --timeout 10m \
                 --namespace="${K8S_NAMESPACE}" \
@@ -58,6 +60,7 @@ deploy_main() {
                 --install --wait --timeout 10m \
                 --namespace="${K8S_NAMESPACE}" \
                 --values ./deploy/infrastructure/helm/values/"$ENVIRONMENT".yaml \
+                --set ingress.allowList="$ALLOW_LIST" \
                 --set image.repository="$REGISTRY/$REPOSITORY" \
                 --set image.tag="$IMAGE_TAG" \
                 --set env.DB_HOST="$DB_HOST" \
