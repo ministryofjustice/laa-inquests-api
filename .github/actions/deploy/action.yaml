@@ -1,6 +1,9 @@
 name: "Deploy"
 description: "Deploy docker image to namespace"
 inputs:
+  allow-list:
+    description: "IP allow list"
+    required: true
   app-environment:
     description:
       "Environment to which the app is being deployed [staging, production, etc]"
@@ -115,6 +118,7 @@ runs:
       shell: bash
       run: ./deploy/scripts/deploy.sh ${{ inputs.app-environment }}
       env:
+        ALLOW_LIST: ${{ inputs.allow-list }}
         DB_HOST: ${{ inputs.db-host }}
         DB_NAME: ${{ inputs.db-name }}
         DB_PASSWORD: ${{ inputs.db-password }}
