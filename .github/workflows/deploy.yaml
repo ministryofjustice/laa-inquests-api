@@ -74,12 +74,6 @@ jobs:
     name: Pytest Unit Tests
     uses: ./.github/workflows/unit-tests.yaml
 
-  # get-allowlist:
-  #   uses: ministryofjustice/laa-ip-allowlist/.github/workflows/generate-allowlist.yml@v1.1.0
-  #   with:
-  #     # Separate tags within a group with spaces, separate groups with semicolons
-  #     groups: "internal staff"
-
   deploy-uat:
     if: ${{ !contains(github.actor, '[bot]') }}
     runs-on: ubuntu-latest
@@ -88,7 +82,6 @@ jobs:
       id-token: write # This is required for requesting the JWT
       contents: read # This is required for actions/checkout
     needs:
-      # - get-allowlist
       - unit-tests
       - snyk
     steps:
@@ -97,7 +90,6 @@ jobs:
       - name: Deploy to uat
         uses: ./.github/actions/deploy
         with:
-          # allow-list: ${{ needs.get-allowlist.outputs.allowlist }}
           allow-list: ${{ secrets.ALLOW_LIST }}
           app-environment: uat
           db-host: ${{ secrets.DB_HOST}}

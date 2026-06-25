@@ -63,7 +63,6 @@ ingress:
       SecRuleEngine On
       SecDefaultAction "phase:2,pass,log,tag:github_team=laa-inquests"
       SecAction "id:900200,phase:1,nolog,pass,t:none,setvar:tx.allowed_methods=GET HEAD POST OPTIONS PATCH"
-    # nginx.ingress.kubernetes.io/whitelist-source-range: "35.176.93.186/32"
 
 
 resources:
