@@ -78,7 +78,7 @@ jobs:
     uses: ministryofjustice/laa-ip-allowlist/.github/workflows/generate-allowlist.yml@v1.1.0
     with:
       # Separate tags within a group with spaces, separate groups with semicolons
-      groups: "internal staff;nat cp"
+      groups: "internal staff"
 
   deploy-uat:
     if: ${{ !contains(github.actor, '[bot]') }}
