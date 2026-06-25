@@ -17,6 +17,7 @@ jobs:
       - name: Deploy to staging
         uses: ./.github/actions/deploy
         with:
+          allow-list: ${{ secrets.ALLOW_LIST }}
           app-environment: staging
           db-host: ${{ secrets.DB_HOST}}
           db-name: ${{ secrets.DB_NAME }}
@@ -68,6 +69,7 @@ jobs:
         uses: ./.github/actions/deploy
         with:
           app-environment: prod
+          allow-list: ${{ secrets.ALLOW_LIST }}
           db-host: ${{ secrets.DB_HOST}}
           db-name: ${{ secrets.DB_NAME }}
           db-password: ${{ secrets.DB_PASSWORD }}

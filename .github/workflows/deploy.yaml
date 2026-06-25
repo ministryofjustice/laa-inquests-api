@@ -91,6 +91,7 @@ jobs:
       - name: Deploy to uat
         uses: ./.github/actions/deploy
         with:
+          allow-list: ${{ secrets.ALLOW_LIST }}
           app-environment: uat
           db-host: ${{ secrets.DB_HOST}}
           db-name: ${{ secrets.DB_NAME }}
