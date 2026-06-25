@@ -16,7 +16,7 @@ deploy_branch() {
                 --install --wait --timeout 10m \
                 --namespace="${K8S_NAMESPACE}" \
                 --values ./deploy/infrastructure/helm/values/"$ENVIRONMENT".yaml \
-                --set-string ingress.allowlist="${ALLOW_LIST//,/\\,}" \
+                --set-string ingress.allowList="${ALLOW_LIST//,/\\,}" \
                 --set image.repository="$REGISTRY/$REPOSITORY" \
                 --set image.tag="$IMAGE_TAG" \
                 --set ingress.annotations."external-dns\.alpha\.kubernetes\.io/set-identifier"="$IDENTIFIER" \
