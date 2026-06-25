@@ -4,10 +4,16 @@ from datetime import timezone, timedelta, datetime
 from passlib.hash import argon2
 import jwt
 from jwt.exceptions import InvalidTokenError
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import (
+    OAuth2PasswordBearer,
+    HTTPBearer,
+    HTTPAuthorizationCredentials,
+)
 from fastapi import HTTPException, Depends, status
-from app.models.user import User, TokenData, Token
+from app.adapters.entra_auth_adapter import EntraAuthAdapter
 from app.config import Config
+from app.ports.entra_auth_port import EntraAuthPort
+from app.models.user import User, TokenData
 from app.db import get_session
 from sqlmodel import Session
 
@@ -38,6 +44,17 @@ def get_password_hash(password):
     return argon2.hash(password)
 
 
+def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + (
+        expires_delta
+        if expires_delta
+        else timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
 def authenticate_user(session, username: str, password: str) -> str | User | bool:
     """
     This function returns the user if they are authenticated against their
@@ -62,50 +79,10 @@ def authenticate_user(session, username: str, password: str) -> str | User | boo
     return user
 
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None) -> Token:
-    """
-    Creates the JWT access token with an expiry time.
-
-    Args:
-        data: A dictionary containing the username.
-        expires_delta: A timedelta of the expiry time of the token.
-
-    Returns:
-        encoded_jwt: Returns the fully encoded JWT with expiry time.
-    """
-    """
-    Data.copy is used to avoid updating the original data dictionary with
-    the expiry field to ensure it can still be read as a standalone object.
-    """
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(
-            minutes=ACCESS_TOKEN_EXPIRE_MINUTES
-        )
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
-
-
 async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],
     session: Annotated[Session, Depends(get_session)],
 ):
-    """
-    Checks the current user token to return a user.
-
-    Args:
-        token: Uses the oauth2 scheme to get the current JWT.
-
-    Returns:
-        user: Returns the current user object by verifying against the JWT.
-
-    Raises:
-        HTTP_Exception: If authentication fails, a HTTP 401 Unauthorised error is
-        raised with a message indicating that the credentials could not be validated.
-    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -114,14 +91,10 @@ async def get_current_user(
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
-        token_data = TokenData(username=username)
+        TokenData(username=username)
     except InvalidTokenError:
         logging.warning(f"Invalid Token Authorisation on token {token}")
         raise credentials_exception
-    user = session.get(User, token_data.username)
-    if user is None:
-        raise credentials_exception
-    return user
 
 
 async def get_current_active_user(
@@ -133,3 +106,26 @@ async def get_current_active_user(
             detail="User Disabled",
         )
     return current_user
+
+
+_http_bearer = HTTPBearer(auto_error=False)
+
+
+def get_entra_auth_port() -> EntraAuthPort:
+    return EntraAuthAdapter(
+        tenant_id=Config.ENTRA_TENANT_ID,
+        client_id=Config.ENTRA_CLIENT_ID,
+    )
+
+
+def verify_entra_token(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_http_bearer)],
+    entra_auth: Annotated[EntraAuthPort, Depends(get_entra_auth_port)],
+) -> None:
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    entra_auth.verify_token(credentials.credentials)

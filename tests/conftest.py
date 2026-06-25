@@ -6,7 +6,7 @@ from app.db import get_session
 from app.db.session import CustomSession
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
-from app.auth.security import get_password_hash
+from app.auth.security import get_password_hash, get_entra_auth_port
 from app.routers.applications import (
     get_provider_details_port,
     get_gov_notify_port,
@@ -154,15 +154,70 @@ def client_fixture(session: Session):
         )
         return mock_sds
 
+    def get_entra_auth_port_bypass():
+        mock_auth = MagicMock()
+        mock_auth.verify_token.return_value = None
+        return mock_auth
+
     api.dependency_overrides[get_session] = get_session_override
     api.dependency_overrides[get_provider_details_port] = (
         get_provider_details_port_override
     )
     api.dependency_overrides[get_gov_notify_port] = get_gov_notify_port_override
     api.dependency_overrides[get_sds_port] = get_sds_port_override
+    api.dependency_overrides[get_entra_auth_port] = get_entra_auth_port_bypass
 
     client = TestClient(api, raise_server_exceptions=False)
     yield client
+    api.dependency_overrides.clear()
+
+
+@pytest.fixture(name="entra_auth_client")
+def entra_auth_client_fixture(session: Session):
+    from fastapi import HTTPException, status
+
+    def get_session_override():
+        return session
+
+    def get_provider_details_port_override():
+        mock_port = MagicMock()
+        mock_port.get_firm_name.return_value = "Test Firm Name"
+        return mock_port
+
+    def get_gov_notify_port_override():
+        return MagicMock()
+
+    def get_sds_port_override():
+        mock_sds = MagicMock()
+        mock_sds.save_coroners_letter.return_value = SDSUploadCoronersLetterResponse(
+            sds_id="test-file_abc123.pdf",
+            status="SUCCESS",
+        )
+        return mock_sds
+
+    def get_entra_auth_port_override():
+        mock_auth = MagicMock()
+
+        def verify_token(token: str) -> None:
+            if token != "valid-entra-token":
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Could not validate credentials",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+        mock_auth.verify_token.side_effect = verify_token
+        return mock_auth
+
+    api.dependency_overrides[get_session] = get_session_override
+    api.dependency_overrides[get_provider_details_port] = (
+        get_provider_details_port_override
+    )
+    api.dependency_overrides[get_gov_notify_port] = get_gov_notify_port_override
+    api.dependency_overrides[get_sds_port] = get_sds_port_override
+    api.dependency_overrides[get_entra_auth_port] = get_entra_auth_port_override
+
+    yield TestClient(api, raise_server_exceptions=False)
     api.dependency_overrides.clear()
 
 

@@ -35,3 +35,6 @@ class Config(object):
     SDS_CLIENT_ID = os.environ.get("SDS_CLIENT_ID", "")
     SDS_CLIENT_SECRET = os.environ.get("SDS_CLIENT_SECRET", "")
     SDS_SCOPE = os.environ.get("SDS_SCOPE", "")
+
+    ENTRA_TENANT_ID = os.environ.get("ENTRA_TENANT_ID", "")
+    ENTRA_CLIENT_ID = os.environ.get("ENTRA_CLIENT_ID", "")

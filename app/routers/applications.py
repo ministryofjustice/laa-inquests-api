@@ -27,6 +27,7 @@ from app.models.application.index import (
 from app.models.application.enums import MeritsDecision
 
 from app.adapters.provider_details_adapter import ProviderDetailsAdapter
+from app.auth.security import verify_entra_token
 from app.config import Config
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.ports.sds_port import SdsPort
@@ -99,7 +100,7 @@ async def read_application(
 @router.get("/")
 async def read_all_applications(
     session: Session = Depends(get_session),
-    # current_user: User = Depends(get_current_active_user),
+    _: None = Depends(verify_entra_token),
 ) -> Sequence[Application]:
     """Read all the applications currently in the database."""
     applications = session.exec(select(Application)).all()
