@@ -115,6 +115,7 @@ runs:
       shell: bash
       run: ./deploy/scripts/deploy.sh ${{ inputs.app-environment }}
       env:
+        ALLOW_LIST: ${{ inputs.allow-list }}
         DB_HOST: ${{ inputs.db-host }}
         DB_NAME: ${{ inputs.db-name }}
         DB_PASSWORD: ${{ inputs.db-password }}
