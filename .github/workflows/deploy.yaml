@@ -4,14 +4,15 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    # From docs: if no activity types are specified, the workflow runs when a pull request is opened or reopened or when the head branch of the pull request is updated.
-    paths:
-      - "deploy/**"
-      - "app/**"
-      - "tests/**"
-      - "Dockerfile"
-      - "compose.yaml"
+#  Turning off the PR branches for UAT. Semi-temporary workaround for database migrations
+#  pull_request:
+#    # From docs: if no activity types are specified, the workflow runs when a pull request is opened or reopened or when the head branch of the pull request is updated.
+#    paths:
+#      - "deploy/**"
+#      - "app/**"
+#      - "tests/**"
+#      - "Dockerfile"
+#      - "compose.yaml"
   workflow_dispatch:
     inputs:
       environment:
