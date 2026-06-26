@@ -4,9 +4,10 @@ from pathlib import Path
 import httpx
 
 from app.models.application.index import SDSUploadCoronersLetterResponse
+from app.ports.sds_port import SdsPort
 
 
-class SdsAdapter:
+class SdsAdapter(SdsPort):
     def __init__(
         self,
         base_url: str,

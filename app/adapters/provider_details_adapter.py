@@ -1,7 +1,9 @@
 import httpx
 
+from app.ports.provider_details_port import ProviderDetailsPort
 
-class ProviderDetailsAdapter:
+
+class ProviderDetailsAdapter(ProviderDetailsPort):
     def __init__(self, base_url: str, api_key: str) -> None:
         self.base_url = base_url
         self.api_key = api_key
