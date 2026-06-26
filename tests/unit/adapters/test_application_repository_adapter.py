@@ -74,12 +74,10 @@ def test_get_application_by_laa_reference_returns_existing_application(session):
     test_app_reference = session.exec(select(Application)).first().laa_reference
     adapter = ApplicationRepositoryAdapter(session)
 
-    result = adapter.get_application_by_laa_reference(
-        str(test_app_reference.laa_reference)
-    )
+    result = adapter.get_application_by_laa_reference(str(test_app_reference))
 
     assert result is not None
-    assert result.laa_reference == test_app_reference.laa_reference
+    assert result.laa_reference == test_app_reference
 
 
 def test_list_applications_returns_all_applications(session):
