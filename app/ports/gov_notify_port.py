@@ -1,11 +1,11 @@
 """Abstraction for Gov Notify integration (email notifications)."""
 
-from typing import Protocol
+from abc import ABC, abstractmethod
 
 from app.models.application.index import Application, ApplicationProceeding
 
 
-class GovNotifyPort(Protocol):
+class GovNotifyPort(ABC):
     """Port for sending notifications via Gov Notify.
 
     Implementers handle:
@@ -14,6 +14,7 @@ class GovNotifyPort(Protocol):
     - Handling errors and retries
     """
 
+    @abstractmethod
     def send_application_refused_decision_email(
         self,
         application: Application,
@@ -32,6 +33,7 @@ class GovNotifyPort(Protocol):
         """
         ...
 
+    @abstractmethod
     def send_application_submit_confirmation_email(
         self, application: Application, recipient_email: str
     ) -> None:
