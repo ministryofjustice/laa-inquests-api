@@ -4,6 +4,7 @@ Tests are run using Pytest and can be run using:
 pytest
 ```
 
+Test
 # How to write API tests
 Tests which send requests to an endpoint should use the client fixture defined in `tests/conftest.py`.
 
