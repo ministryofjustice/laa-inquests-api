@@ -1,4 +1,5 @@
 from sqlmodel import Session, select
+import uuid
 
 from app.models.application.index import (
     Address,
@@ -8,6 +9,7 @@ from app.models.application.index import (
     ApplicationPublicBody,
     AddressSource,
     Client,
+    CoronersLetter,
     Deceased,
     ProceedingId,
     Provider,
@@ -17,6 +19,7 @@ from app.ports.create_application_port import CreateApplicationPort
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.make_merits_decision_port import MakeMeritsDecisionPort
 from app.ports.list_applications_port import ListApplicationsPort
+from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 
 
 class ApplicationRepositoryAdapter(
@@ -24,6 +27,7 @@ class ApplicationRepositoryAdapter(
     CreateApplicationPort,
     MakeMeritsDecisionPort,
     ListApplicationsPort,
+    UploadCoronersLetterPort,
 ):
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -144,6 +148,17 @@ class ApplicationRepositoryAdapter(
 
     def rollback(self) -> None:
         self.session.rollback()
+
+    def save_uploaded_coroners_letter(
+        self,
+        coroners_letter: CoronersLetter,
+    ) -> uuid.UUID:
+        self.session.add(coroners_letter)
+        self.session.flush()
+        coroners_letter_id = coroners_letter.coroners_letter_id
+        self.session.commit()
+
+        return coroners_letter_id
 
     def persist_merits_decision(
         self,

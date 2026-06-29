@@ -23,6 +23,7 @@ from app.ports.make_merits_decision_port import MakeMeritsDecisionPort
 from app.ports.list_applications_port import ListApplicationsPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.ports.sds_port import SdsPort
+from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
@@ -114,9 +115,14 @@ def get_make_merits_decision_use_case(
 
 def get_upload_coroners_letter_use_case(
     sds_port: SdsPort = Depends(get_sds_port),
-    session: Session = Depends(get_session),
+    upload_coroners_letter_port: UploadCoronersLetterPort = Depends(
+        get_application_db_adapter
+    ),
 ) -> UploadCoronersLetterUseCase:
-    return UploadCoronersLetterUseCase(sds_port=sds_port, session=session)
+    return UploadCoronersLetterUseCase(
+        sds_port=sds_port,
+        upload_coroners_letter_port=upload_coroners_letter_port,
+    )
 
 
 @router.get("/{laa_reference}", response_model=ApplicationResponse)
