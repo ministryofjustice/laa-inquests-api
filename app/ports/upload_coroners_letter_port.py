@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import uuid
 
-from app.models.application.index import CoronersLetter
+from app.domain.coroners_letter import CoronersLetter
 
 
 class UploadCoronersLetterPort(ABC):

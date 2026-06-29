@@ -1,6 +1,7 @@
 from sqlmodel import Session, select
 import uuid
 
+from app.domain.coroners_letter import CoronersLetter
 from app.models.application.index import (
     Address,
     Application,
@@ -9,7 +10,7 @@ from app.models.application.index import (
     ApplicationPublicBody,
     AddressSource,
     Client,
-    CoronersLetter,
+    CoronersLetter as CoronersLetterModel,
     Deceased,
     ProceedingId,
     Provider,
@@ -153,9 +154,13 @@ class ApplicationRepositoryAdapter(
         self,
         coroners_letter: CoronersLetter,
     ) -> uuid.UUID:
-        self.session.add(coroners_letter)
+        coroners_letter_model = CoronersLetterModel(
+            sds_file_name=coroners_letter.sds_file_name,
+            file_name=coroners_letter.file_name,
+        )
+        self.session.add(coroners_letter_model)
         self.session.flush()
-        coroners_letter_id = coroners_letter.coroners_letter_id
+        coroners_letter_id = coroners_letter_model.coroners_letter_id
         self.session.commit()
 
         return coroners_letter_id

@@ -5,6 +5,7 @@ import pytest
 from sqlmodel import select
 
 from app.adapters.application_repository_adapter import ApplicationRepositoryAdapter
+from app.domain.coroners_letter import CoronersLetter
 from app.models.application.enums import (
     AddressSource,
     CorrespondenceRecipientType,
@@ -15,7 +16,7 @@ from app.models.application.index import (
     Application,
     ApplicationCreate,
     ApplicationProceeding,
-    CoronersLetter,
+    CoronersLetter as CoronersLetterModel,
 )
 
 
@@ -171,10 +172,14 @@ def test_save_uploaded_coroners_letter_persists_and_commits():
 
     result = adapter.save_uploaded_coroners_letter(coroners_letter)
 
-    mock_session.add.assert_called_once_with(coroners_letter)
+    mock_session.add.assert_called_once()
+    saved_model = mock_session.add.call_args[0][0]
+    assert isinstance(saved_model, CoronersLetterModel)
+    assert saved_model.sds_file_name == coroners_letter.sds_file_name
+    assert saved_model.file_name == coroners_letter.file_name
     mock_session.flush.assert_called_once_with()
     mock_session.commit.assert_called_once_with()
-    assert result == coroners_letter.coroners_letter_id
+    assert result == saved_model.coroners_letter_id
 
 
 def test_persist_merits_decision_adds_entities_and_commits():
