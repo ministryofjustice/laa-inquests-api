@@ -3,6 +3,8 @@
 ENVIRONMENT=$1
 
 deploy_branch() {
+  echo "SKIPPING Turning off the PR branches for UAT. Semi-temporary workaround for database migrations"
+  return 0
 # Convert the branch name into a string that can be turned into a valid URL
   BRANCH_RELEASE_NAME=$(echo "$branch_name" | tr '[:upper:]' '[:lower:]' | sed 's:^\w*\/::' | tr -s ' _/[]().' '-' | cut -c1-18 | sed 's/-$//')
 # Set the deployment host, this will add the prefix of the branch name e.g el-257-deploy-with-circleci or just main
