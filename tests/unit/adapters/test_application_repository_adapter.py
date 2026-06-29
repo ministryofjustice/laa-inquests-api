@@ -15,6 +15,7 @@ from app.models.application.index import (
     Application,
     ApplicationCreate,
     ApplicationProceeding,
+    CoronersLetter,
 )
 
 
@@ -158,6 +159,22 @@ def test_rollback_delegates_to_session_rollback():
     adapter.rollback()
 
     mock_session.rollback.assert_called_once_with()
+
+
+def test_save_uploaded_coroners_letter_persists_and_commits():
+    mock_session = MagicMock()
+    adapter = ApplicationRepositoryAdapter(mock_session)
+    coroners_letter = CoronersLetter(
+        sds_file_name="sds-file.pdf",
+        file_name="upload.pdf",
+    )
+
+    result = adapter.save_uploaded_coroners_letter(coroners_letter)
+
+    mock_session.add.assert_called_once_with(coroners_letter)
+    mock_session.flush.assert_called_once_with()
+    mock_session.commit.assert_called_once_with()
+    assert result == coroners_letter.coroners_letter_id
 
 
 def test_persist_merits_decision_adds_entities_and_commits():
