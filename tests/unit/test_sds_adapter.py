@@ -142,8 +142,8 @@ def test_save_coroners_letter_returns_response_with_correct_fields():
         result = adapter.save_coroners_letter(b"content", "letter.pdf")
 
     assert result.status == "SUCCESS"
-    assert result.sds_id.startswith("letter_")
-    assert result.sds_id.endswith(".pdf")
+    assert result.sds_file_name.startswith("letter_")
+    assert result.sds_file_name.endswith(".pdf")
 
 
 def test_save_coroners_letter_returns_failure_when_sds_fails():
@@ -156,5 +156,5 @@ def test_save_coroners_letter_returns_failure_when_sds_fails():
         result = adapter.save_coroners_letter(b"content", "letter.pdf")
 
     assert result.status == "FAILURE"
-    assert result.sds_id.startswith("letter_")
-    assert result.sds_id.endswith(".pdf")
+    assert result.sds_file_name.startswith("letter_")
+    assert result.sds_file_name.endswith(".pdf")

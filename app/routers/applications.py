@@ -25,17 +25,17 @@ from app.ports.sds_port import SdsPort
 from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
-    CoronersLetterSaveError,
     ProceedingsNotFoundError,
 )
 from app.use_cases.get_application import GetApplicationUseCase
+from app.use_cases.exceptions import CoronersLetterUploadError
 
 # from app.models.user import User
 from app.adapters.gov_notify import GovNotifyAdapter
 from app.ports.gov_notify_port import GovNotifyPort
 from app.use_cases.list_applications import ListApplicationsUseCase
 from app.use_cases.make_merits_decision import MakeMeritsDecisionUseCase
-from app.use_cases.save_coroners_letter import SaveCoronersLetterUseCase
+from app.use_cases.upload_coroners_letter import UploadCoronersLetterUseCase
 
 
 router = APIRouter(
@@ -111,10 +111,11 @@ def get_make_merits_decision_use_case(
     )
 
 
-def get_save_coroners_letter_use_case(
+def get_upload_coroners_letter_use_case(
     sds_port: SdsPort = Depends(get_sds_port),
-) -> SaveCoronersLetterUseCase:
-    return SaveCoronersLetterUseCase(sds_port=sds_port)
+    session: Session = Depends(get_session),
+) -> UploadCoronersLetterUseCase:
+    return UploadCoronersLetterUseCase(sds_port=sds_port, session=session)
 
 
 @router.get("/{laa_reference}", response_model=ApplicationResponse)
@@ -146,18 +147,22 @@ async def read_all_applications(
 )
 async def upload_coroners_letter(
     file: UploadFile = File(...),
-    use_case: SaveCoronersLetterUseCase = Depends(get_save_coroners_letter_use_case),
+    use_case: UploadCoronersLetterUseCase = Depends(
+        get_upload_coroners_letter_use_case
+    ),
 ) -> UploadCoronersLetterResponse:
     """Upload a coroner's letter to document storage and return its file ID."""
     contents = await file.read()
+    file_name = file.filename
     try:
-        response = use_case.execute(
+        coroners_letter_id = use_case.execute(
             contents,
-            file.filename,
+            file_name,
         )
-    except CoronersLetterSaveError:
-        raise HTTPException(status_code=500, detail="Failed to save coroners letter")
-    return UploadCoronersLetterResponse(file_id=response.sds_id)
+    except CoronersLetterUploadError:
+        raise HTTPException(status_code=500, detail="Failed to upload coroners letter")
+
+    return UploadCoronersLetterResponse(coroners_letter_id=coroners_letter_id)
 
 
 @router.post("/", response_model=ApplicationResponse, status_code=201)
@@ -168,6 +173,121 @@ def create_application(
 ) -> Application:
     """Creates a new application with proceedings and public bodies."""
     return use_case.execute(request)
+
+    # COPILOT TODO: This needs moving into the other files that have been hexagonalised
+    # """Creates a new application with proceedings, public bodies."""
+    # proceedings_to_add = []
+    # public_bodies_to_add = []
+    #
+    # for proceeding in request.proceedings:
+    #     code_str = proceeding.proceeding_id
+    #     proceeding_to_add = ApplicationProceeding(proceeding_id=ProceedingId(code_str))
+    #     proceedings_to_add.append(proceeding_to_add)
+    #
+    # for public_body in request.publicBodies:
+    #     public_body_enum = PublicBodyId(public_body.public_body_id)
+    #     public_body_to_add = ApplicationPublicBody(public_body_id=public_body_enum)
+    #     public_bodies_to_add.append(public_body_to_add)
+    #
+    # correspondence_address = None
+    # if request.client.correspondence_address is not None:
+    #     correspondence_address = Address(
+    #         **request.client.correspondence_address.model_dump()
+    #     )
+    #     session.add(correspondence_address)
+    #
+    # home_address_id = None
+    # if request.client.home_address is not None:
+    #     home_address_to_add = Address(**request.client.home_address.model_dump())
+    #     session.add(home_address_to_add)
+    #     session.flush()
+    #     session.refresh(home_address_to_add)
+    #     home_address_id = home_address_to_add.address_id
+    # else:
+    #     session.flush()
+    #
+    # correspondence_address_id = None
+    # if correspondence_address is not None:
+    #     session.refresh(correspondence_address)
+    #     correspondence_address_id = correspondence_address.address_id
+    #
+    # client_data = request.client.model_dump(
+    #     exclude={"correspondence_address", "home_address"}
+    # )
+    # client_data["correspondence_address_source"] = AddressSource(
+    #     client_data["correspondence_address_source"]
+    # )
+    #
+    # new_client = Client(
+    #     **client_data,
+    #     correspondence_address_id=correspondence_address_id,
+    #     home_address_id=home_address_id,
+    #     correspondence_recipient_type=(
+    #         request.client.correspondence_recipient.recipient_type
+    #         if not request.client.is_client_correspondence_recipient
+    #         and request.client.correspondence_recipient is not None
+    #         else None
+    #     ),
+    #     correspondence_recipient_name=(
+    #         request.client.correspondence_recipient.recipient_name
+    #         if not request.client.is_client_correspondence_recipient
+    #         and request.client.correspondence_recipient is not None
+    #         else None
+    #     ),
+    # )
+    # session.add(new_client)
+    # session.flush()
+    # session.refresh(new_client)
+    #
+    # new_deceased = Deceased(
+    #     deceased_first_name=request.deceased.deceased_first_name,
+    #     deceased_last_name=request.deceased.deceased_last_name,
+    #     deceased_date_of_birth=request.deceased.deceased_date_of_birth,
+    #     deceased_date_of_death=request.deceased.deceased_date_of_death,
+    #     coroners_reference=request.deceased.coroners_reference,
+    #     further_information=request.deceased.further_information,
+    #     client_relationship_to_deceased=request.deceased.client_relationship_to_deceased,
+    #     client_id=new_client.client_id,
+    # )
+    # session.add(new_deceased)
+    # session.flush()
+    # session.refresh(new_deceased)
+    #
+    # new_provider = Provider(
+    #     firm_code=request.provider.firm_code,
+    #     office_id=request.provider.office_id,
+    #     email_address=request.provider.email_address,
+    # )
+    # session.add(new_provider)
+    # session.flush()
+    # session.refresh(new_provider)
+    #
+    # new_application = Application(
+    #     client_id=new_client.client_id,
+    #     deceased_id=new_deceased.deceased_id,
+    #     proceedings=proceedings_to_add,
+    #     public_bodies=public_bodies_to_add,
+    #     provider_id=new_provider.provider_id,
+    #     coroners_letter_id=request.coroners_letter_id,
+    # )
+    # session.add(new_application)
+    #
+    # # Flush to generate laa_reference without committing transaction
+    # session.flush()
+    # session.refresh(new_application)
+    #
+    # try:
+    #     gov_notify_port.send_application_submit_confirmation_email(
+    #         new_application, request.provider.email_address
+    #     )
+    #     session.commit()
+    # except Exception:
+    #     # Rollback database changes if email fails
+    #     session.rollback()
+    #     raise
+    #
+    # session.refresh(new_application)
+    # return new_application
 
 
 @router.patch("/{laa_reference}/merits-decision", status_code=204)
