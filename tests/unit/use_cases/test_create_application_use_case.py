@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock
+import uuid
 
 import pytest
 
@@ -11,7 +12,7 @@ from app.use_cases.create_application import CreateApplicationUseCase
 def _make_request(email_address: str = "provider@example.com") -> ApplicationCreate:
     return ApplicationCreate.model_validate(
         {
-            "coronersLetterId": "test-file_abc123.pdf",
+            "coronersLetterId": str(uuid.uuid4()),
             "proceedings": [{"proceedingId": "TEST1"}],
             "client": {
                 "clientFirstName": "Test",
