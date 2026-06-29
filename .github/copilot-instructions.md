@@ -13,7 +13,7 @@
 - **Then develop one unit test at a time.** Write the test, make it pass with minimum code, wait for approval before the next.
 - **Run tests after every change.** New tests must fail first, then pass after implementation. Fix code, not tests, if refactoring breaks them.
 - **NEVER install a new dependency.** Stop and recommend a dependency for the user to add to the appropriate `requirements/source/*.in` file.
-- **All code MUST match the architecture** — keep business logic out of routers. Routers handle HTTP only.
+- **All code MUST match the architecture** — keep business logic out of routers. Routers handle HTTP only and must never delegate directly to DB/session objects.
 - **If a database schema change is required**, e.g. any time a model is changed, create an Alembic migration: `alembic revision --autogenerate -m "description"`.
 - **When finished**, run all checks and update documentation.
 
@@ -38,7 +38,7 @@ If these instructions do not cover a specific case, stop and ask.
 This project is a **FastAPI REST API** using **SQLModel** (SQLAlchemy + Pydantic) for ORM and schema validation.
 
 - **`app/main.py`** — app factory (`create_app()`). Register routers here, nothing else.
-- **`app/routers/`** — `APIRouter` instances. HTTP request/response handling only. No business logic.
+- **`app/routers/`** — `APIRouter` instances. HTTP request/response handling only. No business logic and no direct DB/session delegation.
 - **`app/models/[resource]/`** — SQLModel table models, and Pydantic `Create`/`Update`/`Response` schemas.
 - **`app/db/`** — database session factory and Alembic migrations.
 - **`app/config/`** — typed config objects. Never access `os.environ` directly in application code.
@@ -47,7 +47,7 @@ This project is a **FastAPI REST API** using **SQLModel** (SQLAlchemy + Pydantic
 ### Adding a new endpoint
 
 1. Define table model(s) and `Create`/`Response` Pydantic schemas in `app/models/[resource]/index.py`.
-2. Add an `APIRouter` in `app/routers/[resource].py` with route handlers that delegate directly to the session.
+2. Add an `APIRouter` in `app/routers/[resource].py` with route handlers that map HTTP input/output and call use cases only.
 3. Register the new router in `app/main.py`.
 4. Generate an Alembic migration if the schema changed.
 5. Write E2E tests in `tests/e2e/[resource]/test_[operation].py`.

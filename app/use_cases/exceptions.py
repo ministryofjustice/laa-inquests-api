@@ -4,3 +4,7 @@ class ApplicationNotFoundError(Exception):
 
 class CoronersLetterUploadError(Exception):
     pass
+
+
+class ProceedingsNotFoundError(Exception):
+    pass

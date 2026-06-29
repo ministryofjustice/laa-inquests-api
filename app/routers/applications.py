@@ -1,40 +1,41 @@
-import logging
-
 from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File
-from sqlmodel import Session, select
+from sqlmodel import Session
 from typing import Sequence
 
 # from app.auth.security import get_current_active_user
 from app.adapters.sds_adapter import SdsAdapter
+from app.adapters.application_repository_adapter import ApplicationRepositoryAdapter
 from app.db import get_session
 from app.models.application.index import (
-    Address,
     Application,
     ApplicationCreate,
-    ApplicationProceeding,
-    ApplicationPublicBody,
     ApplicationResponse,
-    AddressSource,
-    Client,
-    Deceased,
     MeritsDecisionUpdateRefuse,
-    ProceedingId,
-    Provider,
-    PublicBodyId,
     UploadCoronersLetterResponse,
 )
-from app.models.application.enums import MeritsDecision
 
 from app.adapters.provider_details_adapter import ProviderDetailsAdapter
 from app.config import Config
+from app.ports.create_application_port import CreateApplicationPort
+from app.ports.get_application_port import GetApplicationPort
+from app.ports.make_merits_decision_port import MakeMeritsDecisionPort
+from app.ports.list_applications_port import ListApplicationsPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.ports.sds_port import SdsPort
-from app.use_cases.exceptions import ApplicationNotFoundError, CoronersLetterUploadError
-from app.use_cases.read_application import ReadApplicationUseCase
+from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
+from app.use_cases.create_application import CreateApplicationUseCase
+from app.use_cases.exceptions import (
+    ApplicationNotFoundError,
+    ProceedingsNotFoundError,
+)
+from app.use_cases.get_application import GetApplicationUseCase
+from app.use_cases.exceptions import CoronersLetterUploadError
 
 # from app.models.user import User
 from app.adapters.gov_notify import GovNotifyAdapter
 from app.ports.gov_notify_port import GovNotifyPort
+from app.use_cases.list_applications import ListApplicationsUseCase
+from app.use_cases.make_merits_decision import MakeMeritsDecisionUseCase
 from app.use_cases.upload_coroners_letter import UploadCoronersLetterUseCase
 
 
@@ -43,8 +44,6 @@ router = APIRouter(
     tags=["Applications"],
     responses={404: {"description": "Not found"}},
 )
-
-logger = logging.getLogger(__name__)
 
 
 def get_provider_details_port() -> ProviderDetailsPort:
@@ -67,26 +66,68 @@ def get_sds_port() -> SdsPort:
     )
 
 
-def get_read_application_use_case(
+def get_application_db_adapter(
     session: Session = Depends(get_session),
+) -> ApplicationRepositoryAdapter:
+    return ApplicationRepositoryAdapter(session=session)
+
+
+def get_get_application_use_case(
+    get_application_port: GetApplicationPort = Depends(get_application_db_adapter),
     provider_details_port: ProviderDetailsPort = Depends(get_provider_details_port),
-) -> ReadApplicationUseCase:
-    return ReadApplicationUseCase(
-        session=session, provider_details_port=provider_details_port
+) -> GetApplicationUseCase:
+    return GetApplicationUseCase(
+        get_application_port=get_application_port,
+        provider_details_port=provider_details_port,
+    )
+
+
+def get_create_application_use_case(
+    create_application_port: CreateApplicationPort = Depends(
+        get_application_db_adapter
+    ),
+    gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
+) -> CreateApplicationUseCase:
+    return CreateApplicationUseCase(
+        create_application_port=create_application_port,
+        gov_notify_port=gov_notify_port,
+    )
+
+
+def get_list_applications_use_case(
+    list_applications_port: ListApplicationsPort = Depends(get_application_db_adapter),
+) -> ListApplicationsUseCase:
+    return ListApplicationsUseCase(list_applications_port=list_applications_port)
+
+
+def get_make_merits_decision_use_case(
+    make_merits_decision_port: MakeMeritsDecisionPort = Depends(
+        get_application_db_adapter
+    ),
+    gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
+) -> MakeMeritsDecisionUseCase:
+    return MakeMeritsDecisionUseCase(
+        make_merits_decision_port=make_merits_decision_port,
+        gov_notify_port=gov_notify_port,
     )
 
 
 def get_upload_coroners_letter_use_case(
     sds_port: SdsPort = Depends(get_sds_port),
-    session: Session = Depends(get_session),
+    upload_coroners_letter_port: UploadCoronersLetterPort = Depends(
+        get_application_db_adapter
+    ),
 ) -> UploadCoronersLetterUseCase:
-    return UploadCoronersLetterUseCase(sds_port=sds_port, session=session)
+    return UploadCoronersLetterUseCase(
+        sds_port=sds_port,
+        upload_coroners_letter_port=upload_coroners_letter_port,
+    )
 
 
 @router.get("/{laa_reference}", response_model=ApplicationResponse)
 async def read_application(
     laa_reference: str,
-    use_case: ReadApplicationUseCase = Depends(get_read_application_use_case),
+    use_case: GetApplicationUseCase = Depends(get_get_application_use_case),
     # current_user: User = Depends(get_current_active_user),
 ) -> ApplicationResponse:
     """Get information about a given application."""
@@ -98,12 +139,11 @@ async def read_application(
 
 @router.get("/")
 async def read_all_applications(
-    session: Session = Depends(get_session),
+    use_case: ListApplicationsUseCase = Depends(get_list_applications_use_case),
     # current_user: User = Depends(get_current_active_user),
 ) -> Sequence[Application]:
     """Read all the applications currently in the database."""
-    applications = session.exec(select(Application)).all()
-    return applications
+    return use_case.execute()
 
 
 @router.post(
@@ -134,173 +174,28 @@ async def upload_coroners_letter(
 @router.post("/", response_model=ApplicationResponse, status_code=201)
 def create_application(
     request: ApplicationCreate,
-    session: Session = Depends(get_session),
-    gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
+    use_case: CreateApplicationUseCase = Depends(get_create_application_use_case),
     # current_user: User = Depends(get_current_active_user),
 ) -> Application:
-    """Creates a new application with proceedings, public bodies."""
-    proceedings_to_add = []
-    public_bodies_to_add = []
-
-    for proceeding in request.proceedings:
-        code_str = proceeding.proceeding_id
-        proceeding_to_add = ApplicationProceeding(proceeding_id=ProceedingId(code_str))
-        proceedings_to_add.append(proceeding_to_add)
-
-    for public_body in request.publicBodies:
-        public_body_enum = PublicBodyId(public_body.public_body_id)
-        public_body_to_add = ApplicationPublicBody(public_body_id=public_body_enum)
-        public_bodies_to_add.append(public_body_to_add)
-
-    correspondence_address = None
-    if request.client.correspondence_address is not None:
-        correspondence_address = Address(
-            **request.client.correspondence_address.model_dump()
-        )
-        session.add(correspondence_address)
-
-    home_address_id = None
-    if request.client.home_address is not None:
-        home_address_to_add = Address(**request.client.home_address.model_dump())
-        session.add(home_address_to_add)
-        session.flush()
-        session.refresh(home_address_to_add)
-        home_address_id = home_address_to_add.address_id
-    else:
-        session.flush()
-
-    correspondence_address_id = None
-    if correspondence_address is not None:
-        session.refresh(correspondence_address)
-        correspondence_address_id = correspondence_address.address_id
-
-    client_data = request.client.model_dump(
-        exclude={"correspondence_address", "home_address"}
-    )
-    client_data["correspondence_address_source"] = AddressSource(
-        client_data["correspondence_address_source"]
-    )
-
-    new_client = Client(
-        **client_data,
-        correspondence_address_id=correspondence_address_id,
-        home_address_id=home_address_id,
-        correspondence_recipient_type=(
-            request.client.correspondence_recipient.recipient_type
-            if not request.client.is_client_correspondence_recipient
-            and request.client.correspondence_recipient is not None
-            else None
-        ),
-        correspondence_recipient_name=(
-            request.client.correspondence_recipient.recipient_name
-            if not request.client.is_client_correspondence_recipient
-            and request.client.correspondence_recipient is not None
-            else None
-        ),
-    )
-    session.add(new_client)
-    session.flush()
-    session.refresh(new_client)
-
-    new_deceased = Deceased(
-        deceased_first_name=request.deceased.deceased_first_name,
-        deceased_last_name=request.deceased.deceased_last_name,
-        deceased_date_of_birth=request.deceased.deceased_date_of_birth,
-        deceased_date_of_death=request.deceased.deceased_date_of_death,
-        coroners_reference=request.deceased.coroners_reference,
-        further_information=request.deceased.further_information,
-        client_relationship_to_deceased=request.deceased.client_relationship_to_deceased,
-        client_id=new_client.client_id,
-    )
-    session.add(new_deceased)
-    session.flush()
-    session.refresh(new_deceased)
-
-    new_provider = Provider(
-        firm_code=request.provider.firm_code,
-        office_id=request.provider.office_id,
-        email_address=request.provider.email_address,
-    )
-    session.add(new_provider)
-    session.flush()
-    session.refresh(new_provider)
-
-    new_application = Application(
-        client_id=new_client.client_id,
-        deceased_id=new_deceased.deceased_id,
-        proceedings=proceedings_to_add,
-        public_bodies=public_bodies_to_add,
-        provider_id=new_provider.provider_id,
-        coroners_letter_id=request.coroners_letter_id,
-    )
-    session.add(new_application)
-
-    # Flush to generate laa_reference without committing transaction
-    session.flush()
-    session.refresh(new_application)
-
-    try:
-        gov_notify_port.send_application_submit_confirmation_email(
-            new_application, request.provider.email_address
-        )
-        session.commit()
-    except Exception:
-        # Rollback database changes if email fails
-        session.rollback()
-        raise
-
-    session.refresh(new_application)
-    return new_application
+    """Creates a new application with proceedings and public bodies."""
+    return use_case.execute(request)
 
 
 @router.patch("/{laa_reference}/merits-decision", status_code=204)
 def patch_merits_decision(
     laa_reference: str,
     request: MeritsDecisionUpdateRefuse,
-    session: Session = Depends(get_session),
-    gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
+    use_case: MakeMeritsDecisionUseCase = Depends(get_make_merits_decision_use_case),
     # current_user: User = Depends(get_current_active_user),
 ) -> Response:
     """Set the merits decision on the single proceeding for a given application."""
-    application = session.get(Application, int(laa_reference))
-    if application is None:
+    try:
+        use_case.execute(laa_reference, request)
+    except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
-
-    if not application.proceedings:
+    except ProceedingsNotFoundError:
         raise HTTPException(
             status_code=404, detail="No proceedings found for application"
         )
-
-    proceeding = application.proceedings[0]
-    proceeding.merits_decision = request.merits_decision
-    proceeding.reason_for_refusal = (
-        request.reason_for_refusal.value if request.reason_for_refusal else None
-    )
-    proceeding.justification = request.justification
-
-    application.overall_decision = request.merits_decision
-
-    session.add(application)
-    session.add(proceeding)
-
-    decision = MeritsDecision(request.merits_decision)
-
-    try:
-        session.commit()
-    except Exception:
-        session.rollback()
-        raise
-
-    if decision == MeritsDecision.REFUSED:
-        try:
-            gov_notify_port.send_application_refused_decision_email(
-                application, proceeding, application.provider.email_address
-            )
-        except Exception:
-            logger.warning(
-                "Failed to send refusal email for application %s",
-                application.laa_reference,
-                exc_info=True,
-            )
 
     return Response(status_code=204)
