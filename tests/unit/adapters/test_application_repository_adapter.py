@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock, call
+import uuid
 
 import pytest
 from sqlmodel import select
@@ -49,7 +50,7 @@ def _make_request(with_addresses: bool = True) -> ApplicationCreate:
 
     return ApplicationCreate.model_validate(
         {
-            "coronersLetterId": "test-file_abc123.pdf",
+            "coronersLetterId": str(uuid.uuid4()),
             "proceedings": [{"proceedingId": "TEST1"}],
             "client": client,
             "publicBodies": [{"publicBodyId": "Department for Transport"}],
@@ -120,7 +121,7 @@ def test_create_application_persists_application_and_nested_data(session):
         == PublicBodyId.DEPARTMENT_FOR_TRANSPORT
     )
     assert stored_application.provider.email_address == "provider@example.com"
-    assert stored_application.coroners_letter.sds_id == "test-file_abc123.pdf"
+    assert stored_application.coroners_letter_id == request.coroners_letter_id
 
 
 def test_create_application_handles_request_without_home_or_correspondence_address(
