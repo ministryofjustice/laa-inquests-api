@@ -1,6 +1,6 @@
 import uuid
 
-from app.models.application.index import CoronersLetter
+from app.domain.coroners_letter import CoronersLetter
 from app.ports.sds_port import SdsPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 from app.use_cases.exceptions import CoronersLetterUploadError
