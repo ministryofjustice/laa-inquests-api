@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, Fil
 from sqlmodel import Session
 from fastapi.responses import StreamingResponse
 from typing import Sequence
+from mimetypes import guess_type
 
 # from app.auth.security import get_current_active_user
 from app.adapters.sds_adapter import SdsAdapter
@@ -160,9 +161,17 @@ def retrieve_coroners_letter(
             status_code=500, detail="Failed to retrieve coroners letter"
         )
 
+    mime_type = guess_type(result.file_name)
+    supported_mime_types = ["image/png", "image/jpeg", "image/bmp", "application/pdf"]
+    if mime_type[0] not in supported_mime_types:
+        raise HTTPException(
+            status_code=415,
+            detail="Returned file type is not supported for streaming. Supported file types are: .png, .jpg, .jpeg, .bmp, .pdf",
+        )
+
     return StreamingResponse(
         result.content,
-        media_type="image/png",
+        media_type=mime_type[0],
         headers={"Content-Disposition": f'inline; filename="{result.file_name}"'},
     )
 
