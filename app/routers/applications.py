@@ -33,8 +33,6 @@ from app.use_cases.exceptions import (
     ProceedingsNotFoundError,
 )
 from app.use_cases.get_application import GetApplicationUseCase
-from app.use_cases.exceptions import CoronersLetterUploadError
-
 from app.adapters.gov_notify import GovNotifyAdapter
 from app.ports.gov_notify_port import GovNotifyPort
 from app.use_cases.list_applications import ListApplicationsUseCase
