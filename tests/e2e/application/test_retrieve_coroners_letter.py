@@ -11,11 +11,13 @@ from app.use_cases.exceptions import (
 from sqlmodel import select
 
 
-def _add_coroners_letter_to_application(session, sds_id: str, file_name: str) -> int:
+def _add_coroners_letter_to_application(
+    session, sds_file_name: str, file_name: str
+) -> int:
     application = session.exec(select(Application)).first()
 
     coroners_letter = CoronersLetter(
-        sds_id=sds_id,
+        sds_file_name=sds_file_name,
         file_name=file_name,
     )
     session.add(coroners_letter)
@@ -32,7 +34,7 @@ def _add_coroners_letter_to_application(session, sds_id: str, file_name: str) ->
 def test_200_retrieve_coroners_letter_returns_file_bytes(session, client, auth_token):
     laa_reference = _add_coroners_letter_to_application(
         session=session,
-        sds_id="test-document_abc123.pdf",
+        sds_file_name="test-document_abc123.pdf",
         file_name="test-document.pdf",
     )
 
@@ -54,7 +56,7 @@ def test_404_retrieve_coroners_letter_when_sds_document_not_found(
 ):
     laa_reference = _add_coroners_letter_to_application(
         session=session,
-        sds_id="missing-document.pdf",
+        sds_file_name="missing-document.pdf",
         file_name="test-document.pdf",
     )
 
@@ -84,7 +86,7 @@ def test_400_retrieve_coroners_letter_when_sds_document_id_is_invalid(
 ):
     laa_reference = _add_coroners_letter_to_application(
         session=session,
-        sds_id="bad-id",
+        sds_file_name="bad-id",
         file_name="test-document.pdf",
     )
 
@@ -116,7 +118,7 @@ def test_500_retrieve_coroners_letter_when_sds_retrieval_fails(
 ):
     laa_reference = _add_coroners_letter_to_application(
         session=session,
-        sds_id="test-document_abc123.pdf",
+        sds_file_name="test-document_abc123.pdf",
         file_name="test-document.pdf",
     )
 

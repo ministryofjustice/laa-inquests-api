@@ -12,13 +12,14 @@ class RetrieveCoronersLetterUseCase:
 
     def execute(self, laa_reference: str) -> CoronersLetterResult:
         application = self.session.get(Application, int(laa_reference))
-        sds_id = application.coroners_letter.sds_id
-        if sds_id is None or not sds_id.strip():
+        sds_file_name = application.coroners_letter.sds_file_name
+        if sds_file_name is None or not sds_file_name.strip():
+            # TODO: Change this to be a different exception type related to the sds_file_name
             raise InvalidCoronersLetterDocumentIdError(
                 "Invalid coroners letter document id"
             )
 
         return CoronersLetterResult(
             file_name=application.coroners_letter.file_name,
-            content=self.sds_port.retrieve_coroners_letter(sds_id),
+            content=self.sds_port.retrieve_coroners_letter(sds_file_name),
         )
