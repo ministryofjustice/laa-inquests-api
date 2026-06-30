@@ -2,7 +2,7 @@ from sqlmodel import Session
 
 from app.models.application.index import Application, CoronersLetterResult
 from app.ports.sds_port import SdsPort
-from app.use_cases.exceptions import InvalidCoronersLetterDocumentIdError
+from app.use_cases.exceptions import CoronersLetterRetrievalError
 
 
 class RetrieveCoronersLetterUseCase:
@@ -14,10 +14,7 @@ class RetrieveCoronersLetterUseCase:
         application = self.session.get(Application, int(laa_reference))
         sds_file_name = application.coroners_letter.sds_file_name
         if sds_file_name is None or not sds_file_name.strip():
-            # TODO: Change this to be a different exception type related to the sds_file_name
-            raise InvalidCoronersLetterDocumentIdError(
-                "Invalid coroners letter document id"
-            )
+            raise CoronersLetterRetrievalError("Could not retrieve coroners letter")
 
         return CoronersLetterResult(
             file_name=application.coroners_letter.file_name,

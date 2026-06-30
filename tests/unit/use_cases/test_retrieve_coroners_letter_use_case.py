@@ -8,7 +8,6 @@ from app.ports.sds_port import SdsPort
 from app.use_cases.exceptions import (
     CoronersLetterNotFoundError,
     CoronersLetterRetrievalError,
-    InvalidCoronersLetterDocumentIdError,
 )
 
 
@@ -92,7 +91,7 @@ def test_execute_raises_error_when_sds_file_name_is_none():
     sds_port = MagicMock(spec=SdsPort)
     use_case = _make_use_case(session, sds_port)
 
-    with pytest.raises(InvalidCoronersLetterDocumentIdError):
+    with pytest.raises(CoronersLetterRetrievalError):
         use_case.execute("1")
 
     sds_port.retrieve_coroners_letter.assert_not_called()
@@ -106,7 +105,7 @@ def test_execute_raises_error_when_sds_file_name_is_blank():
     sds_port = MagicMock(spec=SdsPort)
     use_case = _make_use_case(session, sds_port)
 
-    with pytest.raises(InvalidCoronersLetterDocumentIdError):
+    with pytest.raises(CoronersLetterRetrievalError):
         use_case.execute("1")
 
     sds_port.retrieve_coroners_letter.assert_not_called()
