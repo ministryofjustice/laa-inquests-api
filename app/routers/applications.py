@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, Fil
 from sqlmodel import Session
 from typing import Sequence
 
-# from app.auth.security import get_current_active_user
 from app.adapters.sds_adapter import SdsAdapter
 from app.adapters.application_repository_adapter import ApplicationRepositoryAdapter
 from app.db import get_session
@@ -32,7 +31,6 @@ from app.use_cases.exceptions import (
 )
 from app.use_cases.get_application import GetApplicationUseCase
 
-# from app.models.user import User
 from app.adapters.gov_notify import GovNotifyAdapter
 from app.ports.gov_notify_port import GovNotifyPort
 from app.use_cases.list_applications import ListApplicationsUseCase
@@ -129,7 +127,6 @@ def get_upload_coroners_letter_use_case(
 async def read_application(
     laa_reference: str,
     use_case: GetApplicationUseCase = Depends(get_get_application_use_case),
-    # current_user: User = Depends(get_current_active_user),
 ) -> ApplicationResponse:
     """Get information about a given application."""
     try:
@@ -177,7 +174,6 @@ async def upload_coroners_letter(
 def create_application(
     request: ApplicationCreate,
     use_case: CreateApplicationUseCase = Depends(get_create_application_use_case),
-    # current_user: User = Depends(get_current_active_user),
 ) -> Application:
     """Creates a new application with proceedings and public bodies."""
     return use_case.execute(request)
@@ -188,7 +184,6 @@ def patch_merits_decision(
     laa_reference: str,
     request: MeritsDecisionUpdateRefuse,
     use_case: MakeMeritsDecisionUseCase = Depends(get_make_merits_decision_use_case),
-    # current_user: User = Depends(get_current_active_user),
 ) -> Response:
     """Set the merits decision on the single proceeding for a given application."""
     try:
