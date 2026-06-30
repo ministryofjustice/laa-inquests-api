@@ -182,16 +182,16 @@ def test_retrieve_coroners_letter_gets_correct_url_with_file_key_param():
 
     mock_get_file_response = _mock_retrieve_metadata_response()
 
-    mock_stream_cm = MagicMock()
-    mock_stream_cm.__enter__ = MagicMock(
+    mock_stream = MagicMock()
+    mock_stream.__enter__ = MagicMock(
         return_value=MagicMock(iter_bytes=lambda: iter([]))
     )
-    mock_stream_cm.__exit__ = MagicMock(return_value=False)
+    mock_stream.__exit__ = MagicMock(return_value=False)
 
     with (
         patch("httpx.post", return_value=_mock_token_response()),
         patch("httpx.get", return_value=mock_get_file_response),
-        patch("httpx.stream", return_value=mock_stream_cm) as mock_stream,
+        patch("httpx.stream", return_value=mock_stream) as mock_stream,
     ):
         list(adapter.retrieve_coroners_letter("letter.pdf"))
 
@@ -206,14 +206,14 @@ def test_retrieve_coroners_letter_returns_response_bytes():
     mock_stream_response = MagicMock()
     mock_stream_response.iter_bytes.return_value = iter([b"chunk1", b"chunk2"])
 
-    mock_stream_cm = MagicMock()
-    mock_stream_cm.__enter__ = MagicMock(return_value=mock_stream_response)
-    mock_stream_cm.__exit__ = MagicMock(return_value=False)
+    mock_stream = MagicMock()
+    mock_stream.__enter__ = MagicMock(return_value=mock_stream_response)
+    mock_stream.__exit__ = MagicMock(return_value=False)
 
     with (
         patch("httpx.post", return_value=_mock_token_response()),
         patch("httpx.get", return_value=mock_get_file_response),
-        patch("httpx.stream", return_value=mock_stream_cm),
+        patch("httpx.stream", return_value=mock_stream),
     ):
         result = b"".join(adapter.retrieve_coroners_letter("letter.pdf"))
 

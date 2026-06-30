@@ -74,12 +74,14 @@ def test_execute_returns_iterator_from_port():
         coroners_letter=_make_coroners_letter(sds_file_name="letter_abc.pdf")
     )
     sds_port = MagicMock(spec=SdsPort)
-    sds_port.retrieve_coroners_letter.return_value = iter([b"chunk1", b"chunk2"])
+
+    expected_content = iter([b"chunk1", b"chunk2"])
+    sds_port.retrieve_coroners_letter.return_value = expected_content
 
     use_case = _make_use_case(session, sds_port)
-    result = b"".join(use_case.execute("1").content)
+    response = use_case.execute("1").content
 
-    assert result == b"chunk1chunk2"
+    assert response == expected_content
 
 
 def test_execute_raises_error_when_sds_file_name_is_none():
