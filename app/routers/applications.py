@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File
 from sqlmodel import Session
 from fastapi.responses import StreamingResponse
-from sqlmodel import Session
 from typing import Sequence
 
 # from app.auth.security import get_current_active_user
@@ -33,6 +32,7 @@ from app.use_cases.exceptions import (
     CoronersLetterNotFoundError,
     CoronersLetterRetrievalError,
     InvalidCoronersLetterDocumentIdError,
+    ProceedingsNotFoundError,
 )
 
 # from app.models.user import User
@@ -236,6 +236,7 @@ def patch_merits_decision(
         use_case.execute(laa_reference, request)
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
+    # TODO: Write test for this exception handling
     except ProceedingsNotFoundError:
         raise HTTPException(
             status_code=404, detail="No proceedings found for application"
