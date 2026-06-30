@@ -10,10 +10,19 @@ from app.ports.entra_auth_port import EntraAuthPort
 _http_bearer = HTTPBearer(auto_error=False)
 
 
+def _configured_entra_scopes() -> set[str]:
+    return {
+        scope.strip()
+        for scope in Config.ENTRA_ALLOWED_SCOPES.split(",")
+        if scope.strip()
+    }
+
+
 def get_entra_auth_port() -> EntraAuthPort:
     return EntraAuthAdapter(
         tenant_id=Config.ENTRA_TENANT_ID,
-        client_id=Config.ENTRA_CLIENT_ID,
+        client_id=Config.ENTRA_API_CLIENT_ID,
+        default_scopes=_configured_entra_scopes(),
     )
 
 

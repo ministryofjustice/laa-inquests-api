@@ -25,9 +25,35 @@ def test_verify_token_does_not_raise_when_token_is_valid(adapter):
     adapter._jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
 
     with patch(
-        "app.adapters.entra_auth_adapter.jwt.decode", return_value={"sub": "user"}
+        "app.adapters.entra_auth_adapter.jwt.decode",
+        return_value={"sub": "user", "scp": "User.Provider"},
     ):
         adapter.verify_token("valid.jwt.token")
+
+
+def test_verify_token_raises_403_when_required_scope_missing(adapter):
+    mock_signing_key = MagicMock()
+    adapter._jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
+
+    with patch(
+        "app.adapters.entra_auth_adapter.jwt.decode",
+        return_value={"sub": "user", "scp": "User.Other"},
+    ):
+        with pytest.raises(HTTPException) as exc_info:
+            adapter.verify_token("valid.jwt.token", {"User.Provider"})
+
+    assert exc_info.value.status_code == 403
+
+
+def test_verify_token_allows_required_scope_via_roles_claim(adapter):
+    mock_signing_key = MagicMock()
+    adapter._jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
+
+    with patch(
+        "app.adapters.entra_auth_adapter.jwt.decode",
+        return_value={"sub": "service", "roles": ["User.Caseworker"]},
+    ):
+        adapter.verify_token("valid.jwt.token", {"User.Caseworker"})
 
 
 @pytest.mark.parametrize(
