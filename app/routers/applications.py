@@ -242,6 +242,7 @@ def patch_merits_decision(
 ) -> Response:
     """Set the merits decision on the single proceeding for a given application."""
     try:
+        # TODO: Refactor to not pass in request directly
         use_case.execute(laa_reference, request)
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
