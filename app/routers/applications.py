@@ -139,7 +139,7 @@ def get_coroners_letter_use_case(
 @router.get(
     "/{laa_reference}/coroners-letter",
     response_class=StreamingResponse,
-    responses={200: {"content": {"application/octet-stream": {}}}},
+    responses={200: {"content": {"image/png": {}}}},
 )
 def retrieve_coroners_letter(
     laa_reference: str,
@@ -162,8 +162,8 @@ def retrieve_coroners_letter(
 
     return StreamingResponse(
         result.content,
-        media_type="application/octet-stream",
-        headers={"Content-Disposition": f'attachment; filename="{result.file_name}"'},
+        media_type="image/png",
+        headers={"Content-Disposition": f'inline; filename="{result.file_name}"'},
     )
 
 

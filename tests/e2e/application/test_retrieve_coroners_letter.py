@@ -47,7 +47,7 @@ def test_200_retrieve_coroners_letter_returns_file_bytes(session, client, auth_t
     assert response.content == b"file bytes"
     assert (
         response.headers["content-disposition"]
-        == 'attachment; filename="test-document.pdf"'
+        == 'inline; filename="test-document.pdf"'
     )
 
 
