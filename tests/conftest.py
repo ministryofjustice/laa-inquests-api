@@ -191,13 +191,19 @@ def entra_auth_client_fixture(session: Session):
     def get_sds_port_override():
         mock_sds = MagicMock()
         mock_sds.save_coroners_letter.return_value = SDSUploadCoronersLetterResponse(
-            sds_id="test-file_abc123.pdf",
+            sds_file_name="test-file_abc123.pdf",
             status="SUCCESS",
         )
         return mock_sds
 
     def get_entra_auth_port_override():
         mock_auth = MagicMock()
+        token_scopes = {
+            "valid-provider-entra-token": {"User.Provider"},
+            "valid-caseworker-entra-token": {"User.Caseworker"},
+            # Backward compatible alias for existing tests that used one generic token.
+            "valid-entra-token": {"User.Provider"},
+        }
 
         def verify_token(token: str, required_scopes: set[str] | None = None) -> None:
             if token == "invalid-token":
@@ -207,17 +213,17 @@ def entra_auth_client_fixture(session: Session):
                     headers={"WWW-Authenticate": "Bearer"},
                 )
 
-            if required_scopes and token == "valid-caseworker-entra-token":
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Insufficient permissions",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-
-            if token not in {"valid-entra-token", "valid-caseworker-entra-token"}:
+            if token not in token_scopes:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Could not validate credentials",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+            if required_scopes and required_scopes.isdisjoint(token_scopes[token]):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Insufficient permissions",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
 

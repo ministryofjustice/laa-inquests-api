@@ -14,7 +14,10 @@ from app.models.application.index import (
 )
 
 from app.adapters.provider_details_adapter import ProviderDetailsAdapter
-from app.routers.dependencies import verify_entra_provider_token
+from app.routers.dependencies import (
+    verify_entra_caseworker_token,
+    verify_entra_provider_token,
+)
 from app.config import Config
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.get_application_port import GetApplicationPort
@@ -127,6 +130,7 @@ def get_upload_coroners_letter_use_case(
 async def read_application(
     laa_reference: str,
     use_case: GetApplicationUseCase = Depends(get_get_application_use_case),
+    _: None = Depends(verify_entra_caseworker_token),
 ) -> ApplicationResponse:
     """Get information about a given application."""
     try:
@@ -138,7 +142,7 @@ async def read_application(
 @router.get("/")
 async def read_all_applications(
     use_case: ListApplicationsUseCase = Depends(get_list_applications_use_case),
-    _: None = Depends(verify_entra_provider_token),
+    _: None = Depends(verify_entra_caseworker_token),
 ) -> Sequence[Application]:
     """Read all the applications currently in the database."""
     return use_case.execute()
@@ -154,6 +158,7 @@ async def upload_coroners_letter(
     use_case: UploadCoronersLetterUseCase = Depends(
         get_upload_coroners_letter_use_case
     ),
+    _: None = Depends(verify_entra_provider_token),
 ) -> UploadCoronersLetterResponse:
     """Upload a coroner's letter to document storage and return its file ID."""
     contents = await file.read()
@@ -173,6 +178,7 @@ async def upload_coroners_letter(
 def create_application(
     request: ApplicationCreate,
     use_case: CreateApplicationUseCase = Depends(get_create_application_use_case),
+    _: None = Depends(verify_entra_provider_token),
 ) -> Application:
     """Creates a new application with proceedings and public bodies."""
     return use_case.execute(request)
@@ -183,6 +189,7 @@ def patch_merits_decision(
     laa_reference: str,
     request: MeritsDecisionUpdateRefuse,
     use_case: MakeMeritsDecisionUseCase = Depends(get_make_merits_decision_use_case),
+    _: None = Depends(verify_entra_caseworker_token),
 ) -> Response:
     """Set the merits decision on the single proceeding for a given application."""
     try:

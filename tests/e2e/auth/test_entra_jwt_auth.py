@@ -1,9 +1,56 @@
+import io
+import uuid
+
+
+def _create_application_payload():
+    return {
+        "coronersLetterId": str(uuid.uuid4()),
+        "proceedings": [{"proceedingId": "TEST1"}],
+        "client": {
+            "clientFirstName": "Test",
+            "clientLastName": "Surname",
+            "dateOfBirth": "01-01-1990",
+            "nationalInsuranceNumber": "AB12345A",
+            "correspondenceAddressSource": "USE_SPECIFIED_ADDRESS",
+            "correspondenceAddress": {
+                "addressLine1": "2 Example Lane",
+                "townOrCity": "London",
+                "postcode": "SW1A 1AA",
+            },
+            "hasNoFixedAbode": False,
+            "homeAddress": {
+                "addressLine1": "1 Example Lane",
+                "addressLine2": "Flat 2",
+                "townOrCity": "London",
+                "county": "Greater London",
+                "postcode": "SW1A 1AA",
+            },
+            "isClientCorrespondenceRecipient": True,
+        },
+        "publicBodies": [{"publicBodyId": "Department for Transport"}],
+        "deceased": {
+            "deceasedFirstName": "Test",
+            "deceasedLastName": "Surname",
+            "deceasedDateOfBirth": "01-01-2000",
+            "deceasedDateOfDeath": "01-01-2025",
+            "coronersReference": "COR-2025-001",
+            "furtherInformation": "Further details to be confirmed",
+            "clientRelationshipToDeceased": "guardian",
+        },
+        "provider": {
+            "firmCode": "0A123B",
+            "officeId": "001",
+            "emailAddress": "provider@example.com",
+        },
+    }
+
+
 def test_200_read_all_applications_returns_200_when_valid_entra_token(
     entra_auth_client,
 ):
     response = entra_auth_client.get(
         "/applications",
-        headers={"Authorization": "Bearer valid-entra-token"},
+        headers={"Authorization": "Bearer valid-caseworker-entra-token"},
     )
 
     assert response.status_code == 200
@@ -33,7 +80,133 @@ def test_403_read_all_applications_returns_403_when_scope_is_not_provider(
 ):
     response = entra_auth_client.get(
         "/applications",
+        headers={"Authorization": "Bearer valid-provider-entra-token"},
+    )
+
+    assert response.status_code == 403
+
+
+def test_200_read_application_by_id_returns_200_when_caseworker_token(
+    entra_auth_client,
+):
+    response = entra_auth_client.get(
+        "/applications/1",
         headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+    )
+
+    assert response.status_code == 200
+
+
+def test_403_read_application_by_id_returns_403_when_provider_token(
+    entra_auth_client,
+):
+    response = entra_auth_client.get(
+        "/applications/1",
+        headers={"Authorization": "Bearer valid-provider-entra-token"},
+    )
+
+    assert response.status_code == 403
+
+
+def test_201_create_application_returns_201_when_provider_token(
+    entra_auth_client,
+):
+    response = entra_auth_client.post(
+        "/applications",
+        json=_create_application_payload(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": "Bearer valid-provider-entra-token",
+        },
+    )
+
+    assert response.status_code == 201
+
+
+def test_403_create_application_returns_403_when_caseworker_token(
+    entra_auth_client,
+):
+    response = entra_auth_client.post(
+        "/applications",
+        json=_create_application_payload(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": "Bearer valid-caseworker-entra-token",
+        },
+    )
+
+    assert response.status_code == 403
+
+
+def test_201_upload_coroners_letter_returns_201_when_provider_token(
+    entra_auth_client,
+):
+    response = entra_auth_client.post(
+        "/applications/upload-coroners-letter",
+        files={
+            "file": (
+                "coroners_letter.pdf",
+                io.BytesIO(b"test content"),
+                "application/pdf",
+            )
+        },
+        headers={"Authorization": "Bearer valid-provider-entra-token"},
+    )
+
+    assert response.status_code == 201
+
+
+def test_403_upload_coroners_letter_returns_403_when_caseworker_token(
+    entra_auth_client,
+):
+    response = entra_auth_client.post(
+        "/applications/upload-coroners-letter",
+        files={
+            "file": (
+                "coroners_letter.pdf",
+                io.BytesIO(b"test content"),
+                "application/pdf",
+            )
+        },
+        headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+    )
+
+    assert response.status_code == 403
+
+
+def test_204_patch_merits_decision_returns_204_when_caseworker_token(
+    entra_auth_client,
+):
+    response = entra_auth_client.patch(
+        "/applications/1/merits-decision",
+        json={
+            "meritsDecision": "REFUSED",
+            "reasonForRefusal": "NOT_IN_SCOPE",
+            "justification": "The matter does not meet scope requirements.",
+        },
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": "Bearer valid-caseworker-entra-token",
+        },
+    )
+
+    assert response.status_code == 204
+
+
+def test_403_patch_merits_decision_returns_403_when_provider_token(
+    entra_auth_client,
+):
+    response = entra_auth_client.patch(
+        "/applications/1/merits-decision",
+        json={
+            "meritsDecision": "REFUSED",
+            "reasonForRefusal": "NOT_IN_SCOPE",
+            "justification": "The matter does not meet scope requirements.",
+        },
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": "Bearer valid-provider-entra-token",
+        },
     )
 
     assert response.status_code == 403
