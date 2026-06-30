@@ -75,6 +75,16 @@ jobs:
     name: Pytest Unit Tests
     uses: ./.github/workflows/unit-tests.yaml
 
+  build-ghcr:
+    name: Build and Push to GHCR
+    if: github.ref == 'refs/heads/main'
+    needs:
+      - unit-tests
+    uses: ./.github/workflows/build-ghcr.yaml
+    permissions:
+      contents: read
+      packages: write
+
   deploy-uat:
     if: ${{ !contains(github.actor, '[bot]') }}
     runs-on: ubuntu-latest
