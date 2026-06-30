@@ -29,7 +29,7 @@ from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
-    CoronersLetterSaveError,
+    CoronersLetterUploadError,
     ProceedingsNotFoundError,
 )
 from app.use_cases.get_application import GetApplicationUseCase
@@ -38,7 +38,7 @@ from app.adapters.gov_notify import GovNotifyAdapter
 from app.ports.gov_notify_port import GovNotifyPort
 from app.use_cases.list_applications import ListApplicationsUseCase
 from app.use_cases.make_merits_decision import MakeMeritsDecisionUseCase
-from app.use_cases.save_coroners_letter import SaveCoronersLetterUseCase
+from app.use_cases.upload_coroners_letter import UploadCoronersLetterUseCase
 
 
 router = APIRouter(
