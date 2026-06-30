@@ -7,7 +7,6 @@ from app.adapters.entra_auth_adapter import EntraAuthAdapter
 from app.config import Config
 from app.ports.entra_auth_port import EntraAuthPort
 
-
 _http_bearer = HTTPBearer(auto_error=False)
 
 
@@ -28,4 +27,5 @@ def verify_entra_token(
             detail="Not authenticated",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
     entra_auth.verify_token(credentials.credentials)

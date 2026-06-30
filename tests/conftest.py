@@ -7,7 +7,7 @@ from app.db import get_session
 from app.db.session import CustomSession
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
-from app.auth.security import get_entra_auth_port
+from app.routers.dependencies import get_entra_auth_port
 from app.routers.applications import (
     get_provider_details_port,
     get_gov_notify_port,

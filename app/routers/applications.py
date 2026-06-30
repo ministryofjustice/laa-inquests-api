@@ -15,7 +15,7 @@ from app.models.application.index import (
 )
 
 from app.adapters.provider_details_adapter import ProviderDetailsAdapter
-from app.auth.security import verify_entra_token
+from app.routers.dependencies import verify_entra_token
 from app.config import Config
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.get_application_port import GetApplicationPort
