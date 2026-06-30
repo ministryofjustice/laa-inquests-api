@@ -75,6 +75,10 @@ class SdsAdapter(SdsPort):
         )
 
     def retrieve_coroners_letter(self, file_name: str) -> Iterator[bytes]:
+        if not file_name or not file_name.strip():
+            raise InvalidCoronersLetterDocumentIdError(
+                "Invalid coroners letter document id"
+            )
         token = self._get_token()
         try:
             response = httpx.get(

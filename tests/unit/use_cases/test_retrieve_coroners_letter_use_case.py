@@ -83,29 +83,25 @@ def test_execute_returns_iterator_from_port():
     assert response == expected_content
 
 
-def test_execute_raises_error_when_sds_file_name_is_none():
+def test_execute_raises_error_when_application_is_none():
     session = MagicMock()
-    session.get.return_value = _make_application(
-        coroners_letter=_make_coroners_letter(sds_file_name=None)
-    )
+    session.get.return_value = None
     sds_port = MagicMock(spec=SdsPort)
     use_case = _make_use_case(session, sds_port)
 
-    with pytest.raises(CoronersLetterRetrievalError):
+    with pytest.raises(CoronersLetterNotFoundError):
         use_case.execute("1")
 
     sds_port.retrieve_coroners_letter.assert_not_called()
 
 
-def test_execute_raises_error_when_sds_file_name_is_blank():
+def test_execute_raises_error_when_application_coroners_letter_is_none():
     session = MagicMock()
-    session.get.return_value = _make_application(
-        coroners_letter=_make_coroners_letter(sds_file_name="   ")
-    )
+    session.get.return_value = _make_application(coroners_letter=None)
     sds_port = MagicMock(spec=SdsPort)
     use_case = _make_use_case(session, sds_port)
 
-    with pytest.raises(CoronersLetterRetrievalError):
+    with pytest.raises(CoronersLetterNotFoundError):
         use_case.execute("1")
 
     sds_port.retrieve_coroners_letter.assert_not_called()

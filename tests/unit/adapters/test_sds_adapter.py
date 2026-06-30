@@ -220,6 +220,26 @@ def test_retrieve_coroners_letter_returns_response_bytes():
     assert result == b"chunk1chunk2"
 
 
+def test_retrieve_coroners_letter_id_with_None_filename_raises_InvalidCoronersLetterDocumentIdError():
+    adapter = _make_adapter()
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        pytest.raises(InvalidCoronersLetterDocumentIdError),
+    ):
+        list(adapter.retrieve_coroners_letter(None))
+
+
+def test_retrieve_coroners_letter_id_with_blank_filename_raises_InvalidCoronersLetterDocumentIdError():
+    adapter = _make_adapter()
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        pytest.raises(InvalidCoronersLetterDocumentIdError),
+    ):
+        list(adapter.retrieve_coroners_letter(""))
+
+
 def test_retrieve_coroners_letter_raises_not_found_for_sds_404(caplog):
     adapter = _make_adapter()
 
