@@ -1,12 +1,13 @@
 import pytest
 from unittest.mock import MagicMock
+from passlib.hash import argon2
 from sqlmodel import SQLModel, create_engine, Session, StaticPool
 from app import api
 from app.db import get_session
 from app.db.session import CustomSession
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
-from app.auth.security import get_password_hash, get_entra_auth_port
+from app.auth.security import get_entra_auth_port
 from app.routers.applications import (
     get_provider_details_port,
     get_gov_notify_port,
@@ -51,7 +52,7 @@ def session_fixture():
             password = user.get("password")
             disabled = user.get("disabled")
 
-            password = get_password_hash(password)
+            password = argon2.hash(password)
             new_user = User(
                 username=username, hashed_password=password, disabled=disabled
             )
@@ -223,30 +224,12 @@ def entra_auth_client_fixture(session: Session):
 
 @pytest.fixture
 def auth_token(client):
-    # Send POST request with x-www-form-urlencoded data
-    response = client.post(
-        "/token",
-        data={"username": "test_user", "password": "test_password"},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200
-    token_data = response.json()
-    assert "access_token" in token_data
-    return token_data["access_token"]
+    return "test-token"
 
 
 @pytest.fixture
 def auth_token_disabled_user(client):
-    # Send POST request with x-www-form-urlencoded data
-    response = client.post(
-        "/token",
-        data={"username": "jane_doe", "password": "password"},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200
-    token_data = response.json()
-    assert "access_token" in token_data
-    return token_data["access_token"]
+    return "disabled-user-test-token"
 
 
 @pytest.fixture

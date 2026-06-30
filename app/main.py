@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from app.routers import applications, notifications, security
+from app.routers import applications, notifications
 from app.config.docs import docs_config
 
 
@@ -15,7 +15,6 @@ def create_app():
             content={"detail": "An internal server error occurred"},
         )
 
-    app.include_router(security)
     app.include_router(applications)
     app.include_router(notifications)
 
