@@ -9,3 +9,9 @@ ignore:
     "SNYK-DEBIAN13-PERL-17037434":
         - "*":
             reason: "Issue in base image"
+    "SNYK-DEBIAN13-ATTR-17678182":
+        - "*":
+            reason: "There is no fixed version for Debian:13 attr"
+    "SNYK-DEBIAN13-ACL-17677866":
+        - "*":
+            reason: "There is no fixed version for Debian:13 acl"
