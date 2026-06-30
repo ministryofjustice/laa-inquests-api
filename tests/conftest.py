@@ -199,8 +199,22 @@ def entra_auth_client_fixture(session: Session):
     def get_entra_auth_port_override():
         mock_auth = MagicMock()
 
-        def verify_token(token: str) -> None:
-            if token != "valid-entra-token":
+        def verify_token(token: str, required_scopes: set[str] | None = None) -> None:
+            if token == "invalid-token":
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Could not validate credentials",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+            if required_scopes and token == "valid-caseworker-entra-token":
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Insufficient permissions",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+            if token not in {"valid-entra-token", "valid-caseworker-entra-token"}:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Could not validate credentials",

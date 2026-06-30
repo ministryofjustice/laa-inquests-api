@@ -14,7 +14,7 @@ from app.models.application.index import (
 )
 
 from app.adapters.provider_details_adapter import ProviderDetailsAdapter
-from app.routers.dependencies import verify_entra_token
+from app.routers.dependencies import verify_entra_provider_token
 from app.config import Config
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.get_application_port import GetApplicationPort
@@ -138,8 +138,7 @@ async def read_application(
 @router.get("/")
 async def read_all_applications(
     use_case: ListApplicationsUseCase = Depends(get_list_applications_use_case),
-    _: None = Depends(verify_entra_token),
-
+    _: None = Depends(verify_entra_provider_token),
 ) -> Sequence[Application]:
     """Read all the applications currently in the database."""
     return use_case.execute()
