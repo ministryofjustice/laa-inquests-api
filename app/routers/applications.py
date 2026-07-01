@@ -12,6 +12,7 @@ from app.models.application.index import (
     Application,
     ApplicationCreate,
     ApplicationResponse,
+    ApplicationSearchResponse,
     MeritsDecisionUpdateRefuse,
     UploadCoronersLetterResponse,
 )
@@ -23,6 +24,7 @@ from app.ports.get_application_port import GetApplicationPort
 from app.ports.make_merits_decision_port import MakeMeritsDecisionPort
 from app.ports.list_applications_port import ListApplicationsPort
 from app.ports.provider_details_port import ProviderDetailsPort
+from app.ports.search_application_port import SearchApplicationPort
 from app.ports.sds_port import SdsPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 from app.use_cases.create_application import CreateApplicationUseCase
@@ -35,6 +37,7 @@ from app.use_cases.exceptions import (
     InvalidCoronersLetterDocumentIdError,
     ProceedingsNotFoundError,
 )
+from app.use_cases.search_application import SearchApplicationUseCase
 
 # from app.models.user import User
 from app.adapters.gov_notify import GovNotifyAdapter
@@ -106,6 +109,18 @@ def get_list_applications_use_case(
     return ListApplicationsUseCase(list_applications_port=list_applications_port)
 
 
+def get_search_application_use_case(
+    search_application_port: SearchApplicationPort = Depends(
+        get_application_db_adapter
+    ),
+    provider_details_port: ProviderDetailsPort = Depends(get_provider_details_port),
+) -> SearchApplicationUseCase:
+    return SearchApplicationUseCase(
+        search_application_port=search_application_port,
+        provider_details_port=provider_details_port,
+    )
+
+
 def get_make_merits_decision_use_case(
     make_merits_decision_port: MakeMeritsDecisionPort = Depends(
         get_application_db_adapter
@@ -128,6 +143,15 @@ def get_upload_coroners_letter_use_case(
         sds_port=sds_port,
         upload_coroners_letter_port=upload_coroners_letter_port,
     )
+
+
+@router.get("/search", response_model=list[ApplicationSearchResponse])
+async def search_application(
+    laa_reference: str,
+    use_case: SearchApplicationUseCase = Depends(get_search_application_use_case),
+) -> list[ApplicationSearchResponse]:
+    """Search for an application by exact LAA reference number."""
+    return use_case.execute(laa_reference)
 
 
 def get_coroners_letter_use_case(
