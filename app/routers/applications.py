@@ -150,6 +150,7 @@ def get_upload_coroners_letter_use_case(
 async def search_application(
     laa_reference: str,
     use_case: SearchApplicationUseCase = Depends(get_search_application_use_case),
+    _: None = Depends(verify_entra_provider_token),
 ) -> list[ApplicationSearchResponse]:
     """Search for an application by exact LAA reference number."""
     return use_case.execute(laa_reference)
@@ -170,6 +171,7 @@ def get_coroners_letter_use_case(
 def retrieve_coroners_letter(
     laa_reference: str,
     use_case: RetrieveCoronersLetterUseCase = Depends(get_coroners_letter_use_case),
+    _: None = Depends(verify_entra_caseworker_token),
 ) -> StreamingResponse:
     """Stream the coroner's letter for a given application."""
     try:

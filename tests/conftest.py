@@ -195,6 +195,7 @@ def entra_auth_client_fixture(session: Session):
             sds_file_name="test-file_abc123.pdf",
             status="SUCCESS",
         )
+        mock_sds.retrieve_coroners_letter.return_value = iter([b"file bytes"])
         return mock_sds
 
     def get_entra_auth_port_override():
