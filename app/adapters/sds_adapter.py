@@ -9,7 +9,7 @@ from app.models.application.index import SDSUploadCoronersLetterResponse
 from app.ports.sds_port import SdsPort
 from app.use_cases.exceptions import (
     InvalidCoronersLetterDocumentIdError,
-    SDSLetterRetrivalError,
+    SDSLetterRetrievalError,
 )
 
 
@@ -86,16 +86,20 @@ class SdsAdapter(SdsPort):
         )
         if response.status_code != 200:
             message = f"SDS returned {response.status_code} while retrieving coroner's letter for file key {file_name}"
-            logger.error(message)
-            raise SDSLetterRetrivalError(message)
+            _raise_sds_retrieval_error(message)
 
         try:
             file_url = response.json()["fileURL"]
-        except (KeyError, TypeError, ValueError) as exc:
-            raise SDSLetterRetrivalError("Failed to retrieve coroners letter") from exc
+        except (KeyError, TypeError, ValueError):
+            _raise_sds_retrieval_error("Failed to retrieve coroners letter")
 
         try:
             with httpx.stream("GET", file_url) as stream:
                 yield from stream.iter_bytes()
         except Exception as exc:
-            raise SDSLetterRetrivalError("Failed to retrieve coroners letter") from exc
+            _raise_sds_retrieval_error(f"Failed to stream coroners letter: \n {exc}")
+
+
+def _raise_sds_retrieval_error(message_str):
+    logger.error(message_str)
+    raise SDSLetterRetrievalError(message_str)

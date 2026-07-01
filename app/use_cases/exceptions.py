@@ -22,5 +22,5 @@ class InvalidCoronersLetterDocumentIdError(Exception):
     pass
 
 
-class SDSLetterRetrivalError(Exception):
+class SDSLetterRetrievalError(Exception):
     pass

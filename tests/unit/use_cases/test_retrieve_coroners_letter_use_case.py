@@ -8,6 +8,8 @@ from app.ports.sds_port import SdsPort
 from app.use_cases.exceptions import (
     CoronersLetterNotFoundError,
     CoronersLetterRetrievalError,
+    InvalidCoronersLetterDocumentIdError,
+    SDSLetterRetrievalError,
 )
 
 
@@ -107,26 +109,28 @@ def test_execute_raises_error_when_application_coroners_letter_is_none():
     sds_port.retrieve_coroners_letter.assert_not_called()
 
 
-def test_execute_reraises_not_found_error_from_port():
+def test_execute_raises_error_when_port_raises_invalid_id():
     session = MagicMock()
     session.get.return_value = _make_application(
         coroners_letter=_make_coroners_letter(sds_file_name="letter_abc123.pdf")
     )
     sds_port = MagicMock(spec=SdsPort)
-    sds_port.retrieve_coroners_letter.side_effect = CoronersLetterNotFoundError()
+    sds_port.retrieve_coroners_letter.side_effect = (
+        InvalidCoronersLetterDocumentIdError()
+    )
     use_case = _make_use_case(session, sds_port)
 
-    with pytest.raises(CoronersLetterNotFoundError):
+    with pytest.raises(CoronersLetterRetrievalError):
         use_case.execute("1")
 
 
-def test_execute_reraises_retrieval_error_from_port():
+def test_execute_raises_error_when_port_raises_retrieval_error():
     session = MagicMock()
     session.get.return_value = _make_application(
         coroners_letter=_make_coroners_letter(sds_file_name="letter_abc123.pdf")
     )
     sds_port = MagicMock(spec=SdsPort)
-    sds_port.retrieve_coroners_letter.side_effect = CoronersLetterRetrievalError()
+    sds_port.retrieve_coroners_letter.side_effect = SDSLetterRetrievalError()
     use_case = _make_use_case(session, sds_port)
 
     with pytest.raises(CoronersLetterRetrievalError):

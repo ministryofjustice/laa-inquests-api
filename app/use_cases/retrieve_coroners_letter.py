@@ -2,7 +2,10 @@ from sqlmodel import Session
 
 from app.models.application.index import Application, CoronersLetterResult
 from app.ports.sds_port import SdsPort
-from app.use_cases.exceptions import CoronersLetterNotFoundError
+from app.use_cases.exceptions import (
+    CoronersLetterNotFoundError,
+    CoronersLetterRetrievalError,
+)
 
 
 class RetrieveCoronersLetterUseCase:
@@ -16,7 +19,14 @@ class RetrieveCoronersLetterUseCase:
             raise CoronersLetterNotFoundError("Could not retrieve coroners letter")
         sds_file_name = application.coroners_letter.sds_file_name
 
+        try:
+            content = self.sds_port.retrieve_coroners_letter(sds_file_name)
+        except Exception as exception:
+            raise CoronersLetterRetrievalError(
+                "Failed to retrieve coroners letter"
+            ) from exception
+
         return CoronersLetterResult(
             file_name=application.coroners_letter.file_name,
-            content=self.sds_port.retrieve_coroners_letter(sds_file_name),
+            content=content,
         )

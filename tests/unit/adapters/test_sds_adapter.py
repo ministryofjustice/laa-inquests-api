@@ -5,7 +5,7 @@ import pytest
 
 from app.use_cases.exceptions import (
     InvalidCoronersLetterDocumentIdError,
-    SDSLetterRetrivalError,
+    SDSLetterRetrievalError,
 )
 
 
@@ -252,7 +252,7 @@ def test_retrieve_coroners_letter_raises_not_found_for_sds_404(caplog):
         patch("httpx.post", return_value=_mock_token_response()),
         patch("httpx.get", return_value=_mock_retrieve_metadata_response(404)),
         pytest.raises(
-            SDSLetterRetrivalError,
+            SDSLetterRetrievalError,
             match="SDS returned 404 while retrieving coroner's letter for file key missing.pdf",
         ),
     ):
@@ -268,7 +268,7 @@ def test_retrieve_coroners_letter_raises_invalid_id_for_sds_400(caplog):
         patch("httpx.post", return_value=_mock_token_response()),
         patch("httpx.get", return_value=_mock_retrieve_metadata_response(400)),
         pytest.raises(
-            SDSLetterRetrivalError,
+            SDSLetterRetrievalError,
             match="SDS returned 400 while retrieving coroner's letter for file key bad-id",
         ),
     ):
@@ -284,7 +284,7 @@ def test_retrieve_coroners_letter_logs_and_raises_for_other_sds_4xx(caplog):
         patch("httpx.post", return_value=_mock_token_response()),
         patch("httpx.get", return_value=_mock_retrieve_metadata_response(403)),
         pytest.raises(
-            SDSLetterRetrivalError,
+            SDSLetterRetrievalError,
             match="SDS returned 403 while retrieving coroner's letter for file key forbidden.pdf",
         ),
     ):
@@ -300,7 +300,10 @@ def test_retrieve_coroners_letter_raises_error_when_stream_fails():
         patch("httpx.post", return_value=_mock_token_response()),
         patch("httpx.get", return_value=_mock_retrieve_metadata_response()),
         patch("httpx.stream", side_effect=RuntimeError("stream failed")),
-        pytest.raises(SDSLetterRetrivalError),
+        pytest.raises(
+            SDSLetterRetrievalError,
+            match="Failed to stream coroners letter: \n stream failed",
+        ),
     ):
         list(adapter.retrieve_coroners_letter("letter.pdf"))
 
@@ -315,6 +318,8 @@ def test_retrieve_coroners_letter_raises_error_when_file_url_missing():
     with (
         patch("httpx.post", return_value=_mock_token_response()),
         patch("httpx.get", return_value=bad_metadata),
-        pytest.raises(SDSLetterRetrivalError),
+        pytest.raises(
+            SDSLetterRetrievalError, match="Failed to retrieve coroners letter"
+        ),
     ):
         list(adapter.retrieve_coroners_letter("letter.pdf"))
