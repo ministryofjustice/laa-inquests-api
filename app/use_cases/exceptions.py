@@ -8,3 +8,19 @@ class CoronersLetterUploadError(Exception):
 
 class ProceedingsNotFoundError(Exception):
     pass
+
+
+class CoronersLetterNotFoundError(Exception):
+    pass
+
+
+class CoronersLetterRetrievalError(Exception):
+    pass
+
+
+class InvalidCoronersLetterDocumentIdError(Exception):
+    pass
+
+
+class SDSLetterRetrievalError(Exception):
+    pass

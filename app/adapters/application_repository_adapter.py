@@ -20,6 +20,7 @@ from app.ports.create_application_port import CreateApplicationPort
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.make_merits_decision_port import MakeMeritsDecisionPort
 from app.ports.list_applications_port import ListApplicationsPort
+from app.ports.search_application_port import SearchApplicationPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 
 
@@ -28,6 +29,7 @@ class ApplicationRepositoryAdapter(
     CreateApplicationPort,
     MakeMeritsDecisionPort,
     ListApplicationsPort,
+    SearchApplicationPort,
     UploadCoronersLetterPort,
 ):
     def __init__(self, session: Session) -> None:
@@ -40,6 +42,18 @@ class ApplicationRepositoryAdapter(
 
     def list_applications(self) -> list[Application]:
         return self.session.exec(select(Application)).all()
+
+    def search_applications(self, laa_reference: str) -> list[Application]:
+        try:
+            laa_reference_int = int(laa_reference)
+        except ValueError:
+            return []
+        statement = (
+            select(Application)
+            .join(Deceased, Application.deceased_id == Deceased.deceased_id)
+            .where(Application.laa_reference == laa_reference_int)
+        )
+        return list(self.session.exec(statement).all())
 
     def create_application(self, request: ApplicationCreate) -> Application:
         proceedings_to_add = []

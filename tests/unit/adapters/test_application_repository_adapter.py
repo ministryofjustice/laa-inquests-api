@@ -210,3 +210,29 @@ def test_persist_merits_decision_rolls_back_and_reraises_when_commit_fails():
         adapter.persist_merits_decision(application, proceeding)
 
     mock_session.rollback.assert_called_once_with()
+
+
+def test_search_applications_returns_matching_application(session):
+    test_app_reference = session.exec(select(Application)).first().laa_reference
+    adapter = ApplicationRepositoryAdapter(session)
+
+    result = adapter.search_applications(str(test_app_reference))
+
+    assert len(result) == 1
+    assert result[0].laa_reference == test_app_reference
+
+
+def test_search_applications_returns_empty_list_for_non_numeric_reference(session):
+    adapter = ApplicationRepositoryAdapter(session)
+
+    result = adapter.search_applications("NOT-A-NUMBER")
+
+    assert result == []
+
+
+def test_search_applications_returns_empty_list_for_unknown_reference(session):
+    adapter = ApplicationRepositoryAdapter(session)
+
+    result = adapter.search_applications("99999")
+
+    assert result == []
