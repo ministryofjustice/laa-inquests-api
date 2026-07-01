@@ -531,7 +531,7 @@ class CoronersLetterResponse(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    coroners_letter_id: uuid.UUID
+    file_name: str
 
 
 class ApplicationResponse(BaseModel):
@@ -553,7 +553,7 @@ class ApplicationResponse(BaseModel):
     client: ClientResponse
     deceased: DeceasedResponse
     provider: ProviderResponse
-    coroners_letter_id: uuid.UUID | None = None
+    coroners_letter: CoronersLetterResponse | None = None
 
 
 # Use case models
