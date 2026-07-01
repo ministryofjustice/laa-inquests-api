@@ -34,18 +34,13 @@ from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.get_application import GetApplicationUseCase
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
-    CoronersLetterUploadError,
-    ProceedingsNotFoundError,
-)
-from app.use_cases.get_application import GetApplicationUseCase
     CoronersLetterNotFoundError,
     CoronersLetterRetrievalError,
+    CoronersLetterUploadError,
     InvalidCoronersLetterDocumentIdError,
     ProceedingsNotFoundError,
 )
 from app.use_cases.search_application import SearchApplicationUseCase
-
-# from app.models.user import User
 from app.adapters.gov_notify import GovNotifyAdapter
 from app.ports.gov_notify_port import GovNotifyPort
 from app.use_cases.list_applications import ListApplicationsUseCase
