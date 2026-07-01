@@ -1,6 +1,6 @@
 import pytest
 
-from app.models.application.index import Application
+from app.models.application.index import Application, CoronersLetter
 from sqlmodel import select
 import uuid
 
@@ -244,3 +244,51 @@ def test_200_provider_fields_are_null_when_provider_api_unavailable(
         api.dependency_overrides = original_overrides
 
     assert response.json()["provider"]["firmName"] is None
+
+
+def test_200_read_application_response_coroners_letter_is_none_when_no_letter_exists(
+    session, client, auth_token
+):
+    first_application_row = session.exec(select(Application)).first()
+    laa_reference = first_application_row.__dict__["laa_reference"]
+
+    response = client.get(
+        f"/applications/{laa_reference}",
+        headers={
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["coronersLetter"] is None
+
+
+def test_200_read_application_response_includes_coroners_letter_file_name(
+    session, client, auth_token
+):
+    first_application_row = session.exec(select(Application)).first()
+    laa_reference = first_application_row.__dict__["laa_reference"]
+
+    coroners_letter = CoronersLetter(
+        sds_file_name="sds-abc123.pdf",
+        file_name="test-document.pdf",
+    )
+    session.add(coroners_letter)
+    session.commit()
+    session.refresh(coroners_letter)
+
+    first_application_row.coroners_letter_id = coroners_letter.coroners_letter_id
+    session.add(first_application_row)
+    session.commit()
+
+    response = client.get(
+        f"/applications/{laa_reference}",
+        headers={
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["coronersLetter"]["fileName"] == "test-document.pdf"

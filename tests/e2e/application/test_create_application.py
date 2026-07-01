@@ -220,8 +220,8 @@ def test_201_create_application_response_contains_coroners_letter(client, auth_t
     )
     assert response.status_code == 201
     new_application = response.json()
-    assert new_application["coronersLetterId"] is not None
-    assert new_application["coronersLetterId"] == coroners_letter_id
+    assert new_application["coronersLetter"] is not None
+    assert new_application["coronersLetter"]["fileName"] == "test-file_abc123.pdf"
 
 
 def test_422_rejected_when_has_no_fixed_abode_is_false_and_home_address_is_absent(
