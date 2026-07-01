@@ -1,3 +1,5 @@
+from collections.abc import Iterator
+from dataclasses import dataclass
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, model_validator, Field as PydanticField
 from pydantic.alias_generators import to_camel
@@ -155,7 +157,9 @@ class Deceased(DeceasedBase, table=True):
 
 class CoronersLetter(SQLModel, table=True):
     __tablename__ = "coroners_letter"
-    coroners_letter_id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    coroners_letter_id: uuid.UUID = Field(
+        default_factory=uuid.uuid4, primary_key=True, unique=True
+    )
     sds_file_name: str
     file_name: str
 
@@ -177,7 +181,11 @@ class Application(ApplicationBase, table=True):
     provider: Provider | None = Relationship(sa_relationship_kwargs={"uselist": False})
 
     coroners_letter_id: uuid.UUID | None = Field(
-        default=None, foreign_key="coroners_letter.coroners_letter_id"
+        default=None,
+        foreign_key="coroners_letter.coroners_letter_id",
+    )
+    coroners_letter: CoronersLetter | None = Relationship(
+        sa_relationship_kwargs={"uselist": False}
     )
 
 
@@ -562,6 +570,10 @@ class ApplicationSearchResponse(BaseModel):
     firm_name: str | None
     firm_number: str
     case_status: str
+@dataclass
+class CoronersLetterResult:
+    file_name: str
+    content: Iterator[bytes]
 
 
 class SDSUploadCoronersLetterResponse(BaseModel):

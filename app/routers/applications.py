@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File
 from sqlmodel import Session
+from fastapi.responses import StreamingResponse
 from typing import Sequence
+from mimetypes import guess_type
 
 # from app.auth.security import get_current_active_user
 from app.adapters.sds_adapter import SdsAdapter
@@ -26,8 +28,13 @@ from app.ports.search_application_port import SearchApplicationPort
 from app.ports.sds_port import SdsPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 from app.use_cases.create_application import CreateApplicationUseCase
+from app.use_cases.get_application import GetApplicationUseCase
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
+    CoronersLetterUploadError,
+    CoronersLetterNotFoundError,
+    CoronersLetterRetrievalError,
+    InvalidCoronersLetterDocumentIdError,
     ProceedingsNotFoundError,
 )
 from app.use_cases.get_application import GetApplicationUseCase
@@ -40,6 +47,7 @@ from app.ports.gov_notify_port import GovNotifyPort
 from app.use_cases.list_applications import ListApplicationsUseCase
 from app.use_cases.make_merits_decision import MakeMeritsDecisionUseCase
 from app.use_cases.upload_coroners_letter import UploadCoronersLetterUseCase
+from app.use_cases.retrieve_coroners_letter import RetrieveCoronersLetterUseCase
 
 
 router = APIRouter(
@@ -146,6 +154,50 @@ async def search_application(
 ) -> list[ApplicationSearchResponse]:
     """Search for an application by exact LAA reference number."""
     return use_case.execute(laa_reference)
+def get_coroners_letter_use_case(
+    session: Session = Depends(get_session),
+    sds_port: SdsPort = Depends(get_sds_port),
+) -> RetrieveCoronersLetterUseCase:
+    return RetrieveCoronersLetterUseCase(session=session, sds_port=sds_port)
+
+
+@router.get(
+    "/{laa_reference}/coroners-letter",
+    response_class=StreamingResponse,
+    responses={200: {"content": {"image/png": {}}}},
+)
+def retrieve_coroners_letter(
+    laa_reference: str,
+    use_case: RetrieveCoronersLetterUseCase = Depends(get_coroners_letter_use_case),
+) -> StreamingResponse:
+    """Stream the coroner's letter for a given application."""
+    try:
+        result = use_case.execute(laa_reference)
+    except CoronersLetterNotFoundError:
+        raise HTTPException(status_code=404, detail="Coroners letter not found")
+    except InvalidCoronersLetterDocumentIdError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid coroners letter document id",
+        )
+    except CoronersLetterRetrievalError:
+        raise HTTPException(
+            status_code=500, detail="Failed to retrieve coroners letter"
+        )
+
+    mime_type = guess_type(result.file_name)
+    supported_mime_types = ["image/png", "image/jpeg", "image/bmp", "application/pdf"]
+    if mime_type[0] not in supported_mime_types:
+        raise HTTPException(
+            status_code=415,
+            detail="Returned file type is not supported for streaming. Supported file types are: .png, .jpg, .jpeg, .bmp, .pdf",
+        )
+
+    return StreamingResponse(
+        result.content,
+        media_type=mime_type[0],
+        headers={"Content-Disposition": f'inline; filename="{result.file_name}"'},
+    )
 
 
 @router.get("/{laa_reference}", response_model=ApplicationResponse)
@@ -214,9 +266,11 @@ def patch_merits_decision(
 ) -> Response:
     """Set the merits decision on the single proceeding for a given application."""
     try:
+        # TODO: Refactor to not pass in request directly
         use_case.execute(laa_reference, request)
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
+    # TODO: Write test for this exception handling
     except ProceedingsNotFoundError:
         raise HTTPException(
             status_code=404, detail="No proceedings found for application"

@@ -152,6 +152,7 @@ def client_fixture(session: Session):
             sds_file_name="test-file_abc123.pdf",
             status="SUCCESS",
         )
+        mock_sds.retrieve_coroners_letter.return_value = iter([b"file bytes"])
         return mock_sds
 
     api.dependency_overrides[get_session] = get_session_override
