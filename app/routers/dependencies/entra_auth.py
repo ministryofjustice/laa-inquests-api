@@ -20,8 +20,8 @@ def _configured_entra_scopes() -> set[str]:
 
 def get_entra_auth_port() -> EntraAuthPort:
     return EntraAuthAdapter(
-        tenant_id=Config.ENTRA_TENANT_ID,
-        client_id=Config.ENTRA_API_CLIENT_ID,
+        tenant_id=Config.INQUESTS_API_TENANT_ID,
+        client_id=Config.INQUESTS_API_CLIENT_ID,
         default_scopes=_configured_entra_scopes(),
     )
 

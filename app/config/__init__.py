@@ -36,9 +36,8 @@ class Config(object):
     SDS_CLIENT_SECRET = os.environ.get("SDS_CLIENT_SECRET", "")
     SDS_SCOPE = os.environ.get("SDS_SCOPE", "")
 
-    ENTRA_TENANT_ID = os.environ.get("ENTRA_TENANT_ID", "")
-    ENTRA_CLIENT_ID = os.environ.get("ENTRA_CLIENT_ID", "")
-    ENTRA_API_CLIENT_ID = os.environ.get("ENTRA_API_CLIENT_ID", "")
+    INQUESTS_API_TENANT_ID = os.environ.get("INQUESTS_API_TENANT_ID", "")
+    INQUESTS_API_CLIENT_ID = os.environ.get("INQUESTS_API_CLIENT_ID", "")
     ENTRA_ALLOWED_SCOPES = os.environ.get(
         "ENTRA_ALLOWED_SCOPES", "User.Provider,User.Caseworker"
     )
