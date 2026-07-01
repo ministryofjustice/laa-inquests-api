@@ -37,8 +37,6 @@ from app.use_cases.exceptions import (
     InvalidCoronersLetterDocumentIdError,
     ProceedingsNotFoundError,
 )
-from app.use_cases.get_application import GetApplicationUseCase
-from app.use_cases.exceptions import CoronersLetterUploadError
 from app.use_cases.search_application import SearchApplicationUseCase
 
 # from app.models.user import User
