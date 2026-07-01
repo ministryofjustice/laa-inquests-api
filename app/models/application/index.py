@@ -570,6 +570,8 @@ class ApplicationSearchResponse(BaseModel):
     firm_name: str | None
     firm_number: str
     case_status: str
+
+
 @dataclass
 class CoronersLetterResult:
     file_name: str

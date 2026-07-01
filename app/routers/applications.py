@@ -152,6 +152,8 @@ async def search_application(
 ) -> list[ApplicationSearchResponse]:
     """Search for an application by exact LAA reference number."""
     return use_case.execute(laa_reference)
+
+
 def get_coroners_letter_use_case(
     session: Session = Depends(get_session),
     sds_port: SdsPort = Depends(get_sds_port),
