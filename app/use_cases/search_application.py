@@ -14,7 +14,9 @@ class SearchApplicationUseCase:
 
     def execute(self, laa_reference: str) -> list[ApplicationSearchResponse]:
         normalised_reference = laa_reference.strip()
-        matching_applications = self.search_application_port.search_applications(normalised_reference)
+        matching_applications = self.search_application_port.search_applications(
+            normalised_reference
+        )
         if not matching_applications:
             return []
 
