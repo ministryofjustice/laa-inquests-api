@@ -549,6 +549,21 @@ class ApplicationResponse(BaseModel):
 
 
 # Use case models
+class ApplicationSearchResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        from_attributes=True,
+        populate_by_name=True,
+    )
+    laa_reference: int
+    client_name: str
+    client_date_of_birth: str
+    date_submitted: datetime
+    firm_name: str | None
+    firm_number: str
+    case_status: str
+
+
 class SDSUploadCoronersLetterResponse(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
