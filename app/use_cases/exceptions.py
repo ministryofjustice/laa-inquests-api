@@ -14,9 +14,13 @@ class CoronersLetterNotFoundError(Exception):
     pass
 
 
+class CoronersLetterRetrievalError(Exception):
+    pass
+
+
 class InvalidCoronersLetterDocumentIdError(Exception):
     pass
 
 
-class CoronersLetterRetrievalError(Exception):
+class SDSLetterRetrivalError(Exception):
     pass

@@ -8,9 +8,8 @@ import httpx
 from app.models.application.index import SDSUploadCoronersLetterResponse
 from app.ports.sds_port import SdsPort
 from app.use_cases.exceptions import (
-    CoronersLetterNotFoundError,
-    CoronersLetterRetrievalError,
     InvalidCoronersLetterDocumentIdError,
+    SDSLetterRetrivalError,
 )
 
 
@@ -77,52 +76,26 @@ class SdsAdapter(SdsPort):
     def retrieve_coroners_letter(self, file_name: str) -> Iterator[bytes]:
         if not file_name or not file_name.strip():
             raise InvalidCoronersLetterDocumentIdError(
-                "Invalid coroners letter document id"
+                "file_name must be a non-empty string"
             )
         token = self._get_token()
-        try:
-            response = httpx.get(
-                f"{self.base_url}/get_file",
-                params={"file_key": file_name},
-                headers={"Authorization": f"Bearer {token}"},
-            )
-        except httpx.HTTPError as exc:
-            raise CoronersLetterRetrievalError(
-                "Failed to retrieve coroners letter"
-            ) from exc
-
-        self._raise_for_retrieve_status(response.status_code, file_name)
+        response = httpx.get(
+            f"{self.base_url}/get_file",
+            params={"file_key": file_name},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        if response.status_code != 200:
+            message = f"SDS returned {response.status_code} while retrieving coroner's letter for file key {file_name}"
+            logger.error(message)
+            raise SDSLetterRetrivalError(message)
 
         try:
             file_url = response.json()["fileURL"]
         except (KeyError, TypeError, ValueError) as exc:
-            raise CoronersLetterRetrievalError(
-                "Failed to retrieve coroners letter"
-            ) from exc
+            raise SDSLetterRetrivalError("Failed to retrieve coroners letter") from exc
 
         try:
             with httpx.stream("GET", file_url) as stream:
                 yield from stream.iter_bytes()
         except Exception as exc:
-            raise CoronersLetterRetrievalError(
-                "Failed to retrieve coroners letter"
-            ) from exc
-
-    def _raise_for_retrieve_status(self, status_code: int, file_name: str) -> None:
-        if status_code == 200:
-            return
-
-        if 400 <= status_code < 500:
-            logger.error(
-                "SDS returned %s while retrieving coroner's letter for file key %s",
-                status_code,
-                file_name,
-            )
-            if status_code == 404:
-                raise CoronersLetterNotFoundError("Coroners letter not found")
-            if status_code == 400:
-                raise InvalidCoronersLetterDocumentIdError(
-                    "Invalid coroners letter document id"
-                )
-
-        raise CoronersLetterRetrievalError("Failed to retrieve coroners letter")
+            raise SDSLetterRetrivalError("Failed to retrieve coroners letter") from exc

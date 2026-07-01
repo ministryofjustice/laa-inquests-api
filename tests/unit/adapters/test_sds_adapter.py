@@ -4,9 +4,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.use_cases.exceptions import (
-    CoronersLetterNotFoundError,
-    CoronersLetterRetrievalError,
     InvalidCoronersLetterDocumentIdError,
+    SDSLetterRetrivalError,
 )
 
 
@@ -225,7 +224,10 @@ def test_retrieve_coroners_letter_id_with_None_filename_raises_InvalidCoronersLe
 
     with (
         patch("httpx.post", return_value=_mock_token_response()),
-        pytest.raises(InvalidCoronersLetterDocumentIdError),
+        pytest.raises(
+            InvalidCoronersLetterDocumentIdError,
+            match="file_name must be a non-empty string",
+        ),
     ):
         list(adapter.retrieve_coroners_letter(None))
 
@@ -235,7 +237,10 @@ def test_retrieve_coroners_letter_id_with_blank_filename_raises_InvalidCoronersL
 
     with (
         patch("httpx.post", return_value=_mock_token_response()),
-        pytest.raises(InvalidCoronersLetterDocumentIdError),
+        pytest.raises(
+            InvalidCoronersLetterDocumentIdError,
+            match="file_name must be a non-empty string",
+        ),
     ):
         list(adapter.retrieve_coroners_letter(""))
 
@@ -246,7 +251,10 @@ def test_retrieve_coroners_letter_raises_not_found_for_sds_404(caplog):
     with (
         patch("httpx.post", return_value=_mock_token_response()),
         patch("httpx.get", return_value=_mock_retrieve_metadata_response(404)),
-        pytest.raises(CoronersLetterNotFoundError),
+        pytest.raises(
+            SDSLetterRetrivalError,
+            match="SDS returned 404 while retrieving coroner's letter for file key missing.pdf",
+        ),
     ):
         list(adapter.retrieve_coroners_letter("missing.pdf"))
 
@@ -259,7 +267,10 @@ def test_retrieve_coroners_letter_raises_invalid_id_for_sds_400(caplog):
     with (
         patch("httpx.post", return_value=_mock_token_response()),
         patch("httpx.get", return_value=_mock_retrieve_metadata_response(400)),
-        pytest.raises(InvalidCoronersLetterDocumentIdError),
+        pytest.raises(
+            SDSLetterRetrivalError,
+            match="SDS returned 400 while retrieving coroner's letter for file key bad-id",
+        ),
     ):
         list(adapter.retrieve_coroners_letter("bad-id"))
 
@@ -272,7 +283,10 @@ def test_retrieve_coroners_letter_logs_and_raises_for_other_sds_4xx(caplog):
     with (
         patch("httpx.post", return_value=_mock_token_response()),
         patch("httpx.get", return_value=_mock_retrieve_metadata_response(403)),
-        pytest.raises(CoronersLetterRetrievalError),
+        pytest.raises(
+            SDSLetterRetrivalError,
+            match="SDS returned 403 while retrieving coroner's letter for file key forbidden.pdf",
+        ),
     ):
         list(adapter.retrieve_coroners_letter("forbidden.pdf"))
 
@@ -286,7 +300,7 @@ def test_retrieve_coroners_letter_raises_error_when_stream_fails():
         patch("httpx.post", return_value=_mock_token_response()),
         patch("httpx.get", return_value=_mock_retrieve_metadata_response()),
         patch("httpx.stream", side_effect=RuntimeError("stream failed")),
-        pytest.raises(CoronersLetterRetrievalError),
+        pytest.raises(SDSLetterRetrivalError),
     ):
         list(adapter.retrieve_coroners_letter("letter.pdf"))
 
@@ -301,6 +315,6 @@ def test_retrieve_coroners_letter_raises_error_when_file_url_missing():
     with (
         patch("httpx.post", return_value=_mock_token_response()),
         patch("httpx.get", return_value=bad_metadata),
-        pytest.raises(CoronersLetterRetrievalError),
+        pytest.raises(SDSLetterRetrivalError),
     ):
         list(adapter.retrieve_coroners_letter("letter.pdf"))
