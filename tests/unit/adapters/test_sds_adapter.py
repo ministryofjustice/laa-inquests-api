@@ -25,7 +25,7 @@ def _make_adapter():
 def _mock_token_response(token: str = "test-token") -> MagicMock:
     mock = MagicMock()
     mock.status_code = 200
-    mock.json.return_value = {"access_token": token}
+    mock.json.return_value = {"access_token": token, "expires_in": 3599}
     return mock
 
 
@@ -92,6 +92,38 @@ def test_get_token_raises_http_exception_on_unsuccessful_status_code():
             adapter._get_token()
 
 
+def test_get_token_caches_token_and_does_not_call_post_again():
+    adapter = _make_adapter()
+    with patch(
+        "httpx.post", return_value=_mock_token_response("cached-token")
+    ) as mock_post:
+        first = adapter._get_token()
+        second = adapter._get_token()
+
+    assert mock_post.call_count == 1
+    assert first == "cached-token"
+    assert second == "cached-token"
+
+
+def test_get_token_refreshes_token_when_expired():
+    adapter = _make_adapter()
+    with patch("httpx.post", return_value=_mock_token_response()) as mock_post:
+        # First _get_token: self._token is None so cache check is short-circuited;
+        # time.time() called once to set expiry → 1000.0, expiry = 4539.0.
+        # Second _get_token: time.time() called for check → 5000.0 > 4539.0 → refresh;
+        # time.time() called again to set new expiry → 5000.0.
+
+        first_time = 1000.0  # time on first call expiry set
+        second_time = 5000.0  # time on second call expiry check. So is above first one
+        third_time = 5000.0  # time on third call expiry set
+
+        with patch("time.time", side_effect=[first_time, second_time, third_time]):
+            adapter._get_token()
+            adapter._get_token()
+
+    assert mock_post.call_count == 2
+
+
 def test_save_coroners_letter_sends_file_bytes_in_multipart():
     adapter = _make_adapter()
 
@@ -127,12 +159,12 @@ def test_save_coroners_letter_generates_unique_file_name_with_readable_stem():
 def test_save_coroners_letter_two_calls_produce_different_file_names():
     adapter = _make_adapter()
 
+    # Second save reuses the cached token, so only 3 post calls: token, save, save.
     with patch(
         "httpx.post",
         side_effect=[
             _mock_token_response(),
             _mock_save_response(),
-            _mock_token_response(),
             _mock_save_response(),
         ],
     ) as mock_post:
@@ -140,7 +172,7 @@ def test_save_coroners_letter_two_calls_produce_different_file_names():
         adapter.save_coroners_letter(b"content", "letter.pdf")
 
     name_1 = mock_post.call_args_list[1].kwargs["files"]["file"][0]
-    name_2 = mock_post.call_args_list[3].kwargs["files"]["file"][0]
+    name_2 = mock_post.call_args_list[2].kwargs["files"]["file"][0]
     assert name_1 != name_2
 
 

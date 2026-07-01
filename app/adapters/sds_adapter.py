@@ -1,4 +1,5 @@
 import logging
+import time
 import uuid
 from collections.abc import Iterator
 from pathlib import Path
@@ -30,8 +31,12 @@ class SdsAdapter(SdsPort):
         self.client_id = client_id
         self.client_secret = client_secret
         self.scope = scope
+        self.token: str | None = None
+        self.token_expiry: float = 0.0
 
     def _get_token(self) -> str:
+        if self.token and time.time() < self.token_expiry:
+            return self.token
         response = httpx.post(
             f"https://login.microsoftonline.com/{self.tenant_id}/oauth2/v2.0/token",
             data={
@@ -47,7 +52,12 @@ class SdsAdapter(SdsPort):
                 request=response.request,
                 response=response,
             )
-        return response.json()["access_token"]
+        data = response.json()
+        self.token = data["access_token"]
+
+        timeout_buffer = 60  # minute
+        self.token_expiry = time.time() + data["expires_in"] - timeout_buffer
+        return self.token
 
     def save_coroners_letter(
         self, coroners_letter: bytes, file_name: str
