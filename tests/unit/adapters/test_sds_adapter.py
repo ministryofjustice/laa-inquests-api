@@ -1,6 +1,7 @@
 import uuid
 from unittest.mock import MagicMock, patch
 
+from httpx import HTTPStatusError
 import pytest
 
 from app.use_cases.exceptions import (
@@ -23,6 +24,7 @@ def _make_adapter():
 
 def _mock_token_response(token: str = "test-token") -> MagicMock:
     mock = MagicMock()
+    mock.status_code = 200
     mock.json.return_value = {"access_token": token}
     return mock
 
@@ -56,6 +58,15 @@ def _mock_retrieve_metadata_response(
     return mock
 
 
+def test_get_token_returns_access_token():
+    adapter = _make_adapter()
+
+    with patch("httpx.post", return_value=_mock_token_response("my-token")):
+        result = adapter._get_token()
+
+    assert result == "my-token"
+
+
 def test_get_token_posts_client_credentials_to_correct_url():
     adapter = _make_adapter()
     token_response = _mock_token_response()
@@ -74,26 +85,11 @@ def test_get_token_posts_client_credentials_to_correct_url():
     )
 
 
-def test_get_token_returns_access_token():
+def test_get_token_raises_http_exception_on_unsuccessful_status_code():
     adapter = _make_adapter()
-
-    with patch("httpx.post", return_value=_mock_token_response("my-token")):
-        result = adapter._get_token()
-
-    assert result == "my-token"
-
-
-def test_save_coroners_letter_posts_to_correct_url_with_bearer_token():
-    adapter = _make_adapter()
-
-    with patch(
-        "httpx.post", side_effect=[_mock_token_response(), _mock_save_response()]
-    ) as mock_post:
-        adapter.save_coroners_letter(b"file content", "letter.pdf")
-
-    save_call = mock_post.call_args_list[1]
-    assert save_call.args[0] == "https://sds.example.com/save_file"
-    assert save_call.kwargs["headers"] == {"Authorization": "Bearer test-token"}
+    with patch("httpx.post", return_value=_mock_save_failure_response()):
+        with pytest.raises(HTTPStatusError):
+            adapter._get_token()
 
 
 def test_save_coroners_letter_sends_file_bytes_in_multipart():

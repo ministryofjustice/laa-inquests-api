@@ -41,7 +41,12 @@ class SdsAdapter(SdsPort):
                 "scope": self.scope,
             },
         )
-        response.raise_for_status()
+        if response.status_code != 200:
+            raise httpx.HTTPStatusError(
+                f"Failed to retrieve sds token. API status code: {response.status_code}",
+                request=response.request,
+                response=response,
+            )
         return response.json()["access_token"]
 
     def save_coroners_letter(
