@@ -15,7 +15,7 @@ def test_200_search_application_by_reference_returns_expected_fields(client):
     assert "dateSubmitted" in result
     assert result["firmName"] == "Test Firm Name"
     assert result["firmNumber"] == "0A123B"
-    assert result["caseStatus"] == "LIVE"
+    assert result["overallDecision"] == "PENDING"
 
 
 def test_200_search_application_trims_leading_and_trailing_spaces(client):
