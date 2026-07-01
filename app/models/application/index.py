@@ -523,6 +523,7 @@ class UploadCoronersLetterResponse(BaseModel):
         populate_by_name=True,
     )
     coroners_letter_id: uuid.UUID
+    coroners_letter_file_name: str
 
 
 class CoronersLetterResponse(BaseModel):

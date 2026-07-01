@@ -244,7 +244,9 @@ async def upload_coroners_letter(
     except CoronersLetterUploadError:
         raise HTTPException(status_code=500, detail="Failed to upload coroners letter")
 
-    return UploadCoronersLetterResponse(coroners_letter_id=coroners_letter_id)
+    return UploadCoronersLetterResponse(
+        coroners_letter_id=coroners_letter_id, coroners_letter_file_name=file_name
+    )
 
 
 @router.post("/", response_model=ApplicationResponse, status_code=201)
