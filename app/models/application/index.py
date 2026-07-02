@@ -395,7 +395,7 @@ class MeritsDecisionUpdateRefuse(BaseModel):
         populate_by_name=True,
     )
     # TODO: Remove this field after refuse usecase
-    merits_decision: MeritsDecision = PydanticField(examples=["REFUSED"])
+    merits_decision: MeritsDecision | None = PydanticField(examples=["REFUSED"])
     reason_for_refusal: ReasonForRefusal | None = PydanticField(
         examples=["NOT_IN_SCOPE"]
     )
