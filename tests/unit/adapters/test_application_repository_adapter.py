@@ -182,7 +182,7 @@ def test_save_uploaded_coroners_letter_persists_and_commits():
     assert result == saved_model.coroners_letter_id
 
 
-def test_persist_merits_decision_adds_entities_and_commits():
+def test_commit_decision_adds_entities_and_commits():
     mock_session = MagicMock()
     adapter = ApplicationRepositoryAdapter(mock_session)
     application = Application(laa_reference=1, deceased_id=1, provider_id=1)
@@ -190,14 +190,14 @@ def test_persist_merits_decision_adds_entities_and_commits():
         laa_reference=1, proceeding_id=ProceedingId.TEST1
     )
 
-    adapter.persist_merits_decision(application, proceeding)
+    adapter.commit_decision(application, proceeding)
 
     assert mock_session.add.call_args_list == [call(application), call(proceeding)]
     mock_session.commit.assert_called_once_with()
     mock_session.rollback.assert_not_called()
 
 
-def test_persist_merits_decision_rolls_back_and_reraises_when_commit_fails():
+def test_commit_decision_rolls_back_and_reraises_when_commit_fails():
     mock_session = MagicMock()
     mock_session.commit.side_effect = RuntimeError("database failure")
     adapter = ApplicationRepositoryAdapter(mock_session)
@@ -207,7 +207,7 @@ def test_persist_merits_decision_rolls_back_and_reraises_when_commit_fails():
     )
 
     with pytest.raises(RuntimeError, match="database failure"):
-        adapter.persist_merits_decision(application, proceeding)
+        adapter.commit_decision(application, proceeding)
 
     mock_session.rollback.assert_called_once_with()
 

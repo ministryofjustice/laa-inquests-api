@@ -6,7 +6,7 @@ from app.ports.application_lookup_port import ApplicationLookupPort
 
 class MakeMeritsDecisionPort(ApplicationLookupPort):
     @abstractmethod
-    def persist_merits_decision(
+    def commit_decision(
         self,
         application: Application,
         proceeding: ApplicationProceeding,

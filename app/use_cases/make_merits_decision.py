@@ -38,7 +38,7 @@ class MakeMeritsDecisionUseCase:
         proceeding.justification = request.justification
         application.overall_decision = request.merits_decision
 
-        self.make_merits_decision_port.persist_merits_decision(application, proceeding)
+        self.make_merits_decision_port.commit_decision(application, proceeding)
 
         if request.merits_decision == MeritsDecision.REFUSED:
             try:

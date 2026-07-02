@@ -179,7 +179,7 @@ class ApplicationRepositoryAdapter(
 
         return coroners_letter_id
 
-    def persist_merits_decision(
+    def commit_decision(
         self,
         application: Application,
         proceeding: ApplicationProceeding,
