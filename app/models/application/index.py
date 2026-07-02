@@ -393,6 +393,7 @@ class MeritsDecisionUpdateRefuse(BaseModel):
         alias_generator=to_camel,
         populate_by_name=True,
     )
+    # TODO: Remove this field after refuse usecase
     merits_decision: MeritsDecision = PydanticField(examples=["REFUSED"])
     reason_for_refusal: ReasonForRefusal | None = PydanticField(
         examples=["NOT_IN_SCOPE"]
