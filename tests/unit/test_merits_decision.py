@@ -74,7 +74,7 @@ def test_patch_merits_decision_calls_session_add_and_commit():
 
     use_case.execute("1", _make_request("REFUSED"))
 
-    make_merits_decision_port.persist_merits_decision.assert_called_once_with(
+    make_merits_decision_port.commit_decision.assert_called_once_with(
         application,
         proceeding,
     )
@@ -184,7 +184,7 @@ def test_patch_merits_decision_returns_204_when_notify_fails_after_commit():
     use_case = MakeMeritsDecisionUseCase(make_merits_decision_port, gov_notify_port)
 
     use_case.execute("1", _make_request("REFUSED"))
-    make_merits_decision_port.persist_merits_decision.assert_called_once_with(
+    make_merits_decision_port.commit_decision.assert_called_once_with(
         application,
         proceeding,
     )
