@@ -4,7 +4,6 @@ from fastapi.responses import StreamingResponse
 from typing import Sequence
 from mimetypes import guess_type
 
-# from app.auth.security import get_current_active_user
 from app.adapters.sds_adapter import SdsAdapter
 from app.adapters.application_repository_adapter import ApplicationRepositoryAdapter
 from app.db import get_session
@@ -18,6 +17,10 @@ from app.models.application.index import (
 )
 
 from app.adapters.provider_details_adapter import ProviderDetailsAdapter
+from app.routers.dependencies import (
+    verify_entra_caseworker_token,
+    verify_entra_provider_token,
+)
 from app.config import Config
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.get_application_port import GetApplicationPort
@@ -31,15 +34,13 @@ from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.get_application import GetApplicationUseCase
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
-    CoronersLetterUploadError,
     CoronersLetterNotFoundError,
     CoronersLetterRetrievalError,
+    CoronersLetterUploadError,
     InvalidCoronersLetterDocumentIdError,
     ProceedingsNotFoundError,
 )
 from app.use_cases.search_application import SearchApplicationUseCase
-
-# from app.models.user import User
 from app.adapters.gov_notify import GovNotifyAdapter
 from app.ports.gov_notify_port import GovNotifyPort
 from app.use_cases.list_applications import ListApplicationsUseCase
@@ -149,6 +150,7 @@ def get_upload_coroners_letter_use_case(
 async def search_application(
     laa_reference: str,
     use_case: SearchApplicationUseCase = Depends(get_search_application_use_case),
+    _: None = Depends(verify_entra_provider_token),
 ) -> list[ApplicationSearchResponse]:
     """Search for an application by exact LAA reference number."""
     return use_case.execute(laa_reference)
@@ -169,6 +171,7 @@ def get_coroners_letter_use_case(
 def retrieve_coroners_letter(
     laa_reference: str,
     use_case: RetrieveCoronersLetterUseCase = Depends(get_coroners_letter_use_case),
+    _: None = Depends(verify_entra_caseworker_token),
 ) -> StreamingResponse:
     """Stream the coroner's letter for a given application."""
     try:
@@ -204,7 +207,7 @@ def retrieve_coroners_letter(
 async def read_application(
     laa_reference: str,
     use_case: GetApplicationUseCase = Depends(get_get_application_use_case),
-    # current_user: User = Depends(get_current_active_user),
+    _: None = Depends(verify_entra_caseworker_token),
 ) -> ApplicationResponse:
     """Get information about a given application."""
     try:
@@ -216,7 +219,7 @@ async def read_application(
 @router.get("/")
 async def read_all_applications(
     use_case: ListApplicationsUseCase = Depends(get_list_applications_use_case),
-    # current_user: User = Depends(get_current_active_user),
+    _: None = Depends(verify_entra_caseworker_token),
 ) -> Sequence[Application]:
     """Read all the applications currently in the database."""
     return use_case.execute()
@@ -232,6 +235,7 @@ async def upload_coroners_letter(
     use_case: UploadCoronersLetterUseCase = Depends(
         get_upload_coroners_letter_use_case
     ),
+    _: None = Depends(verify_entra_provider_token),
 ) -> UploadCoronersLetterResponse:
     """Upload a coroner's letter to document storage and return its file ID."""
     contents = await file.read()
@@ -253,7 +257,7 @@ async def upload_coroners_letter(
 def create_application(
     request: ApplicationCreate,
     use_case: CreateApplicationUseCase = Depends(get_create_application_use_case),
-    # current_user: User = Depends(get_current_active_user),
+    _: None = Depends(verify_entra_provider_token),
 ) -> Application:
     """Creates a new application with proceedings and public bodies."""
     return use_case.execute(request)
@@ -264,7 +268,7 @@ def patch_merits_decision(
     laa_reference: str,
     request: MeritsDecisionUpdateRefuse,
     use_case: MakeMeritsDecisionUseCase = Depends(get_make_merits_decision_use_case),
-    # current_user: User = Depends(get_current_active_user),
+    _: None = Depends(verify_entra_caseworker_token),
 ) -> Response:
     """Set the merits decision on the single proceeding for a given application."""
     try:

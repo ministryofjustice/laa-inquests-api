@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.db import get_session
 from app.models.user import User
-from app.auth.security import get_password_hash
+from passlib.hash import argon2
 import logging
 
 
@@ -41,7 +41,7 @@ def add_users(users_list_dict: list[dict]):
                 logging.warning(f"User with username '{username}' already exists.")
                 continue
 
-            password = get_password_hash(password)
+            password = argon2.hash(password)
             new_user = User(
                 username=username, hashed_password=password, disabled=disabled
             )

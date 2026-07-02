@@ -12,9 +12,10 @@ anyio==4.9.0
 argon2-cffi==25.1.0
 argon2-cffi-bindings==21.2.0
 certifi==2025.7.9
-cffi==1.17.1
+cffi==2.0.0
 charset-normalizer==3.4.7
 click==8.3.3
+cryptography==49.0.0
 dnspython==2.7.0
 docopt==0.6.2
 email-validator==2.2.0

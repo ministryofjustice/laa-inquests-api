@@ -1,12 +1,13 @@
 import pytest
 from unittest.mock import MagicMock
+from passlib.hash import argon2
 from sqlmodel import SQLModel, create_engine, Session, StaticPool
 from app import api
 from app.db import get_session
 from app.db.session import CustomSession
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
-from app.auth.security import get_password_hash
+from app.routers.dependencies import get_entra_auth_port
 from app.routers.applications import (
     get_provider_details_port,
     get_gov_notify_port,
@@ -51,7 +52,7 @@ def session_fixture():
             password = user.get("password")
             disabled = user.get("disabled")
 
-            password = get_password_hash(password)
+            password = argon2.hash(password)
             new_user = User(
                 username=username, hashed_password=password, disabled=disabled
             )
@@ -155,44 +156,102 @@ def client_fixture(session: Session):
         mock_sds.retrieve_coroners_letter.return_value = iter([b"file bytes"])
         return mock_sds
 
+    def get_entra_auth_port_bypass():
+        mock_auth = MagicMock()
+        mock_auth.verify_token.return_value = None
+        return mock_auth
+
     api.dependency_overrides[get_session] = get_session_override
     api.dependency_overrides[get_provider_details_port] = (
         get_provider_details_port_override
     )
     api.dependency_overrides[get_gov_notify_port] = get_gov_notify_port_override
     api.dependency_overrides[get_sds_port] = get_sds_port_override
+    api.dependency_overrides[get_entra_auth_port] = get_entra_auth_port_bypass
 
     client = TestClient(api, raise_server_exceptions=False)
     yield client
     api.dependency_overrides.clear()
 
 
+@pytest.fixture(name="entra_auth_client")
+def entra_auth_client_fixture(session: Session):
+    from fastapi import HTTPException, status
+
+    def get_session_override():
+        return session
+
+    def get_provider_details_port_override():
+        mock_port = MagicMock()
+        mock_port.get_firm_name.return_value = "Test Firm Name"
+        return mock_port
+
+    def get_gov_notify_port_override():
+        return MagicMock()
+
+    def get_sds_port_override():
+        mock_sds = MagicMock()
+        mock_sds.save_coroners_letter.return_value = SDSUploadCoronersLetterResponse(
+            sds_file_name="test-file_abc123.pdf",
+            status="SUCCESS",
+        )
+        mock_sds.retrieve_coroners_letter.return_value = iter([b"file bytes"])
+        return mock_sds
+
+    def get_entra_auth_port_override():
+        mock_auth = MagicMock()
+        token_scopes = {
+            "valid-provider-entra-token": {"User.Provider"},
+            "valid-caseworker-entra-token": {"User.Caseworker"},
+            # Backward compatible alias for existing tests that used one generic token.
+            "valid-entra-token": {"User.Provider"},
+        }
+
+        def verify_token(token: str, required_scopes: set[str] | None = None) -> None:
+            if token == "invalid-token":
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Could not validate credentials",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+            if token not in token_scopes:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Could not validate credentials",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+            if required_scopes and required_scopes.isdisjoint(token_scopes[token]):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Insufficient permissions",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+        mock_auth.verify_token.side_effect = verify_token
+        return mock_auth
+
+    api.dependency_overrides[get_session] = get_session_override
+    api.dependency_overrides[get_provider_details_port] = (
+        get_provider_details_port_override
+    )
+    api.dependency_overrides[get_gov_notify_port] = get_gov_notify_port_override
+    api.dependency_overrides[get_sds_port] = get_sds_port_override
+    api.dependency_overrides[get_entra_auth_port] = get_entra_auth_port_override
+
+    yield TestClient(api, raise_server_exceptions=False)
+    api.dependency_overrides.clear()
+
+
 @pytest.fixture
 def auth_token(client):
-    # Send POST request with x-www-form-urlencoded data
-    response = client.post(
-        "/token",
-        data={"username": "test_user", "password": "test_password"},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200
-    token_data = response.json()
-    assert "access_token" in token_data
-    return token_data["access_token"]
+    return "test-token"
 
 
 @pytest.fixture
 def auth_token_disabled_user(client):
-    # Send POST request with x-www-form-urlencoded data
-    response = client.post(
-        "/token",
-        data={"username": "jane_doe", "password": "password"},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200
-    token_data = response.json()
-    assert "access_token" in token_data
-    return token_data["access_token"]
+    return "disabled-user-test-token"
 
 
 @pytest.fixture
