@@ -32,7 +32,7 @@ class SearchApplicationUseCase:
                 date_submitted=application.created_at,
                 firm_name=firm_name,
                 firm_number=application.provider.firm_code,
-                case_status=application.status,
+                overall_decision=application.overall_decision,
             )
             for application in matching_applications
         ]

@@ -570,7 +570,7 @@ class ApplicationSearchResponse(BaseModel):
     date_submitted: datetime
     firm_name: str | None
     firm_number: str
-    case_status: str
+    overall_decision: str
 
 
 @dataclass
