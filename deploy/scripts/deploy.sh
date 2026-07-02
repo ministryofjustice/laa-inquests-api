@@ -23,8 +23,6 @@ deploy_branch() {
                 --set image.tag="$IMAGE_TAG" \
                 --set ingress.annotations."external-dns\.alpha\.kubernetes\.io/set-identifier"="$IDENTIFIER" \
                 --set ingress.hosts[0].host="$RELEASE_HOST" \
-                --set env.INQUESTS_API_CLIENT_ID="$INQUESTS_API_CLIENT_ID" \
-                --set env.INQUESTS_API_TENANT_ID="$INQUESTS_API_TENANT_ID" \
                 --set env.AWS_SECRETS_GOV_NOTIFY_API_KEY="gov-notify-api-key-$ENVIRONMENT" \
                 --set env.AWS_SECRETS_GOV_NOTIFY_CALLBACK_BEARER_TOKEN="gov-notify-callback-bearer-token-$ENVIRONMENT" \
                 --set env.AWS_SECRETS_GOV_NOTIFY_TEMPLATE_IDS="gov-notify-template-ids-$ENVIRONMENT" \
@@ -73,8 +71,6 @@ deploy_main() {
                 --set env.DB_USER="$DB_USER" \
                 --set env.DEPARTMENT_NAME="$DEPARTMENT_NAME" \
                 --set env.DEPARTMENT_URL="$DEPARTMENT_URL" \
-                --set env.INQUESTS_API_CLIENT_ID="$INQUESTS_API_CLIENT_ID" \
-                --set env.INQUESTS_API_TENANT_ID="$INQUESTS_API_TENANT_ID" \
                 --set env.AWS_SECRETS_GOV_NOTIFY_API_KEY="gov-notify-api-key-$ENVIRONMENT" \
                 --set env.AWS_SECRETS_GOV_NOTIFY_CALLBACK_BEARER_TOKEN="gov-notify-callback-bearer-token-$ENVIRONMENT" \
                 --set env.AWS_SECRETS_GOV_NOTIFY_TEMPLATE_IDS="gov-notify-template-ids-$ENVIRONMENT" \
