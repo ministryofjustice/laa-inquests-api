@@ -3,7 +3,7 @@ import logging
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import MeritsDecisionUpdateRefuse
 from app.ports.gov_notify_port import GovNotifyPort
-from app.ports.commit_decision_port import CommitDecisionPort
+from app.ports.commit_decision_port import ApplicationDecisionPort
 from app.use_cases.exceptions import ApplicationNotFoundError, ProceedingsNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -12,14 +12,14 @@ logger = logging.getLogger(__name__)
 class RefuseDecisionUseCase:
     def __init__(
         self,
-        commit_decision_port: CommitDecisionPort,
+        application_decision_port: ApplicationDecisionPort,
         gov_notify_port: GovNotifyPort,
     ) -> None:
-        self.commit_decision_port = commit_decision_port
+        self.application_decision_port = application_decision_port
         self.gov_notify_port = gov_notify_port
 
     def execute(self, laa_reference: str, request: MeritsDecisionUpdateRefuse) -> None:
-        application = self.commit_decision_port.get_application_by_laa_reference(
+        application = self.application_decision_port.get_application_by_laa_reference(
             laa_reference
         )
         if application is None:
@@ -36,7 +36,7 @@ class RefuseDecisionUseCase:
         proceeding.justification = request.justification
         application.overall_decision = MeritsDecision.REFUSED
 
-        self.commit_decision_port.commit_decision(application, proceeding)
+        self.application_decision_port.commit_decision(application, proceeding)
 
         try:
             self.gov_notify_port.send_application_refused_decision_email(

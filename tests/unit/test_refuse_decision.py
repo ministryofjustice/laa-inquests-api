@@ -11,7 +11,7 @@ from app.models.application.index import (
     MeritsDecisionUpdateRefuse,
     Provider,
 )
-from app.ports.commit_decision_port import CommitDecisionPort
+from app.ports.commit_decision_port import ApplicationDecisionPort
 from app.use_cases.exceptions import ApplicationNotFoundError, ProceedingsNotFoundError
 from app.use_cases.refuse_decision import RefuseDecisionUseCase
 
@@ -67,7 +67,7 @@ def test_patch_merits_decision_calls_session_add_and_commit():
     application = Application(
         proceedings=[proceeding], provider=provider, client=client
     )
-    commit_decision_port = MagicMock(spec=CommitDecisionPort)
+    commit_decision_port = MagicMock(spec=ApplicationDecisionPort)
     commit_decision_port.get_application_by_laa_reference.return_value = application
     gov_notify_port = MagicMock()
     use_case = RefuseDecisionUseCase(commit_decision_port, gov_notify_port)
@@ -96,7 +96,7 @@ def test_patch_merits_decision_sets_merits_decision_to_refused():
     application = Application(
         proceedings=[proceeding], provider=provider, client=client
     )
-    commit_decision_port = MagicMock(spec=CommitDecisionPort)
+    commit_decision_port = MagicMock(spec=ApplicationDecisionPort)
     commit_decision_port.get_application_by_laa_reference.return_value = application
     gov_notify_port = MagicMock()
     use_case = RefuseDecisionUseCase(commit_decision_port, gov_notify_port)
@@ -107,7 +107,7 @@ def test_patch_merits_decision_sets_merits_decision_to_refused():
 
 
 def test_patch_merits_decision_raises_404_when_application_not_found():
-    commit_decision_port = MagicMock(spec=CommitDecisionPort)
+    commit_decision_port = MagicMock(spec=ApplicationDecisionPort)
     commit_decision_port.get_application_by_laa_reference.return_value = None
     use_case = RefuseDecisionUseCase(commit_decision_port, MagicMock())
 
@@ -117,7 +117,7 @@ def test_patch_merits_decision_raises_404_when_application_not_found():
 
 def test_patch_merits_decision_raises_404_when_no_proceedings():
     application = Application(proceedings=[])
-    commit_decision_port = MagicMock(spec=CommitDecisionPort)
+    commit_decision_port = MagicMock(spec=ApplicationDecisionPort)
     commit_decision_port.get_application_by_laa_reference.return_value = application
     use_case = RefuseDecisionUseCase(commit_decision_port, MagicMock())
 
@@ -141,7 +141,7 @@ def test_patch_merits_decision_sets_overall_decision_on_application():
     application = Application(
         proceedings=[proceeding], provider=provider, client=client
     )
-    commit_decision_port = MagicMock(spec=CommitDecisionPort)
+    commit_decision_port = MagicMock(spec=ApplicationDecisionPort)
     commit_decision_port.get_application_by_laa_reference.return_value = application
     gov_notify_port = MagicMock()
     use_case = RefuseDecisionUseCase(commit_decision_port, gov_notify_port)
@@ -167,7 +167,7 @@ def test_patch_merits_decision_returns_204_when_notify_fails_after_commit():
     application = Application(
         proceedings=[proceeding], provider=provider, client=client
     )
-    commit_decision_port = MagicMock(spec=CommitDecisionPort)
+    commit_decision_port = MagicMock(spec=ApplicationDecisionPort)
     commit_decision_port.get_application_by_laa_reference.return_value = application
     gov_notify_port = MagicMock()
     gov_notify_port.send_application_refused_decision_email.side_effect = RuntimeError(
