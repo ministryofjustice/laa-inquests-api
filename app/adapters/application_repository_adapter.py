@@ -18,7 +18,7 @@ from app.models.application.index import (
 )
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.get_application_port import GetApplicationPort
-from app.ports.make_merits_decision_port import MakeMeritsDecisionPort
+from app.ports.commit_decision_port import CommitDecisionPort
 from app.ports.list_applications_port import ListApplicationsPort
 from app.ports.search_application_port import SearchApplicationPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
@@ -27,7 +27,7 @@ from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 class ApplicationRepositoryAdapter(
     GetApplicationPort,
     CreateApplicationPort,
-    MakeMeritsDecisionPort,
+    CommitDecisionPort,
     ListApplicationsPort,
     SearchApplicationPort,
     UploadCoronersLetterPort,

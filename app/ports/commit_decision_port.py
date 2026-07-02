@@ -4,7 +4,7 @@ from app.models.application.index import Application, ApplicationProceeding
 from app.ports.application_lookup_port import ApplicationLookupPort
 
 
-class MakeMeritsDecisionPort(ApplicationLookupPort):
+class CommitDecisionPort(ApplicationLookupPort):
     @abstractmethod
     def commit_decision(
         self,
