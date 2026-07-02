@@ -388,6 +388,7 @@ class ApplicationCreate(BaseModel):
     provider: ProviderCreate
 
 
+# TODO: Rename this to match a better naming convention. Also split this out for web layer + use case layer. This is a temporary model to support the refuse decision use case.
 class MeritsDecisionUpdateRefuse(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
