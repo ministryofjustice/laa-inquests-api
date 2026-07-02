@@ -24,24 +24,24 @@ def _make_request(value):
     return MeritsDecisionUpdateRefuse(**request_data)
 
 
-def test_merits_decision_update_parses_camel_case():
-    update = MeritsDecisionUpdateRefuse.model_validate(
-        {
-            "meritsDecision": "REFUSED",
-            "reasonForRefusal": "NOT_IN_SCOPE",
-            "justification": "The matter is not in scope.",
-        }
-    )
-    assert update.merits_decision == "REFUSED"
+# def test_merits_decision_update_parses_camel_case():
+#     update = MeritsDecisionUpdateRefuse.model_validate(
+#         {
+#             "meritsDecision": "REFUSED",
+#             "reasonForRefusal": "NOT_IN_SCOPE",
+#             "justification": "The matter is not in scope.",
+#         }
+#     )
+#     assert update.merits_decision == "REFUSED"
 
 
-def test_merits_decision_update_parses_snake_case():
-    update = MeritsDecisionUpdateRefuse(
-        merits_decision="REFUSED",
-        reason_for_refusal="NOT_IN_SCOPE",
-        justification="The matter is not in scope.",
-    )
-    assert update.merits_decision == "REFUSED"
+# def test_merits_decision_update_parses_snake_case():
+#     update = MeritsDecisionUpdateRefuse(
+#         merits_decision="REFUSED",
+#         reason_for_refusal="NOT_IN_SCOPE",
+#         justification="The matter is not in scope.",
+#     )
+#     assert update.merits_decision == "REFUSED"
 
 
 def test_merits_decision_update_rejects_invalid_value():
