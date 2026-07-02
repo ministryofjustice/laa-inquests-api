@@ -18,12 +18,12 @@ def _refuse_decision_payload(overrides=None):
     return payload
 
 
-def test_204_patch_merits_decision_to_refused(session, client, auth_token):
+def test_204_refuse_decision_to_refused(session, client, auth_token):
     application = session.exec(select(Application)).first()
     laa_reference = application.laa_reference
 
     response = client.patch(
-        f"/applications/{laa_reference}/merits-decision",
+        f"/applications/{laa_reference}/refuse-decision",
         json=_refuse_decision_payload(),
         headers={
             "Content-Type": "application/json",
@@ -34,9 +34,9 @@ def test_204_patch_merits_decision_to_refused(session, client, auth_token):
     assert response.status_code == 204
 
 
-def test_422_patch_merits_decision_with_invalid_value(client, auth_token):
+def test_422_refuse_decision_with_invalid_value(client, auth_token):
     response = client.patch(
-        "/applications/1/merits-decision",
+        "/applications/1/refuse-decision",
         json={"meritsDecision": "INVALID_VALUE"},
         headers={
             "Content-Type": "application/json",
@@ -47,9 +47,9 @@ def test_422_patch_merits_decision_with_invalid_value(client, auth_token):
     assert response.status_code == 422
 
 
-def test_404_patch_merits_decision_application_not_found(client, auth_token):
+def test_404_refuse_decision_application_not_found(client, auth_token):
     response = client.patch(
-        "/applications/99999/merits-decision",
+        "/applications/99999/refuse-decision",
         json=_refuse_decision_payload(),
         headers={
             "Content-Type": "application/json",
@@ -60,12 +60,12 @@ def test_404_patch_merits_decision_application_not_found(client, auth_token):
     assert response.status_code == 404
 
 
-def test_204_patch_merits_decision_updates_db(session, client, auth_token):
+def test_204_refuse_decision_updates_db(session, client, auth_token):
     application = session.exec(select(Application)).first()
     laa_reference = application.laa_reference
 
     client.patch(
-        f"/applications/{laa_reference}/merits-decision",
+        f"/applications/{laa_reference}/refuse-decision",
         json=_refuse_decision_payload(),
         headers={
             "Content-Type": "application/json",
@@ -92,11 +92,9 @@ def test_204_patch_merits_decision_updates_db(session, client, auth_token):
     assert application.overall_decision == "REFUSED"
 
 
-def test_422_patch_merits_decision_refused_missing_reason_for_refusal(
-    client, auth_token
-):
+def test_422_refuse_decision_refused_missing_reason_for_refusal(client, auth_token):
     response = client.patch(
-        "/applications/1/merits-decision",
+        "/applications/1/refuse-decision",
         json={
             "meritsDecision": "REFUSED",
             "justification": "A justification is provided.",
@@ -110,9 +108,9 @@ def test_422_patch_merits_decision_refused_missing_reason_for_refusal(
     assert response.status_code == 422
 
 
-def test_422_patch_merits_decision_refused_missing_justification(client, auth_token):
+def test_422_refuse_decision_refused_missing_justification(client, auth_token):
     response = client.patch(
-        "/applications/1/merits-decision",
+        "/applications/1/refuse-decision",
         json={
             "meritsDecision": "REFUSED",
             "reasonForRefusal": "NOT_IN_SCOPE",
@@ -126,9 +124,9 @@ def test_422_patch_merits_decision_refused_missing_justification(client, auth_to
     assert response.status_code == 422
 
 
-def test_422_patch_merits_decision_refused_with_invalid_reason(client, auth_token):
+def test_422_refuse_decision_refused_with_invalid_reason(client, auth_token):
     response = client.patch(
-        "/applications/1/merits-decision",
+        "/applications/1/refuse-decision",
         json={
             "meritsDecision": "REFUSED",
             "reasonForRefusal": "INVALID_REASON",
@@ -143,7 +141,7 @@ def test_422_patch_merits_decision_refused_with_invalid_reason(client, auth_toke
     assert response.status_code == 422
 
 
-def test_204_patch_merits_decision_persists_when_notify_fails(
+def test_204_refuse_decision_persists_when_notify_fails(
     session, client, auth_token, mock_gov_notify
 ):
     application = session.exec(select(Application)).first()
@@ -154,7 +152,7 @@ def test_204_patch_merits_decision_persists_when_notify_fails(
     )
 
     response = client.patch(
-        f"/applications/{laa_reference}/merits-decision",
+        f"/applications/{laa_reference}/refuse-decision",
         json=_refuse_decision_payload(),
         headers={
             "Content-Type": "application/json",

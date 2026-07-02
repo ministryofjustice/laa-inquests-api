@@ -263,14 +263,18 @@ def create_application(
     return use_case.execute(request)
 
 
+# TODO: Remove refuse-decision endpoint after UI update
 @router.patch("/{laa_reference}/merits-decision", status_code=204)
-def patch_merits_decision(
+@router.patch("/{laa_reference}/refuse-decision", status_code=204)
+# TODO: Better name once we understand proceeding needs
+def refuse_decision(
     laa_reference: str,
     request: MeritsDecisionUpdateRefuse,
     use_case: MakeMeritsDecisionUseCase = Depends(get_make_merits_decision_use_case),
     _: None = Depends(verify_entra_caseworker_token),
 ) -> Response:
     """Set the merits decision on the single proceeding for a given application."""
+    # TODO: Move this endpoint tests to unit instead of E2E tests
     try:
         # TODO: Refactor to not pass in request directly
         use_case.execute(laa_reference, request)
