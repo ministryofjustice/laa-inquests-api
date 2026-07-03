@@ -34,7 +34,6 @@ class RefuseDecisionUseCase:
         proceeding.merits_decision = MeritsDecision.REFUSED
         proceeding.reason_for_refusal = request.reason_for_refusal.value
         proceeding.justification = request.justification
-        application.overall_decision = MeritsDecision.REFUSED
 
         self.application_decision_port.commit_decision(application, proceeding)
 
