@@ -1,7 +1,13 @@
 from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Optional
-from pydantic import BaseModel, ConfigDict, model_validator, Field as PydanticField
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    model_validator,
+    Field as PydanticField,
+    computed_field,
+)
 from pydantic.alias_generators import to_camel
 from sqlalchemy import Column
 from sqlmodel import Field, Relationship, SQLModel, Enum
@@ -143,7 +149,6 @@ class ApplicationBase(SQLModel):
     used_delegated_functions: bool = True
     application_type: str | None = "INITIAL"
     auto_grant: bool | None = True
-    overall_decision: str | None = "PENDING"
 
 
 class Deceased(DeceasedBase, table=True):
@@ -188,6 +193,14 @@ class Application(ApplicationBase, table=True):
         sa_relationship_kwargs={"uselist": False}
     )
 
+    @computed_field
+    @property
+    def overall_decision(self) -> str:
+        """Calculate overall_decision from the first proceeding's merits_decision."""
+        if self.proceedings and len(self.proceedings) > 0:
+            return self.proceedings[0].merits_decision
+        return "PENDING"
+
 
 class ApplicationPublicBody(SQLModel, table=True):
     __tablename__ = "application_public_body"
@@ -206,7 +219,7 @@ class ApplicationProceeding(SQLModel, table=True):
     __tablename__ = "application_proceeding"
     application_proceeding_id: int | None = Field(default=None, primary_key=True)
     client_involvement_type: str | None = "RESPONDENT"
-    merits_decision: str | None = "PENDING"
+    merits_decision: str = "PENDING"
     reason_for_refusal: str | None = None
     justification: str | None = None
     laa_reference: int = Field(foreign_key="application.laa_reference")
@@ -393,7 +406,8 @@ class MeritsDecisionUpdateRefuse(BaseModel):
         alias_generator=to_camel,
         populate_by_name=True,
     )
-    merits_decision: MeritsDecision = PydanticField(examples=["REFUSED"])
+    # TODO: Remove this field after refuse usecase
+    merits_decision: MeritsDecision | None = PydanticField(examples=["REFUSED"])
     reason_for_refusal: ReasonForRefusal | None = PydanticField(
         examples=["NOT_IN_SCOPE"]
     )

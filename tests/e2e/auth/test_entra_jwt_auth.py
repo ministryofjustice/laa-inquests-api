@@ -178,11 +178,11 @@ def test_403_upload_coroners_letter_returns_403_when_caseworker_token(
     assert response.status_code == 403
 
 
-def test_204_patch_merits_decision_returns_204_when_caseworker_token(
+def test_204_refuse_decision_returns_204_when_caseworker_token(
     entra_auth_client,
 ):
     response = entra_auth_client.patch(
-        "/applications/1/merits-decision",
+        "/applications/1/refuse-decision",
         json={
             "meritsDecision": "REFUSED",
             "reasonForRefusal": "NOT_IN_SCOPE",
@@ -197,11 +197,11 @@ def test_204_patch_merits_decision_returns_204_when_caseworker_token(
     assert response.status_code == 204
 
 
-def test_403_patch_merits_decision_returns_403_when_provider_token(
+def test_403_refuse_decision_returns_403_when_provider_token(
     entra_auth_client,
 ):
     response = entra_auth_client.patch(
-        "/applications/1/merits-decision",
+        "/applications/1/refuse-decision",
         json={
             "meritsDecision": "REFUSED",
             "reasonForRefusal": "NOT_IN_SCOPE",

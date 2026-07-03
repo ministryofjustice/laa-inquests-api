@@ -18,7 +18,7 @@ from app.models.application.index import (
 )
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.get_application_port import GetApplicationPort
-from app.ports.make_merits_decision_port import MakeMeritsDecisionPort
+from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.list_applications_port import ListApplicationsPort
 from app.ports.search_application_port import SearchApplicationPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
@@ -27,7 +27,7 @@ from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 class ApplicationRepositoryAdapter(
     GetApplicationPort,
     CreateApplicationPort,
-    MakeMeritsDecisionPort,
+    ApplicationDecisionPort,
     ListApplicationsPort,
     SearchApplicationPort,
     UploadCoronersLetterPort,
@@ -179,16 +179,9 @@ class ApplicationRepositoryAdapter(
 
         return coroners_letter_id
 
-    def persist_merits_decision(
+    def update_decision(
         self,
-        application: Application,
         proceeding: ApplicationProceeding,
     ) -> None:
-        self.session.add(application)
         self.session.add(proceeding)
-
-        try:
-            self.session.commit()
-        except Exception:
-            self.session.rollback()
-            raise
+        self.session.flush()

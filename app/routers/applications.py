@@ -24,7 +24,7 @@ from app.routers.dependencies import (
 from app.config import Config
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.get_application_port import GetApplicationPort
-from app.ports.make_merits_decision_port import MakeMeritsDecisionPort
+from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.list_applications_port import ListApplicationsPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.ports.search_application_port import SearchApplicationPort
@@ -44,7 +44,7 @@ from app.use_cases.search_application import SearchApplicationUseCase
 from app.adapters.gov_notify import GovNotifyAdapter
 from app.ports.gov_notify_port import GovNotifyPort
 from app.use_cases.list_applications import ListApplicationsUseCase
-from app.use_cases.make_merits_decision import MakeMeritsDecisionUseCase
+from app.use_cases.refuse_decision import RefuseDecisionUseCase
 from app.use_cases.upload_coroners_letter import UploadCoronersLetterUseCase
 from app.use_cases.retrieve_coroners_letter import RetrieveCoronersLetterUseCase
 
@@ -123,13 +123,11 @@ def get_search_application_use_case(
 
 
 def get_make_merits_decision_use_case(
-    make_merits_decision_port: MakeMeritsDecisionPort = Depends(
-        get_application_db_adapter
-    ),
+    update_decision_port: ApplicationDecisionPort = Depends(get_application_db_adapter),
     gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
-) -> MakeMeritsDecisionUseCase:
-    return MakeMeritsDecisionUseCase(
-        make_merits_decision_port=make_merits_decision_port,
+) -> RefuseDecisionUseCase:
+    return RefuseDecisionUseCase(
+        application_decision_port=update_decision_port,
         gov_notify_port=gov_notify_port,
     )
 
@@ -263,20 +261,20 @@ def create_application(
     return use_case.execute(request)
 
 
+# TODO: Remove refuse-decision endpoint after UI update
 @router.patch("/{laa_reference}/merits-decision", status_code=204)
-def patch_merits_decision(
+@router.patch("/{laa_reference}/refuse-decision", status_code=204)
+def refuse_decision(
     laa_reference: str,
     request: MeritsDecisionUpdateRefuse,
-    use_case: MakeMeritsDecisionUseCase = Depends(get_make_merits_decision_use_case),
+    use_case: RefuseDecisionUseCase = Depends(get_make_merits_decision_use_case),
     _: None = Depends(verify_entra_caseworker_token),
 ) -> Response:
     """Set the merits decision on the single proceeding for a given application."""
     try:
-        # TODO: Refactor to not pass in request directly
         use_case.execute(laa_reference, request)
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
-    # TODO: Write test for this exception handling
     except ProceedingsNotFoundError:
         raise HTTPException(
             status_code=404, detail="No proceedings found for application"

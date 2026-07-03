@@ -11,9 +11,9 @@ from app.models.application.index import (
     MeritsDecisionUpdateRefuse,
     Provider,
 )
-from app.ports.make_merits_decision_port import MakeMeritsDecisionPort
+from app.ports.update_decision_port import ApplicationDecisionPort
 from app.use_cases.exceptions import ApplicationNotFoundError, ProceedingsNotFoundError
-from app.use_cases.make_merits_decision import MakeMeritsDecisionUseCase
+from app.use_cases.refuse_decision import RefuseDecisionUseCase
 
 
 def _make_request(value):
@@ -24,6 +24,7 @@ def _make_request(value):
     return MeritsDecisionUpdateRefuse(**request_data)
 
 
+# TODO remove this when meritsDecision is removed from model
 def test_merits_decision_update_parses_camel_case():
     update = MeritsDecisionUpdateRefuse.model_validate(
         {
@@ -35,6 +36,7 @@ def test_merits_decision_update_parses_camel_case():
     assert update.merits_decision == "REFUSED"
 
 
+# TODO remove this when meritsDecision is removed from model
 def test_merits_decision_update_parses_snake_case():
     update = MeritsDecisionUpdateRefuse(
         merits_decision="REFUSED",
@@ -44,12 +46,44 @@ def test_merits_decision_update_parses_snake_case():
     assert update.merits_decision == "REFUSED"
 
 
+# TODO remove this when meritsDecision is removed from model
 def test_merits_decision_update_rejects_invalid_value():
     with pytest.raises(ValidationError):
         MeritsDecisionUpdateRefuse(merits_decision="INVALID_VALUE")
 
 
-def test_patch_merits_decision_calls_session_add_and_commit():
+def test_merits_decision_update_rejects_missing_reason_for_refusal_when_refused():
+    with pytest.raises(ValidationError):
+        MeritsDecisionUpdateRefuse.model_validate(
+            {
+                "meritsDecision": "REFUSED",
+                "justification": "A justification is provided.",
+            }
+        )
+
+
+def test_merits_decision_update_rejects_missing_justification_when_refused():
+    with pytest.raises(ValidationError):
+        MeritsDecisionUpdateRefuse.model_validate(
+            {
+                "meritsDecision": "REFUSED",
+                "reasonForRefusal": "NOT_IN_SCOPE",
+            }
+        )
+
+
+def test_merits_decision_update_rejects_invalid_reason_for_refusal_when_refused():
+    with pytest.raises(ValidationError):
+        MeritsDecisionUpdateRefuse.model_validate(
+            {
+                "meritsDecision": "REFUSED",
+                "reasonForRefusal": "INVALID_REASON",
+                "justification": "A justification is provided.",
+            }
+        )
+
+
+def test_refuse_decision_calls_session_add_and_commit():
     proceeding = ApplicationProceeding(
         laa_reference=1, proceeding_id=ProceedingId.TEST1
     )
@@ -65,22 +99,19 @@ def test_patch_merits_decision_calls_session_add_and_commit():
     application = Application(
         proceedings=[proceeding], provider=provider, client=client
     )
-    make_merits_decision_port = MagicMock(spec=MakeMeritsDecisionPort)
-    make_merits_decision_port.get_application_by_laa_reference.return_value = (
-        application
-    )
+    update_decision_port = MagicMock(spec=ApplicationDecisionPort)
+    update_decision_port.get_application_by_laa_reference.return_value = application
+    update_decision_port.update_decision.return_value = None
     gov_notify_port = MagicMock()
-    use_case = MakeMeritsDecisionUseCase(make_merits_decision_port, gov_notify_port)
+    use_case = RefuseDecisionUseCase(update_decision_port, gov_notify_port)
 
     use_case.execute("1", _make_request("REFUSED"))
 
-    make_merits_decision_port.persist_merits_decision.assert_called_once_with(
-        application,
-        proceeding,
-    )
+    update_decision_port.update_decision.assert_called_once_with(proceeding)
+    update_decision_port.commit.assert_called_once()
 
 
-def test_patch_merits_decision_sets_merits_decision_to_refused():
+def test_refuse_decision_sets_merits_decision_to_refused():
     proceeding = ApplicationProceeding(
         laa_reference=1, proceeding_id=ProceedingId.TEST1
     )
@@ -96,40 +127,36 @@ def test_patch_merits_decision_sets_merits_decision_to_refused():
     application = Application(
         proceedings=[proceeding], provider=provider, client=client
     )
-    make_merits_decision_port = MagicMock(spec=MakeMeritsDecisionPort)
-    make_merits_decision_port.get_application_by_laa_reference.return_value = (
-        application
-    )
+    update_decision_port = MagicMock(spec=ApplicationDecisionPort)
+    update_decision_port.get_application_by_laa_reference.return_value = application
     gov_notify_port = MagicMock()
-    use_case = MakeMeritsDecisionUseCase(make_merits_decision_port, gov_notify_port)
+    use_case = RefuseDecisionUseCase(update_decision_port, gov_notify_port)
 
     use_case.execute("1", _make_request("REFUSED"))
 
     assert proceeding.merits_decision == "REFUSED"
 
 
-def test_patch_merits_decision_raises_404_when_application_not_found():
-    make_merits_decision_port = MagicMock(spec=MakeMeritsDecisionPort)
-    make_merits_decision_port.get_application_by_laa_reference.return_value = None
-    use_case = MakeMeritsDecisionUseCase(make_merits_decision_port, MagicMock())
+def test_refuse_decision_raises_404_when_application_not_found():
+    update_decision_port = MagicMock(spec=ApplicationDecisionPort)
+    update_decision_port.get_application_by_laa_reference.return_value = None
+    use_case = RefuseDecisionUseCase(update_decision_port, MagicMock())
 
     with pytest.raises(ApplicationNotFoundError):
         use_case.execute("99999", _make_request("REFUSED"))
 
 
-def test_patch_merits_decision_raises_404_when_no_proceedings():
+def test_refuse_decision_raises_404_when_no_proceedings():
     application = Application(proceedings=[])
-    make_merits_decision_port = MagicMock(spec=MakeMeritsDecisionPort)
-    make_merits_decision_port.get_application_by_laa_reference.return_value = (
-        application
-    )
-    use_case = MakeMeritsDecisionUseCase(make_merits_decision_port, MagicMock())
+    update_decision_port = MagicMock(spec=ApplicationDecisionPort)
+    update_decision_port.get_application_by_laa_reference.return_value = application
+    use_case = RefuseDecisionUseCase(update_decision_port, MagicMock())
 
     with pytest.raises(ProceedingsNotFoundError):
         use_case.execute("1", _make_request("REFUSED"))
 
 
-def test_patch_merits_decision_sets_overall_decision_on_application():
+def test_refuse_decision_sets_overall_decision_on_application():
     proceeding = ApplicationProceeding(
         laa_reference=1, proceeding_id=ProceedingId.TEST1
     )
@@ -145,19 +172,17 @@ def test_patch_merits_decision_sets_overall_decision_on_application():
     application = Application(
         proceedings=[proceeding], provider=provider, client=client
     )
-    make_merits_decision_port = MagicMock(spec=MakeMeritsDecisionPort)
-    make_merits_decision_port.get_application_by_laa_reference.return_value = (
-        application
-    )
+    update_decision_port = MagicMock(spec=ApplicationDecisionPort)
+    update_decision_port.get_application_by_laa_reference.return_value = application
     gov_notify_port = MagicMock()
-    use_case = MakeMeritsDecisionUseCase(make_merits_decision_port, gov_notify_port)
+    use_case = RefuseDecisionUseCase(update_decision_port, gov_notify_port)
 
     use_case.execute("1", _make_request("REFUSED"))
 
     assert application.overall_decision == "REFUSED"
 
 
-def test_patch_merits_decision_returns_204_when_notify_fails_after_commit():
+def test_refuse_decision_raises_exception_and_rolls_back_if_gov_notify_fails():
     proceeding = ApplicationProceeding(
         laa_reference=1, proceeding_id=ProceedingId.TEST1
     )
@@ -173,18 +198,15 @@ def test_patch_merits_decision_returns_204_when_notify_fails_after_commit():
     application = Application(
         proceedings=[proceeding], provider=provider, client=client
     )
-    make_merits_decision_port = MagicMock(spec=MakeMeritsDecisionPort)
-    make_merits_decision_port.get_application_by_laa_reference.return_value = (
-        application
-    )
+    update_decision_port = MagicMock(spec=ApplicationDecisionPort)
+    update_decision_port.get_application_by_laa_reference.return_value = application
     gov_notify_port = MagicMock()
-    gov_notify_port.send_application_refused_decision_email.side_effect = RuntimeError(
+    gov_notify_port.send_application_refused_decision_email.side_effect = Exception(
         "Gov Notify is unavailable"
     )
-    use_case = MakeMeritsDecisionUseCase(make_merits_decision_port, gov_notify_port)
+    use_case = RefuseDecisionUseCase(update_decision_port, gov_notify_port)
 
-    use_case.execute("1", _make_request("REFUSED"))
-    make_merits_decision_port.persist_merits_decision.assert_called_once_with(
-        application,
-        proceeding,
-    )
+    with pytest.raises(Exception, match="Failed to refuse application."):
+        use_case.execute("1", _make_request("REFUSED"))
+
+    update_decision_port.rollback.assert_called_once()
