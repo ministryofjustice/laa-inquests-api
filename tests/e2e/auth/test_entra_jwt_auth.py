@@ -216,6 +216,34 @@ def test_403_refuse_decision_returns_403_when_provider_token(
     assert response.status_code == 403
 
 
+def test_204_grant_decision_returns_204_when_caseworker_token(
+    entra_auth_client,
+):
+    response = entra_auth_client.patch(
+        "/applications/1/grant-decision",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": "Bearer valid-caseworker-entra-token",
+        },
+    )
+
+    assert response.status_code == 204
+
+
+def test_403_grant_decision_returns_403_when_provider_token(
+    entra_auth_client,
+):
+    response = entra_auth_client.patch(
+        "/applications/1/grant-decision",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": "Bearer valid-provider-entra-token",
+        },
+    )
+
+    assert response.status_code == 403
+
+
 def test_200_search_application_returns_200_when_provider_token(
     entra_auth_client,
 ):
