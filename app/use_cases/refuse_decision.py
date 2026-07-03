@@ -35,7 +35,7 @@ class RefuseDecisionUseCase:
         proceeding.reason_for_refusal = request.reason_for_refusal.value
         proceeding.justification = request.justification
 
-        self.application_decision_port.commit_decision(application, proceeding)
+        self.application_decision_port.commit_decision(proceeding)
 
         try:
             self.gov_notify_port.send_application_refused_decision_email(

@@ -181,10 +181,8 @@ class ApplicationRepositoryAdapter(
 
     def commit_decision(
         self,
-        application: Application,
         proceeding: ApplicationProceeding,
     ) -> None:
-        self.session.add(application)
         self.session.add(proceeding)
 
         try:

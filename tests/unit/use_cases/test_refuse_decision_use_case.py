@@ -106,10 +106,9 @@ def test_refuse_decision_calls_session_add_and_commit():
 
     use_case.execute("1", _make_request("REFUSED"))
 
-    commit_decision_port.commit_decision.assert_called_once_with(
-        application,
-        proceeding,
-    )
+    # update_decision
+    commit_decision_port.commit_decision.assert_called_once_with(proceeding)
+    # commit is called
 
 
 def test_refuse_decision_sets_merits_decision_to_refused():
@@ -208,7 +207,7 @@ def test_refuse_decision_returns_204_when_notify_fails_after_commit():
     use_case = RefuseDecisionUseCase(commit_decision_port, gov_notify_port)
 
     use_case.execute("1", _make_request("REFUSED"))
-    commit_decision_port.commit_decision.assert_called_once_with(
-        application,
-        proceeding,
-    )
+    commit_decision_port.commit_decision.assert_called_once_with(proceeding)
+
+    # if notify fails
+    # port.rollback called
