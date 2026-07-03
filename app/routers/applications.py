@@ -271,8 +271,6 @@ def create_application(
     return use_case.execute(request)
 
 
-# TODO: Remove refuse-decision endpoint after UI update
-@router.patch("/{laa_reference}/merits-decision", status_code=204)
 @router.patch("/{laa_reference}/refuse-decision", status_code=204)
 def refuse_decision(
     laa_reference: str,
