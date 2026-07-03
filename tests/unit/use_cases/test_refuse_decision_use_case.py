@@ -52,6 +52,37 @@ def test_merits_decision_update_rejects_invalid_value():
         MeritsDecisionUpdateRefuse(merits_decision="INVALID_VALUE")
 
 
+def test_merits_decision_update_rejects_missing_reason_for_refusal_when_refused():
+    with pytest.raises(ValidationError):
+        MeritsDecisionUpdateRefuse.model_validate(
+            {
+                "meritsDecision": "REFUSED",
+                "justification": "A justification is provided.",
+            }
+        )
+
+
+def test_merits_decision_update_rejects_missing_justification_when_refused():
+    with pytest.raises(ValidationError):
+        MeritsDecisionUpdateRefuse.model_validate(
+            {
+                "meritsDecision": "REFUSED",
+                "reasonForRefusal": "NOT_IN_SCOPE",
+            }
+        )
+
+
+def test_merits_decision_update_rejects_invalid_reason_for_refusal_when_refused():
+    with pytest.raises(ValidationError):
+        MeritsDecisionUpdateRefuse.model_validate(
+            {
+                "meritsDecision": "REFUSED",
+                "reasonForRefusal": "INVALID_REASON",
+                "justification": "A justification is provided.",
+            }
+        )
+
+
 def test_patch_merits_decision_calls_session_add_and_commit():
     proceeding = ApplicationProceeding(
         laa_reference=1, proceeding_id=ProceedingId.TEST1
