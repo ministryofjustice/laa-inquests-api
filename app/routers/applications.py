@@ -264,7 +264,6 @@ def create_application(
 # TODO: Remove refuse-decision endpoint after UI update
 @router.patch("/{laa_reference}/merits-decision", status_code=204)
 @router.patch("/{laa_reference}/refuse-decision", status_code=204)
-# TODO: Better name once we understand proceeding needs
 def refuse_decision(
     laa_reference: str,
     request: MeritsDecisionUpdateRefuse,
@@ -272,13 +271,10 @@ def refuse_decision(
     _: None = Depends(verify_entra_caseworker_token),
 ) -> Response:
     """Set the merits decision on the single proceeding for a given application."""
-    # TODO: Move this endpoint tests to unit instead of E2E tests
     try:
-        # TODO: Refactor to not pass in request directly
         use_case.execute(laa_reference, request)
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
-    # TODO: Write test for this exception handling
     except ProceedingsNotFoundError:
         raise HTTPException(
             status_code=404, detail="No proceedings found for application"
