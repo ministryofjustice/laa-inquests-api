@@ -20,6 +20,7 @@ sds_response_body = SDSUploadCoronersLetterResponse(
 
 def test_execute_returns_coroners_letter_id_when_call_is_successful():
     port = MagicMock(spec=SdsPort)
+    port.virus_check_coroners_letter.return_value = True
     port.save_coroners_letter.return_value = sds_response_body
     upload_port = MagicMock(spec=UploadCoronersLetterPort)
     expected_id = uuid.uuid4()
@@ -38,6 +39,7 @@ def test_execute_returns_coroners_letter_id_when_call_is_successful():
 
 def test_execute_stores_coroners_letter_in_database():
     port = MagicMock(spec=SdsPort)
+    port.virus_check_coroners_letter.return_value = True
     port.save_coroners_letter.return_value = sds_response_body
     upload_port = MagicMock(spec=UploadCoronersLetterPort)
 
@@ -56,6 +58,7 @@ def test_execute_stores_coroners_letter_in_database():
 
 def test_execute_raises_an_error_when_sds_fails():
     port = MagicMock(spec=SdsPort)
+    port.virus_check_coroners_letter.return_value = True
     sds_failure_response_body = sds_response_body
     sds_failure_response_body.status = "FAILURE"
     port.save_coroners_letter.return_value = sds_failure_response_body
@@ -67,3 +70,38 @@ def test_execute_raises_an_error_when_sds_fails():
 
     with pytest.raises(CoronersLetterUploadError):
         use_case.execute(request_body["coroners_letter"], request_body["file_name"])
+
+
+def test_execute_raises_an_error_when_virus_check_fails():
+    port = MagicMock(spec=SdsPort)
+    port.virus_check_coroners_letter.return_value = False
+    port.save_coroners_letter.return_value = sds_response_body
+    upload_port = MagicMock(spec=UploadCoronersLetterPort)
+
+    use_case = UploadCoronersLetterUseCase(
+        sds_port=port,
+        upload_coroners_letter_port=upload_port,
+    )
+
+    with pytest.raises(CoronersLetterUploadError):
+        use_case.execute(request_body["coroners_letter"], request_body["file_name"])
+
+    port.save_coroners_letter.assert_not_called()
+    upload_port.save_uploaded_coroners_letter.assert_not_called()
+
+
+def test_execute_raises_an_error_when_virus_check_returns_server_error():
+    port = MagicMock(spec=SdsPort)
+    port.virus_check_coroners_letter.side_effect = Exception("Server error")
+    upload_port = MagicMock(spec=UploadCoronersLetterPort)
+
+    use_case = UploadCoronersLetterUseCase(
+        sds_port=port,
+        upload_coroners_letter_port=upload_port,
+    )
+
+    with pytest.raises(CoronersLetterUploadError):
+        use_case.execute(request_body["coroners_letter"], request_body["file_name"])
+
+    port.save_coroners_letter.assert_not_called()
+    upload_port.save_uploaded_coroners_letter.assert_not_called()

@@ -21,6 +21,18 @@ class UploadCoronersLetterUseCase:
         coroners_letter: bytes,
         file_name: str,
     ) -> uuid.UUID:
+        try:
+            is_safe = self.sds_port.virus_check_coroners_letter(coroners_letter)
+        except Exception as e:
+            raise CoronersLetterUploadError(
+                f"Coroners letter {file_name} failed due server error during virus check: {str(e)}"
+            )
+
+        if not is_safe:
+            raise CoronersLetterUploadError(
+                f"Coroners letter {file_name} failed due to identified virus during virus check"
+            )
+
         response_body = self.sds_port.save_coroners_letter(
             coroners_letter,
             file_name,

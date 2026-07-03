@@ -11,6 +11,7 @@ from app.ports.sds_port import SdsPort
 from app.use_cases.exceptions import (
     InvalidCoronersLetterDocumentIdError,
     SDSLetterRetrievalError,
+    CoronersLetterUploadError,
 )
 
 
@@ -58,6 +59,28 @@ class SdsAdapter(SdsPort):
         timeout_buffer = 60  # minute
         self.token_expiry = time.time() + data["expires_in"] - timeout_buffer
         return self.token
+
+    def virus_check_coroners_letter(self, coroners_letter: bytes) -> bool:
+        token = self._get_token()
+        response = httpx.post(
+            f"{self.base_url}/virus_check_file",
+            files={
+                "file": (
+                    coroners_letter,
+                    "application/octet-stream",
+                )
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        if response.status_code == 200:
+            return True
+        elif response.status_code == 400:
+            return False
+        else:
+            raise CoronersLetterUploadError(
+                f"Failed to perform virus check. API status code: {response.status_code}"
+            )
 
     def save_coroners_letter(
         self, coroners_letter: bytes, file_name: str
