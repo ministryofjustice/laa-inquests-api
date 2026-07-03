@@ -83,7 +83,7 @@ def test_merits_decision_update_rejects_invalid_reason_for_refusal_when_refused(
         )
 
 
-def test_patch_merits_decision_calls_session_add_and_commit():
+def test_refuse_decision_calls_session_add_and_commit():
     proceeding = ApplicationProceeding(
         laa_reference=1, proceeding_id=ProceedingId.TEST1
     )
@@ -112,7 +112,7 @@ def test_patch_merits_decision_calls_session_add_and_commit():
     )
 
 
-def test_patch_merits_decision_sets_merits_decision_to_refused():
+def test_refuse_decision_sets_merits_decision_to_refused():
     proceeding = ApplicationProceeding(
         laa_reference=1, proceeding_id=ProceedingId.TEST1
     )
@@ -138,7 +138,7 @@ def test_patch_merits_decision_sets_merits_decision_to_refused():
     assert proceeding.merits_decision == "REFUSED"
 
 
-def test_patch_merits_decision_raises_404_when_application_not_found():
+def test_refuse_decision_raises_404_when_application_not_found():
     commit_decision_port = MagicMock(spec=ApplicationDecisionPort)
     commit_decision_port.get_application_by_laa_reference.return_value = None
     use_case = RefuseDecisionUseCase(commit_decision_port, MagicMock())
@@ -147,7 +147,7 @@ def test_patch_merits_decision_raises_404_when_application_not_found():
         use_case.execute("99999", _make_request("REFUSED"))
 
 
-def test_patch_merits_decision_raises_404_when_no_proceedings():
+def test_refuse_decision_raises_404_when_no_proceedings():
     application = Application(proceedings=[])
     commit_decision_port = MagicMock(spec=ApplicationDecisionPort)
     commit_decision_port.get_application_by_laa_reference.return_value = application
@@ -157,7 +157,7 @@ def test_patch_merits_decision_raises_404_when_no_proceedings():
         use_case.execute("1", _make_request("REFUSED"))
 
 
-def test_patch_merits_decision_sets_overall_decision_on_application():
+def test_refuse_decision_sets_overall_decision_on_application():
     proceeding = ApplicationProceeding(
         laa_reference=1, proceeding_id=ProceedingId.TEST1
     )
@@ -183,7 +183,7 @@ def test_patch_merits_decision_sets_overall_decision_on_application():
     assert application.overall_decision == "REFUSED"
 
 
-def test_patch_merits_decision_returns_204_when_notify_fails_after_commit():
+def test_refuse_decision_returns_204_when_notify_fails_after_commit():
     proceeding = ApplicationProceeding(
         laa_reference=1, proceeding_id=ProceedingId.TEST1
     )
