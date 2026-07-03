@@ -43,9 +43,12 @@ class RefuseDecisionUseCase:
                 proceeding,
                 application.provider.email_address,
             )
-        except Exception:
+            self.application_decision_port.commit()
+        except Exception as exception:
             logger.warning(
                 "Failed to send refusal email for application %s",
                 application.laa_reference,
                 exc_info=True,
             )
+            self.application_decision_port.rollback()
+            raise Exception("Failed to refuse application.") from exception

@@ -10,3 +10,9 @@ class ApplicationDecisionPort(ApplicationLookupPort):
         self,
         proceeding: ApplicationProceeding,
     ) -> None: ...
+
+    @abstractmethod
+    def commit(self) -> None: ...
+
+    @abstractmethod
+    def rollback(self) -> None: ...

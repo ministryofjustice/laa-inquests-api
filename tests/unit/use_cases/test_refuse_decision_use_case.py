@@ -101,14 +101,14 @@ def test_refuse_decision_calls_session_add_and_commit():
     )
     update_decision_port = MagicMock(spec=ApplicationDecisionPort)
     update_decision_port.get_application_by_laa_reference.return_value = application
+    update_decision_port.update_decision.return_value = None
     gov_notify_port = MagicMock()
     use_case = RefuseDecisionUseCase(update_decision_port, gov_notify_port)
 
     use_case.execute("1", _make_request("REFUSED"))
 
-    # update_decision
     update_decision_port.update_decision.assert_called_once_with(proceeding)
-    # commit is called
+    update_decision_port.commit.assert_called_once()
 
 
 def test_refuse_decision_sets_merits_decision_to_refused():
@@ -182,7 +182,7 @@ def test_refuse_decision_sets_overall_decision_on_application():
     assert application.overall_decision == "REFUSED"
 
 
-def test_refuse_decision_returns_204_when_notify_fails_after_commit():
+def test_refuse_decision_raises_exception_and_rolls_back_if_gov_notify_fails():
     proceeding = ApplicationProceeding(
         laa_reference=1, proceeding_id=ProceedingId.TEST1
     )
@@ -201,13 +201,12 @@ def test_refuse_decision_returns_204_when_notify_fails_after_commit():
     update_decision_port = MagicMock(spec=ApplicationDecisionPort)
     update_decision_port.get_application_by_laa_reference.return_value = application
     gov_notify_port = MagicMock()
-    gov_notify_port.send_application_refused_decision_email.side_effect = RuntimeError(
+    gov_notify_port.send_application_refused_decision_email.side_effect = Exception(
         "Gov Notify is unavailable"
     )
     use_case = RefuseDecisionUseCase(update_decision_port, gov_notify_port)
 
-    use_case.execute("1", _make_request("REFUSED"))
-    update_decision_port.update_decision.assert_called_once_with(proceeding)
+    with pytest.raises(Exception, match="Failed to refuse application."):
+        use_case.execute("1", _make_request("REFUSED"))
 
-    # if notify fails
-    # port.rollback called
+    update_decision_port.rollback.assert_called_once()

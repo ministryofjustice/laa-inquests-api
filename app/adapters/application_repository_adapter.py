@@ -184,9 +184,4 @@ class ApplicationRepositoryAdapter(
         proceeding: ApplicationProceeding,
     ) -> None:
         self.session.add(proceeding)
-
-        try:
-            self.session.commit()
-        except Exception:
-            self.session.rollback()
-            raise
+        self.session.flush()
