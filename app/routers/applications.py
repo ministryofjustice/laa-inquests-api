@@ -37,6 +37,7 @@ from app.use_cases.exceptions import (
     CoronersLetterNotFoundError,
     CoronersLetterRetrievalError,
     CoronersLetterUploadError,
+    CoronersLetterVirusDetectedError,
     InvalidCoronersLetterDocumentIdError,
     ProceedingsNotFoundError,
 )
@@ -243,6 +244,8 @@ async def upload_coroners_letter(
             contents,
             file_name,
         )
+    except CoronersLetterVirusDetectedError:
+        raise HTTPException(status_code=422, detail="Uploaded file failed virus check")
     except CoronersLetterUploadError:
         raise HTTPException(status_code=500, detail="Failed to upload coroners letter")
 

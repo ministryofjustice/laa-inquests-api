@@ -3,7 +3,10 @@ import uuid
 from app.domain.coroners_letter import CoronersLetter
 from app.ports.sds_port import SdsPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
-from app.use_cases.exceptions import CoronersLetterUploadError
+from app.use_cases.exceptions import (
+    CoronersLetterUploadError,
+    CoronersLetterVirusDetectedError,
+)
 
 
 class UploadCoronersLetterUseCase:
@@ -29,7 +32,7 @@ class UploadCoronersLetterUseCase:
             )
 
         if not is_safe:
-            raise CoronersLetterUploadError(
+            raise CoronersLetterVirusDetectedError(
                 f"Coroners letter {file_name} failed due to identified virus during virus check"
             )
 

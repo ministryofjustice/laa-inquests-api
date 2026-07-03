@@ -92,7 +92,9 @@ def test_execute_raises_an_error_when_virus_check_fails():
 
 def test_execute_raises_an_error_when_virus_check_returns_server_error():
     port = MagicMock(spec=SdsPort)
-    port.virus_check_coroners_letter.side_effect = Exception("Server error")
+    port.virus_check_coroners_letter.side_effect = CoronersLetterUploadError(
+        "SDS server error"
+    )
     upload_port = MagicMock(spec=UploadCoronersLetterPort)
 
     use_case = UploadCoronersLetterUseCase(
