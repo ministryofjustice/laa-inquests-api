@@ -3,7 +3,7 @@ import logging
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import MeritsDecisionUpdateRefuse
 from app.ports.gov_notify_port import GovNotifyPort
-from app.ports.commit_decision_port import ApplicationDecisionPort
+from app.ports.update_decision_port import ApplicationDecisionPort
 from app.use_cases.exceptions import ApplicationNotFoundError, ProceedingsNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ class RefuseDecisionUseCase:
         proceeding.reason_for_refusal = request.reason_for_refusal.value
         proceeding.justification = request.justification
 
-        self.application_decision_port.commit_decision(proceeding)
+        self.application_decision_port.update_decision(proceeding)
 
         try:
             self.gov_notify_port.send_application_refused_decision_email(

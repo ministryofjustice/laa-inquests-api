@@ -18,7 +18,7 @@ from app.models.application.index import (
 )
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.get_application_port import GetApplicationPort
-from app.ports.commit_decision_port import ApplicationDecisionPort
+from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.list_applications_port import ListApplicationsPort
 from app.ports.search_application_port import SearchApplicationPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
@@ -179,7 +179,7 @@ class ApplicationRepositoryAdapter(
 
         return coroners_letter_id
 
-    def commit_decision(
+    def update_decision(
         self,
         proceeding: ApplicationProceeding,
     ) -> None:

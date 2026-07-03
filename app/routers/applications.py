@@ -24,7 +24,7 @@ from app.routers.dependencies import (
 from app.config import Config
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.get_application_port import GetApplicationPort
-from app.ports.commit_decision_port import ApplicationDecisionPort
+from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.list_applications_port import ListApplicationsPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.ports.search_application_port import SearchApplicationPort
@@ -123,11 +123,11 @@ def get_search_application_use_case(
 
 
 def get_make_merits_decision_use_case(
-    commit_decision_port: ApplicationDecisionPort = Depends(get_application_db_adapter),
+    update_decision_port: ApplicationDecisionPort = Depends(get_application_db_adapter),
     gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
 ) -> RefuseDecisionUseCase:
     return RefuseDecisionUseCase(
-        application_decision_port=commit_decision_port,
+        application_decision_port=update_decision_port,
         gov_notify_port=gov_notify_port,
     )
 

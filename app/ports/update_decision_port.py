@@ -6,7 +6,7 @@ from app.ports.application_lookup_port import ApplicationLookupPort
 
 class ApplicationDecisionPort(ApplicationLookupPort):
     @abstractmethod
-    def commit_decision(
+    def update_decision(
         self,
         proceeding: ApplicationProceeding,
     ) -> None: ...
