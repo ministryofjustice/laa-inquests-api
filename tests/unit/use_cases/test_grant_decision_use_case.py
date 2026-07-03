@@ -1,3 +1,4 @@
+from datetime import date, datetime, UTC
 from unittest.mock import MagicMock
 
 import pytest
@@ -7,11 +8,16 @@ from app.models.application.index import (
     Application,
     ApplicationProceeding,
     Client,
+    MeritsDecisionUpdateGrant,
     Provider,
 )
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.use_cases.exceptions import ApplicationNotFoundError, ProceedingsNotFoundError
 from app.use_cases.grant_decision import GrantDecisionUseCase
+
+
+def _grant_request() -> MeritsDecisionUpdateGrant:
+    return MeritsDecisionUpdateGrant(certificate_start_date=date(2000, 1, 1))
 
 
 def _make_application() -> Application:
@@ -37,7 +43,7 @@ def test_grant_decision_calls_update_decision_and_commit():
     update_decision_port.update_decision.return_value = None
     use_case = GrantDecisionUseCase(update_decision_port)
 
-    use_case.execute("1")
+    use_case.execute("1", _grant_request())
 
     update_decision_port.update_decision.assert_called_once_with(
         application.proceedings[0]
@@ -51,9 +57,21 @@ def test_grant_decision_sets_merits_decision_to_granted():
     update_decision_port.get_application_by_laa_reference.return_value = application
     use_case = GrantDecisionUseCase(update_decision_port)
 
-    use_case.execute("1")
+    use_case.execute("1", _grant_request())
 
     assert application.proceedings[0].merits_decision == "GRANTED"
+
+
+def test_grant_decision_sets_certificate_dates():
+    application = _make_application()
+    update_decision_port = MagicMock(spec=ApplicationDecisionPort)
+    update_decision_port.get_application_by_laa_reference.return_value = application
+    use_case = GrantDecisionUseCase(update_decision_port)
+
+    use_case.execute("1", _grant_request())
+
+    assert application.proceedings[0].certificate_start_date == date(2000, 1, 1)
+    assert application.proceedings[0].certificate_issue_date == datetime.now(UTC).date()
 
 
 def test_grant_decision_clears_refusal_fields():
@@ -64,7 +82,7 @@ def test_grant_decision_clears_refusal_fields():
     update_decision_port.get_application_by_laa_reference.return_value = application
     use_case = GrantDecisionUseCase(update_decision_port)
 
-    use_case.execute("1")
+    use_case.execute("1", _grant_request())
 
     assert application.proceedings[0].reason_for_refusal is None
     assert application.proceedings[0].justification is None
@@ -76,7 +94,7 @@ def test_grant_decision_sets_overall_decision_on_application():
     update_decision_port.get_application_by_laa_reference.return_value = application
     use_case = GrantDecisionUseCase(update_decision_port)
 
-    use_case.execute("1")
+    use_case.execute("1", _grant_request())
 
     assert application.overall_decision == "GRANTED"
 
@@ -87,7 +105,7 @@ def test_grant_decision_raises_404_when_application_not_found():
     use_case = GrantDecisionUseCase(update_decision_port)
 
     with pytest.raises(ApplicationNotFoundError):
-        use_case.execute("99999")
+        use_case.execute("99999", _grant_request())
 
 
 def test_grant_decision_raises_404_when_no_proceedings():
@@ -97,4 +115,4 @@ def test_grant_decision_raises_404_when_no_proceedings():
     use_case = GrantDecisionUseCase(update_decision_port)
 
     with pytest.raises(ProceedingsNotFoundError):
-        use_case.execute("1")
+        use_case.execute("1", _grant_request())

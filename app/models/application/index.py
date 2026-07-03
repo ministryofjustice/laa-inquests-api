@@ -11,7 +11,7 @@ from pydantic import (
 from pydantic.alias_generators import to_camel
 from sqlalchemy import Column
 from sqlmodel import Field, Relationship, SQLModel, Enum
-from datetime import datetime, UTC
+from datetime import date, datetime, UTC
 from app.models.application.enums import (
     AddressSource,
     CorrespondenceRecipientType,
@@ -226,6 +226,8 @@ class ApplicationProceeding(SQLModel, table=True):
     proceeding_id: ProceedingId = Field(foreign_key="proceeding.proceeding_id")
     proceeding: Proceeding = Relationship(back_populates="application_proceedings")
     application: Application = Relationship(back_populates="proceedings")
+    certificate_issue_date: date = Field(nullable=True, default=None)
+    certificate_start_date: date = Field(nullable=True, default=None)
 
     @property
     def proceeding_description(self):
@@ -426,6 +428,20 @@ class MeritsDecisionUpdateRefuse(BaseModel):
                 raise ValueError(
                     "justification is required when merits_decision is REFUSED"
                 )
+        return self
+
+
+class MeritsDecisionUpdateGrant(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+    certificate_start_date: date = PydanticField(examples=["2000-01-01"])
+
+    @model_validator(mode="after")
+    def validate_certificate_start_date(self) -> "MeritsDecisionUpdateGrant":
+        if self.certificate_start_date > datetime.now(UTC).date():
+            raise ValueError("certificate_start_date must not be in the future")
         return self
 
 

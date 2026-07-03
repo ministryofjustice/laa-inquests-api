@@ -12,6 +12,7 @@ from app.models.application.index import (
     ApplicationCreate,
     ApplicationResponse,
     ApplicationSearchResponse,
+    MeritsDecisionUpdateGrant,
     MeritsDecisionUpdateRefuse,
     UploadCoronersLetterResponse,
 )
@@ -295,12 +296,13 @@ def refuse_decision(
 @router.patch("/{laa_reference}/grant-decision", status_code=204)
 def grant_decision(
     laa_reference: str,
+    request: MeritsDecisionUpdateGrant,
     use_case: GrantDecisionUseCase = Depends(get_grant_decision_use_case),
     _: None = Depends(verify_entra_caseworker_token),
 ) -> Response:
     """Grant the merits decision on the single proceeding for a given application."""
     try:
-        use_case.execute(laa_reference)
+        use_case.execute(laa_reference, request)
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
     except ProceedingsNotFoundError:

@@ -1,4 +1,7 @@
+from datetime import datetime, UTC
+
 from app.models.application.enums import MeritsDecision
+from app.models.application.index import MeritsDecisionUpdateGrant
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.use_cases.exceptions import ApplicationNotFoundError, ProceedingsNotFoundError
 
@@ -10,7 +13,7 @@ class GrantDecisionUseCase:
     ) -> None:
         self.application_decision_port = application_decision_port
 
-    def execute(self, laa_reference: str) -> None:
+    def execute(self, laa_reference: str, request: MeritsDecisionUpdateGrant) -> None:
         application = self.application_decision_port.get_application_by_laa_reference(
             laa_reference
         )
@@ -26,6 +29,8 @@ class GrantDecisionUseCase:
         proceeding.merits_decision = MeritsDecision.GRANTED
         proceeding.reason_for_refusal = None
         proceeding.justification = None
+        proceeding.certificate_start_date = request.certificate_start_date
+        proceeding.certificate_issue_date = datetime.now(UTC).date()
 
         self.application_decision_port.update_decision(proceeding)
         self.application_decision_port.commit()

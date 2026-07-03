@@ -221,6 +221,7 @@ def test_204_grant_decision_returns_204_when_caseworker_token(
 ):
     response = entra_auth_client.patch(
         "/applications/1/grant-decision",
+        json={"certificateStartDate": "2000-01-01"},
         headers={
             "Content-Type": "application/json",
             "Authorization": "Bearer valid-caseworker-entra-token",
@@ -235,6 +236,7 @@ def test_403_grant_decision_returns_403_when_provider_token(
 ):
     response = entra_auth_client.patch(
         "/applications/1/grant-decision",
+        json={"certificateStartDate": "2000-01-01"},
         headers={
             "Content-Type": "application/json",
             "Authorization": "Bearer valid-provider-entra-token",
