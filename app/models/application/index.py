@@ -403,7 +403,7 @@ class ApplicationCreate(BaseModel):
     provider: ProviderCreate
 
 
-class MeritsDecisionUpdateRefuse(BaseModel):
+class RefuseApplicationUpdate(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
         populate_by_name=True,
@@ -418,7 +418,7 @@ class MeritsDecisionUpdateRefuse(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_refusal_fields(self) -> "MeritsDecisionUpdateRefuse":
+    def validate_refusal_fields(self) -> "RefuseApplicationUpdate":
         if self.merits_decision == MeritsDecision.REFUSED:
             if self.reason_for_refusal is None:
                 raise ValueError(
@@ -431,7 +431,7 @@ class MeritsDecisionUpdateRefuse(BaseModel):
         return self
 
 
-class MeritsDecisionUpdateGrant(BaseModel):
+class GrantApplicationUpdate(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
         populate_by_name=True,
@@ -439,7 +439,7 @@ class MeritsDecisionUpdateGrant(BaseModel):
     certificate_start_date: date = PydanticField(examples=["2000-01-01"])
 
     @model_validator(mode="after")
-    def validate_certificate_start_date(self) -> "MeritsDecisionUpdateGrant":
+    def validate_certificate_start_date(self) -> "GrantApplicationUpdate":
         if self.certificate_start_date > datetime.now(UTC).date():
             raise ValueError("certificate_start_date must not be in the future")
         return self

@@ -12,8 +12,8 @@ from app.models.application.index import (
     ApplicationCreate,
     ApplicationResponse,
     ApplicationSearchResponse,
-    MeritsDecisionUpdateGrant,
-    MeritsDecisionUpdateRefuse,
+    GrantApplicationUpdate,
+    RefuseApplicationUpdate,
     UploadCoronersLetterResponse,
 )
 
@@ -274,7 +274,7 @@ def create_application(
 @router.patch("/{laa_reference}/refuse-decision", status_code=204)
 def refuse_decision(
     laa_reference: str,
-    request: MeritsDecisionUpdateRefuse,
+    request: RefuseApplicationUpdate,
     use_case: RefuseDecisionUseCase = Depends(get_make_merits_decision_use_case),
     _: None = Depends(verify_entra_caseworker_token),
 ) -> Response:
@@ -294,7 +294,7 @@ def refuse_decision(
 @router.patch("/{laa_reference}/grant-decision", status_code=204)
 def grant_decision(
     laa_reference: str,
-    request: MeritsDecisionUpdateGrant,
+    request: GrantApplicationUpdate,
     use_case: GrantDecisionUseCase = Depends(get_grant_decision_use_case),
     _: None = Depends(verify_entra_caseworker_token),
 ) -> Response:

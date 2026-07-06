@@ -4,13 +4,13 @@ from starlette.responses import Response
 
 import pytest
 
-from app.models.application.index import MeritsDecisionUpdateRefuse
+from app.models.application.index import RefuseApplicationUpdate
 from app.routers.applications import refuse_decision
 from app.use_cases.exceptions import ApplicationNotFoundError, ProceedingsNotFoundError
 
 
-def _make_request() -> MeritsDecisionUpdateRefuse:
-    return MeritsDecisionUpdateRefuse.model_validate(
+def _make_request() -> RefuseApplicationUpdate:
+    return RefuseApplicationUpdate.model_validate(
         {
             "meritsDecision": "REFUSED",
             "reasonForRefusal": "NOT_IN_SCOPE",

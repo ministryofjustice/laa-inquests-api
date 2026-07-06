@@ -5,13 +5,13 @@ from starlette.responses import Response
 
 import pytest
 
-from app.models.application.index import MeritsDecisionUpdateGrant
+from app.models.application.index import GrantApplicationUpdate
 from app.routers.applications import grant_decision
 from app.use_cases.exceptions import ApplicationNotFoundError, ProceedingsNotFoundError
 
 
-def _grant_request() -> MeritsDecisionUpdateGrant:
-    return MeritsDecisionUpdateGrant(certificate_start_date=date(2000, 1, 1))
+def _grant_request() -> GrantApplicationUpdate:
+    return GrantApplicationUpdate(certificate_start_date=date(2000, 1, 1))
 
 
 def test_grant_decision_calls_use_case_with_expected_arguments():

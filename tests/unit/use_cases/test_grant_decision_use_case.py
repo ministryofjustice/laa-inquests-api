@@ -8,7 +8,7 @@ from app.models.application.index import (
     Application,
     ApplicationProceeding,
     Client,
-    MeritsDecisionUpdateGrant,
+    GrantApplicationUpdate,
     Provider,
 )
 from app.ports.update_decision_port import ApplicationDecisionPort
@@ -16,8 +16,8 @@ from app.use_cases.exceptions import ApplicationNotFoundError, ProceedingsNotFou
 from app.use_cases.grant_decision import GrantDecisionUseCase
 
 
-def _grant_request() -> MeritsDecisionUpdateGrant:
-    return MeritsDecisionUpdateGrant(certificate_start_date=date(2000, 1, 1))
+def _grant_request() -> GrantApplicationUpdate:
+    return GrantApplicationUpdate(certificate_start_date=date(2000, 1, 1))
 
 
 def _make_application() -> Application:

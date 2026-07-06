@@ -1,7 +1,7 @@
 import logging
 
 from app.models.application.enums import MeritsDecision
-from app.models.application.index import MeritsDecisionUpdateRefuse
+from app.models.application.index import RefuseApplicationUpdate
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.use_cases.exceptions import ApplicationNotFoundError, ProceedingsNotFoundError
@@ -18,7 +18,7 @@ class RefuseDecisionUseCase:
         self.application_decision_port = application_decision_port
         self.gov_notify_port = gov_notify_port
 
-    def execute(self, laa_reference: str, request: MeritsDecisionUpdateRefuse) -> None:
+    def execute(self, laa_reference: str, request: RefuseApplicationUpdate) -> None:
         application = self.application_decision_port.get_application_by_laa_reference(
             laa_reference
         )

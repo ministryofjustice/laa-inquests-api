@@ -8,7 +8,7 @@ from app.models.application.index import (
     Application,
     ApplicationProceeding,
     Client,
-    MeritsDecisionUpdateRefuse,
+    RefuseApplicationUpdate,
     Provider,
 )
 from app.ports.update_decision_port import ApplicationDecisionPort
@@ -21,12 +21,12 @@ def _make_request(value):
     if value == "REFUSED":
         request_data["reason_for_refusal"] = "NOT_IN_SCOPE"
         request_data["justification"] = "The matter is not in scope."
-    return MeritsDecisionUpdateRefuse(**request_data)
+    return RefuseApplicationUpdate(**request_data)
 
 
 # TODO remove this when meritsDecision is removed from model
 def test_merits_decision_update_parses_camel_case():
-    update = MeritsDecisionUpdateRefuse.model_validate(
+    update = RefuseApplicationUpdate.model_validate(
         {
             "meritsDecision": "REFUSED",
             "reasonForRefusal": "NOT_IN_SCOPE",
@@ -38,7 +38,7 @@ def test_merits_decision_update_parses_camel_case():
 
 # TODO remove this when meritsDecision is removed from model
 def test_merits_decision_update_parses_snake_case():
-    update = MeritsDecisionUpdateRefuse(
+    update = RefuseApplicationUpdate(
         merits_decision="REFUSED",
         reason_for_refusal="NOT_IN_SCOPE",
         justification="The matter is not in scope.",
@@ -49,12 +49,12 @@ def test_merits_decision_update_parses_snake_case():
 # TODO remove this when meritsDecision is removed from model
 def test_merits_decision_update_rejects_invalid_value():
     with pytest.raises(ValidationError):
-        MeritsDecisionUpdateRefuse(merits_decision="INVALID_VALUE")
+        RefuseApplicationUpdate(merits_decision="INVALID_VALUE")
 
 
 def test_merits_decision_update_rejects_missing_reason_for_refusal_when_refused():
     with pytest.raises(ValidationError):
-        MeritsDecisionUpdateRefuse.model_validate(
+        RefuseApplicationUpdate.model_validate(
             {
                 "meritsDecision": "REFUSED",
                 "justification": "A justification is provided.",
@@ -64,7 +64,7 @@ def test_merits_decision_update_rejects_missing_reason_for_refusal_when_refused(
 
 def test_merits_decision_update_rejects_missing_justification_when_refused():
     with pytest.raises(ValidationError):
-        MeritsDecisionUpdateRefuse.model_validate(
+        RefuseApplicationUpdate.model_validate(
             {
                 "meritsDecision": "REFUSED",
                 "reasonForRefusal": "NOT_IN_SCOPE",
@@ -74,7 +74,7 @@ def test_merits_decision_update_rejects_missing_justification_when_refused():
 
 def test_merits_decision_update_rejects_invalid_reason_for_refusal_when_refused():
     with pytest.raises(ValidationError):
-        MeritsDecisionUpdateRefuse.model_validate(
+        RefuseApplicationUpdate.model_validate(
             {
                 "meritsDecision": "REFUSED",
                 "reasonForRefusal": "INVALID_REASON",
