@@ -587,7 +587,8 @@ class ApplicationSearchResponse(BaseModel):
         populate_by_name=True,
     )
     laa_reference: int
-    client_name: str
+    client_first_name: str
+    client_last_name: str
     client_date_of_birth: str
     date_submitted: datetime
     firm_name: str | None

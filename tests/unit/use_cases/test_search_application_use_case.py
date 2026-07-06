@@ -102,7 +102,8 @@ def test_execute_returns_response_with_all_required_fields():
     assert len(results) == 1
     result = results[0]
     assert result.laa_reference == 1
-    assert result.client_name == "Test User"
+    assert result.client_first_name == "Test"
+    assert result.client_last_name == "User"
     assert result.client_date_of_birth == "2000-01-01"
     assert result.date_submitted == application.created_at
     assert result.firm_name == "My Firm"

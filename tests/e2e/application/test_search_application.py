@@ -13,7 +13,8 @@ def test_200_search_application_by_reference_returns_expected_fields(
     assert len(body) == 1
     result = body[0]
     assert result["laaReference"] == 1
-    assert result["clientName"] == "Test Surname"
+    assert result["clientFirstName"] == "Test"
+    assert result["clientLastName"] == "Surname"
     assert result["clientDateOfBirth"] == "01-02-2003"
     assert "dateSubmitted" in result
     assert result["firmName"] == "Test Firm Name"
