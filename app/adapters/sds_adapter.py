@@ -62,7 +62,7 @@ class SdsAdapter(SdsPort):
 
     def virus_check_coroners_letter(self, coroners_letter: bytes) -> bool:
         token = self._get_token()
-        response = httpx.post(
+        response = httpx.put(
             f"{self.base_url}/virus_check_file",
             files={
                 "file": (
