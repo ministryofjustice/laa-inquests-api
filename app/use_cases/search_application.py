@@ -27,7 +27,8 @@ class SearchApplicationUseCase:
         return [
             ApplicationSearchResponse(
                 laa_reference=application.laa_reference,
-                client_name=f"{application.client.client_first_name} {application.client.client_last_name}",
+                client_first_name=application.client.client_first_name,
+                client_last_name=application.client.client_last_name,
                 client_date_of_birth=application.client.date_of_birth,
                 date_submitted=application.created_at,
                 firm_name=firm_name,
