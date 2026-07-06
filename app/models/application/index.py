@@ -11,11 +11,10 @@ from pydantic import (
 from pydantic.alias_generators import to_camel
 from sqlalchemy import Column
 from sqlmodel import Field, Relationship, SQLModel, Enum
-from datetime import datetime, UTC
+from datetime import date, datetime, UTC
 from app.models.application.enums import (
     AddressSource,
     CorrespondenceRecipientType,
-    MeritsDecision,
     ReasonForRefusal,
     ProceedingId,
     PublicBodyId,
@@ -226,6 +225,8 @@ class ApplicationProceeding(SQLModel, table=True):
     proceeding_id: ProceedingId = Field(foreign_key="proceeding.proceeding_id")
     proceeding: Proceeding = Relationship(back_populates="application_proceedings")
     application: Application = Relationship(back_populates="proceedings")
+    certificate_issue_date: date = Field(nullable=True, default=None)
+    certificate_start_date: date = Field(nullable=True, default=None)
 
     @property
     def proceeding_description(self):
@@ -401,13 +402,11 @@ class ApplicationCreate(BaseModel):
     provider: ProviderCreate
 
 
-class MeritsDecisionUpdateRefuse(BaseModel):
+class RefuseApplicationUpdate(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
         populate_by_name=True,
     )
-    # TODO: Remove this field after refuse usecase
-    merits_decision: MeritsDecision | None = PydanticField(examples=["REFUSED"])
     reason_for_refusal: ReasonForRefusal | None = PydanticField(
         examples=["NOT_IN_SCOPE"]
     )
@@ -416,16 +415,25 @@ class MeritsDecisionUpdateRefuse(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_refusal_fields(self) -> "MeritsDecisionUpdateRefuse":
-        if self.merits_decision == MeritsDecision.REFUSED:
-            if self.reason_for_refusal is None:
-                raise ValueError(
-                    "reason_for_refusal is required when merits_decision is REFUSED"
-                )
-            if self.justification is None or not self.justification.strip():
-                raise ValueError(
-                    "justification is required when merits_decision is REFUSED"
-                )
+    def validate_refusal_fields(self) -> "RefuseApplicationUpdate":
+        if self.reason_for_refusal is None:
+            raise ValueError("reason_for_refusal is required")
+        if self.justification is None or not self.justification.strip():
+            raise ValueError("justification is required")
+        return self
+
+
+class GrantApplicationUpdate(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+    certificate_start_date: date = PydanticField(examples=["2000-01-01"])
+
+    @model_validator(mode="after")
+    def validate_certificate_start_date(self) -> "GrantApplicationUpdate":
+        if self.certificate_start_date > datetime.now(UTC).date():
+            raise ValueError("certificate_start_date must not be in the future")
         return self
 
 

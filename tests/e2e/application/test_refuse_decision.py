@@ -9,7 +9,6 @@ pytestmark = pytest.mark.usefixtures("mock_gov_notify")
 
 def _refuse_decision_payload(overrides=None):
     payload = {
-        "meritsDecision": "REFUSED",
         "reasonForRefusal": "NOT_IN_SCOPE",
         "justification": "The matter does not meet scope requirements.",
     }

@@ -12,7 +12,8 @@ from app.models.application.index import (
     ApplicationCreate,
     ApplicationResponse,
     ApplicationSearchResponse,
-    MeritsDecisionUpdateRefuse,
+    GrantApplicationUpdate,
+    RefuseApplicationUpdate,
     UploadCoronersLetterResponse,
 )
 
@@ -45,6 +46,7 @@ from app.adapters.gov_notify import GovNotifyAdapter
 from app.ports.gov_notify_port import GovNotifyPort
 from app.use_cases.list_applications import ListApplicationsUseCase
 from app.use_cases.refuse_decision import RefuseDecisionUseCase
+from app.use_cases.grant_decision import GrantDecisionUseCase
 from app.use_cases.upload_coroners_letter import UploadCoronersLetterUseCase
 from app.use_cases.retrieve_coroners_letter import RetrieveCoronersLetterUseCase
 
@@ -129,6 +131,14 @@ def get_make_merits_decision_use_case(
     return RefuseDecisionUseCase(
         application_decision_port=update_decision_port,
         gov_notify_port=gov_notify_port,
+    )
+
+
+def get_grant_decision_use_case(
+    update_decision_port: ApplicationDecisionPort = Depends(get_application_db_adapter),
+) -> GrantDecisionUseCase:
+    return GrantDecisionUseCase(
+        application_decision_port=update_decision_port,
     )
 
 
@@ -261,16 +271,34 @@ def create_application(
     return use_case.execute(request)
 
 
-# TODO: Remove refuse-decision endpoint after UI update
-@router.patch("/{laa_reference}/merits-decision", status_code=204)
 @router.patch("/{laa_reference}/refuse-decision", status_code=204)
 def refuse_decision(
     laa_reference: str,
-    request: MeritsDecisionUpdateRefuse,
+    request: RefuseApplicationUpdate,
     use_case: RefuseDecisionUseCase = Depends(get_make_merits_decision_use_case),
     _: None = Depends(verify_entra_caseworker_token),
 ) -> Response:
     """Set the merits decision on the single proceeding for a given application."""
+    try:
+        use_case.execute(laa_reference, request)
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
+    except ProceedingsNotFoundError:
+        raise HTTPException(
+            status_code=404, detail="No proceedings found for application"
+        )
+
+    return Response(status_code=204)
+
+
+@router.patch("/{laa_reference}/grant-decision", status_code=204)
+def grant_decision(
+    laa_reference: str,
+    request: GrantApplicationUpdate,
+    use_case: GrantDecisionUseCase = Depends(get_grant_decision_use_case),
+    _: None = Depends(verify_entra_caseworker_token),
+) -> Response:
+    """Grant the merits decision on the single proceeding for a given application."""
     try:
         use_case.execute(laa_reference, request)
     except ApplicationNotFoundError:
