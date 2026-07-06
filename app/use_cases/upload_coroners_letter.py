@@ -25,7 +25,9 @@ class UploadCoronersLetterUseCase:
         file_name: str,
     ) -> uuid.UUID:
         try:
-            is_safe = self.sds_port.virus_check_coroners_letter(coroners_letter)
+            is_safe = self.sds_port.virus_check_coroners_letter(
+                coroners_letter, file_name
+            )
         except Exception as e:
             raise CoronersLetterUploadError(
                 f"{file_name} upload failed due to server error during virus check: {str(e)}"

@@ -364,7 +364,7 @@ def test_virus_check_coroners_letter_returns_true_for_safe_file():
         patch("httpx.post", side_effect=[_mock_token_response(), mock]),
         patch("httpx.put", return_value=mock),
     ):
-        result = adapter.virus_check_coroners_letter(b"safe content")
+        result = adapter.virus_check_coroners_letter(b"safe content", "test_file.pdf")
 
     assert result is True
 
@@ -379,7 +379,7 @@ def test_virus_check_coroners_letter_returns_false_for_infected_file():
         patch("httpx.post", side_effect=[_mock_token_response(), mock]),
         patch("httpx.put", return_value=mock),
     ):
-        result = adapter.virus_check_coroners_letter(b"unsafe content")
+        result = adapter.virus_check_coroners_letter(b"unsafe content", "test_file.pdf")
 
     assert result is False
 
@@ -398,4 +398,4 @@ def test_virus_check_coroners_letter_raises_upload_error_on_sds_failure():
             CoronersLetterUploadError,
             match="Failed to perform virus check. API status code: 500",
         ):
-            adapter.virus_check_coroners_letter(b"unsafe content")
+            adapter.virus_check_coroners_letter(b"unsafe content", "test_file.pdf")

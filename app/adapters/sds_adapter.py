@@ -60,12 +60,15 @@ class SdsAdapter(SdsPort):
         self.token_expiry = time.time() + data["expires_in"] - timeout_buffer
         return self.token
 
-    def virus_check_coroners_letter(self, coroners_letter: bytes) -> bool:
+    def virus_check_coroners_letter(
+        self, coroners_letter: bytes, file_name: str
+    ) -> bool:
         token = self._get_token()
         response = httpx.put(
             f"{self.base_url}/virus_check_file",
             files={
                 "file": (
+                    file_name,
                     coroners_letter,
                     "application/octet-stream",
                 )
