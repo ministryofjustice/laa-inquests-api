@@ -12,7 +12,6 @@ from app.use_cases.exceptions import ApplicationNotFoundError, ProceedingsNotFou
 def _make_request() -> RefuseApplicationUpdate:
     return RefuseApplicationUpdate.model_validate(
         {
-            "meritsDecision": "REFUSED",
             "reasonForRefusal": "NOT_IN_SCOPE",
             "justification": "The matter is not in scope.",
         }

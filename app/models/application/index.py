@@ -15,7 +15,6 @@ from datetime import date, datetime, UTC
 from app.models.application.enums import (
     AddressSource,
     CorrespondenceRecipientType,
-    MeritsDecision,
     ReasonForRefusal,
     ProceedingId,
     PublicBodyId,
@@ -408,8 +407,6 @@ class RefuseApplicationUpdate(BaseModel):
         alias_generator=to_camel,
         populate_by_name=True,
     )
-    # TODO: Remove this field after refuse usecase
-    merits_decision: MeritsDecision | None = PydanticField(examples=["REFUSED"])
     reason_for_refusal: ReasonForRefusal | None = PydanticField(
         examples=["NOT_IN_SCOPE"]
     )
@@ -419,15 +416,10 @@ class RefuseApplicationUpdate(BaseModel):
 
     @model_validator(mode="after")
     def validate_refusal_fields(self) -> "RefuseApplicationUpdate":
-        if self.merits_decision == MeritsDecision.REFUSED:
-            if self.reason_for_refusal is None:
-                raise ValueError(
-                    "reason_for_refusal is required when merits_decision is REFUSED"
-                )
-            if self.justification is None or not self.justification.strip():
-                raise ValueError(
-                    "justification is required when merits_decision is REFUSED"
-                )
+        if self.reason_for_refusal is None:
+            raise ValueError("reason_for_refusal is required")
+        if self.justification is None or not self.justification.strip():
+            raise ValueError("justification is required")
         return self
 
 

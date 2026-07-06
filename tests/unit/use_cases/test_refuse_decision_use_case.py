@@ -16,67 +16,35 @@ from app.use_cases.exceptions import ApplicationNotFoundError, ProceedingsNotFou
 from app.use_cases.refuse_decision import RefuseDecisionUseCase
 
 
-def _make_request(value):
-    request_data = {"merits_decision": value}
-    if value == "REFUSED":
-        request_data["reason_for_refusal"] = "NOT_IN_SCOPE"
-        request_data["justification"] = "The matter is not in scope."
-    return RefuseApplicationUpdate(**request_data)
-
-
-# TODO remove this when meritsDecision is removed from model
-def test_merits_decision_update_parses_camel_case():
-    update = RefuseApplicationUpdate.model_validate(
-        {
-            "meritsDecision": "REFUSED",
-            "reasonForRefusal": "NOT_IN_SCOPE",
-            "justification": "The matter is not in scope.",
-        }
-    )
-    assert update.merits_decision == "REFUSED"
-
-
-# TODO remove this when meritsDecision is removed from model
-def test_merits_decision_update_parses_snake_case():
-    update = RefuseApplicationUpdate(
-        merits_decision="REFUSED",
+def _make_request():
+    return RefuseApplicationUpdate(
         reason_for_refusal="NOT_IN_SCOPE",
         justification="The matter is not in scope.",
     )
-    assert update.merits_decision == "REFUSED"
 
 
-# TODO remove this when meritsDecision is removed from model
-def test_merits_decision_update_rejects_invalid_value():
-    with pytest.raises(ValidationError):
-        RefuseApplicationUpdate(merits_decision="INVALID_VALUE")
-
-
-def test_merits_decision_update_rejects_missing_reason_for_refusal_when_refused():
+def test_refusal_update_rejects_missing_reason_for_refusal():
     with pytest.raises(ValidationError):
         RefuseApplicationUpdate.model_validate(
             {
-                "meritsDecision": "REFUSED",
                 "justification": "A justification is provided.",
             }
         )
 
 
-def test_merits_decision_update_rejects_missing_justification_when_refused():
+def test_refusal_update_rejects_missing_justification():
     with pytest.raises(ValidationError):
         RefuseApplicationUpdate.model_validate(
             {
-                "meritsDecision": "REFUSED",
                 "reasonForRefusal": "NOT_IN_SCOPE",
             }
         )
 
 
-def test_merits_decision_update_rejects_invalid_reason_for_refusal_when_refused():
+def test_refusal_update_rejects_invalid_reason_for_refusal():
     with pytest.raises(ValidationError):
         RefuseApplicationUpdate.model_validate(
             {
-                "meritsDecision": "REFUSED",
                 "reasonForRefusal": "INVALID_REASON",
                 "justification": "A justification is provided.",
             }
@@ -105,7 +73,7 @@ def test_refuse_decision_calls_session_add_and_commit():
     gov_notify_port = MagicMock()
     use_case = RefuseDecisionUseCase(update_decision_port, gov_notify_port)
 
-    use_case.execute("1", _make_request("REFUSED"))
+    use_case.execute("1", _make_request())
 
     update_decision_port.update_decision.assert_called_once_with(proceeding)
     update_decision_port.commit.assert_called_once()
@@ -132,7 +100,7 @@ def test_refuse_decision_sets_merits_decision_to_refused():
     gov_notify_port = MagicMock()
     use_case = RefuseDecisionUseCase(update_decision_port, gov_notify_port)
 
-    use_case.execute("1", _make_request("REFUSED"))
+    use_case.execute("1", _make_request())
 
     assert proceeding.merits_decision == "REFUSED"
 
@@ -143,7 +111,7 @@ def test_refuse_decision_raises_404_when_application_not_found():
     use_case = RefuseDecisionUseCase(update_decision_port, MagicMock())
 
     with pytest.raises(ApplicationNotFoundError):
-        use_case.execute("99999", _make_request("REFUSED"))
+        use_case.execute("99999", _make_request())
 
 
 def test_refuse_decision_raises_404_when_no_proceedings():
@@ -153,7 +121,7 @@ def test_refuse_decision_raises_404_when_no_proceedings():
     use_case = RefuseDecisionUseCase(update_decision_port, MagicMock())
 
     with pytest.raises(ProceedingsNotFoundError):
-        use_case.execute("1", _make_request("REFUSED"))
+        use_case.execute("1", _make_request())
 
 
 def test_refuse_decision_sets_overall_decision_on_application():
@@ -177,7 +145,7 @@ def test_refuse_decision_sets_overall_decision_on_application():
     gov_notify_port = MagicMock()
     use_case = RefuseDecisionUseCase(update_decision_port, gov_notify_port)
 
-    use_case.execute("1", _make_request("REFUSED"))
+    use_case.execute("1", _make_request())
 
     assert application.overall_decision == "REFUSED"
 
@@ -207,6 +175,6 @@ def test_refuse_decision_raises_exception_and_rolls_back_if_gov_notify_fails():
     use_case = RefuseDecisionUseCase(update_decision_port, gov_notify_port)
 
     with pytest.raises(Exception, match="Failed to refuse application."):
-        use_case.execute("1", _make_request("REFUSED"))
+        use_case.execute("1", _make_request())
 
     update_decision_port.rollback.assert_called_once()
