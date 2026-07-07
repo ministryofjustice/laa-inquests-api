@@ -6,6 +6,7 @@ from mimetypes import guess_type
 
 from app.adapters.sds_adapter import SdsAdapter
 from app.adapters.application_repository_adapter import ApplicationRepositoryAdapter
+from app.adapters.weasyprint_adapter import WeasyPrintAdapter
 from app.db import get_session
 from app.models.application.index import (
     Application,
@@ -31,6 +32,7 @@ from app.ports.provider_details_port import ProviderDetailsPort
 from app.ports.search_application_port import SearchApplicationPort
 from app.ports.sds_port import SdsPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
+from app.ports.pdf_generation_port import PdfGenerationPort
 from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.get_application import GetApplicationUseCase
 from app.use_cases.exceptions import (
@@ -49,6 +51,7 @@ from app.use_cases.refuse_decision import RefuseDecisionUseCase
 from app.use_cases.grant_decision import GrantDecisionUseCase
 from app.use_cases.upload_coroners_letter import UploadCoronersLetterUseCase
 from app.use_cases.retrieve_coroners_letter import RetrieveCoronersLetterUseCase
+from app.use_cases.generate_demo_pdf import GenerateDemoPdfUseCase
 
 
 router = APIRouter(
@@ -151,6 +154,29 @@ def get_upload_coroners_letter_use_case(
     return UploadCoronersLetterUseCase(
         sds_port=sds_port,
         upload_coroners_letter_port=upload_coroners_letter_port,
+    )
+
+
+def get_pdf_generation_port() -> PdfGenerationPort:
+    return WeasyPrintAdapter()
+
+
+def get_generate_demo_pdf_use_case(
+    pdf_generation_port: PdfGenerationPort = Depends(get_pdf_generation_port),
+) -> GenerateDemoPdfUseCase:
+    return GenerateDemoPdfUseCase(pdf_generation_port=pdf_generation_port)
+
+
+@router.get("/pdf-generator", response_class=Response)
+def generate_pdf(
+    use_case: GenerateDemoPdfUseCase = Depends(get_generate_demo_pdf_use_case),
+) -> Response:
+    """Generate a demo PDF with a GOV.UK header."""
+    pdf_content = use_case.execute()
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'inline; filename="govuk-demo.pdf"'},
     )
 
 
