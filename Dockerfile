@@ -7,6 +7,18 @@ ARG REQUIREMENTS=requirements-production.txt
 RUN adduser --disabled-password app -u 1000 && \
     cp /usr/share/zoneinfo/Europe/London /etc/localtime
 
+# Install system dependencies required by WeasyPrint
+# TODO: Use the requirements file to install dependencies instead of hardcoding them here
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libcairo2 \
+    libgdk-pixbuf-2.0-0 \
+    libffi8 \
+    shared-mime-info && \
+    rm -rf /var/lib/apt/lists/*
+
 RUN mkdir /home/app/laa-inquests-api
 WORKDIR /home/app/laa-inquests-api
 
@@ -20,9 +32,6 @@ COPY alembic.ini ./alembic.ini
 
 # Change ownership of the working directory to the non-root user
 RUN chown -R app:app /home/app
-
-# Cleanup container
-RUN rm -rf /var/lib/apt/lists/*
 
 # Switch to the non-root user
 USER app
