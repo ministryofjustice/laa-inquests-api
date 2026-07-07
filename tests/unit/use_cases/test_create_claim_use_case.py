@@ -1,5 +1,8 @@
 from unittest.mock import MagicMock
 
+import pytest
+from pydantic import ValidationError
+
 from app.models.claim.index import Claim, ClaimCreate
 from app.ports.create_claim_port import CreateClaimPort
 from app.use_cases.create_claim import CreateClaimUseCase
@@ -51,3 +54,53 @@ def test_execute_returns_created_claim():
     result = use_case.execute("12345", request)
 
     assert result is claim
+
+
+def test_claim_create_rejects_payment_on_account_without_poa_type():
+    with pytest.raises(ValidationError):
+        ClaimCreate.model_validate(
+            {
+                "claimType": "PAYMENT_ON_ACCOUNT",
+                "totalProfitCostNet": 1000,
+                "totalProfitCostGross": 1200,
+                "poaTypeId": None,
+            }
+        )
+
+
+def test_claim_create_rejects_non_payment_on_account_with_poa_type():
+    with pytest.raises(ValidationError):
+        ClaimCreate.model_validate(
+            {
+                "claimType": "FINAL_BILL",
+                "totalProfitCostNet": 1000,
+                "totalProfitCostGross": 1200,
+                "poaTypeId": "PROFIT_COST",
+            }
+        )
+
+
+def test_claim_create_accepts_payment_on_account_with_poa_type():
+    request = ClaimCreate.model_validate(
+        {
+            "claimType": "PAYMENT_ON_ACCOUNT",
+            "totalProfitCostNet": 1000,
+            "totalProfitCostGross": 1200,
+            "poaTypeId": "PROFIT_COST",
+        }
+    )
+
+    assert request.poa_type_id is not None
+
+
+def test_claim_create_accepts_non_payment_on_account_without_poa_type():
+    request = ClaimCreate.model_validate(
+        {
+            "claimType": "FINAL_BILL",
+            "totalProfitCostNet": 1000,
+            "totalProfitCostGross": 1200,
+            "poaTypeId": None,
+        }
+    )
+
+    assert request.poa_type_id is None

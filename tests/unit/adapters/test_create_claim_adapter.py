@@ -66,7 +66,9 @@ def test_create_claim_defaults_optional_fields_to_none_when_omitted(session):
     laa_reference = session.exec(select(Application)).first().laa_reference
     adapter = ApplicationRepositoryAdapter(session)
 
-    request = _make_request({"poaTypeId": None, "claimantId": None})
+    request = _make_request(
+        {"claimType": "FINAL_BILL", "poaTypeId": None, "claimantId": None}
+    )
     created_claim = adapter.create_claim(str(laa_reference), request)
 
     assert created_claim.poa_type_id is None

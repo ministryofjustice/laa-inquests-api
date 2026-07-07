@@ -63,7 +63,9 @@ def test_201_create_claim_without_optional_fields(session, client, auth_token):
 
     response = client.post(
         f"/applications/{laa_reference}/claim",
-        json=_make_request_body({"poaTypeId": None, "claimantId": None}),
+        json=_make_request_body(
+            {"claimType": "FINAL_BILL", "poaTypeId": None, "claimantId": None}
+        ),
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {auth_token}",
@@ -92,3 +94,35 @@ def test_201_create_claim_persists_claim_to_database(session, client, auth_token
     stored_claim = session.get(Claim, claim_id)
     assert stored_claim is not None
     assert stored_claim.laa_reference == laa_reference
+
+
+def test_422_payment_on_account_without_poa_type_id(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body({"poaTypeId": None}),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_422_non_payment_on_account_with_poa_type_id(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {"claimType": "FINAL_BILL", "poaTypeId": "PROFIT_COST"}
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
