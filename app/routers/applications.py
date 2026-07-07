@@ -16,6 +16,7 @@ from app.models.application.index import (
     RefuseApplicationUpdate,
     UploadCoronersLetterResponse,
 )
+from app.models.claim.index import Claim, ClaimCreate, ClaimResponse
 
 from app.adapters.provider_details_adapter import ProviderDetailsAdapter
 from app.routers.dependencies import (
@@ -24,6 +25,7 @@ from app.routers.dependencies import (
 )
 from app.config import Config
 from app.ports.create_application_port import CreateApplicationPort
+from app.ports.create_claim_port import CreateClaimPort
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.list_applications_port import ListApplicationsPort
@@ -32,6 +34,7 @@ from app.ports.search_application_port import SearchApplicationPort
 from app.ports.sds_port import SdsPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 from app.use_cases.create_application import CreateApplicationUseCase
+from app.use_cases.create_claim import CreateClaimUseCase
 from app.use_cases.get_application import GetApplicationUseCase
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
@@ -110,6 +113,12 @@ def get_list_applications_use_case(
     list_applications_port: ListApplicationsPort = Depends(get_application_db_adapter),
 ) -> ListApplicationsUseCase:
     return ListApplicationsUseCase(list_applications_port=list_applications_port)
+
+
+def get_create_claim_use_case(
+    create_claim_port: CreateClaimPort = Depends(get_application_db_adapter),
+) -> CreateClaimUseCase:
+    return CreateClaimUseCase(create_claim_port=create_claim_port)
 
 
 def get_search_application_use_case(
@@ -269,6 +278,17 @@ def create_application(
 ) -> Application:
     """Creates a new application with proceedings and public bodies."""
     return use_case.execute(request)
+
+
+@router.post("/{laa_reference}/claim", response_model=ClaimResponse, status_code=201)
+def create_claim(
+    laa_reference: str,
+    request: ClaimCreate,
+    use_case: CreateClaimUseCase = Depends(get_create_claim_use_case),
+    _: None = Depends(verify_entra_provider_token),
+) -> Claim:
+    """Creates a new claim against an application."""
+    return use_case.execute(laa_reference, request)
 
 
 @router.patch("/{laa_reference}/refuse-decision", status_code=204)
