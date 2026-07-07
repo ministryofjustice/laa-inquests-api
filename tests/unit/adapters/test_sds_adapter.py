@@ -5,6 +5,7 @@ from httpx import HTTPStatusError
 import pytest
 
 from app.use_cases.exceptions import (
+    CoronersLetterUploadError,
     InvalidCoronersLetterDocumentIdError,
     SDSLetterRetrievalError,
 )
@@ -351,3 +352,50 @@ def test_retrieve_coroners_letter_raises_error_when_file_url_missing():
         ),
     ):
         list(adapter.retrieve_coroners_letter("letter.pdf"))
+
+
+def test_virus_check_coroners_letter_returns_true_for_safe_file():
+    adapter = _make_adapter()
+
+    mock = MagicMock()
+    mock.status_code = 200
+
+    with (
+        patch("httpx.post", side_effect=[_mock_token_response(), mock]),
+        patch("httpx.put", return_value=mock),
+    ):
+        result = adapter.virus_check_coroners_letter(b"safe content", "test_file.pdf")
+
+    assert result is True
+
+
+def test_virus_check_coroners_letter_returns_false_for_infected_file():
+    adapter = _make_adapter()
+
+    mock = MagicMock()
+    mock.status_code = 400
+
+    with (
+        patch("httpx.post", side_effect=[_mock_token_response(), mock]),
+        patch("httpx.put", return_value=mock),
+    ):
+        result = adapter.virus_check_coroners_letter(b"unsafe content", "test_file.pdf")
+
+    assert result is False
+
+
+def test_virus_check_coroners_letter_raises_upload_error_on_sds_failure():
+    adapter = _make_adapter()
+
+    mock = MagicMock()
+    mock.status_code = 500
+
+    with (
+        patch("httpx.post", side_effect=[_mock_token_response(), mock]),
+        patch("httpx.put", return_value=mock),
+    ):
+        with pytest.raises(
+            CoronersLetterUploadError,
+            match="Failed to perform virus check. API status code: 500",
+        ):
+            adapter.virus_check_coroners_letter(b"unsafe content", "test_file.pdf")

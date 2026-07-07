@@ -149,6 +149,7 @@ def client_fixture(session: Session):
 
     def get_sds_port_override():
         mock_sds = MagicMock()
+        mock_sds.virus_check_coroners_letter.return_value = True
         mock_sds.save_coroners_letter.return_value = SDSUploadCoronersLetterResponse(
             sds_file_name="test-file_abc123.pdf",
             status="SUCCESS",
@@ -191,6 +192,7 @@ def entra_auth_client_fixture(session: Session):
 
     def get_sds_port_override():
         mock_sds = MagicMock()
+        mock_sds.virus_check_coroners_letter.return_value = True
         mock_sds.save_coroners_letter.return_value = SDSUploadCoronersLetterResponse(
             sds_file_name="test-file_abc123.pdf",
             status="SUCCESS",

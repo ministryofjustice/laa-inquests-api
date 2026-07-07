@@ -6,6 +6,10 @@ class CoronersLetterUploadError(Exception):
     pass
 
 
+class CoronersLetterVirusDetectedError(Exception):
+    pass
+
+
 class ProceedingsNotFoundError(Exception):
     pass
 

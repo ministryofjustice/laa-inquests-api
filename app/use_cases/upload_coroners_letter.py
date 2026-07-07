@@ -3,7 +3,10 @@ import uuid
 from app.domain.coroners_letter import CoronersLetter
 from app.ports.sds_port import SdsPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
-from app.use_cases.exceptions import CoronersLetterUploadError
+from app.use_cases.exceptions import (
+    CoronersLetterUploadError,
+    CoronersLetterVirusDetectedError,
+)
 
 
 class UploadCoronersLetterUseCase:
@@ -21,6 +24,20 @@ class UploadCoronersLetterUseCase:
         coroners_letter: bytes,
         file_name: str,
     ) -> uuid.UUID:
+        try:
+            is_safe = self.sds_port.virus_check_coroners_letter(
+                coroners_letter, file_name
+            )
+        except Exception as e:
+            raise CoronersLetterUploadError(
+                f"{file_name} upload failed due to server error during virus check: {str(e)}"
+            )
+
+        if not is_safe:
+            raise CoronersLetterVirusDetectedError(
+                f"{file_name} upload failed due to identified virus"
+            )
+
         response_body = self.sds_port.save_coroners_letter(
             coroners_letter,
             file_name,
