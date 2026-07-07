@@ -6,7 +6,7 @@ class CoronersLetterUploadError(Exception):
     pass
 
 
-class CoronersLetterVirusDetectedError(CoronersLetterUploadError):
+class CoronersLetterVirusDetectedError(Exception):
     pass
 
 
