@@ -1,23 +1,23 @@
 description = """
 ## Applications
 
-A valid access token is required to perform the below requests. 
+A valid access token is required to perform the below requests.
 
 ### Caseworkers
 Authorised caseworkers can:
 
-* Read all applications by sending a get request to `/applications/`.
-* Read a given application by sending a get request to `/applications/{laa_reference}`.
-* Read the evidence associated with an application by sending a get request to `/applications/{laa_reference}coroners-letter`
-* Update the merits decision for an application to refused by sending a patch request to `/applications/{laa_reference}/refuse-decision`
-* Update the merits decision for an application to granted by sending a patch request to `/applications/{laa_reference}/grant-decision`
+* Read all applications by sending a get request to **/applications/**.
+* Read a given application by sending a get request to **/applications/{laa_reference}**.
+* Read the evidence associated with an application by sending a get request to **/applications/{laa_reference}coroners-letter**.
+* Update the merits decision for an application to refused by sending a patch request to **/applications/{laa_reference}/refuse-decision**.
+* Update the merits decision for an application to granted by sending a patch request to **/applications/{laa_reference}/grant-decision**.
 
 ### Providers
 Authorised providers can:
-* Create an application by posting to `/applications/`.
-* Create a claim by posting to `/applications/{laa_reference}/claim`.
-* Upload evidence by posting to `/applications/coroners-letter`.
-* Search for an application by LAA reference by sending a get request to `/applications/search`.
+* Create an application by posting to **/applications/**.
+* Create a claim by posting to **/applications/{laa_reference}/claim**.
+* Upload evidence by posting to **/applications/coroners-letter**.
+* Search for an application by LAA reference by sending a get request to **/applications/search**.
 
 
 ## Notifications
