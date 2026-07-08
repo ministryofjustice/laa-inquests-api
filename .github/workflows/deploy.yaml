@@ -33,7 +33,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
       - name: Get Snyk OAuth Token
         id: snyk-auth
@@ -97,7 +97,7 @@ jobs:
       - snyk
     steps:
       - name: Checkout
-        uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Deploy to uat
         uses: ./.github/actions/deploy
         with:
@@ -135,7 +135,7 @@ jobs:
     if: always() && github.ref_name == 'main'
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Send Slack Notification
         uses: ./.github/actions/notify
         with:
