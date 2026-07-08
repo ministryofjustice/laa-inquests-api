@@ -6,7 +6,7 @@ from fastapi import APIRouter, Header, HTTPException, Response, status
 from app.models.notifications import GovNotifyCallbackPayload
 from app.config import Config
 
-router = APIRouter(prefix="/notifications", tags=["notifications"])
+router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
 logger = logging.getLogger(__name__)
 
