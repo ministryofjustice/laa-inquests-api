@@ -16,7 +16,9 @@ from app.models.application.index import (
     Provider,
     PublicBodyId,
 )
+from app.models.claim.index import Claim, ClaimCreate
 from app.ports.create_application_port import CreateApplicationPort
+from app.ports.create_claim_port import CreateClaimPort
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.list_applications_port import ListApplicationsPort
@@ -27,6 +29,7 @@ from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 class ApplicationRepositoryAdapter(
     GetApplicationPort,
     CreateApplicationPort,
+    CreateClaimPort,
     ApplicationDecisionPort,
     ListApplicationsPort,
     SearchApplicationPort,
@@ -157,6 +160,20 @@ class ApplicationRepositoryAdapter(
         self.session.flush()
         self.session.refresh(new_application)
         return new_application
+
+    def create_claim(self, laa_reference: str, request: ClaimCreate) -> Claim:
+        new_claim = Claim(
+            laa_reference=int(laa_reference),
+            claim_type_id=request.claim_type,
+            total_profit_cost_net=request.total_profit_cost_net,
+            total_profit_cost_gross=request.total_profit_cost_gross,
+            poa_type_id=request.poa_type_id,
+            claimant_id=request.claimant_id,
+        )
+        self.session.add(new_claim)
+        self.session.flush()
+        self.session.refresh(new_claim)
+        return new_claim
 
     def commit(self) -> None:
         self.session.commit()

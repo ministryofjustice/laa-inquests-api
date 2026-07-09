@@ -1,0 +1,20 @@
+import enum
+
+
+class ClaimType(str, enum.Enum):
+    PAYMENT_ON_ACCOUNT = "PAYMENT_ON_ACCOUNT"
+    FINAL_BILL = "FINAL_BILL"
+    NIL_BILL = "NIL_BILL"
+
+
+class ClaimStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    ACCEPTED = "ACCEPTED"
+    REJECTED = "REJECTED"
+    REJECTED_WITH_AMENDMENT = "REJECTED_WITH_AMENDMENT"
+
+
+class POAType(str, enum.Enum):
+    PROFIT_COST = "PROFIT_COST"
+    EXPERT_COST = "EXPERT_COST"
+    NON_EXPERT_DISBURSEMENT = "NON_EXPERT_DISBURSEMENT"
