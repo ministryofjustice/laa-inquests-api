@@ -1,7 +1,7 @@
 """IDDS-292 add claim table
 
 Revision ID: da57ddca1aae
-Revises: 02a055ebbdc7
+Revises: 9b2ae8ea620f
 Create Date: 2026-07-07 11:25:38.664442
 
 """
@@ -15,7 +15,7 @@ import sqlmodel
 
 # revision identifiers, used by Alembic.
 revision: str = "da57ddca1aae"
-down_revision: Union[str, None] = "02a055ebbdc7"
+down_revision: Union[str, None] = "9b2ae8ea620f"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
