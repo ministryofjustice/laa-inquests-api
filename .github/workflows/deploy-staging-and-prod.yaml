@@ -44,7 +44,7 @@ jobs:
     environment: staging
     needs: deploy-staging
     runs-on: ubuntu-latest
-    if: always() && github.ref_name == 'main'
+    if: always()
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
@@ -95,13 +95,13 @@ jobs:
     environment: production
     needs: deploy-production
     runs-on: ubuntu-latest
-    if: always() && github.ref_name == 'main'
+    if: always()
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
       - name: Send Slack Notification
         uses: ./.github/actions/notify
         with:
-          app-environment: production
+          app-environment: prod
           slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL_PROD }}
           pipeline_status: "${{ job.status }} ${{ join(needs.*.result, ' ') }}"
