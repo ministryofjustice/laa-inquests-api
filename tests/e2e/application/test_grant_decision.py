@@ -1,9 +1,12 @@
 from datetime import date, datetime, UTC
-
+import pytest
 from sqlmodel import select
 
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
+
+
+pytestmark = pytest.mark.usefixtures("mock_gov_notify")
 
 
 def _grant_decision_payload(overrides=None):

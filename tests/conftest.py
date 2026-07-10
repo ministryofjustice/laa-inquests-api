@@ -139,6 +139,7 @@ def client_fixture(session: Session):
     mock_gov_notify_port = MagicMock()
     mock_gov_notify_port.send_application_submit_confirmation_email.return_value = None
     mock_gov_notify_port.send_application_refused_decision_email.return_value = None
+    mock_gov_notify_port.send_application_granted_decision_email.return_value = None
 
     def get_session_override():
         return session

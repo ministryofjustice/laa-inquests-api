@@ -26,10 +26,6 @@ from app.models.application.index import (
     PublicBody,
 )
 
-from app.models.gov_notify_templates.application_submit_personalisation import (
-    NotifyApplicationSubmitTemplatePersonalisation,
-)
-
 
 def _create_test_application_and_proceeding():
     utc = ZoneInfo("UTC")
@@ -203,39 +199,40 @@ def test_gov_notify_adapter_uses_config_api_key():
         mock_api_client.assert_called_once_with(Config.GOV_NOTIFY_API_KEY)
 
 
-def test_application_submit_email_personalisation_rejects_missing_required_fields():
-    """
-    Test that NotifyApplicationSubmitTemplatePersonalisation model rejects creation with missing required fields.
-    """
-    with pytest.raises(Exception):
-        NotifyApplicationSubmitTemplatePersonalisation(
-            laa_reference="12345",
-            client_first_name="Test",
+def test_gov_notify_adapter_sends_grant_email_successfully():
+    from datetime import date
+
+    application, proceeding = _create_test_application_and_proceeding()
+    proceeding.merits_decision = "GRANTED"
+    proceeding.certificate_issue_date = date(2026, 6, 18)
+
+    mock_notifications_client = Mock()
+    mock_notifications_client.send_email_notification.return_value = {
+        "id": "test-notification-id"
+    }
+
+    with (
+        patch("app.adapters.gov_notify.NotificationsAPIClient") as mock_api_client,
+        patch.object(
+            Config,
+            "GOV_NOTIFY_APPLICATION_GRANT_TEMPLATE_ID",
+            "test-grant-template-id",
+        ),
+    ):
+        mock_api_client.return_value = mock_notifications_client
+
+        adapter = GovNotifyAdapter()
+        adapter.send_application_granted_decision_email(
+            application, proceeding, "provider@example.com"
         )
 
-
-def test_application_submit_email_personalisation_rejects_extra_fields():
-    """
-    Test that NotifyApplicationSubmitTemplatePersonalisation model rejects extra/unexpected fields.
-    """
-    with pytest.raises(Exception):
-        NotifyApplicationSubmitTemplatePersonalisation(
-            laa_reference="12345",
-            client_first_name="Test",
-            client_last_name="User",
-            date_of_birth="01-01-1990",
-            has_applied_previously="No",
-            client_home_address="Test Address",
-            correspondence_address="Test Address",
-            correspondence_recipient="Client",
-            client_relationship_to_deceased="Son",
-            proceeding_description="Test Proceeding",
-            matter_type="INQUESTS",
-            deceased_first_name="Test",
-            deceased_last_name="Deceased",
-            deceased_date_of_birth="01-01-1950",
-            deceased_date_of_death="01-01-2025",
-            coroners_reference="COR-123",
-            public_body_description="Test Department",
-            unexpected_field="This should not be allowed",
+        mock_api_client.assert_called_once_with(Config.GOV_NOTIFY_API_KEY)
+        call_kwargs = mock_notifications_client.send_email_notification.call_args.kwargs
+        assert call_kwargs["email_address"] == "provider@example.com"
+        assert call_kwargs["template_id"] == "test-grant-template-id"
+        assert isinstance(call_kwargs["personalisation"], dict)
+        assert call_kwargs["personalisation"]["laa_reference"] == "12345"
+        assert (
+            call_kwargs["personalisation"]["team_name"] == "Legal Aid Advice Inquests"
         )
+        assert call_kwargs["personalisation"]["issue_date"] == "18 June 2026"

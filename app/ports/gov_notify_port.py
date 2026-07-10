@@ -47,3 +47,22 @@ class GovNotifyPort(ABC):
             Exception: If the notification fails to send
         """
         ...
+
+    @abstractmethod
+    def send_application_granted_decision_email(
+        self,
+        application: Application,
+        proceeding: ApplicationProceeding,
+        recipient_email: str,
+    ) -> None:
+        """Send application grant notification to recipient.
+
+        Args:
+            application: The application being granted
+            proceeding: The proceeding with grant details (certificate issue date)
+            recipient_email: Email address of the recipient
+
+        Raises:
+            Exception: If the notification fails to send
+        """
+        ...

@@ -12,6 +12,9 @@ from app.use_cases.notify.create_application_refusal_email_personalisation impor
 from app.use_cases.notify.create_application_submission_email_personalisation import (
     create_application_submission_email_personalisation,
 )
+from app.use_cases.notify.create_application_grant_email_personalisation import (
+    create_application_grant_email_personalisation,
+)
 
 
 class GovNotifyAdapter(GovNotifyPort):
@@ -44,5 +47,20 @@ class GovNotifyAdapter(GovNotifyPort):
         self.client.send_email_notification(
             email_address=recipient_email,
             template_id=Config.GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID,
+            personalisation=personalisation.model_dump(),
+        )
+
+    def send_application_granted_decision_email(
+        self,
+        application: Application,
+        proceeding: ApplicationProceeding,
+        recipient_email: str,
+    ) -> None:
+        personalisation = create_application_grant_email_personalisation(
+            application, proceeding
+        )
+        self.client.send_email_notification(
+            email_address=recipient_email,
+            template_id=Config.GOV_NOTIFY_APPLICATION_GRANT_TEMPLATE_ID,
             personalisation=personalisation.model_dump(),
         )

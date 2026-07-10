@@ -9,6 +9,8 @@ from app.use_cases.notify.create_application_refusal_email_personalisation impor
     create_application_refusal_email_personalisation,
 )
 
+import pytest
+
 
 def _create_test_application_and_proceeding(laa_reference: int = 12345):
     client = Client(
@@ -54,3 +56,29 @@ def test_create_application_refusal_email_personalisation_returns_all_required_f
     assert result.application_submitted_at == "18 June 2026 14:03 UTC"
     assert result.reason_for_refusal == "NOT_IN_SCOPE"
     assert result.justification == "The matter does not meet scope requirements."
+
+
+def test_create_application_refusal_email_personalisation_rejects_missing_required_fields():
+    """
+    Test that NotifyApplicationRefuseTemplatePersonalisation model rejects creation with missing required fields.
+    """
+    with pytest.raises(Exception):
+        NotifyApplicationRefuseTemplatePersonalisation(
+            laa_reference="12345",
+        )
+
+
+def test_create_application_refusal_email_personalisation_rejects_extra_fields():
+    """
+    Test that NotifyApplicationRefuseTemplatePersonalisation model rejects creation with extra/unexpected fields.
+    """
+    with pytest.raises(Exception):
+        NotifyApplicationRefuseTemplatePersonalisation(
+            laa_reference="12345",
+            client_first_name="Jane",
+            client_last_name="Doe",
+            application_submitted_at="18 June 2026 14:03 UTC",
+            reason_for_refusal="NOT_IN_SCOPE",
+            justification="The matter does not meet scope requirements.",
+            unexpected_field="This should not be allowed",
+        )

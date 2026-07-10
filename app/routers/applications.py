@@ -179,9 +179,11 @@ def get_retrieve_certificate_use_case(
 
 def get_grant_decision_use_case(
     update_decision_port: ApplicationDecisionPort = Depends(get_application_db_adapter),
+    gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
 ) -> GrantDecisionUseCase:
     return GrantDecisionUseCase(
         application_decision_port=update_decision_port,
+        gov_notify_port=gov_notify_port,
     )
 
 

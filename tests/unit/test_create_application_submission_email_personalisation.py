@@ -19,6 +19,8 @@ from app.models.gov_notify_templates.application_submit_personalisation import (
     NotifyApplicationSubmitTemplatePersonalisation,
 )
 
+import pytest
+
 
 def test_create_application_submission_email_personalisation_returns_all_required_fields():
     """
@@ -420,3 +422,41 @@ def test_default_home_address_value_set_to_no_fixed_abode_when_not_provided():
     assert "456 Oak Ave" in result.correspondence_address
     assert "Manchester" in result.correspondence_address
     assert "M1 1AA" in result.correspondence_address
+
+
+def test_application_submit_email_personalisation_rejects_missing_required_fields():
+    """
+    Test that NotifyApplicationSubmitTemplatePersonalisation model rejects creation with missing required fields.
+    """
+    with pytest.raises(Exception):
+        NotifyApplicationSubmitTemplatePersonalisation(
+            laa_reference="12345",
+            client_first_name="Test",
+        )
+
+
+def test_application_submit_email_personalisation_rejects_extra_fields():
+    """
+    Test that NotifyApplicationSubmitTemplatePersonalisation model rejects extra/unexpected fields.
+    """
+    with pytest.raises(Exception):
+        NotifyApplicationSubmitTemplatePersonalisation(
+            laa_reference="12345",
+            client_first_name="Test",
+            client_last_name="User",
+            date_of_birth="01-01-1990",
+            has_applied_previously="No",
+            client_home_address="Test Address",
+            correspondence_address="Test Address",
+            correspondence_recipient="Client",
+            client_relationship_to_deceased="Son",
+            proceeding_description="Test Proceeding",
+            matter_type="INQUESTS",
+            deceased_first_name="Test",
+            deceased_last_name="Deceased",
+            deceased_date_of_birth="01-01-1950",
+            deceased_date_of_death="01-01-2025",
+            coroners_reference="COR-123",
+            public_body_description="Test Department",
+            unexpected_field="This should not be allowed",
+        )
