@@ -8,6 +8,5 @@ class NotifyApplicationGrantTemplatePersonalisation(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    team_name: str = Field(description="Team name")
     laa_reference: str = Field(description="LAA application reference")
     issue_date: str = Field(description="Certificate issue date")

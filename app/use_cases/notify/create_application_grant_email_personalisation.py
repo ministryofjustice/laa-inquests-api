@@ -18,7 +18,6 @@ def create_application_grant_email_personalisation(
     """Build personalisation payload for grant decision notification."""
 
     return NotifyApplicationGrantTemplatePersonalisation(
-        team_name="Legal Aid Advice Inquests",
         laa_reference=str(application.laa_reference),
         issue_date=_format_issue_date(proceeding.certificate_issue_date),
     )

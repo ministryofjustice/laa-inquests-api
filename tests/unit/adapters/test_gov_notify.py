@@ -232,7 +232,4 @@ def test_gov_notify_adapter_sends_grant_email_successfully():
         assert call_kwargs["template_id"] == "test-grant-template-id"
         assert isinstance(call_kwargs["personalisation"], dict)
         assert call_kwargs["personalisation"]["laa_reference"] == "12345"
-        assert (
-            call_kwargs["personalisation"]["team_name"] == "Legal Aid Advice Inquests"
-        )
         assert call_kwargs["personalisation"]["issue_date"] == "18 June 2026"

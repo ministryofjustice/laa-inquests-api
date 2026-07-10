@@ -49,7 +49,6 @@ def test_create_application_grant_email_personalisation_returns_all_required_fie
     result = create_application_grant_email_personalisation(application, proceeding)
 
     assert isinstance(result, NotifyApplicationGrantTemplatePersonalisation)
-    assert result.team_name == "Legal Aid Advice Inquests"
     assert result.laa_reference == "12345"
     assert result.issue_date == "18 June 2026"
 
@@ -71,7 +70,6 @@ def test_create_application_grant_email_personalisation_rejects_extra_fields():
     with pytest.raises(Exception):
         NotifyApplicationGrantTemplatePersonalisation(
             laa_reference="12345",
-            team_name="Legal Aid Advice Inquests",
             issue_date="18 June 2026",
             unexpected_field="This should not be allowed",
         )
