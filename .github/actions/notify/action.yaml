@@ -26,16 +26,16 @@ runs:
 
         coreMessage="Inquests API Deployment to $environment has"
 
-        if [ $pipelineStatus == "failed" ]; then
+        if [ "$pipelineStatus" == "failed" ]; then
           runUrl=https://github.com/ministryofjustice/laa-inquests-api/actions/runs/${{ github.run_id }}
           message=":exclamation: $coreMessage Failed! :exclamation: \n $runUrl"
-        elif [ $environment != "UAT" ]; then
+        elif [ "$environment" != "UAT" ]; then
           releaseUrl=https://github.com/ministryofjustice/laa-inquests-api/releases/tag/${{ github.ref_name }}
           message=":white_check_mark: $coreMessage Succeeded! :white_check_mark: \n $releaseUrl"
         fi
 
         postBody="{
-          'text': '${message}'
+          \"text\": \"${message}\"
         }"
 
         curl -X POST -H 'Content-type: application/json' \
