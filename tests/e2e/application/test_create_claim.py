@@ -147,6 +147,7 @@ def test_422_profit_cost_with_no_cost_fields(session, client, auth_token):
     )
 
     assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "MISSING_TOTAL_CLAIM_COST"
 
 
 def test_422_profit_cost_with_net_higher_than_gross(session, client, auth_token):
@@ -164,6 +165,7 @@ def test_422_profit_cost_with_net_higher_than_gross(session, client, auth_token)
     )
 
     assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "NET_TOTAL_HIGHER_THAN_GROSS_TOTAL"
 
 
 def test_201_profit_cost_with_vat_zero_only(session, client, auth_token):
@@ -202,3 +204,4 @@ def test_422_profit_cost_mixing_vat_zero_and_net(session, client, auth_token):
     )
 
     assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "PROFIT_COST_MIXED_VAT"

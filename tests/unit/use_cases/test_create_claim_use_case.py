@@ -6,6 +6,7 @@ from pydantic import ValidationError
 from app.models.claim.index import Claim, ClaimCreate
 from app.ports.create_claim_port import CreateClaimPort
 from app.use_cases.create_claim import CreateClaimUseCase
+from app.domain.claim_error import ClaimErrorCode
 from app.use_cases.exceptions import InvalidClaimError
 
 
@@ -90,8 +91,9 @@ def test_execute_raises_invalid_claim_error_when_profit_cost_has_no_costs():
     )
     use_case = CreateClaimUseCase(create_claim_port=MagicMock(spec=CreateClaimPort))
 
-    with pytest.raises(InvalidClaimError, match="Either total_profit_cost_vat_zero"):
+    with pytest.raises(InvalidClaimError) as exc_info:
         use_case.execute("12345", request)
+    assert exc_info.value.code == ClaimErrorCode.MISSING_TOTAL_CLAIM_COST
 
 
 def test_execute_raises_invalid_claim_error_when_net_higher_than_gross():
@@ -105,10 +107,9 @@ def test_execute_raises_invalid_claim_error_when_net_higher_than_gross():
     )
     use_case = CreateClaimUseCase(create_claim_port=MagicMock(spec=CreateClaimPort))
 
-    with pytest.raises(
-        InvalidClaimError, match="Net total cannot be higher than the gross total value"
-    ):
+    with pytest.raises(InvalidClaimError) as exc_info:
         use_case.execute("12345", request)
+    assert exc_info.value.code == ClaimErrorCode.NET_TOTAL_HIGHER_THAN_GROSS_TOTAL
 
 
 def test_execute_raises_invalid_claim_error_when_mixing_vat_rates():
@@ -122,11 +123,9 @@ def test_execute_raises_invalid_claim_error_when_mixing_vat_rates():
     )
     use_case = CreateClaimUseCase(create_claim_port=MagicMock(spec=CreateClaimPort))
 
-    with pytest.raises(
-        InvalidClaimError,
-        match="You cannot submit a profit cost claim with both 0% and 20% VAT",
-    ):
+    with pytest.raises(InvalidClaimError) as exc_info:
         use_case.execute("12345", request)
+    assert exc_info.value.code == ClaimErrorCode.PROFIT_COST_MIXED_VAT
 
 
 def test_execute_does_not_raise_for_non_profit_cost_without_costs():

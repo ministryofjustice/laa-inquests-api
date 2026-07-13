@@ -1,4 +1,5 @@
 from app.domain.claim_cost import ClaimCost
+from app.domain.claim_error import ClaimValidationError
 from app.models.claim.index import Claim, ClaimCreate
 from app.ports.create_claim_port import CreateClaimPort
 from app.use_cases.exceptions import InvalidClaimError
@@ -16,8 +17,8 @@ class CreateClaimUseCase:
                 gross=request.total_profit_cost_gross,
                 vat_zero_total=request.total_profit_cost_vat_zero,
             )
-        except ValueError as e:
-            raise InvalidClaimError(str(e)) from e
+        except ClaimValidationError as e:
+            raise InvalidClaimError(code=e.code, message=e.message) from e
 
         claim = self.create_claim_port.create_claim(laa_reference, request)
         self.create_claim_port.commit()
