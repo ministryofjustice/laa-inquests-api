@@ -7,20 +7,14 @@ ARG REQUIREMENTS=requirements-production.txt
 RUN adduser --disabled-password app -u 1000 && \
     cp /usr/share/zoneinfo/Europe/London /etc/localtime
 
-# Install system dependencies required by WeasyPrint
-# TODO: Use the requirements file to install dependencies instead of hardcoding them here
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libcairo2 \
-    libgdk-pixbuf-2.0-0 \
-    libffi8 \
-    shared-mime-info && \
-    rm -rf /var/lib/apt/lists/*
-
 RUN mkdir /home/app/laa-inquests-api
 WORKDIR /home/app/laa-inquests-api
+
+COPY requirements/system-packages.txt /tmp/system-packages.txt
+RUN apt-get update && \
+    grep -vE '^\s*(#|$)' /tmp/system-packages.txt | \
+        xargs apt-get install -y --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/* /tmp/system-packages.txt
 
 COPY requirements/generated/$REQUIREMENTS requirements.txt
 RUN pip install --upgrade pip

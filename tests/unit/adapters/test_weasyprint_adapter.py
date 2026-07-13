@@ -10,7 +10,7 @@ def test_generate_pdf_returns_bytes():
     adapter = WeasyPrintAdapter()
     context = {"header_text": "Test Header"}
 
-    result = adapter.generate_pdf("govuk_header_demo.html", context)
+    result = adapter.generate_pdf("govuk_header.html", context)
 
     assert isinstance(result, bytes)
     assert len(result) > 0
@@ -21,30 +21,18 @@ def test_generate_pdf_returns_valid_pdf():
     adapter = WeasyPrintAdapter()
     context = {"header_text": "Test Header"}
 
-    result = adapter.generate_pdf("govuk_header_demo.html", context)
+    result = adapter.generate_pdf("govuk_header.html", context)
 
     # PDF files start with %PDF
     assert result.startswith(b"%PDF")
-
-
-def test_generate_pdf_includes_faqs_page():
-    """Test that generate_pdf automatically appends FAQs page."""
-    adapter = WeasyPrintAdapter()
-    context = {"header_text": "Test Header"}
-
-    result = adapter.generate_pdf("govuk_header_demo.html", context)
-
-    # Multi-page PDF with FAQs should be larger than minimal single page
-    # TODO: Better assertions of PDF content
-    assert len(result) > 5000
 
 
 def test_generate_pdf_with_different_context_values():
     """Test that different context values produce different PDFs."""
     adapter = WeasyPrintAdapter()
 
-    pdf1 = adapter.generate_pdf("govuk_header_demo.html", {"header_text": "Header 1"})
-    pdf2 = adapter.generate_pdf("govuk_header_demo.html", {"header_text": "Header 2"})
+    pdf1 = adapter.generate_pdf("govuk_header.html", {"header_text": "Header 1"})
+    pdf2 = adapter.generate_pdf("govuk_header.html", {"header_text": "Header 2"})
 
     # Different context should produce different PDFs
     assert pdf1 != pdf2

@@ -62,7 +62,6 @@ from app.use_cases.refuse_decision import RefuseDecisionUseCase
 from app.use_cases.grant_decision import GrantDecisionUseCase
 from app.use_cases.upload_coroners_letter import UploadCoronersLetterUseCase
 from app.use_cases.retrieve_coroners_letter import RetrieveCoronersLetterUseCase
-from app.use_cases.generate_demo_pdf import GenerateDemoPdfUseCase
 
 
 router = APIRouter(
@@ -90,6 +89,10 @@ def get_sds_port() -> SdsPort:
         client_secret=Config.SDS_CLIENT_SECRET,
         scope=Config.SDS_SCOPE,
     )
+
+
+def get_pdf_generation_port() -> PdfGenerationPort:
+    return WeasyPrintAdapter()
 
 
 def get_application_db_adapter(
@@ -183,10 +186,12 @@ def get_retrieve_certificate_use_case(
 def get_grant_decision_use_case(
     update_decision_port: ApplicationDecisionPort = Depends(get_application_db_adapter),
     gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
+    pdf_generation_port: PdfGenerationPort = Depends(get_pdf_generation_port),
 ) -> GrantDecisionUseCase:
     return GrantDecisionUseCase(
         application_decision_port=update_decision_port,
         gov_notify_port=gov_notify_port,
+        pdf_generation_port=pdf_generation_port,
     )
 
 
@@ -199,29 +204,6 @@ def get_upload_coroners_letter_use_case(
     return UploadCoronersLetterUseCase(
         sds_port=sds_port,
         upload_coroners_letter_port=upload_coroners_letter_port,
-    )
-
-
-def get_pdf_generation_port() -> PdfGenerationPort:
-    return WeasyPrintAdapter()
-
-
-def get_generate_demo_pdf_use_case(
-    pdf_generation_port: PdfGenerationPort = Depends(get_pdf_generation_port),
-) -> GenerateDemoPdfUseCase:
-    return GenerateDemoPdfUseCase(pdf_generation_port=pdf_generation_port)
-
-
-@router.get("/pdf-generator", response_class=Response)
-def generate_pdf(
-    use_case: GenerateDemoPdfUseCase = Depends(get_generate_demo_pdf_use_case),
-) -> Response:
-    """Generate a demo PDF with a GOV.UK header."""
-    pdf_content = use_case.execute()
-    return Response(
-        content=pdf_content,
-        media_type="application/pdf",
-        headers={"Content-Disposition": 'inline; filename="govuk-demo.pdf"'},
     )
 
 
@@ -430,6 +412,7 @@ def grant_decision(
     """Grant the merits decision on the single proceeding for a given application."""
     try:
         use_case.execute(laa_reference, request)
+
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
     except ProceedingsNotFoundError:

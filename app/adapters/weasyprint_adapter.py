@@ -20,7 +20,7 @@ class WeasyPrintAdapter(PdfGenerationPort):
         Generate a PDF from an HTML template with FAQs page automatically appended.
 
         Args:
-            template_name: Name of the template file (e.g., 'govuk_header_demo.html')
+            template_name: Name of the template file (e.g., 'govuk_header.html')
             context: Dictionary of variables to pass to the template
 
         Returns:
@@ -30,15 +30,7 @@ class WeasyPrintAdapter(PdfGenerationPort):
         template = self.jinja_env.get_template(template_name)
         html_content = template.render(**context)
 
-        # Render the FAQs template (no context needed)
-        faqs_template = self.jinja_env.get_template("govuk_faqs.html")
-        faqs_html = faqs_template.render()
-
-        # Combine main content and FAQs with page break
-        page_break = '<div style="page-break-before: always;"></div>'
-        combined_html = html_content + page_break + faqs_html
-
         # Convert combined HTML to PDF using WeasyPrint
-        pdf_bytes = HTML(string=combined_html).write_pdf()
+        pdf_bytes = HTML(string=html_content).write_pdf()
 
         return pdf_bytes

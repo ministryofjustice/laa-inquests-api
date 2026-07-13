@@ -5,6 +5,7 @@ from app.models.application.enums import MeritsDecision
 from app.models.application.index import GrantApplicationUpdate
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.update_decision_port import ApplicationDecisionPort
+from app.ports.pdf_generation_port import PdfGenerationPort
 from app.use_cases.exceptions import ApplicationNotFoundError, ProceedingsNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -15,9 +16,11 @@ class GrantDecisionUseCase:
         self,
         application_decision_port: ApplicationDecisionPort,
         gov_notify_port: GovNotifyPort,
+        pdf_generation_port: PdfGenerationPort,
     ) -> None:
         self.application_decision_port = application_decision_port
         self.gov_notify_port = gov_notify_port
+        self.pdf_generation_port = pdf_generation_port
 
     def execute(self, laa_reference: str, request: GrantApplicationUpdate) -> None:
         application = self.application_decision_port.get_application_by_laa_reference(
@@ -47,6 +50,9 @@ class GrantDecisionUseCase:
                 application.provider.email_address,
             )
             self.application_decision_port.commit()
+
+            context = {"header_text": "GOV.UK"}
+            self.pdf_generation_port.generate_pdf("govuk_header.html", context)
         except Exception as exception:
             logger.warning(
                 "Failed to send grant email for application %s",
