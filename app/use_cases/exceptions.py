@@ -28,3 +28,7 @@ class InvalidCoronersLetterDocumentIdError(Exception):
 
 class SDSLetterRetrievalError(Exception):
     pass
+
+
+class InvalidClaimError(Exception):
+    pass

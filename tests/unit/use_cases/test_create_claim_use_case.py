@@ -6,6 +6,7 @@ from pydantic import ValidationError
 from app.models.claim.index import Claim, ClaimCreate
 from app.ports.create_claim_port import CreateClaimPort
 from app.use_cases.create_claim import CreateClaimUseCase
+from app.use_cases.exceptions import InvalidClaimError
 
 
 def _make_request() -> ClaimCreate:
@@ -78,6 +79,65 @@ def test_claim_create_rejects_non_payment_on_account_with_poa_type():
                 "poaTypeId": "PROFIT_COST",
             }
         )
+
+
+def test_execute_raises_invalid_claim_error_when_profit_cost_has_no_costs():
+    request = ClaimCreate.model_validate(
+        {
+            "claimType": "PAYMENT_ON_ACCOUNT",
+            "poaTypeId": "PROFIT_COST",
+        }
+    )
+    use_case = CreateClaimUseCase(create_claim_port=MagicMock(spec=CreateClaimPort))
+
+    with pytest.raises(InvalidClaimError, match="Either total_profit_cost_vat_zero"):
+        use_case.execute("12345", request)
+
+
+def test_execute_raises_invalid_claim_error_when_net_higher_than_gross():
+    request = ClaimCreate.model_validate(
+        {
+            "claimType": "PAYMENT_ON_ACCOUNT",
+            "poaTypeId": "PROFIT_COST",
+            "totalProfitCostNet": 1200,
+            "totalProfitCostGross": 1000,
+        }
+    )
+    use_case = CreateClaimUseCase(create_claim_port=MagicMock(spec=CreateClaimPort))
+
+    with pytest.raises(
+        InvalidClaimError, match="Net total cannot be higher than the gross total value"
+    ):
+        use_case.execute("12345", request)
+
+
+def test_execute_raises_invalid_claim_error_when_mixing_vat_rates():
+    request = ClaimCreate.model_validate(
+        {
+            "claimType": "PAYMENT_ON_ACCOUNT",
+            "poaTypeId": "PROFIT_COST",
+            "totalProfitCostNet": 1000,
+            "totalProfitCostVatZero": 500,
+        }
+    )
+    use_case = CreateClaimUseCase(create_claim_port=MagicMock(spec=CreateClaimPort))
+
+    with pytest.raises(
+        InvalidClaimError,
+        match="You cannot submit a profit cost claim with both 0% and 20% VAT",
+    ):
+        use_case.execute("12345", request)
+
+
+def test_execute_does_not_raise_for_non_profit_cost_without_costs():
+    request = ClaimCreate.model_validate(
+        {"claimType": "FINAL_BILL"}
+    )
+    port = MagicMock(spec=CreateClaimPort)
+    port.create_claim.return_value = _make_claim()
+    use_case = CreateClaimUseCase(create_claim_port=port)
+
+    use_case.execute("12345", request)  # should not raise
 
 
 def test_claim_create_accepts_payment_on_account_with_poa_type():

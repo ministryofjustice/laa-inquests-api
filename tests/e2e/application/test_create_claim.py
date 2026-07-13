@@ -126,3 +126,58 @@ def test_422_non_payment_on_account_with_poa_type_id(session, client, auth_token
     )
 
     assert response.status_code == 422
+
+
+def test_422_profit_cost_with_no_cost_fields(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "totalProfitCostNet": None,
+                "totalProfitCostGross": None,
+                "totalProfitCostVatZero": None,
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_422_profit_cost_with_net_higher_than_gross(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {"totalProfitCostNet": 1200, "totalProfitCostGross": 1000}
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_422_profit_cost_mixing_vat_zero_and_net(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {"totalProfitCostNet": 1000, "totalProfitCostVatZero": 500}
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422

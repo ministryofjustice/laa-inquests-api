@@ -35,8 +35,9 @@ class ClaimCreate(BaseModel):
         from_attributes=True,
     )
     claim_type: ClaimType = PydanticField(examples=["PAYMENT_ON_ACCOUNT"])
-    total_profit_cost_net: int = PydanticField(examples=[1000])
-    total_profit_cost_gross: int = PydanticField(examples=[1200])
+    total_profit_cost_net: int | None = PydanticField(default=None, examples=[1000])
+    total_profit_cost_gross: int | None = PydanticField(default=None, examples=[1200])
+    total_profit_cost_vat_zero: int | None = PydanticField(default=None, examples=[500])
     poa_type_id: POAType | None = PydanticField(default=None, examples=["PROFIT_COST"])
     claimant_id: str | None = PydanticField(
         default=None, examples=["claimant-123@provider.co.uk"]
