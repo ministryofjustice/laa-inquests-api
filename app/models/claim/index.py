@@ -15,8 +15,9 @@ class ClaimBase(SQLModel):
         default=ClaimStatus.PENDING, sa_column=Column(Enum(ClaimStatus))
     )
     submission_date: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    total_profit_cost_net: int
-    total_profit_cost_gross: int
+    total_profit_cost_net: int | None = Field(default=None)
+    total_profit_cost_gross: int | None = Field(default=None)
+    total_profit_cost_vat_zero: int | None = Field(default=None)
     claimant_id: str | None = None
     poa_type_id: POAType | None = Field(
         default=None, sa_column=Column(Enum(POAType), nullable=True)
@@ -69,7 +70,8 @@ class ClaimResponse(BaseModel):
     claim_type_id: ClaimType
     status_id: ClaimStatus
     submission_date: datetime
-    total_profit_cost_net: int
-    total_profit_cost_gross: int
+    total_profit_cost_net: int | None = None
+    total_profit_cost_gross: int | None = None
+    total_profit_cost_vat_zero: int | None = None
     claimant_id: str | None = None
     poa_type_id: POAType | None = None
