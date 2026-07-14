@@ -1,4 +1,4 @@
-from app.domain.claim_cost import ClaimCost
+from app.domain.claim import Claim as DomainClaim
 from app.domain.claim_error import ClaimValidationError
 from app.models.claim.index import Claim, ClaimCreate
 from app.ports.create_claim_port import CreateClaimPort
@@ -11,7 +11,8 @@ class CreateClaimUseCase:
 
     def execute(self, laa_reference: str, request: ClaimCreate) -> Claim:
         try:
-            ClaimCost(
+            DomainClaim(
+                claim_type=request.claim_type,
                 poa_type=request.poa_type_id,
                 net=request.total_profit_cost_net,
                 gross=request.total_profit_cost_gross,

@@ -1,6 +1,6 @@
 from datetime import datetime, UTC
 
-from pydantic import BaseModel, ConfigDict, Field as PydanticField, model_validator
+from pydantic import BaseModel, ConfigDict, Field as PydanticField
 from pydantic.alias_generators import to_camel
 from sqlalchemy import Column
 from sqlmodel import Enum, Field, SQLModel
@@ -43,19 +43,6 @@ class ClaimCreate(BaseModel):
     claimant_id: str | None = PydanticField(
         default=None, examples=["claimant-123@provider.co.uk"]
     )
-
-    @model_validator(mode="after")
-    def validate_poa_type_id(self) -> "ClaimCreate":
-        if self.claim_type == ClaimType.PAYMENT_ON_ACCOUNT:
-            if self.poa_type_id is None:
-                raise ValueError(
-                    "poa_type_id is required when claim_type is PAYMENT_ON_ACCOUNT"
-                )
-        elif self.poa_type_id is not None:
-            raise ValueError(
-                "poa_type_id must not be provided when claim_type is not PAYMENT_ON_ACCOUNT"
-            )
-        return self
 
 
 # RESPONSE BODY

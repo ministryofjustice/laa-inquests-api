@@ -109,6 +109,10 @@ def test_422_payment_on_account_without_poa_type_id(session, client, auth_token)
     )
 
     assert response.status_code == 422
+    assert (
+        response.json()["detail"]["errorCode"]
+        == "MISSING_POA_TYPE_FOR_PAYMENT_ON_ACCOUNT"
+    )
 
 
 def test_422_non_payment_on_account_with_poa_type_id(session, client, auth_token):
@@ -126,6 +130,10 @@ def test_422_non_payment_on_account_with_poa_type_id(session, client, auth_token
     )
 
     assert response.status_code == 422
+    assert (
+        response.json()["detail"]["errorCode"]
+        == "POA_TYPE_NOT_ALLOWED_FOR_NON_PAYMENT_ON_ACCOUNT"
+    )
 
 
 def test_422_profit_cost_with_no_cost_fields(session, client, auth_token):
