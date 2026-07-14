@@ -36,8 +36,6 @@ class Claim:
         if self.poa_type == POAType.PROFIT_COST:
             self._validate_profit_cost()
 
-        
-
     def _normalize_non_profit_cost_totals(self) -> None:
         if self.poa_type == POAType.PROFIT_COST:
             return

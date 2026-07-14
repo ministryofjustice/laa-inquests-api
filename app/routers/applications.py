@@ -34,7 +34,7 @@ from app.ports.search_application_port import SearchApplicationPort
 from app.ports.sds_port import SdsPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 from app.use_cases.create_application import CreateApplicationUseCase
-from app.use_cases.create_claim import CreateClaimUseCase
+from app.use_cases.create_claim import CreateClaimCommand, CreateClaimUseCase
 from app.use_cases.get_application import GetApplicationUseCase
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
@@ -293,7 +293,16 @@ def create_claim(
 ) -> Claim:
     """Creates a new claim against an application."""
     try:
-        return use_case.execute(laa_reference, request)
+        command = CreateClaimCommand(
+            laa_reference=laa_reference,
+            claim_type=request.claim_type,
+            poa_type=request.poa_type_id,
+            net=request.total_profit_cost_net,
+            gross=request.total_profit_cost_gross,
+            vat_zero_total=request.total_profit_cost_vat_zero,
+            claimant_id=request.claimant_id,
+        )
+        return use_case.execute(command)
     except InvalidClaimError as e:
         raise HTTPException(
             status_code=422, detail={"errorCode": e.code, "message": e.message}

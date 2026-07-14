@@ -1,6 +1,7 @@
 from sqlmodel import Session, select
 import uuid
 
+from app.domain.claim import Claim as DomainClaim
 from app.domain.coroners_letter import CoronersLetter
 from app.models.application.index import (
     Address,
@@ -16,7 +17,7 @@ from app.models.application.index import (
     Provider,
     PublicBodyId,
 )
-from app.models.claim.index import Claim, ClaimCreate
+from app.models.claim.index import Claim
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.create_claim_port import CreateClaimPort
 from app.ports.get_application_port import GetApplicationPort
@@ -161,15 +162,20 @@ class ApplicationRepositoryAdapter(
         self.session.refresh(new_application)
         return new_application
 
-    def create_claim(self, laa_reference: str, request: ClaimCreate) -> Claim:
+    def create_claim(
+        self,
+        laa_reference: str,
+        claim: DomainClaim,
+        claimant_id: str | None,
+    ) -> Claim:
         new_claim = Claim(
             laa_reference=int(laa_reference),
-            claim_type_id=request.claim_type,
-            total_profit_cost_net=request.total_profit_cost_net,
-            total_profit_cost_gross=request.total_profit_cost_gross,
-            total_profit_cost_vat_zero=request.total_profit_cost_vat_zero,
-            poa_type_id=request.poa_type_id,
-            claimant_id=request.claimant_id,
+            claim_type_id=claim.claim_type,
+            total_profit_cost_net=claim.net,
+            total_profit_cost_gross=claim.gross,
+            total_profit_cost_vat_zero=claim.vat_zero_total,
+            poa_type_id=claim.poa_type,
+            claimant_id=claimant_id,
         )
         self.session.add(new_claim)
         self.session.flush()
