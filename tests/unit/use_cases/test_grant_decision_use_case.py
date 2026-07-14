@@ -59,7 +59,7 @@ def update_decision_port(application: Application) -> MagicMock:
 
 
 @pytest.fixture
-def create_certificate_model_use_case() -> MagicMock:
+def create_certificate_context_use_case() -> MagicMock:
     return MagicMock()
 
 
@@ -68,19 +68,19 @@ def use_case(
     update_decision_port: MagicMock,
     gov_notify_port: MagicMock,
     pdf_generation_port: MagicMock,
-    create_certificate_model_use_case: MagicMock,
+    create_certificate_context_use_case: MagicMock,
 ) -> GrantDecisionUseCase:
     return GrantDecisionUseCase(
         update_decision_port,
         gov_notify_port,
         pdf_generation_port,
-        create_certificate_model_use_case,
+        create_certificate_context_use_case,
     )
 
 
 def test_grant_decision_calls_required_ports_and_commit(
     use_case,
-    create_certificate_model_use_case,
+    create_certificate_context_use_case,
     application,
     update_decision_port,
     gov_notify_port,
@@ -89,7 +89,7 @@ def test_grant_decision_calls_required_ports_and_commit(
 ):
     use_case.execute("1", grant_request)
 
-    create_certificate_model_use_case.populate_certificate_context.assert_called_once_with(
+    create_certificate_context_use_case.populate_certificate_context.assert_called_once_with(
         application, application.proceedings[0]
     )
     update_decision_port.update_decision.assert_called_once_with(
@@ -161,10 +161,10 @@ def test_grant_decision_raises_exception_when_create_certificate_model_use_case_
     use_case,
     update_decision_port,
     gov_notify_port,
-    create_certificate_model_use_case,
+    create_certificate_context_use_case,
     grant_request,
 ):
-    create_certificate_model_use_case.populate_certificate_context.side_effect = (
+    create_certificate_context_use_case.populate_certificate_context.side_effect = (
         Exception("Create Certificate Model failure")
     )
 

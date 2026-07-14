@@ -1,6 +1,6 @@
 from datetime import datetime, UTC
 import logging
-from app.use_cases.create_certificate_model import CreateCertificateModelUseCase
+from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import GrantApplicationUpdate
 from app.ports.gov_notify_port import GovNotifyPort
@@ -17,12 +17,12 @@ class GrantDecisionUseCase:
         application_decision_port: ApplicationDecisionPort,
         gov_notify_port: GovNotifyPort,
         pdf_generation_port: PdfGenerationPort,
-        create_certificate_model_use_case: CreateCertificateModelUseCase,
+        create_certificate_context_use_case: CreateCertificateContextUseCase,
     ) -> None:
         self.application_decision_port = application_decision_port
         self.gov_notify_port = gov_notify_port
         self.pdf_generation_port = pdf_generation_port
-        self.create_certificate_model_use_case = create_certificate_model_use_case
+        self.create_certificate_context_use_case = create_certificate_context_use_case
 
     def execute(self, laa_reference: str, request: GrantApplicationUpdate) -> None:
         application = self.application_decision_port.get_application_by_laa_reference(
@@ -47,7 +47,7 @@ class GrantDecisionUseCase:
 
         try:
             certificate_context = (
-                self.create_certificate_model_use_case.populate_certificate_context(
+                self.create_certificate_context_use_case.populate_certificate_context(
                     application, proceeding
                 )
             ).model_dump()

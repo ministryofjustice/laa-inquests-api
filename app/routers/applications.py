@@ -189,7 +189,9 @@ def get_grant_decision_use_case(
     update_decision_port: ApplicationDecisionPort = Depends(get_application_db_adapter),
     gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
     pdf_generation_port: PdfGenerationPort = Depends(get_pdf_generation_port),
-    create_certificate_context_use_case=Depends(get_create_certificate_context_use_case),
+    create_certificate_context_use_case=Depends(
+        get_create_certificate_context_use_case
+    ),
 ) -> GrantDecisionUseCase:
     return GrantDecisionUseCase(
         application_decision_port=update_decision_port,
