@@ -59,18 +59,28 @@ def update_decision_port(application: Application) -> MagicMock:
 
 
 @pytest.fixture
+def create_certificate_model_use_case() -> MagicMock:
+    return MagicMock()
+
+
+@pytest.fixture
 def use_case(
     update_decision_port: MagicMock,
     gov_notify_port: MagicMock,
     pdf_generation_port: MagicMock,
+    create_certificate_model_use_case: MagicMock,
 ) -> GrantDecisionUseCase:
     return GrantDecisionUseCase(
-        update_decision_port, gov_notify_port, pdf_generation_port
+        update_decision_port,
+        gov_notify_port,
+        pdf_generation_port,
+        create_certificate_model_use_case,
     )
 
 
 def test_grant_decision_calls_required_ports_and_commit(
     use_case,
+    create_certificate_model_use_case,
     application,
     update_decision_port,
     gov_notify_port,
@@ -79,6 +89,9 @@ def test_grant_decision_calls_required_ports_and_commit(
 ):
     use_case.execute("1", grant_request)
 
+    create_certificate_model_use_case.populate_certificate_context.assert_called_once_with(
+        application, application.proceedings[0]
+    )
     update_decision_port.update_decision.assert_called_once_with(
         application.proceedings[0]
     )
@@ -142,6 +155,23 @@ def test_grant_decision_raises_404_when_no_proceedings(
 
     with pytest.raises(ProceedingsNotFoundError):
         use_case.execute("1", grant_request)
+
+
+def test_grant_decision_raises_exception_when_create_certificate_model_use_case_fails_and_rollbacks(
+    use_case,
+    update_decision_port,
+    gov_notify_port,
+    create_certificate_model_use_case,
+    grant_request,
+):
+    create_certificate_model_use_case.populate_certificate_context.side_effect = (
+        Exception("Create Certificate Model failure")
+    )
+
+    with pytest.raises(Exception):
+        use_case.execute("1", grant_request)
+
+    update_decision_port.rollback.assert_called_once()
 
 
 def test_grant_decision_raises_exception_when_gov_notify_fails_and_rollbacks(
