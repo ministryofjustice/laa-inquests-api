@@ -295,7 +295,9 @@ def create_claim(
     try:
         return use_case.execute(laa_reference, request)
     except InvalidClaimError as e:
-        raise HTTPException(status_code=422, detail={"errorCode": e.code, "message": e.message})
+        raise HTTPException(
+            status_code=422, detail={"errorCode": e.code, "message": e.message}
+        )
 
 
 @router.patch("/{laa_reference}/refuse-decision", status_code=204)

@@ -129,9 +129,7 @@ def test_execute_raises_invalid_claim_error_when_mixing_vat_rates():
 
 
 def test_execute_does_not_raise_for_non_profit_cost_without_costs():
-    request = ClaimCreate.model_validate(
-        {"claimType": "FINAL_BILL"}
-    )
+    request = ClaimCreate.model_validate({"claimType": "FINAL_BILL"})
     port = MagicMock(spec=CreateClaimPort)
     port.create_claim.return_value = _make_claim()
     use_case = CreateClaimUseCase(create_claim_port=port)

@@ -19,31 +19,41 @@ def test_valid_when_gross_equals_net():
 
 def test_raises_when_vat_zero_and_net_both_provided():
     with pytest.raises(ClaimValidationError) as exc_info:
-        ClaimCost(poa_type=POAType.PROFIT_COST, net=1000, gross=None, vat_zero_total=500)
+        ClaimCost(
+            poa_type=POAType.PROFIT_COST, net=1000, gross=None, vat_zero_total=500
+        )
     assert exc_info.value.code == ClaimErrorCode.PROFIT_COST_MIXED_VAT
 
 
 def test_raises_when_vat_zero_and_gross_both_provided():
     with pytest.raises(ClaimValidationError) as exc_info:
-        ClaimCost(poa_type=POAType.PROFIT_COST, net=None, gross=1200, vat_zero_total=500)
+        ClaimCost(
+            poa_type=POAType.PROFIT_COST, net=None, gross=1200, vat_zero_total=500
+        )
     assert exc_info.value.code == ClaimErrorCode.PROFIT_COST_MIXED_VAT
 
 
 def test_raises_when_nothing_provided():
     with pytest.raises(ClaimValidationError) as exc_info:
-        ClaimCost(poa_type=POAType.PROFIT_COST, net=None, gross=None, vat_zero_total=None)
+        ClaimCost(
+            poa_type=POAType.PROFIT_COST, net=None, gross=None, vat_zero_total=None
+        )
     assert exc_info.value.code == ClaimErrorCode.MISSING_TOTAL_CLAIM_COST
 
 
 def test_raises_when_net_provided_without_gross():
     with pytest.raises(ClaimValidationError) as exc_info:
-        ClaimCost(poa_type=POAType.PROFIT_COST, net=1000, gross=None, vat_zero_total=None)
+        ClaimCost(
+            poa_type=POAType.PROFIT_COST, net=1000, gross=None, vat_zero_total=None
+        )
     assert exc_info.value.code == ClaimErrorCode.MISSING_GROSS_TOTAL_WHEN_NET_ENTERED
 
 
 def test_raises_when_net_higher_than_gross():
     with pytest.raises(ClaimValidationError) as exc_info:
-        ClaimCost(poa_type=POAType.PROFIT_COST, net=1200, gross=1000, vat_zero_total=None)
+        ClaimCost(
+            poa_type=POAType.PROFIT_COST, net=1200, gross=1000, vat_zero_total=None
+        )
     assert exc_info.value.code == ClaimErrorCode.NET_TOTAL_HIGHER_THAN_GROSS_TOTAL
 
 
