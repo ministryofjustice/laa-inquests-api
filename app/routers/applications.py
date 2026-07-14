@@ -8,7 +8,7 @@ from mimetypes import guess_type
 
 from app.adapters.sds_adapter import SdsAdapter
 from app.adapters.application_repository_adapter import ApplicationRepositoryAdapter
-from app.adapters.weasyprint_adapter import WeasyPrintAdapter
+from app.adapters.pdf_generator_adapter import PdfGeneratorAdapter
 from app.db import get_session
 from app.models.application.index import (
     Application,
@@ -91,8 +91,10 @@ def get_sds_port() -> SdsPort:
     )
 
 
-def get_pdf_generation_port() -> PdfGenerationPort:
-    return WeasyPrintAdapter()
+def get_pdf_generation_port(
+    provider_details_port: ProviderDetailsPort = Depends(get_provider_details_port),
+) -> PdfGenerationPort:
+    return PdfGeneratorAdapter(provider_details_port=provider_details_port)
 
 
 def get_application_db_adapter(

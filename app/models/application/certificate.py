@@ -22,18 +22,18 @@ class ApplicationCertificate(BaseModel):
     laa_reference: int
     date_created: date
 
-    certificate_type: str  # Proceeding.certificate_type
-    status: str  # ApplicationBase.Status
-    effective_date: date  # ApplicationProceeding.certificate_start_date
+    certificate_type: str
+    status: str
+    effective_date: date
     end_date: date | None = None
-    reinstatement_date: date | None = None  # Will be Not applicable
-    cost_limitation: str  # Proceeding.substantive_cost_limitation
+    reinstatement_date: date | None = None
+    cost_limitation: str
     cost_limitation_effective_date: date | None = None
     certificate_limitation: str = "Not applicable"
 
-    care_order_description: str  # Proceeding.proceeding_description
-    category_of_law: str  # Proceeding.category_of_law
-    current_proceeding_status: str  # ApplicationBase.Status TODO: Confirm. We don't have a field for proceeding status in the ApplicationBase model. Is this the same as the application status?
+    care_order_description: str
+    category_of_law: str
+    current_proceeding_status: str
     date_work_can_commence: date  # ApplicationProceeding.certificate_start_date
     proceeding_end_date: date | None = None
     client_involvement_type: str = "Applicant"
