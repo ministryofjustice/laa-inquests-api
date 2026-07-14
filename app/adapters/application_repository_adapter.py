@@ -167,6 +167,7 @@ class ApplicationRepositoryAdapter(
             claim_type_id=request.claim_type,
             total_profit_cost_net=request.total_profit_cost_net,
             total_profit_cost_gross=request.total_profit_cost_gross,
+            total_profit_cost_vat_zero=request.total_profit_cost_vat_zero,
             poa_type_id=request.poa_type_id,
             claimant_id=request.claimant_id,
         )

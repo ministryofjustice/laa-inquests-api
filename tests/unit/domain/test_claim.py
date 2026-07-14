@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 
 from app.domain.claim import Claim
@@ -115,6 +117,33 @@ def test_no_validation_for_non_profit_cost_poa_type():
         gross=None,
         vat_zero_total=None,
     )
+
+
+def test_non_profit_cost_defaults_missing_totals_to_zero():
+    claim = Claim(
+        claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+        poa_type=POAType.EXPERT_COST,
+        net=None,
+        gross=None,
+        vat_zero_total=Decimal("150.00"),
+    )
+
+    assert claim.net == Decimal("0.00")
+    assert claim.gross == Decimal("0.00")
+    assert claim.vat_zero_total == Decimal("150.00")
+
+
+def test_raises_when_non_profit_cost_net_higher_than_gross():
+    with pytest.raises(ClaimValidationError) as exc_info:
+        Claim(
+            claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+            poa_type=POAType.NON_EXPERT_DISBURSEMENT,
+            net=Decimal("120.00"),
+            gross=Decimal("100.00"),
+            vat_zero_total=None,
+        )
+
+    assert exc_info.value.code == ClaimErrorCode.NET_TOTAL_HIGHER_THAN_GROSS_TOTAL
 
 
 def test_no_validation_when_poa_type_is_none():

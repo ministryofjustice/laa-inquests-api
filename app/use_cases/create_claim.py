@@ -11,7 +11,7 @@ class CreateClaimUseCase:
 
     def execute(self, laa_reference: str, request: ClaimCreate) -> Claim:
         try:
-            DomainClaim(
+            validated_claim = DomainClaim(
                 claim_type=request.claim_type,
                 poa_type=request.poa_type_id,
                 net=request.total_profit_cost_net,
@@ -21,6 +21,14 @@ class CreateClaimUseCase:
         except ClaimValidationError as e:
             raise InvalidClaimError(code=e.code, message=e.message) from e
 
-        claim = self.create_claim_port.create_claim(laa_reference, request)
+        normalized_request = request.model_copy(
+            update={
+                "total_profit_cost_net": validated_claim.net,
+                "total_profit_cost_gross": validated_claim.gross,
+                "total_profit_cost_vat_zero": validated_claim.vat_zero_total,
+            }
+        )
+
+        claim = self.create_claim_port.create_claim(laa_reference, normalized_request)
         self.create_claim_port.commit()
         return claim

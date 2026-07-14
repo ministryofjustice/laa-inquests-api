@@ -1,4 +1,5 @@
 from sqlmodel import select
+from decimal import Decimal
 
 from app.adapters.application_repository_adapter import ApplicationRepositoryAdapter
 from app.models.application.index import Application
@@ -11,6 +12,7 @@ def _make_request(overrides=None) -> ClaimCreate:
         "claimType": "PAYMENT_ON_ACCOUNT",
         "totalProfitCostNet": 1000,
         "totalProfitCostGross": 1200,
+        "totalProfitCostVatZero": 150.00,
         "poaTypeId": "PROFIT_COST",
         "claimantId": "claimant-123@provider.co.uk",
     }
@@ -32,6 +34,7 @@ def test_create_claim_persists_claim_with_expected_values(session):
     assert stored_claim.claim_type_id == ClaimType.PAYMENT_ON_ACCOUNT
     assert stored_claim.total_profit_cost_net == 1000
     assert stored_claim.total_profit_cost_gross == 1200
+    assert stored_claim.total_profit_cost_vat_zero == Decimal("150.00")
 
 
 def test_create_claim_defaults_status_to_pending(session):
@@ -73,3 +76,4 @@ def test_create_claim_defaults_optional_fields_to_none_when_omitted(session):
 
     assert created_claim.poa_type_id is None
     assert created_claim.claimant_id is None
+

@@ -1,4 +1,5 @@
 from sqlmodel import select
+from decimal import Decimal
 
 from app.models.application.index import Application
 from app.models.claim.index import Claim
@@ -36,8 +37,8 @@ def test_201_create_claim_response_contains_expected_properties(
     assert isinstance(claim["claimId"], int)
     assert claim["laaReference"] == laa_reference
     assert claim["claimTypeId"] == "PAYMENT_ON_ACCOUNT"
-    assert claim["totalProfitCostNet"] == 1000
-    assert claim["totalProfitCostGross"] == 1200
+    assert Decimal(str(claim["totalProfitCostNet"])) == Decimal("1000.00")
+    assert Decimal(str(claim["totalProfitCostGross"])) == Decimal("1200.00")
     assert claim["poaTypeId"] == "PROFIT_COST"
     assert claim["claimantId"] == "claimant-123@provider.co.uk"
     assert isinstance(claim["submissionDate"], str)
@@ -213,3 +214,58 @@ def test_422_profit_cost_mixing_vat_zero_and_net(session, client, auth_token):
 
     assert response.status_code == 422
     assert response.json()["detail"]["errorCode"] == "PROFIT_COST_MIXED_VAT"
+
+
+def test_201_non_profit_cost_with_vat_zero_only_defaults_missing_totals(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "poaTypeId": "EXPERT_COST",
+                "totalProfitCostNet": None,
+                "totalProfitCostGross": None,
+                "totalProfitCostVatZero": "150.00",
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    claim = response.json()
+    assert Decimal(str(claim["totalProfitCostNet"])) == Decimal("0.00")
+    assert Decimal(str(claim["totalProfitCostGross"])) == Decimal("0.00")
+    assert Decimal(str(claim["totalProfitCostVatZero"])) == Decimal("150.00")
+
+
+def test_422_non_profit_cost_with_net_higher_than_gross(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "poaTypeId": "NON_EXPERT_DISBURSEMENT",
+                "totalProfitCostNet": "120.00",
+                "totalProfitCostGross": "100.00",
+                "totalProfitCostVatZero": None,
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "NET_TOTAL_HIGHER_THAN_GROSS_TOTAL"
+    assert (
+        response.json()["detail"]["message"]
+        == "Net total cannot be higher than the gross total value"
+    )

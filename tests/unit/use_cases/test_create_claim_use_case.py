@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock
+from decimal import Decimal
 
 import pytest
 
@@ -122,6 +123,23 @@ def test_execute_raises_invalid_claim_error_when_net_higher_than_gross():
     assert exc_info.value.code == ClaimErrorCode.NET_TOTAL_HIGHER_THAN_GROSS_TOTAL
 
 
+def test_execute_raises_invalid_claim_error_when_non_profit_cost_net_higher_than_gross():
+    request = ClaimCreate.model_validate(
+        {
+            "claimType": "PAYMENT_ON_ACCOUNT",
+            "poaTypeId": "EXPERT_COST",
+            "totalProfitCostNet": Decimal("120.00"),
+            "totalProfitCostGross": Decimal("100.00"),
+        }
+    )
+    use_case = CreateClaimUseCase(create_claim_port=MagicMock(spec=CreateClaimPort))
+
+    with pytest.raises(InvalidClaimError) as exc_info:
+        use_case.execute("12345", request)
+
+    assert exc_info.value.code == ClaimErrorCode.NET_TOTAL_HIGHER_THAN_GROSS_TOTAL
+
+
 def test_execute_raises_invalid_claim_error_when_mixing_vat_rates():
     request = ClaimCreate.model_validate(
         {
@@ -145,6 +163,21 @@ def test_execute_does_not_raise_for_non_profit_cost_without_costs():
     use_case = CreateClaimUseCase(create_claim_port=port)
 
     use_case.execute("12345", request)  # should not raise
+
+
+def test_execute_accepts_non_profit_cost_with_vat_zero_only():
+    request = ClaimCreate.model_validate(
+        {
+            "claimType": "PAYMENT_ON_ACCOUNT",
+            "poaTypeId": "EXPERT_COST",
+            "totalProfitCostVatZero": Decimal("150.00"),
+        }
+    )
+    port = MagicMock(spec=CreateClaimPort)
+    port.create_claim.return_value = _make_claim()
+    use_case = CreateClaimUseCase(create_claim_port=port)
+
+    use_case.execute("12345", request)
 
 
 def test_claim_create_accepts_payment_on_account_with_poa_type():
