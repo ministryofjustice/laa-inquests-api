@@ -14,6 +14,8 @@ from tests.unit.factories import (
     create_base_home_address,
     create_base_proceeding,
     create_base_provider,
+    create_base_application_public_body,
+    create_base_public_body,
 )
 from datetime import date
 
@@ -196,7 +198,6 @@ def test_populate_certificate_context_populates_default_static_fields():
 
     result = usecase.populate_certificate_context(application, application_proceeding)
 
-    assert result.opponent_details == "Not applicable"
     assert result.guardian_name == "Not applicable"
     assert result.guardian_address == "Not applicable"
     assert result.client_involvement_type == "Applicant"
@@ -282,3 +283,49 @@ def test_populate_certificate_context_handles_none_correspondence_address():
     # Should use home address
     assert "Home Street 1" in result.client_address
     assert "HM1 1AA" in result.client_address
+
+
+def test_populate_certificate_context_handles_single_public_body_correctly():
+    """Test that a single public body is handled correctly."""
+    mock_provider_port = MagicMock()
+    mock_provider_port.get_firm_name.return_value = "Test Firm"
+    usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
+
+    application = create_base_application(
+        public_bodies=[
+            create_base_application_public_body(
+                public_body=create_base_public_body(public_body_description="Body A")
+            )
+        ]
+    )
+    application_proceeding = application.proceedings[0]
+
+    result = usecase.populate_certificate_context(application, application_proceeding)
+
+    assert result.opponent_details == "Body A"
+    assert result.opponent_details.count("\n") == 0
+
+
+def test_populate_certificate_context_handles_multiple_public_bodies_correctly():
+    """Test that public bodies are concatenated correctly."""
+    mock_provider_port = MagicMock()
+    mock_provider_port.get_firm_name.return_value = "Test Firm"
+    usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
+
+    application = create_base_application(
+        public_bodies=[
+            create_base_application_public_body(
+                public_body=create_base_public_body(public_body_description="Body A")
+            ),
+            create_base_application_public_body(
+                public_body=create_base_public_body(public_body_description="Body B")
+            ),
+        ]
+    )
+    application_proceeding = application.proceedings[0]
+
+    result = usecase.populate_certificate_context(application, application_proceeding)
+
+    assert "Body A" in result.opponent_details
+    assert "Body B" in result.opponent_details
+    assert result.opponent_details.count("\n") == 1
