@@ -42,6 +42,7 @@ from app.use_cases.exceptions import (
     CoronersLetterRetrievalError,
     CoronersLetterUploadError,
     CoronersLetterVirusDetectedError,
+    InvalidClaimError,
     InvalidCoronersLetterDocumentIdError,
     ProceedingsNotFoundError,
 )
@@ -291,7 +292,12 @@ def create_claim(
     _: None = Depends(verify_entra_provider_token),
 ) -> Claim:
     """Creates a new claim against an application."""
-    return use_case.execute(laa_reference, request)
+    try:
+        return use_case.execute(laa_reference, request)
+    except InvalidClaimError as e:
+        raise HTTPException(
+            status_code=422, detail={"errorCode": e.code, "message": e.message}
+        )
 
 
 @router.patch("/{laa_reference}/refuse-decision", status_code=204)
