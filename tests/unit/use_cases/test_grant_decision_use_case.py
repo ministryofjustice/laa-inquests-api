@@ -101,6 +101,7 @@ def test_grant_decision_calls_required_ports_and_commit(
         application,
         application.proceedings[0],
         application.provider.email_address,
+        pdf_generation_port.generate_pdf.return_value,
     )
 
 

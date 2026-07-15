@@ -54,6 +54,7 @@ class GovNotifyPort(ABC):
         application: Application,
         proceeding: ApplicationProceeding,
         recipient_email: str,
+        certificate_pdf: bytes,
     ) -> None:
         """Send application grant notification to recipient.
 
@@ -61,6 +62,7 @@ class GovNotifyPort(ABC):
             application: The application being granted
             proceeding: The proceeding with grant details (certificate issue date)
             recipient_email: Email address of the recipient
+            certificate_pdf: PDF bytes to be attached to the notification
 
         Raises:
             Exception: If the notification fails to send

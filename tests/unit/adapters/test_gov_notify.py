@@ -155,7 +155,10 @@ def test_gov_notify_adapter_sends_grant_email_successfully():
 
         adapter = GovNotifyAdapter()
         adapter.send_application_granted_decision_email(
-            application, proceeding, "provider@example.com"
+            application,
+            proceeding,
+            "provider@example.com",
+            certificate_pdf=b"dummy-pdf-content",
         )
 
         mock_api_client.assert_called_once_with(Config.GOV_NOTIFY_API_KEY)

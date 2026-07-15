@@ -10,7 +10,7 @@ from app.adapters.pdf_generator_adapter import PdfGeneratorAdapter
 from app.models.application.certificate import ApplicationCertificate
 
 
-def _sample_context() -> dict:
+def _sample_context() -> ApplicationCertificate:
     """Build a minimal, valid ApplicationCertificate context for template rendering."""
     return ApplicationCertificate(
         client_name="Jane Doe",
@@ -32,7 +32,7 @@ def _sample_context() -> dict:
         date_current_level_of_service_effective=date(2026, 7, 15),
         scope_limitation_heading="FINAL_HEARING",
         scope_limitation_description="Limited to final hearing only",
-    ).model_dump()
+    )
 
 
 def test_generate_pdf_returns_bytes():

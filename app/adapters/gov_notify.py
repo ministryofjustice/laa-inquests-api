@@ -1,6 +1,9 @@
 """Gov Notify adapter for application emails."""
 
+from io import BytesIO
+
 from notifications_python_client.notifications import NotificationsAPIClient
+from notifications_python_client import prepare_upload
 
 from app.config import Config
 from app.models.application.index import Application, ApplicationProceeding
@@ -55,9 +58,12 @@ class GovNotifyAdapter(GovNotifyPort):
         application: Application,
         proceeding: ApplicationProceeding,
         recipient_email: str,
+        certificate_pdf: bytes,
     ) -> None:
+        certificate_payload = prepare_upload(BytesIO(certificate_pdf))
+
         personalisation = create_application_grant_email_personalisation(
-            application, proceeding
+            application, proceeding, certificate_payload
         )
         self.client.send_email_notification(
             email_address=recipient_email,

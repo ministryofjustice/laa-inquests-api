@@ -45,12 +45,16 @@ def test_create_application_grant_email_personalisation_returns_all_required_fie
     application, proceeding = _create_test_application_and_proceeding(
         laa_reference=12345
     )
+    certificate_payload = {"file": "dGVzdA==", "filename": None}
 
-    result = create_application_grant_email_personalisation(application, proceeding)
+    result = create_application_grant_email_personalisation(
+        application, proceeding, certificate_payload
+    )
 
     assert isinstance(result, NotifyApplicationGrantTemplatePersonalisation)
     assert result.laa_reference == "12345"
     assert result.issue_date == "18 June 2026"
+    assert result.link_to_file == certificate_payload
 
 
 def test_create_application_grant_email_personalisation_rejects_missing_required_fields():
@@ -71,5 +75,6 @@ def test_create_application_grant_email_personalisation_rejects_extra_fields():
         NotifyApplicationGrantTemplatePersonalisation(
             laa_reference="12345",
             issue_date="18 June 2026",
+            link_to_file={"file": "dGVzdA=="},
             unexpected_field="This should not be allowed",
         )

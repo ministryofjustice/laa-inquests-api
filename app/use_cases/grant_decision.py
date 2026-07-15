@@ -50,8 +50,8 @@ class GrantDecisionUseCase:
                 self.create_certificate_context_use_case.populate_certificate_context(
                     application, proceeding
                 )
-            ).model_dump()
-            self.pdf_generation_port.generate_pdf(
+            )
+            certificate_pdf = self.pdf_generation_port.generate_pdf(
                 "certificate.html", certificate_context
             )
 
@@ -59,6 +59,7 @@ class GrantDecisionUseCase:
                 application,
                 proceeding,
                 application.provider.email_address,
+                certificate_pdf,
             )
             self.application_decision_port.commit()
         except Exception as exception:
