@@ -52,7 +52,7 @@ class GrantDecisionUseCase:
                 )
             ).model_dump()
             self.pdf_generation_port.generate_pdf(
-                "govuk_header.html", certificate_context
+                "certificate.html", certificate_context
             )
 
             self.gov_notify_port.send_application_granted_decision_email(

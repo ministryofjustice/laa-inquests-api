@@ -187,6 +187,27 @@ def test_populate_certificate_context_populates_application_status_fields():
     assert result.current_proceeding_status == "LIVE"
 
 
+def test_populate_certificate_context_populates_identifiers_and_dates():
+    """LAA reference and date created are read from application/proceeding."""
+    mock_provider_port = MagicMock()
+    mock_provider_port.get_firm_name.return_value = "Test Firm"
+    usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
+
+    issue_date = date(2026, 7, 15)
+    application = create_base_application(
+        laa_reference=98765,
+        proceedings=[
+            create_base_application_proceeding(certificate_issue_date=issue_date)
+        ],
+    )
+    application_proceeding = application.proceedings[0]
+
+    result = usecase.populate_certificate_context(application, application_proceeding)
+
+    assert result.laa_reference == 98765
+    assert result.date_created == issue_date
+
+
 def test_populate_certificate_context_populates_default_static_fields():
     """Test that static/default fields are populated correctly."""
     mock_provider_port = MagicMock()
