@@ -109,14 +109,17 @@ def test_raises_when_net_is_negative():
     assert exc_info.value.code == ClaimErrorCode.NEGATIVE_NET_COST
 
 
-def test_no_validation_for_non_profit_cost_poa_type():
-    Claim(
-        claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
-        poa_type=POAType.EXPERT_COST,
-        net=None,
-        gross=None,
-        vat_zero_total=None,
-    )
+def test_raises_when_non_profit_cost_has_no_totals():
+    with pytest.raises(ClaimValidationError) as exc_info:
+        Claim(
+            claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+            poa_type=POAType.EXPERT_COST,
+            net=None,
+            gross=None,
+            vat_zero_total=None,
+        )
+
+    assert exc_info.value.code == ClaimErrorCode.MISSING_NON_PROFIT_COST_TOTAL
 
 
 def test_non_profit_cost_defaults_missing_totals_to_zero():

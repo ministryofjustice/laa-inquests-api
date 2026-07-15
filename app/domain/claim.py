@@ -5,6 +5,7 @@ from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
 from app.domain.constants.claim_messages import (
     MIXED_VAT_MESSAGE,
     MISSING_GROSS_MESSAGE,
+    MISSING_NON_PROFIT_COST_TOTAL_MESSAGE,
     MISSING_POA_TYPE_MESSAGE,
     MISSING_TOTAL_MESSAGE,
     NEGATIVE_NET_MESSAGE,
@@ -32,6 +33,7 @@ class Claim:
             and self.poa_type is not None
             and self.poa_type != POAType.PROFIT_COST
         ):
+            self._validate_non_profit_cost_has_at_least_one_total()
             self._normalize_non_profit_cost_totals()
 
         if self.poa_type == POAType.PROFIT_COST:
@@ -53,6 +55,13 @@ class Claim:
             "vat_zero_total",
             self.vat_zero_total if self.vat_zero_total is not None else Decimal("0.00"),
         )
+
+    def _validate_non_profit_cost_has_at_least_one_total(self) -> None:
+        if self.net is None and self.gross is None and self.vat_zero_total is None:
+            raise ClaimValidationError(
+                ClaimErrorCode.MISSING_NON_PROFIT_COST_TOTAL,
+                MISSING_NON_PROFIT_COST_TOTAL_MESSAGE,
+            )
 
     def _validate_claim_type_poa_combination(self) -> None:
         if self.claim_type == ClaimType.PAYMENT_ON_ACCOUNT and self.poa_type is None:

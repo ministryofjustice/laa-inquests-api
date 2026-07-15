@@ -244,6 +244,33 @@ def test_201_non_profit_cost_with_vat_zero_only_defaults_missing_totals(
     assert Decimal(str(claim["totalProfitCostVatZero"])) == Decimal("150.00")
 
 
+def test_422_non_profit_cost_with_no_cost_fields(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "poaTypeId": "EXPERT_COST",
+                "totalProfitCostNet": None,
+                "totalProfitCostGross": None,
+                "totalProfitCostVatZero": None,
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "MISSING_NON_PROFIT_COST_TOTAL"
+    assert (
+        response.json()["detail"]["message"]
+        == "Please complete the total value of your claim to continue"
+    )
+
+
 def test_422_non_profit_cost_with_net_higher_than_gross(session, client, auth_token):
     laa_reference = session.exec(select(Application)).first().laa_reference
 

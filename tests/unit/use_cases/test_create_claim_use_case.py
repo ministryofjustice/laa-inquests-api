@@ -126,6 +126,23 @@ def test_execute_raises_invalid_claim_error_when_non_profit_cost_net_higher_than
     assert exc_info.value.code == ClaimErrorCode.NET_TOTAL_HIGHER_THAN_GROSS_TOTAL
 
 
+def test_execute_raises_invalid_claim_error_when_non_profit_cost_has_no_costs():
+    command = _make_command(
+        {
+            "poa_type": POAType.EXPERT_COST,
+            "net": None,
+            "gross": None,
+            "vat_zero_total": None,
+        }
+    )
+    use_case = CreateClaimUseCase(create_claim_port=MagicMock(spec=CreateClaimPort))
+
+    with pytest.raises(InvalidClaimError) as exc_info:
+        use_case.execute(command)
+
+    assert exc_info.value.code == ClaimErrorCode.MISSING_NON_PROFIT_COST_TOTAL
+
+
 def test_execute_raises_invalid_claim_error_when_mixing_vat_rates():
     command = _make_command({"vat_zero_total": Decimal("500.00")})
     use_case = CreateClaimUseCase(create_claim_port=MagicMock(spec=CreateClaimPort))
