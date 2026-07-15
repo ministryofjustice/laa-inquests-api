@@ -30,6 +30,7 @@ class Claim:
         if (
             self.claim_type == ClaimType.PAYMENT_ON_ACCOUNT
             and self.poa_type is not None
+            and self.poa_type != POAType.PROFIT_COST
         ):
             self._normalize_non_profit_cost_totals()
 
@@ -37,9 +38,6 @@ class Claim:
             self._validate_profit_cost()
 
     def _normalize_non_profit_cost_totals(self) -> None:
-        if self.poa_type == POAType.PROFIT_COST:
-            return
-
         object.__setattr__(
             self,
             "net",
