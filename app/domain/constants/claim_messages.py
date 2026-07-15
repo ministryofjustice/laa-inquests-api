@@ -1,5 +1,8 @@
 MIXED_VAT_MESSAGE = "You cannot submit a profit cost claim with both 0% and 20% VAT"
 MISSING_GROSS_MESSAGE = "Please complete the gross total value of your claim"
+MISSING_NON_PROFIT_COST_TOTAL_MESSAGE = (
+    "Please complete the total value of your claim to continue"
+)
 MISSING_TOTAL_MESSAGE = (
     "Either total_profit_cost_vat_zero or both "
     "total_profit_cost_net and total_profit_cost_gross must be provided"

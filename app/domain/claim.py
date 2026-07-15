@@ -1,9 +1,11 @@
 from dataclasses import dataclass
+from decimal import Decimal
 
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
 from app.domain.constants.claim_messages import (
     MIXED_VAT_MESSAGE,
     MISSING_GROSS_MESSAGE,
+    MISSING_NON_PROFIT_COST_TOTAL_MESSAGE,
     MISSING_POA_TYPE_MESSAGE,
     MISSING_TOTAL_MESSAGE,
     NEGATIVE_NET_MESSAGE,
@@ -17,15 +19,49 @@ from app.models.claim.enums import ClaimType, POAType
 class Claim:
     claim_type: ClaimType
     poa_type: POAType | None
-    net: int | None
-    gross: int | None
-    vat_zero_total: int | None
+    net: Decimal | None
+    gross: Decimal | None
+    vat_zero_total: Decimal | None
 
     def __post_init__(self) -> None:
         self._validate_claim_type_poa_combination()
 
+        self._validate_totals_consistency()
+
+        if (
+            self.claim_type == ClaimType.PAYMENT_ON_ACCOUNT
+            and self.poa_type is not None
+            and self.poa_type != POAType.PROFIT_COST
+        ):
+            self._validate_non_profit_cost_has_at_least_one_total()
+            self._normalize_non_profit_cost_totals()
+
         if self.poa_type == POAType.PROFIT_COST:
             self._validate_profit_cost()
+
+    def _normalize_non_profit_cost_totals(self) -> None:
+        object.__setattr__(
+            self,
+            "net",
+            self.net if self.net is not None else Decimal("0.00"),
+        )
+        object.__setattr__(
+            self,
+            "gross",
+            self.gross if self.gross is not None else Decimal("0.00"),
+        )
+        object.__setattr__(
+            self,
+            "vat_zero_total",
+            self.vat_zero_total if self.vat_zero_total is not None else Decimal("0.00"),
+        )
+
+    def _validate_non_profit_cost_has_at_least_one_total(self) -> None:
+        if self.net is None and self.gross is None and self.vat_zero_total is None:
+            raise ClaimValidationError(
+                ClaimErrorCode.MISSING_NON_PROFIT_COST_TOTAL,
+                MISSING_NON_PROFIT_COST_TOTAL_MESSAGE,
+            )
 
     def _validate_claim_type_poa_combination(self) -> None:
         if self.claim_type == ClaimType.PAYMENT_ON_ACCOUNT and self.poa_type is None:
@@ -64,6 +100,10 @@ class Claim:
                 ClaimErrorCode.MISSING_TOTAL_CLAIM_COST,
                 MISSING_TOTAL_MESSAGE,
             )
+
+    def _validate_totals_consistency(self) -> None:
+        has_net = self.net is not None
+        has_gross = self.gross is not None
 
         if has_net and self.net < 0:
             raise ClaimValidationError(
