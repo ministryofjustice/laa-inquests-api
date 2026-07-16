@@ -6,6 +6,82 @@
     <meta name="theme-color" content="#0b0c0c">
     <title>Civil legal aid certificate - GOV.UK</title>
     <link rel="stylesheet" href="../static/govuk-frontend.css">
+    <style>
+        /* Override font-family to use Arial consistently for PDF generation since GDS Transport fonts are not available */
+        * {
+            font-family: Arial, sans-serif !important;
+        }
+        
+        /* Remove grey background for PDF generation */
+        html,
+        body,
+        .govuk-template {
+            background-color: #ffffff !important;
+        }
+        
+        /* Force table layout for PDF generation to ensure keys and values are on the same line */
+        .govuk-summary-list {
+            display: table !important;
+            width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        
+        .govuk-summary-list__row {
+            display: table-row !important;
+            border-bottom: 1px solid #b1b4b6;
+        }
+        
+        .govuk-summary-list__key,
+        .govuk-summary-list__value {
+            display: table-cell !important;
+            padding-top: 10px;
+            padding-right: 20px;
+            padding-bottom: 10px;
+            vertical-align: top;
+        }
+        
+        .govuk-summary-list__key {
+            width: 40%;
+            font-weight: 700;
+        }
+        
+        .govuk-summary-list__value {
+            width: 60%;
+        }
+        
+        /* Preserve heading and text spacing */
+        .govuk-heading-l,
+        .govuk-heading-m {
+            margin-top: 0;
+        }
+        
+        .govuk-inset-text {
+            padding: 15px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        
+        /* Ensure summary cards display properly */
+        .govuk-summary-card {
+            margin-bottom: 20px;
+            border: 1px solid #b1b4b6;
+        }
+        
+        .govuk-summary-card__title-wrapper {
+            padding: 15px 20px;
+            background-color: #f3f2f1;
+        }
+        
+        .govuk-summary-card__content {
+            padding: 15px 20px;
+        }
+        
+        .govuk-summary-card__content .govuk-summary-list {
+            margin-bottom: 0;
+        }
+    </style>
 </head>
 <body class="govuk-template__body">
 <script>
@@ -194,7 +270,7 @@
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Limitation</dt>
-                                        <dd class="govuk-summary-list__value">{{ scope_limitation_heading }} /n {{scope_limitation_description}}</dd>
+                                        <dd class="govuk-summary-list__value">{{ scope_limitation_heading }}<br>{{scope_limitation_description}}</dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Effective date</dt>
