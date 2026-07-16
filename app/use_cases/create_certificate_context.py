@@ -92,7 +92,9 @@ class CreateCertificateContextUseCase:
 
         # Application status fields
         status = application.status
-        current_proceeding_status = application.status
+        current_proceeding_status = (
+            application.status in ["CLOSED", "WITHDRAWN"] and "CLOSED" or "LIVE"
+        )
 
         return ApplicationCertificate(
             # Client fields
