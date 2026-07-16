@@ -41,6 +41,7 @@ from app.use_cases.retrieve_certificate import RetrieveCertificateUseCase
 from app.use_cases.get_application import GetApplicationUseCase
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
+    ApplicationNotGrantedError,
     CoronersLetterNotFoundError,
     CoronersLetterRetrievalError,
     CoronersLetterUploadError,
@@ -274,6 +275,11 @@ def read_certificate(
         return ApplicationCertificateResponse.model_validate(certificate)
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
+    except ApplicationNotGrantedError:
+        raise HTTPException(
+            status_code=422,
+            detail="Application is not granted",
+        )
     except ProceedingsNotFoundError:
         raise HTTPException(
             status_code=404, detail="No proceedings found for application"

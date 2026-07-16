@@ -1,7 +1,11 @@
 from app.models.application.certificate import ApplicationCertificate
 from app.ports.get_application_port import GetApplicationPort
 from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
-from app.use_cases.exceptions import ApplicationNotFoundError, ProceedingsNotFoundError
+from app.use_cases.exceptions import (
+    ApplicationNotFoundError,
+    ApplicationNotGrantedError,
+    ProceedingsNotFoundError,
+)
 
 
 class RetrieveCertificateUseCase:
@@ -19,6 +23,11 @@ class RetrieveCertificateUseCase:
         )
         if application is None:
             raise ApplicationNotFoundError(f"Application {laa_reference} not found")
+
+        if application.overall_decision != "GRANTED":
+            raise ApplicationNotGrantedError(
+                f"Application {laa_reference} is not granted"
+            )
 
         if not application.proceedings:
             raise ProceedingsNotFoundError(

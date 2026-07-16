@@ -9,6 +9,9 @@ def test_200_read_certificate_returns_expected_certificate_context(
     session, client, auth_token
 ):
     application = session.exec(select(Application)).first()
+    application.proceedings[0].merits_decision = "GRANTED"
+    session.add(application)
+    session.commit()
 
     response = client.get(
         f"/applications/{application.laa_reference}/certificate",

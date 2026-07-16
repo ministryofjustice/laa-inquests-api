@@ -2,6 +2,10 @@ class ApplicationNotFoundError(Exception):
     pass
 
 
+class ApplicationNotGrantedError(Exception):
+    pass
+
+
 class CoronersLetterUploadError(Exception):
     pass
 
