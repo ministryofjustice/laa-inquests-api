@@ -168,3 +168,45 @@ def test_gov_notify_adapter_sends_grant_email_successfully():
         assert isinstance(call_kwargs["personalisation"], dict)
         assert call_kwargs["personalisation"]["laa_reference"] == "12345"
         assert call_kwargs["personalisation"]["issue_date"] == "18 June 2026"
+
+
+def test_gov_notify_formats_filename():
+    from datetime import date
+
+    application, proceeding = _create_test_application_and_proceeding()
+    proceeding.merits_decision = "GRANTED"
+    proceeding.certificate_issue_date = date(2026, 6, 18)
+
+    mock_notifications_client = Mock()
+    mock_notifications_client.send_email_notification.return_value = {
+        "id": "test-notification-id"
+    }
+    mock_datetime = datetime(2026, 6, 18, 14, 3, 0)
+    expected_filename = "12345_Certificate_20260618_140300.pdf"
+
+    with (
+        patch("app.adapters.gov_notify.NotificationsAPIClient") as mock_api_client,
+        patch("app.adapters.gov_notify.datetime") as mock_datetime_module,
+        patch("app.adapters.gov_notify.prepare_upload") as mock_prepare_upload,
+        patch.object(
+            Config,
+            "GOV_NOTIFY_APPLICATION_GRANT_TEMPLATE_ID",
+            "test-grant-template-id",
+        ),
+    ):
+        mock_api_client.return_value = mock_notifications_client
+        mock_datetime_module.now.return_value = mock_datetime
+        mock_prepare_upload.return_value = {"file": "encoded-content"}
+
+        adapter = GovNotifyAdapter()
+        adapter.send_application_granted_decision_email(
+            application,
+            proceeding,
+            "provider@example.com",
+            certificate_pdf=b"dummy-pdf-content",
+        )
+
+        # Verify prepare_upload was called with the correctly formatted filename
+        mock_prepare_upload.assert_called_once()
+        call_kwargs = mock_prepare_upload.call_args.kwargs
+        assert call_kwargs["filename"] == expected_filename

@@ -91,10 +91,8 @@ def get_sds_port() -> SdsPort:
     )
 
 
-def get_pdf_generation_port(
-    provider_details_port: ProviderDetailsPort = Depends(get_provider_details_port),
-) -> PdfGenerationPort:
-    return PdfGeneratorAdapter(provider_details_port=provider_details_port)
+def get_pdf_generation_port() -> PdfGenerationPort:
+    return PdfGeneratorAdapter()
 
 
 def get_application_db_adapter(

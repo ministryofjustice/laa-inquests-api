@@ -1,7 +1,7 @@
 """Gov Notify adapter for application emails."""
 
 from io import BytesIO
-
+from datetime import datetime
 from notifications_python_client.notifications import NotificationsAPIClient
 from notifications_python_client import prepare_upload
 
@@ -60,7 +60,10 @@ class GovNotifyAdapter(GovNotifyPort):
         recipient_email: str,
         certificate_pdf: bytes,
     ) -> None:
-        certificate_payload = prepare_upload(BytesIO(certificate_pdf))
+        filename = f"{application.laa_reference}_Certificate_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        certificate_payload = prepare_upload(
+            BytesIO(certificate_pdf), filename=filename
+        )
 
         personalisation = create_application_grant_email_personalisation(
             application, proceeding, certificate_payload
