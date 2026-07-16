@@ -45,3 +45,11 @@ class ApplicationCertificate(BaseModel):
     date_previous_level_of_service_effective: date = "Not applicable"
     scope_limitation_heading: str  # Proceeding.scope_limitation_heading
     scope_limitation_description: str  # Proceeding.scope_limitation_description
+
+
+class ApplicationCertificateResponse(ApplicationCertificate):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
