@@ -15,6 +15,7 @@ from datetime import date, datetime, UTC
 from app.models.application.enums import (
     AddressSource,
     CorrespondenceRecipientType,
+    MeritsDecision,
     ReasonForRefusal,
     ProceedingId,
     PublicBodyId,
@@ -198,7 +199,7 @@ class Application(ApplicationBase, table=True):
         """Calculate overall_decision from the first proceeding's merits_decision."""
         if self.proceedings and len(self.proceedings) > 0:
             return self.proceedings[0].merits_decision
-        return "PENDING"
+        return MeritsDecision.PENDING
 
 
 class ApplicationPublicBody(SQLModel, table=True):
@@ -218,7 +219,7 @@ class ApplicationProceeding(SQLModel, table=True):
     __tablename__ = "application_proceeding"
     application_proceeding_id: int | None = Field(default=None, primary_key=True)
     client_involvement_type: str | None = "RESPONDENT"
-    merits_decision: str = "PENDING"
+    merits_decision: str = MeritsDecision.PENDING
     reason_for_refusal: str | None = None
     justification: str | None = None
     laa_reference: int = Field(foreign_key="application.laa_reference")

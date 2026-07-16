@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.models.application.enums import ProceedingId
+from app.models.application.enums import MeritsDecision, ProceedingId
 from app.models.application.index import (
     Application,
     ApplicationProceeding,
@@ -59,7 +59,7 @@ def test_grant_decision_sets_merits_decision_to_granted():
 
     use_case.execute("1", _grant_request())
 
-    assert application.proceedings[0].merits_decision == "GRANTED"
+    assert application.proceedings[0].merits_decision == MeritsDecision.GRANTED
 
 
 def test_grant_decision_sets_certificate_dates():
@@ -96,7 +96,7 @@ def test_grant_decision_sets_overall_decision_on_application():
 
     use_case.execute("1", _grant_request())
 
-    assert application.overall_decision == "GRANTED"
+    assert application.overall_decision == MeritsDecision.GRANTED
 
 
 def test_grant_decision_raises_404_when_application_not_found():

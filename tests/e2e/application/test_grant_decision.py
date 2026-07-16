@@ -2,6 +2,7 @@ from datetime import date, datetime, UTC
 
 from sqlmodel import select
 
+from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 
 
@@ -28,7 +29,7 @@ def test_204_grant_decision_to_granted(session, client, auth_token):
     assert response.status_code == 204
 
     session.refresh(application)
-    assert application.proceedings[0].merits_decision == "GRANTED"
+    assert application.proceedings[0].merits_decision == MeritsDecision.GRANTED
     assert application.proceedings[0].certificate_start_date == date(2000, 1, 1)
     assert application.proceedings[0].certificate_issue_date == datetime.now(UTC).date()
 

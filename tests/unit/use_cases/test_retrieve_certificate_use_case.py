@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import MagicMock
 
 from app.models.application.certificate import ApplicationCertificate
+from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application, ApplicationProceeding
 from app.ports.get_application_port import GetApplicationPort
 from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
@@ -17,7 +18,7 @@ def _make_application() -> Application:
     application = MagicMock(spec=Application)
     application.laa_reference = 123
     application.proceedings = [MagicMock(spec=ApplicationProceeding)]
-    application.overall_decision = "GRANTED"
+    application.overall_decision = MeritsDecision.GRANTED
     return application
 
 
@@ -90,7 +91,7 @@ def test_execute_raises_proceedings_not_found_error_when_application_has_no_proc
     get_application_port = MagicMock(spec=GetApplicationPort)
     application = MagicMock(spec=Application)
     application.proceedings = []
-    application.overall_decision = "GRANTED"
+    application.overall_decision = MeritsDecision.GRANTED
     get_application_port.get_application_by_laa_reference.return_value = application
     create_certificate_context_use_case = MagicMock(
         spec=CreateCertificateContextUseCase
@@ -107,7 +108,9 @@ def test_execute_raises_proceedings_not_found_error_when_application_has_no_proc
     create_certificate_context_use_case.populate_certificate_context.assert_not_called()
 
 
-@pytest.mark.parametrize("overall_decision", ["PENDING", "REFUSED"])
+@pytest.mark.parametrize(
+    "overall_decision", [MeritsDecision.PENDING, MeritsDecision.REFUSED]
+)
 def test_execute_raises_application_not_granted_error_when_application_not_granted(
     overall_decision,
 ):

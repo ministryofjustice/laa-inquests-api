@@ -1,5 +1,6 @@
 import pytest
 from sqlmodel import select
+from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 import uuid
 
@@ -96,7 +97,7 @@ def test_201_create_application_response_contains_expected_proceeding_informatio
     assert proceeding["levelOfService"] == "FULL_REPRESENTATION"
     assert proceeding["certificateType"] == "SUBSTANTIVE"
     assert proceeding["clientInvolvementType"] == "RESPONDENT"
-    assert proceeding["meritsDecision"] == "PENDING"
+    assert proceeding["meritsDecision"] == MeritsDecision.PENDING
     assert isinstance(proceeding["substantiveCostLimitation"], int)
     assert isinstance(proceeding["scopeDescription"], str)
     assert isinstance(proceeding["proceedingDescription"], str)
