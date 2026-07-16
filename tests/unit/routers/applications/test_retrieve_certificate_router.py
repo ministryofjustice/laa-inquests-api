@@ -2,18 +2,21 @@ import pytest
 from fastapi import HTTPException
 from unittest.mock import MagicMock
 
-from app.models.application.certificate import ApplicationCertificate
+from app.models.application.certificate import (
+    ApplicationCertificateResponse,
+)
 from app.routers.applications import read_certificate
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
     ProceedingsNotFoundError,
     ProviderDetailsRetrievalError,
 )
+from tests.unit.factories import create_base_certificate
 
 
 def test_read_certificate_calls_use_case_with_laa_reference():
     use_case = MagicMock()
-    use_case.execute.return_value = MagicMock(spec=ApplicationCertificate)
+    use_case.execute.return_value = create_base_certificate()
 
     read_certificate("123", use_case=use_case)
 
@@ -22,12 +25,13 @@ def test_read_certificate_calls_use_case_with_laa_reference():
 
 def test_read_certificate_returns_certificate_context():
     use_case = MagicMock()
-    certificate_context = MagicMock(spec=ApplicationCertificate)
+    certificate_context = create_base_certificate()
     use_case.execute.return_value = certificate_context
 
     result = read_certificate("123", use_case=use_case)
 
-    assert result is certificate_context
+    assert isinstance(result, ApplicationCertificateResponse)
+    assert result.model_dump() == certificate_context.model_dump()
 
 
 def test_read_certificate_raises_404_when_application_not_found():

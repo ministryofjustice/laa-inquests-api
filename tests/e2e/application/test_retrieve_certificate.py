@@ -1,12 +1,8 @@
 from datetime import date
 
-import pytest
 from sqlmodel import select
 
 from app.models.application.index import Application
-
-
-pytestmark = pytest.mark.usefixtures("mock_gov_notify", "mock_pdf_generation_port")
 
 
 def test_200_read_certificate_returns_expected_certificate_context(
@@ -33,7 +29,9 @@ def test_200_read_certificate_returns_expected_certificate_context(
     assert body["effectiveDate"] == date.today().isoformat()
 
 
-def test_404_read_certificate_returns_404_when_application_not_found(client, auth_token):
+def test_404_read_certificate_returns_404_when_application_not_found(
+    client, auth_token
+):
     response = client.get(
         "/applications/99999/certificate",
         headers={

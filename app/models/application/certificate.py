@@ -42,7 +42,7 @@ class ApplicationCertificate(BaseModel):
         date  # ApplicationProceeding.certificate_start_date
     )
     previous_level_of_service: str = "Not applicable"
-    date_previous_level_of_service_effective: date = "Not applicable"
+    date_previous_level_of_service_effective: str = "Not applicable"
     scope_limitation_heading: str  # Proceeding.scope_limitation_heading
     scope_limitation_description: str  # Proceeding.scope_limitation_description
 

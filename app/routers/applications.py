@@ -271,9 +271,7 @@ def read_certificate(
     """Get the populated certificate context for a given application."""
     try:
         certificate = use_case.execute(laa_reference)
-        return ApplicationCertificateResponse.model_construct(
-            **certificate.model_dump()
-        )
+        return ApplicationCertificateResponse.model_validate(certificate)
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
     except ProceedingsNotFoundError:
