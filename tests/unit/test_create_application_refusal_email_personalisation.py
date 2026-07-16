@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from app.models.application.enums import AddressSource, ProceedingId
+from app.models.application.enums import AddressSource, MeritsDecision, ProceedingId
 from app.models.application.index import Application, ApplicationProceeding, Client
 from app.models.gov_notify_templates.application_refuse_personalisation import (
     NotifyApplicationRefuseTemplatePersonalisation,
@@ -32,7 +32,7 @@ def _create_test_application_and_proceeding(laa_reference: int = 12345):
         application_proceeding_id=1,
         laa_reference=laa_reference,
         proceeding_id=ProceedingId.TEST1,
-        merits_decision="REFUSED",
+        merits_decision=MeritsDecision.REFUSED,
         reason_for_refusal="NOT_IN_SCOPE",
         justification="The matter does not meet scope requirements.",
     )

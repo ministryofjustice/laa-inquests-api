@@ -3,6 +3,7 @@ import uuid
 
 from sqlmodel import select
 
+from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application, CoronersLetter
 
 
@@ -184,7 +185,7 @@ def test_204_refuse_decision_returns_204_when_caseworker_token(
     response = entra_auth_client.patch(
         "/applications/1/refuse-decision",
         json={
-            "meritsDecision": "REFUSED",
+            "meritsDecision": MeritsDecision.REFUSED,
             "reasonForRefusal": "NOT_IN_SCOPE",
             "justification": "The matter does not meet scope requirements.",
         },
@@ -203,7 +204,7 @@ def test_403_refuse_decision_returns_403_when_provider_token(
     response = entra_auth_client.patch(
         "/applications/1/refuse-decision",
         json={
-            "meritsDecision": "REFUSED",
+            "meritsDecision": MeritsDecision.REFUSED,
             "reasonForRefusal": "NOT_IN_SCOPE",
             "justification": "The matter does not meet scope requirements.",
         },

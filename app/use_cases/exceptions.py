@@ -2,6 +2,10 @@ class ApplicationNotFoundError(Exception):
     pass
 
 
+class ApplicationNotGrantedError(Exception):
+    pass
+
+
 class CoronersLetterUploadError(Exception):
     pass
 
@@ -27,6 +31,10 @@ class InvalidCoronersLetterDocumentIdError(Exception):
 
 
 class SDSLetterRetrievalError(Exception):
+    pass
+
+
+class ProviderDetailsRetrievalError(Exception):
     pass
 
 

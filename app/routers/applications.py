@@ -1,3 +1,5 @@
+from app.models.application.certificate import ApplicationCertificateResponse
+from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
 from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File
 from sqlmodel import Session
 from fastapi.responses import StreamingResponse
@@ -35,15 +37,18 @@ from app.ports.sds_port import SdsPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.create_claim import CreateClaimCommand, CreateClaimUseCase
+from app.use_cases.retrieve_certificate import RetrieveCertificateUseCase
 from app.use_cases.get_application import GetApplicationUseCase
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
+    ApplicationNotGrantedError,
     CoronersLetterNotFoundError,
     CoronersLetterRetrievalError,
     CoronersLetterUploadError,
     CoronersLetterVirusDetectedError,
     InvalidClaimError,
     InvalidCoronersLetterDocumentIdError,
+    ProviderDetailsRetrievalError,
     ProceedingsNotFoundError,
 )
 from app.use_cases.search_application import SearchApplicationUseCase
@@ -145,6 +150,26 @@ def get_make_merits_decision_use_case(
     )
 
 
+def get_create_certificate_context_use_case(
+    provider_details_port: ProviderDetailsPort = Depends(get_provider_details_port),
+) -> CreateCertificateContextUseCase:
+    return CreateCertificateContextUseCase(
+        provider_details_port=provider_details_port,
+    )
+
+
+def get_retrieve_certificate_use_case(
+    get_application_port: GetApplicationPort = Depends(get_application_db_adapter),
+    create_certificate_context_use_case: CreateCertificateContextUseCase = Depends(
+        get_create_certificate_context_use_case
+    ),
+) -> RetrieveCertificateUseCase:
+    return RetrieveCertificateUseCase(
+        get_application_port=get_application_port,
+        create_certificate_context_use_case=create_certificate_context_use_case,
+    )
+
+
 def get_grant_decision_use_case(
     update_decision_port: ApplicationDecisionPort = Depends(get_application_db_adapter),
 ) -> GrantDecisionUseCase:
@@ -233,6 +258,37 @@ async def read_application(
         return use_case.execute(laa_reference)
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
+
+
+@router.get(
+    "/{laa_reference}/certificate",
+    response_model=ApplicationCertificateResponse,
+)
+def read_certificate(
+    laa_reference: str,
+    use_case: RetrieveCertificateUseCase = Depends(get_retrieve_certificate_use_case),
+    _: None = Depends(verify_entra_caseworker_token),
+) -> ApplicationCertificateResponse:
+    """Get the populated certificate context for a given application."""
+    try:
+        certificate = use_case.execute(laa_reference)
+        return ApplicationCertificateResponse.model_validate(certificate)
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
+    except ApplicationNotGrantedError:
+        raise HTTPException(
+            status_code=422,
+            detail="Application is not granted",
+        )
+    except ProceedingsNotFoundError:
+        raise HTTPException(
+            status_code=404, detail="No proceedings found for application"
+        )
+    except ProviderDetailsRetrievalError:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve firm name from provider details service",
+        )
 
 
 @router.get("/")

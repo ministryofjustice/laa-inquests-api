@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 from pydantic import ValidationError
 
-from app.models.application.enums import ProceedingId
+from app.models.application.enums import MeritsDecision, ProceedingId
 from app.models.application.index import (
     Application,
     ApplicationProceeding,
@@ -102,7 +102,7 @@ def test_refuse_decision_sets_merits_decision_to_refused():
 
     use_case.execute("1", _make_request())
 
-    assert proceeding.merits_decision == "REFUSED"
+    assert proceeding.merits_decision == MeritsDecision.REFUSED
 
 
 def test_refuse_decision_raises_404_when_application_not_found():
@@ -147,7 +147,7 @@ def test_refuse_decision_sets_overall_decision_on_application():
 
     use_case.execute("1", _make_request())
 
-    assert application.overall_decision == "REFUSED"
+    assert application.overall_decision == MeritsDecision.REFUSED
 
 
 def test_refuse_decision_raises_exception_and_rolls_back_if_gov_notify_fails():

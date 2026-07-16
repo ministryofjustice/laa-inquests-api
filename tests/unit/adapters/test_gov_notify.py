@@ -8,7 +8,12 @@ import pytest
 
 from app.adapters.gov_notify import GovNotifyAdapter
 from app.config import Config
-from app.models.application.enums import AddressSource, ProceedingId, PublicBodyId
+from app.models.application.enums import (
+    AddressSource,
+    MeritsDecision,
+    ProceedingId,
+    PublicBodyId,
+)
 from app.models.application.index import (
     Address,
     Application,
@@ -66,7 +71,7 @@ def _create_test_application_and_proceeding():
         laa_reference=12345,
         proceeding_id=ProceedingId.TEST1,
         proceeding=proceeding,
-        merits_decision="REFUSED",
+        merits_decision=MeritsDecision.REFUSED,
         reason_for_refusal="NOT_IN_SCOPE",
         justification="The matter does not meet scope requirements.",
     )
