@@ -12,7 +12,17 @@ from app.domain.constants.claim_messages import (
     NET_GT_GROSS_MESSAGE,
     POA_NOT_ALLOWED_MESSAGE,
 )
+from app.domain.constants.claim_reason_codes import (
+    CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT,
+)
+from app.models.application.index import Application
 from app.models.claim.enums import ClaimType, POAType
+
+
+@dataclass(frozen=True)
+class autodecision:
+    should_auto_reject: bool
+    reason_code: str | None
 
 
 @dataclass(frozen=True)
@@ -26,6 +36,7 @@ class Claim:
     def __post_init__(self) -> None:
         self._validate_claim_type_poa_combination()
 
+    def validate_total_claim_cost(self) -> None:
         self._validate_totals_consistency()
 
         if (
@@ -38,6 +49,31 @@ class Claim:
 
         if self.poa_type == POAType.PROFIT_COST:
             self._validate_profit_cost()
+
+    def total_claim_cost_for_limit_check(self) -> Decimal | None:
+        return self.gross
+
+    def should_auto_reject_for_limit(self, application: Application) -> autodecision:
+        total = self.total_claim_cost_for_limit_check()
+        if total is None:
+            return autodecision(should_auto_reject=False, reason_code=None)
+
+        if not application.proceedings:
+            return autodecision(should_auto_reject=False, reason_code=None)
+
+        raw_limit = application.proceedings[0].substantive_cost_limitation
+        if raw_limit is None:
+            return autodecision(should_auto_reject=False, reason_code=None)
+
+        limit = Decimal(str(raw_limit))
+        exceeds_limit = total > limit
+
+        return autodecision(
+            should_auto_reject=exceeds_limit,
+            reason_code=(
+                CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT if exceeds_limit else None
+            ),
+        )
 
     def _normalize_non_profit_cost_totals(self) -> None:
         object.__setattr__(
