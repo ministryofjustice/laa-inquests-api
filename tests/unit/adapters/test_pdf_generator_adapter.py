@@ -7,6 +7,7 @@ import pytest
 from pypdf import PdfReader
 
 from app.adapters.pdf_generator_adapter import PdfGeneratorAdapter
+from app.models.application.index import Address
 from app.models.application.certificate import ApplicationCertificate
 
 
@@ -14,7 +15,11 @@ def _sample_context() -> ApplicationCertificate:
     """Build a minimal, valid ApplicationCertificate context for template rendering."""
     return ApplicationCertificate(
         client_name="Jane Doe",
-        client_address="1 High Street\nLondon\nSW1A 1AA",
+        client_address=Address(
+            address_line_1="1 High Street",
+            town_or_city="London",
+            postcode="SW1A 1AA",
+        ),
         firm_name="Test Firm Ltd",
         office_address="Office address\nLondon",
         opponent_details="Department for Transport",

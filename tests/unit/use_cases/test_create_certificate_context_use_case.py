@@ -61,9 +61,10 @@ def test_populate_certificate_context_populates_client_fields_correctly():
     result = usecase.populate_certificate_context(application, proceeding)
 
     assert result.client_name == "John Smith"
-    assert "10 Downing Street" in result.client_address
-    assert "Westminster" in result.client_address
-    assert "SW1A 2AA" in result.client_address
+    assert result.client_address is not None
+    assert result.client_address.address_line_1 == "10 Downing Street"
+    assert result.client_address.address_line_2 == "Westminster"
+    assert result.client_address.postcode == "SW1A 2AA"
 
 
 def test_populate_certificate_context_uses_correspondence_address_when_available():
@@ -85,9 +86,10 @@ def test_populate_certificate_context_uses_correspondence_address_when_available
 
     result = usecase.populate_certificate_context(application, application_proceeding)
 
-    assert "456 Oak Avenue" in result.client_address
-    assert "Manchester" in result.client_address
-    assert "M1 2AB" in result.client_address
+    assert result.client_address is not None
+    assert result.client_address.address_line_1 == "456 Oak Avenue"
+    assert result.client_address.town_or_city == "Manchester"
+    assert result.client_address.postcode == "M1 2AB"
 
 
 def test_populate_certificate_context_populates_provider_fields():
@@ -287,11 +289,12 @@ def test_populate_certificate_context_formats_address_with_missing_fields():
 
     result = usecase.populate_certificate_context(application, application_proceeding)
 
-    assert "100 Simple Street" in result.client_address
-    assert "Bristol" in result.client_address
-    assert "BS1 1AA" in result.client_address
-    # Should not have double newlines from missing fields
-    assert "\n\n" not in result.client_address
+    assert result.client_address is not None
+    assert result.client_address.address_line_1 == "100 Simple Street"
+    assert result.client_address.town_or_city == "Bristol"
+    assert result.client_address.postcode == "BS1 1AA"
+    assert result.client_address.address_line_2 is None
+    assert result.client_address.county is None
 
 
 def test_populate_certificate_context_handles_none_correspondence_address():
@@ -315,8 +318,8 @@ def test_populate_certificate_context_handles_none_correspondence_address():
     result = usecase.populate_certificate_context(application, application_proceeding)
 
     # Should use home address
-    assert "Home Street 1" in result.client_address
-    assert "HM1 1AA" in result.client_address
+    assert "Home Street 1" == result.client_address.address_line_1
+    assert "HM1 1AA" == result.client_address.postcode
 
 
 def test_populate_certificate_context_handles_single_public_body_correctly():

@@ -1,5 +1,5 @@
 from app.ports.provider_details_port import ProviderDetailsPort
-from app.models.application.index import Address, Application, ApplicationProceeding
+from app.models.application.index import Application, ApplicationProceeding
 from app.models.application.certificate import ApplicationCertificate
 from app.use_cases.exceptions import ProviderDetailsRetrievalError
 from datetime import date
@@ -8,28 +8,6 @@ from datetime import date
 class CreateCertificateContextUseCase:
     def __init__(self, provider_details_port: ProviderDetailsPort) -> None:
         self.provider_details_port = provider_details_port
-
-    def _format_address(self, address: Address | None) -> str:
-        """
-        Format an address into a multi-line string.
-
-        Args:
-            address: Address object to format, or None
-
-        Returns:
-            Formatted address string, or "Not applicable" if address is None
-        """
-        if not address:
-            return "Not applicable"
-
-        parts = [
-            address.address_line_1,
-            address.address_line_2,
-            address.town_or_city,
-            address.county,
-            address.postcode,
-        ]
-        return "\n".join(part for part in parts if part)
 
     def populate_certificate_context(
         self, application: Application, proceeding: ApplicationProceeding
@@ -52,10 +30,9 @@ class CreateCertificateContextUseCase:
             body.public_body_description for body in public_bodies
         )
 
-        client_address_obj = (
+        client_address = (
             application.client.correspondence_address or application.client.home_address
         )
-        client_address = self._format_address(client_address_obj)
 
         firm_name = self.provider_details_port.get_firm_name(
             application.provider.firm_code

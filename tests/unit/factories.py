@@ -206,21 +206,9 @@ def create_base_certificate(
     client_address = (
         application.client.correspondence_address or application.client.home_address
     )
-    client_address_string = "\n".join(
-        part
-        for part in [
-            client_address.address_line_1,
-            client_address.address_line_2,
-            client_address.town_or_city,
-            client_address.county,
-            client_address.postcode,
-        ]
-        if part
-    )
-
     defaults = {
         "client_name": f"{application.client.client_first_name} {application.client.client_last_name}",
-        "client_address": client_address_string,
+        "client_address": client_address,
         "firm_name": application.provider.firm_code,
         "office_address": application.provider.office_id,
         "opponent_details": ", ".join(
