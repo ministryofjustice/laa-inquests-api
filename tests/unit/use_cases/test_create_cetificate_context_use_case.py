@@ -87,7 +87,7 @@ def test_populate_certificate_context_uses_correspondence_address_when_available
     result = usecase.populate_certificate_context(application, application_proceeding)
 
     assert result.client_address is not None
-    assert result.client_address.address_line_1 == "456 Oak Avenue"
+    assert result.client_address.address_line_1 == "c/o John Smith 456 Oak Avenue"
     assert result.client_address.town_or_city == "Manchester"
     assert result.client_address.postcode == "M1 2AB"
 
