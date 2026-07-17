@@ -205,7 +205,6 @@ def test_populate_certificate_context_populates_application_status_fields():
     result = usecase.populate_certificate_context(application, application_proceeding)
 
     assert result.status == "LIVE"
-    # TODO: Confirm if current_proceeding_status should be the same as application.status or if it should come from ApplicationProceeding. For now, we will assume it's the same.
     assert result.current_proceeding_status == "LIVE"
 
 

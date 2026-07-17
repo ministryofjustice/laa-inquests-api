@@ -10,19 +10,23 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
 
     def get_firm_name(self, firm_code: str) -> str | None:
         try:
+            url = f"{self.base_url}/api/v1/provider-firms/{firm_code}"
             response = httpx.get(
-                f"{self.base_url}/api/v1/provider-firms/{firm_code}",
+                url,
                 headers={"X-Authorization": self.api_key},
             )
+
             response.raise_for_status()
-            return response.json()["firm"]["firmName"]
+            result = response.json()["firm"]["firmName"]
+            return result
         except Exception:
             return None
 
     def get_office_address(self, office_id: str) -> str | None:
         try:
+            url = f"{self.base_url}/api/v1/provider-offices/{office_id}"
             response = httpx.get(
-                f"{self.base_url}/api/v1/provider-offices/{office_id}",
+                url,
                 headers={"X-Authorization": self.api_key},
             )
             response.raise_for_status()
