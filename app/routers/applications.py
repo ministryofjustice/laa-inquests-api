@@ -27,6 +27,7 @@ from app.routers.dependencies import (
 )
 from app.config import Config
 from app.ports.create_application_port import CreateApplicationPort
+from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.create_claim_port import CreateClaimPort
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.update_decision_port import ApplicationDecisionPort
@@ -124,8 +125,14 @@ def get_list_applications_use_case(
 
 def get_create_claim_use_case(
     create_claim_port: CreateClaimPort = Depends(get_application_db_adapter),
+    application_lookup_port: ApplicationLookupPort = Depends(
+        get_application_db_adapter
+    ),
 ) -> CreateClaimUseCase:
-    return CreateClaimUseCase(create_claim_port=create_claim_port)
+    return CreateClaimUseCase(
+        create_claim_port=create_claim_port,
+        application_lookup_port=application_lookup_port,
+    )
 
 
 def get_search_application_use_case(
