@@ -18,3 +18,27 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
             return response.json()["firm"]["firmName"]
         except Exception:
             return None
+
+    def get_office_address(self, office_id: str) -> str | None:
+        try:
+            response = httpx.get(
+                f"{self.base_url}/api/v1/provider-offices/{office_id}",
+                headers={"X-Authorization": self.api_key},
+            )
+            response.raise_for_status()
+
+            full_address = ", ".join(
+                filter(
+                    None,
+                    [
+                        response.json()["office"]["addressLine1"],
+                        response.json()["office"]["addressLine2"],
+                        response.json()["office"]["addressLine3"],
+                        response.json()["office"]["addressLine4"],
+                        response.json()["office"]["postCode"],
+                    ],
+                )
+            )
+            return full_address
+        except Exception:
+            return None

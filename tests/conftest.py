@@ -114,7 +114,7 @@ def session_fixture():
         db_session.refresh(new_deceased)
 
         new_provider = Provider(
-            firm_code="0A123B", office_id="001", email_address="test@example.com"
+            firm_code="0A123B", office_id="0U651L", email_address="test@example.com"
         )
         db_session.add(new_provider)
         db_session.commit()
@@ -150,6 +150,7 @@ def client_fixture(session: Session):
     def get_provider_details_port_override():
         mock_port = MagicMock()
         mock_port.get_firm_name.return_value = "Test Firm Name"
+        mock_port.get_office_address.return_value = "Test Office Address"
         return mock_port
 
     def get_gov_notify_port_override():
@@ -197,6 +198,7 @@ def entra_auth_client_fixture(session: Session):
     def get_provider_details_port_override():
         mock_port = MagicMock()
         mock_port.get_firm_name.return_value = "Test Firm Name"
+        mock_port.get_office_address.return_value = "Test Office Address"
         return mock_port
 
     def get_gov_notify_port_override():

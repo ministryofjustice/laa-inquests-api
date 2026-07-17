@@ -68,9 +68,14 @@ class CreateCertificateContextUseCase:
                 "Failed to retrieve firm name from provider details service."
             )
 
-        # Office address - hardcoded placeholder for now
-        # TODO: Pull this from PDA? Throw errors when some of these defaults aren't available. E.g. if certificate start date doesn't exist we shouldn't be issuing a certificate. We should throw an error and log it.
-        office_address = "TBD"
+        office_address = self.provider_details_port.get_office_address(
+            application.provider.office_id
+        )
+
+        if office_address is None:
+            raise ProviderDetailsRetrievalError(
+                "Failed to retrieve office address from provider details service."
+            )
 
         # Proceeding fields (accessed via ApplicationProceeding properties)
         certificate_type = proceeding.certificate_type
