@@ -222,7 +222,7 @@ def create_base_certificate(
         "client_name": f"{application.client.client_first_name} {application.client.client_last_name}",
         "client_address": client_address_string,
         "firm_name": application.provider.firm_code,
-        "office_address": "TBD",
+        "office_address": application.provider.office_id,
         "opponent_details": ", ".join(
             body.public_body_description for body in public_bodies
         ),
