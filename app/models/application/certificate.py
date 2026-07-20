@@ -33,6 +33,7 @@ class ApplicationCertificate(BaseModel):
     cost_limitation_effective_date: date | None = None
     certificate_limitation: str = "Not applicable"
 
+    proceeding_name: str
     proceeding_description: str
     category_of_law: str
     current_proceeding_status: str

@@ -211,15 +211,15 @@ def create_base_application(
 
 def create_base_certificate(
     application=_NOT_PROVIDED,
-    proceeding=_NOT_PROVIDED,
+    application_proceeding=_NOT_PROVIDED,
     public_bodies=_NOT_PROVIDED,
     **overrides,
 ):
     """Create a base certificate with optional field overrides."""
     if application is _NOT_PROVIDED:
         application = create_base_application()
-    if proceeding is _NOT_PROVIDED:
-        proceeding = create_base_application_proceeding()
+    if application_proceeding is _NOT_PROVIDED:
+        application_proceeding = create_base_application_proceeding()
     if public_bodies is _NOT_PROVIDED:
         public_bodies = [create_base_application_public_body()]
 
@@ -235,28 +235,32 @@ def create_base_certificate(
         "guardian_name": "Not applicable",
         "guardian_address": "Not applicable",
         "laa_reference": application.laa_reference,
-        "date_created": proceeding.certificate_issue_date or date.today(),
-        "certificate_type": proceeding.proceeding.certificate_type,
+        "date_created": application_proceeding.certificate_issue_date or date.today(),
+        "certificate_type": application_proceeding.proceeding.certificate_type,
         "status": application.status,
-        "effective_date": proceeding.certificate_start_date or date.today(),
+        "effective_date": application_proceeding.certificate_start_date or date.today(),
         "end_date": None,
         "reinstatement_date": None,
-        "cost_limitation": str(proceeding.proceeding.substantive_cost_limitation),
+        "cost_limitation": str(
+            application_proceeding.proceeding.substantive_cost_limitation
+        ),
         "cost_limitation_effective_date": None,
         "certificate_limitation": "Not applicable",
-        "proceeding_description": proceeding.proceeding.proceeding_description,
-        "category_of_law": proceeding.proceeding.category_of_law,
+        "proceeding_name": application_proceeding.proceeding.proceeding_name,
+        "proceeding_description": application_proceeding.proceeding.proceeding_description,
+        "category_of_law": application_proceeding.proceeding.category_of_law,
         "current_proceeding_status": application.status,
-        "date_work_can_commence": proceeding.certificate_start_date or date.today(),
+        "date_work_can_commence": application_proceeding.certificate_start_date
+        or date.today(),
         "proceeding_end_date": None,
         "client_involvement_type": "Applicant",
-        "level_of_service": proceeding.proceeding.level_of_service,
+        "level_of_service": application_proceeding.proceeding.level_of_service,
         "date_current_level_of_service_effective": (
-            proceeding.certificate_start_date or date.today()
+            application_proceeding.certificate_start_date or date.today()
         ),
         "previous_level_of_service": "Not applicable",
         "date_previous_level_of_service_effective": "Not applicable",
-        "scope_limitation_heading": proceeding.proceeding.scope_limitation_heading,
-        "scope_limitation_description": proceeding.proceeding.scope_description,
+        "scope_limitation_heading": application_proceeding.proceeding.scope_limitation_heading,
+        "scope_limitation_description": application_proceeding.proceeding.scope_description,
     }
     return ApplicationCertificate(**(defaults | overrides))
