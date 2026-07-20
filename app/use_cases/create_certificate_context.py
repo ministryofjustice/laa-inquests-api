@@ -60,7 +60,7 @@ class CreateCertificateContextUseCase:
         level_of_service = proceeding.level_of_service
         scope_limitation_heading = proceeding.scope_limitation_heading
         scope_limitation_description = proceeding.scope_description
-        cost_limitation = str(proceeding.substantive_cost_limitation)
+        cost_limitation = proceeding.substantive_cost_limitation
         care_order_description = proceeding.proceeding_description
 
         effective_date = proceeding.certificate_start_date or date.today()

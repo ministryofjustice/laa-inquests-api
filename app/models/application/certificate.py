@@ -29,7 +29,7 @@ class ApplicationCertificate(BaseModel):
     effective_date: date
     end_date: date | None = None
     reinstatement_date: date | None = None
-    cost_limitation: str
+    cost_limitation: int
     cost_limitation_effective_date: date | None = None
     certificate_limitation: str = "Not applicable"
 

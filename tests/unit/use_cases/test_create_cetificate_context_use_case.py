@@ -168,7 +168,7 @@ def test_populate_certificate_context_populates_proceeding_fields():
     assert result.level_of_service == "FULL_REPRESENTATION"
     assert result.scope_limitation_heading == "FINAL_HEARING"
     assert result.scope_limitation_description == "Limited to final hearing only"
-    assert result.cost_limitation == "15000"
+    assert result.cost_limitation == 15000
     assert result.care_order_description == "Inquest proceedings"
 
 
