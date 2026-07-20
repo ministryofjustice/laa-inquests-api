@@ -80,7 +80,10 @@ def test_populate_certificate_context_uses_correspondence_address_when_available
         town_or_city="Manchester",
         postcode="M1 2AB",
     )
-    client = create_base_client(correspondence_address=correspondence_address)
+    client = create_base_client(
+        correspondence_address=correspondence_address,
+        is_client_correspondence_recipient=False,
+    )
     application = create_base_application(client=client)
     application_proceeding = application.proceedings[0]
 
@@ -88,6 +91,34 @@ def test_populate_certificate_context_uses_correspondence_address_when_available
 
     assert result.client_address is not None
     assert result.client_address.address_line_1 == "c/o John Smith 456 Oak Avenue"
+    assert result.client_address.town_or_city == "Manchester"
+    assert result.client_address.postcode == "M1 2AB"
+
+
+def test_populate_certificate_context_does_not_use_correspondence_recipient_name_when_client_is_recipient():
+    """Test that correspondence address is not used when client is the correspondence recipient."""
+    mock_provider_port = MagicMock()
+    mock_provider_port.get_firm_name.return_value = "Test Firm"
+    mock_provider_port.get_office_address.return_value = "Test Office Address"
+    usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
+
+    # Only override the specific address fields we're testing
+    correspondence_address = create_base_correspondence_address(
+        address_line_1="456 Oak Avenue",
+        town_or_city="Manchester",
+        postcode="M1 2AB",
+    )
+    client = create_base_client(
+        correspondence_address=correspondence_address,
+        is_client_correspondence_recipient=True,
+    )
+    application = create_base_application(client=client)
+    application_proceeding = application.proceedings[0]
+
+    result = usecase.populate_certificate_context(application, application_proceeding)
+
+    assert result.client_address is not None
+    assert result.client_address.address_line_1 == "456 Oak Avenue"
     assert result.client_address.town_or_city == "Manchester"
     assert result.client_address.postcode == "M1 2AB"
 

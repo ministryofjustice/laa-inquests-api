@@ -56,6 +56,13 @@ def create_base_client(
     if correspondence_address is _NOT_PROVIDED:
         correspondence_address = create_base_correspondence_address()
 
+    if correspondence_address is not None:
+        correspondence_recipient = "John Smith"
+        correspondence_recipient_type = CorrespondenceRecipientType.PERSON
+    else:
+        correspondence_recipient = None
+        correspondence_recipient_type = None
+
     defaults = {
         "client_id": 1,
         "client_first_name": "Jane",
@@ -71,8 +78,8 @@ def create_base_client(
         "correspondence_address_id": 2,
         "correspondence_address": correspondence_address,
         "is_client_correspondence_recipient": False,
-        "correspondence_recipient_type": CorrespondenceRecipientType.PERSON,
-        "correspondence_recipient_name": "John Smith",
+        "correspondence_recipient_type": correspondence_recipient_type,
+        "correspondence_recipient_name": correspondence_recipient,
     }
     return Client(**(defaults | overrides))
 
