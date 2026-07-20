@@ -57,7 +57,11 @@ def session_fixture():
                 username=username, hashed_password=password, disabled=disabled
             )
             db_session.add(new_user)
-        proceeding = Proceeding(proceeding_id=ProceedingId.TEST1)
+        proceeding = Proceeding(
+            proceeding_id=ProceedingId.TEST1,
+            proceeding_name="Inquest into death",
+            proceeding_description="Inquest into death",
+        )
         db_session.add(proceeding)
         db_session.commit()
         application_proceedings_to_add = [
