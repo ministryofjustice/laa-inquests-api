@@ -16,5 +16,5 @@ ignore:
         - "*":
             reason: "There is no fixed version for Debian:13 acl"
     "SNYK-DEBIAN13-EXPAT-16650098":
-    - "*":
-        reason: "There is no fixed version for Debian:13 expat; XML parsing not exposed to untrusted input"
+        - "*":
+            reason: "There is no fixed version for Debian:13 expat; XML parsing not exposed to untrusted input"
