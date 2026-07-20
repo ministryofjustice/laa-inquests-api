@@ -296,3 +296,33 @@ def test_422_non_profit_cost_with_net_higher_than_gross(session, client, auth_to
         response.json()["detail"]["message"]
         == "Net total cannot be higher than the gross total value"
     )
+
+
+def test_201_create_claim_when_existing_claims_push_application_total_over_limit(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {"totalProfitCostNet": 6000, "totalProfitCostGross": 6000}
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {"totalProfitCostNet": 5000, "totalProfitCostGross": 6000}
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201

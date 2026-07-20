@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
 from app.domain.constants.claim_messages import (
@@ -13,9 +16,14 @@ from app.domain.constants.claim_messages import (
     POA_NOT_ALLOWED_MESSAGE,
 )
 from app.domain.constants.claim_reason_codes import (
+    APPLICATION_CLAIMS_EXCEED_COST_LIMIT,
     CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT,
 )
 from app.models.application.index import Application
+from app.models.claim.enums import ClaimStatus
+
+if TYPE_CHECKING:
+    from app.models.claim.index import Claim as DBClaim
 from app.models.claim.enums import ClaimType, POAType
 
 
@@ -73,6 +81,49 @@ class Claim:
             reason_code=(
                 CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT if exceeds_limit else None
             ),
+        )
+
+    def should_auto_reject_for_application_total_limit(
+        self,
+        application: Application,
+        existing_claims: list[DBClaim],
+    ) -> autodecision:
+        if self.gross is None:
+            return autodecision(should_auto_reject=False, reason_code=None)
+
+        if not application.proceedings:
+            return autodecision(should_auto_reject=False, reason_code=None)
+
+        raw_limit = application.proceedings[0].substantive_cost_limitation
+        if raw_limit is None:
+            return autodecision(should_auto_reject=False, reason_code=None)
+
+        application_claims = [
+            c
+            for c in existing_claims
+            if c.status_id in (ClaimStatus.PENDING, ClaimStatus.ACCEPTED)
+        ]
+        existing_total = sum(
+            (c.total_profit_cost_gross or Decimal(0)) for c in application_claims
+        )
+        total = existing_total + self.gross
+        exceeds_limit = total > Decimal(str(raw_limit))
+
+        return autodecision(
+            should_auto_reject=exceeds_limit,
+            reason_code=APPLICATION_CLAIMS_EXCEED_COST_LIMIT if exceeds_limit else None,
+        )
+
+    def should_auto_reject(
+        self,
+        application: Application,
+        existing_claims: list[DBClaim],
+    ) -> autodecision:
+        claim_limit_decision = self.should_auto_reject_for_limit(application)
+        if claim_limit_decision.should_auto_reject:
+            return claim_limit_decision
+        return self.should_auto_reject_for_application_total_limit(
+            application, existing_claims
         )
 
     def _normalize_non_profit_cost_totals(self) -> None:

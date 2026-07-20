@@ -30,6 +30,7 @@ from app.ports.create_application_port import CreateApplicationPort
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.create_claim_port import CreateClaimPort
 from app.ports.get_application_port import GetApplicationPort
+from app.ports.get_claims_for_application_port import GetClaimsForApplicationPort
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.list_applications_port import ListApplicationsPort
 from app.ports.provider_details_port import ProviderDetailsPort
@@ -128,10 +129,14 @@ def get_create_claim_use_case(
     application_lookup_port: ApplicationLookupPort = Depends(
         get_application_db_adapter
     ),
+    get_claims_for_application_port: GetClaimsForApplicationPort = Depends(
+        get_application_db_adapter
+    ),
 ) -> CreateClaimUseCase:
     return CreateClaimUseCase(
         create_claim_port=create_claim_port,
         application_lookup_port=application_lookup_port,
+        get_claims_for_application_port=get_claims_for_application_port,
     )
 
 
