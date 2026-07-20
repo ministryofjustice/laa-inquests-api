@@ -61,8 +61,8 @@ def test_get_office_address_returns_full_address_from_successful_api_response(ad
         "office": {
             "addressLine1": "123 Main St",
             "addressLine2": "Suite 100",
-            "addressLine3": None,
-            "addressLine4": None,
+            "city": "London",
+            "county": "Greater London",
             "postCode": "AB12 3CD",
         }
     }
@@ -70,7 +70,12 @@ def test_get_office_address_returns_full_address_from_successful_api_response(ad
     with patch("httpx.get", return_value=mock_response):
         result = adapter.get_office_address("OFFICE123")
 
-    assert result == "123 Main St, Suite 100, AB12 3CD"
+    assert result is not None
+    assert result.address_line_1 == "123 Main St"
+    assert result.address_line_2 == "Suite 100"
+    assert result.town_or_city == "London"
+    assert result.county == "Greater London"
+    assert result.postcode == "AB12 3CD"
 
 
 def test_get_office_address_returns_none_when_request_raises_exception(adapter):

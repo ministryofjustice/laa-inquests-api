@@ -9,6 +9,7 @@ from pypdf import PdfReader
 from app.adapters.pdf_generator_adapter import PdfGeneratorAdapter
 from app.models.application.index import Address
 from app.models.application.certificate import ApplicationCertificate
+from tests.unit.factories import create_base_office_address
 
 
 def _sample_context() -> ApplicationCertificate:
@@ -21,7 +22,7 @@ def _sample_context() -> ApplicationCertificate:
             postcode="SW1A 1AA",
         ),
         firm_name="Test Firm Ltd",
-        office_address="Office address\nLondon",
+        office_address=create_base_office_address(),
         opponent_details=["Department for Transport"],
         laa_reference=12345,
         date_created=date(2026, 7, 15),

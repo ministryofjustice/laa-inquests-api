@@ -27,7 +27,10 @@ def test_200_read_certificate_returns_expected_certificate_context(
     assert body["laaReference"] == application.laa_reference
     assert body["clientName"] == "Test Surname"
     assert body["firmName"] == "Test Firm Name"
-    assert body["officeAddress"] == "Test Office Address"
+    assert body["officeAddress"] is not None
+    assert body["officeAddress"]["addressLine1"] == "Test Office Street"
+    assert body["officeAddress"]["townOrCity"] == "Test City"
+    assert body["officeAddress"]["postcode"] == "TE1 1ST"
     assert body["opponentDetails"] == ["Department for Transport"]
     assert body["dateCreated"] == date.today().isoformat()
     assert body["effectiveDate"] == date.today().isoformat()

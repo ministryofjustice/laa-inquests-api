@@ -1,6 +1,7 @@
 """Tests for the CreateCertificateModel use case"""
 
 from unittest.mock import MagicMock
+from tests.unit.factories import create_base_office_address
 
 from app.models.application.certificate import ApplicationCertificate
 from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
@@ -24,7 +25,7 @@ def test_populate_certificate_context_returns_ApplicationCertificate():
     """Test that populate_certificate_context returns an ApplicationCertificate."""
     mock_provider_port = MagicMock()
     mock_provider_port.get_firm_name.return_value = "Test Firm Ltd"
-    mock_provider_port.get_office_address.return_value = "Test Office Address"
+    mock_provider_port.get_office_address.return_value = create_base_office_address()
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     # Use factory defaults - they already include all required fields
@@ -40,7 +41,7 @@ def test_populate_certificate_context_populates_client_fields_correctly():
     """Test that client name and address are populated correctly."""
     mock_provider_port = MagicMock()
     mock_provider_port.get_firm_name.return_value = "Smith & Associates"
-    mock_provider_port.get_office_address.return_value = "Test Office Address"
+    mock_provider_port.get_office_address.return_value = create_base_office_address()
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     # Override only the specific fields we're testing
@@ -71,7 +72,7 @@ def test_populate_certificate_context_uses_correspondence_address_when_available
     """Test that correspondence address is used when available."""
     mock_provider_port = MagicMock()
     mock_provider_port.get_firm_name.return_value = "Test Firm"
-    mock_provider_port.get_office_address.return_value = "Test Office Address"
+    mock_provider_port.get_office_address.return_value = create_base_office_address()
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     # Only override the specific address fields we're testing
@@ -99,7 +100,7 @@ def test_populate_certificate_context_does_not_use_correspondence_recipient_name
     """Test that correspondence address is not used when client is the correspondence recipient."""
     mock_provider_port = MagicMock()
     mock_provider_port.get_firm_name.return_value = "Test Firm"
-    mock_provider_port.get_office_address.return_value = "Test Office Address"
+    mock_provider_port.get_office_address.return_value = create_base_office_address()
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     # Only override the specific address fields we're testing
@@ -127,7 +128,7 @@ def test_populate_certificate_context_populates_provider_fields():
     """Test that firm name and office address are populated correctly."""
     mock_provider_port = MagicMock()
     mock_provider_port.get_firm_name.return_value = "Jones Legal Services"
-    mock_provider_port.get_office_address.return_value = "Test Office Address"
+    mock_provider_port.get_office_address.return_value = create_base_office_address()
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     application = create_base_application(
@@ -146,7 +147,7 @@ def test_populate_certificate_context_raises_exception_on_firm_name_lookup_failu
     """Test that a fallback is used when firm name lookup fails."""
     mock_provider_port = MagicMock()
     mock_provider_port.get_firm_name.return_value = None
-    mock_provider_port.get_office_address.return_value = "Test Office Address"
+    mock_provider_port.get_office_address.return_value = create_base_office_address()
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     application = create_base_application()
@@ -160,7 +161,7 @@ def test_populate_certificate_context_populates_proceeding_fields():
     """Test that proceeding fields are mapped correctly."""
     mock_provider_port = MagicMock()
     mock_provider_port.get_firm_name.return_value = "Test Firm"
-    mock_provider_port.get_office_address.return_value = "Test Office Address"
+    mock_provider_port.get_office_address.return_value = create_base_office_address()
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     proceeding = create_base_proceeding(
@@ -193,7 +194,7 @@ def test_populate_certificate_context_populates_application_proceeding_date_fiel
     """Test that date fields from ApplicationProceeding are mapped correctly."""
     mock_provider_port = MagicMock()
     mock_provider_port.get_firm_name.return_value = "Test Firm"
-    mock_provider_port.get_office_address.return_value = "Test Office Address"
+    mock_provider_port.get_office_address.return_value = create_base_office_address()
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     test_date = date(2026, 8, 15)
@@ -215,7 +216,7 @@ def test_populate_certificate_context_populates_application_status_fields():
     """Test that application status is mapped correctly."""
     mock_provider_port = MagicMock()
     mock_provider_port.get_firm_name.return_value = "Test Firm"
-    mock_provider_port.get_office_address.return_value = "Test Office Address"
+    mock_provider_port.get_office_address.return_value = create_base_office_address()
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     application = create_base_application(status="LIVE")
@@ -232,7 +233,7 @@ def test_populate_certificate_context_populates_identifiers_and_dates():
     """LAA reference and date created are read from application/proceeding."""
     mock_provider_port = MagicMock()
     mock_provider_port.get_firm_name.return_value = "Test Firm"
-    mock_provider_port.get_office_address.return_value = "Test Office Address"
+    mock_provider_port.get_office_address.return_value = create_base_office_address()
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     issue_date = date(2026, 7, 15)
@@ -254,7 +255,7 @@ def test_populate_certificate_context_populates_default_static_fields():
     """Test that static/default fields are populated correctly."""
     mock_provider_port = MagicMock()
     mock_provider_port.get_firm_name.return_value = "Test Firm"
-    mock_provider_port.get_office_address.return_value = "Test Office Address"
+    mock_provider_port.get_office_address.return_value = create_base_office_address()
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     application = create_base_application()
@@ -276,7 +277,7 @@ def test_populate_certificate_context_handles_none_certificate_start_date():
     """Test that None certificate_start_date is handled gracefully."""
     mock_provider_port = MagicMock()
     mock_provider_port.get_firm_name.return_value = "Test Firm"
-    mock_provider_port.get_office_address.return_value = "Test Office Address"
+    mock_provider_port.get_office_address.return_value = create_base_office_address()
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     application = create_base_application(
@@ -300,7 +301,7 @@ def test_populate_certificate_context_formats_address_with_missing_fields():
     """Test that address formatting handles missing optional fields."""
     mock_provider_port = MagicMock()
     mock_provider_port.get_firm_name.return_value = "Test Firm"
-    mock_provider_port.get_office_address.return_value = "Test Office Address"
+    mock_provider_port.get_office_address.return_value = create_base_office_address()
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     # Create address with no address_line_2 or county
@@ -332,7 +333,7 @@ def test_populate_certificate_context_handles_none_correspondence_address():
     """Test that None correspondence address falls back to home address."""
     mock_provider_port = MagicMock()
     mock_provider_port.get_firm_name.return_value = "Test Firm"
-    mock_provider_port.get_office_address.return_value = "Test Office Address"
+    mock_provider_port.get_office_address.return_value = create_base_office_address()
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     home_address = create_base_home_address(
@@ -357,7 +358,7 @@ def test_populate_certificate_context_handles_single_public_body_correctly():
     """Test that a single public body is handled correctly."""
     mock_provider_port = MagicMock()
     mock_provider_port.get_firm_name.return_value = "Test Firm"
-    mock_provider_port.get_office_address.return_value = "Test Office Address"
+    mock_provider_port.get_office_address.return_value = create_base_office_address()
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     application = create_base_application(
@@ -379,7 +380,7 @@ def test_populate_certificate_context_handles_multiple_public_bodies_correctly()
     """Test that public bodies are concatenated correctly."""
     mock_provider_port = MagicMock()
     mock_provider_port.get_firm_name.return_value = "Test Firm"
-    mock_provider_port.get_office_address.return_value = "Test Office Address"
+    mock_provider_port.get_office_address.return_value = create_base_office_address()
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     application = create_base_application(

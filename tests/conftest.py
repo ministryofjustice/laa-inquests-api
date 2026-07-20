@@ -150,7 +150,11 @@ def client_fixture(session: Session):
     def get_provider_details_port_override():
         mock_port = MagicMock()
         mock_port.get_firm_name.return_value = "Test Firm Name"
-        mock_port.get_office_address.return_value = "Test Office Address"
+        mock_port.get_office_address.return_value = Address(
+            address_line_1="Test Office Street",
+            town_or_city="Test City",
+            postcode="TE1 1ST",
+        )
         return mock_port
 
     def get_gov_notify_port_override():
@@ -198,7 +202,11 @@ def entra_auth_client_fixture(session: Session):
     def get_provider_details_port_override():
         mock_port = MagicMock()
         mock_port.get_firm_name.return_value = "Test Firm Name"
-        mock_port.get_office_address.return_value = "Test Office Address"
+        mock_port.get_office_address.return_value = Address(
+            address_line_1="Test Office Street",
+            town_or_city="Test City",
+            postcode="TE1 1ST",
+        )
         return mock_port
 
     def get_gov_notify_port_override():

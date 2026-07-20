@@ -1,3 +1,4 @@
+from app.models.application.index import Address
 import httpx
 
 from app.ports.provider_details_port import ProviderDetailsPort
@@ -22,7 +23,7 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
         except Exception:
             return None
 
-    def get_office_address(self, office_id: str) -> str | None:
+    def get_office_address(self, office_id: str) -> Address | None:
         try:
             url = f"{self.base_url}/api/v1/provider-offices/{office_id}"
             response = httpx.get(
@@ -31,18 +32,13 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
             )
             response.raise_for_status()
 
-            full_address = ", ".join(
-                filter(
-                    None,
-                    [
-                        response.json()["office"]["addressLine1"],
-                        response.json()["office"]["addressLine2"],
-                        response.json()["office"]["addressLine3"],
-                        response.json()["office"]["addressLine4"],
-                        response.json()["office"]["postCode"],
-                    ],
-                )
+            address = Address(
+                address_line_1=response.json()["office"]["addressLine1"],
+                address_line_2=response.json()["office"]["addressLine2"],
+                postcode=response.json()["office"]["postCode"],
+                town_or_city=response.json()["office"]["city"],
+                county=response.json()["office"]["county"],
             )
-            return full_address
+            return address
         except Exception:
             return None

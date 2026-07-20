@@ -3,7 +3,7 @@ from typing import List
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 
-from app.models.application.index import Address
+from app.models.application.index import AddressResponse
 
 
 class ApplicationCertificate(BaseModel):
@@ -14,9 +14,9 @@ class ApplicationCertificate(BaseModel):
     )
 
     client_name: str
-    client_address: Address | None
+    client_address: AddressResponse | None
     firm_name: str
-    office_address: str
+    office_address: AddressResponse | None
     opponent_details: List[str] | None = None
     guardian_name: str = "Not applicable"
     guardian_address: str = "Not applicable"

@@ -46,6 +46,19 @@ def create_base_correspondence_address(**overrides):
     return Address(**(defaults | overrides))
 
 
+def create_base_office_address(**overrides):
+    """Create a base office address with optional field overrides."""
+    defaults = {
+        "address_id": 3,
+        "address_line_1": "123 Main St",
+        "address_line_2": "Apt 4B",
+        "town_or_city": "London",
+        "county": "Greater London",
+        "postcode": "SW1A 1AA",
+    }
+    return Address(**(defaults | overrides))
+
+
 def create_base_client(
     home_address=_NOT_PROVIDED, correspondence_address=_NOT_PROVIDED, **overrides
 ):
@@ -217,7 +230,7 @@ def create_base_certificate(
         "client_name": f"{application.client.client_first_name} {application.client.client_last_name}",
         "client_address": client_address,
         "firm_name": application.provider.firm_code,
-        "office_address": application.provider.office_id,
+        "office_address": create_base_office_address(),
         "opponent_details": [body.public_body_description for body in public_bodies],
         "guardian_name": "Not applicable",
         "guardian_address": "Not applicable",
