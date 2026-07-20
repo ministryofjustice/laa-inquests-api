@@ -66,14 +66,10 @@ class Claim:
         if total is None:
             return autodecision(should_auto_reject=False, reason_code=None)
 
-        if not application.proceedings:
+        limit = self._get_substantive_cost_limit(application)
+        if limit is None:
             return autodecision(should_auto_reject=False, reason_code=None)
 
-        raw_limit = application.proceedings[0].substantive_cost_limitation
-        if raw_limit is None:
-            return autodecision(should_auto_reject=False, reason_code=None)
-
-        limit = Decimal(str(raw_limit))
         exceeds_limit = total > limit
 
         return autodecision(
@@ -91,11 +87,8 @@ class Claim:
         if self.gross is None:
             return autodecision(should_auto_reject=False, reason_code=None)
 
-        if not application.proceedings:
-            return autodecision(should_auto_reject=False, reason_code=None)
-
-        raw_limit = application.proceedings[0].substantive_cost_limitation
-        if raw_limit is None:
+        limit = self._get_substantive_cost_limit(application)
+        if limit is None:
             return autodecision(should_auto_reject=False, reason_code=None)
 
         application_claims = [
@@ -107,7 +100,7 @@ class Claim:
             (c.total_profit_cost_gross or Decimal(0)) for c in application_claims
         )
         total = existing_total + self.gross
-        exceeds_limit = total > Decimal(str(raw_limit))
+        exceeds_limit = total > limit
 
         return autodecision(
             should_auto_reject=exceeds_limit,
@@ -125,6 +118,14 @@ class Claim:
         return self.should_auto_reject_for_application_total_limit(
             application, existing_claims
         )
+
+    def _get_substantive_cost_limit(self, application: Application) -> Decimal | None:
+        if not application.proceedings:
+            return None
+        raw_limit = application.proceedings[0].substantive_cost_limitation
+        if raw_limit is None:
+            return None
+        return Decimal(str(raw_limit))
 
     def _normalize_non_profit_cost_totals(self) -> None:
         object.__setattr__(
