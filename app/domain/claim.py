@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
@@ -18,6 +19,7 @@ from app.domain.constants.claim_messages import (
 from app.domain.constants.claim_reason_codes import (
     APPLICATION_CLAIMS_EXCEED_COST_LIMIT,
     CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT,
+    MAX_POA_CLAIMS_EXCEEDED,
 )
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimStatus
@@ -31,6 +33,14 @@ from app.models.claim.enums import ClaimType, POAType
 class autodecision:
     should_auto_reject: bool
     reason_code: str | None
+
+
+def _as_utc(dt: datetime) -> datetime:
+    """Treat timezone-naive datetimes as UTC for safe comparison."""
+    return dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
+
+
+MAX_PROFIT_COST_POA_CLAIM_COUNT = 4
 
 
 @dataclass(frozen=True)
@@ -60,6 +70,28 @@ class Claim:
 
     def total_claim_cost_for_limit_check(self) -> Decimal | None:
         return self.gross
+
+    def should_auto_reject_for_max_poa_count(
+        self,
+        existing_claims: list[DBClaim],
+        reference_date: datetime | None = None,
+    ) -> autodecision:
+        if self.poa_type != POAType.PROFIT_COST:
+            return autodecision(should_auto_reject=False, reason_code=None)
+
+        cutoff = (reference_date or datetime.now(UTC)) - timedelta(days=365)
+        active_poas = [
+            c
+            for c in existing_claims
+            if c.poa_type_id == POAType.PROFIT_COST
+            and c.status_id in (ClaimStatus.PENDING, ClaimStatus.ACCEPTED)
+            and _as_utc(c.submission_date) >= cutoff
+        ]
+        exceeds = len(active_poas) >= MAX_PROFIT_COST_POA_CLAIM_COUNT
+        return autodecision(
+            should_auto_reject=exceeds,
+            reason_code=MAX_POA_CLAIMS_EXCEEDED if exceeds else None,
+        )
 
     def should_auto_reject_for_limit(self, application: Application) -> autodecision:
         total = self.total_claim_cost_for_limit_check()
@@ -111,7 +143,14 @@ class Claim:
         self,
         application: Application,
         existing_claims: list[DBClaim],
+        reference_date: datetime | None = None,
     ) -> autodecision:
+        max_poa_decision = self.should_auto_reject_for_max_poa_count(
+            existing_claims, reference_date
+        )
+        if max_poa_decision.should_auto_reject:
+            return max_poa_decision
+
         claim_limit_decision = self.should_auto_reject_for_limit(application)
         if claim_limit_decision.should_auto_reject:
             return claim_limit_decision

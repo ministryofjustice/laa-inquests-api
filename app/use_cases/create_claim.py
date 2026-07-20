@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from app.domain.claim import Claim as DomainClaim
@@ -63,6 +64,9 @@ class CreateClaimUseCase:
         self.create_claim_port.commit()
 
         if application is not None:
-            validated_claim.should_auto_reject(application, existing_claims)
+            reference_date = datetime.now(UTC)
+            validated_claim.should_auto_reject(
+                application, existing_claims, reference_date
+            )
 
         return claim
