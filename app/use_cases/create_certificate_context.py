@@ -26,8 +26,10 @@ class CreateCertificateContextUseCase:
         client_name = f"{application.client.client_first_name} {application.client.client_last_name}"
 
         public_bodies = application.public_bodies
-        opponent_details = "\n".join(
-            body.public_body_description for body in public_bodies
+        opponent_details = (
+            [body.public_body_description for body in public_bodies]
+            if public_bodies
+            else None
         )
 
         client_address = (

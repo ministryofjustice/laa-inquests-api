@@ -352,8 +352,8 @@ def test_populate_certificate_context_handles_single_public_body_correctly():
 
     result = usecase.populate_certificate_context(application, application_proceeding)
 
-    assert result.opponent_details == "Body A"
-    assert result.opponent_details.count("\n") == 0
+    assert result.opponent_details == ["Body A"]
+    assert len(result.opponent_details) == 1
 
 
 def test_populate_certificate_context_handles_multiple_public_bodies_correctly():
@@ -377,6 +377,5 @@ def test_populate_certificate_context_handles_multiple_public_bodies_correctly()
 
     result = usecase.populate_certificate_context(application, application_proceeding)
 
-    assert "Body A" in result.opponent_details
-    assert "Body B" in result.opponent_details
-    assert result.opponent_details.count("\n") == 1
+    assert result.opponent_details == ["Body A", "Body B"]
+    assert len(result.opponent_details) == 2

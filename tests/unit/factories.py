@@ -211,9 +211,7 @@ def create_base_certificate(
         "client_address": client_address,
         "firm_name": application.provider.firm_code,
         "office_address": application.provider.office_id,
-        "opponent_details": ", ".join(
-            body.public_body_description for body in public_bodies
-        ),
+        "opponent_details": [body.public_body_description for body in public_bodies],
         "guardian_name": "Not applicable",
         "guardian_address": "Not applicable",
         "laa_reference": application.laa_reference,

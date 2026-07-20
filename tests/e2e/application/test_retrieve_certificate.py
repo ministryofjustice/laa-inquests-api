@@ -28,7 +28,7 @@ def test_200_read_certificate_returns_expected_certificate_context(
     assert body["clientName"] == "Test Surname"
     assert body["firmName"] == "Test Firm Name"
     assert body["officeAddress"] == "Test Office Address"
-    assert body["opponentDetails"] == "Department for Transport"
+    assert body["opponentDetails"] == ["Department for Transport"]
     assert body["dateCreated"] == date.today().isoformat()
     assert body["effectiveDate"] == date.today().isoformat()
 
