@@ -1,7 +1,3 @@
-from datetime import UTC, datetime, date
-
-from app.models.application.enums import AddressSource, ProceedingId
-from app.models.application.index import Application, ApplicationProceeding, Client
 from app.models.gov_notify_templates.application_grant_personalisation import (
     NotifyApplicationGrantTemplatePersonalisation,
 )
@@ -10,41 +6,25 @@ from app.use_cases.notify.create_application_grant_email_personalisation import 
 )
 
 import pytest
+from tests.unit.factories import (
+    create_base_application,
+    create_base_client,
+    create_base_application_proceeding,
+)
 
 
-def _create_test_application_and_proceeding(laa_reference: int = 12345):
-    client = Client(
-        client_id=1,
-        client_first_name="Jane",
-        client_last_name="Doe",
-        date_of_birth="15-06-1985",
-        correspondence_address_source=AddressSource.USE_CLIENT_HOME_ADDRESS,
-    )
+def _create_test_application_and_proceeding():
+    client = create_base_client()
 
-    application = Application(
-        laa_reference=laa_reference,
-        created_at=datetime(2026, 6, 18, 14, 3, tzinfo=UTC),
-        client_id=1,
-        client=client,
-        deceased_id=1,
-        provider_id=1,
-    )
+    application = create_base_application(client=client)
 
-    proceeding = ApplicationProceeding(
-        application_proceeding_id=1,
-        laa_reference=laa_reference,
-        proceeding_id=ProceedingId.TEST1,
-        merits_decision="GRANTED",
-        certificate_issue_date=date(2026, 6, 18),
-    )
+    proceeding = create_base_application_proceeding(application=application)
 
     return application, proceeding
 
 
 def test_create_application_grant_email_personalisation_returns_all_required_fields():
-    application, proceeding = _create_test_application_and_proceeding(
-        laa_reference=12345
-    )
+    application, proceeding = _create_test_application_and_proceeding()
     certificate_payload = {"file": "dGVzdA==", "filename": None}
 
     result = create_application_grant_email_personalisation(

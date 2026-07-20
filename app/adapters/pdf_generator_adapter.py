@@ -11,7 +11,6 @@ class PdfGeneratorAdapter(PdfGenerationPort):
     """WeasyPrint adapter for generating PDFs from HTML templates."""
 
     def __init__(self) -> None:
-        # Set up Jinja2 environment to load templates from app/templates/
         self._template_dir = Path(__file__).parent.parent / "templates"
         self.jinja_env = Environment(loader=FileSystemLoader(str(self._template_dir)))
 
@@ -28,7 +27,6 @@ class PdfGeneratorAdapter(PdfGenerationPort):
         Returns:
             PDF content as bytes
         """
-        # Render the main template with the provided context
         template = self.jinja_env.get_template(template_name)
         html_content = template.render(**context.model_dump())
 
