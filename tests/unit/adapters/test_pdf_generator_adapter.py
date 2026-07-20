@@ -30,7 +30,7 @@ def _sample_context() -> ApplicationCertificate:
         status="LIVE",
         effective_date=date(2026, 7, 15),
         cost_limitation="15000",
-        care_order_description="Inquest into death",
+        proceeding_description="Inquest into death",
         category_of_law="INQUESTS",
         current_proceeding_status="LIVE",
         date_work_can_commence=date(2026, 7, 15),

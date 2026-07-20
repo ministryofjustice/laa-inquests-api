@@ -66,7 +66,7 @@ class CreateCertificateContextUseCase:
         scope_limitation_heading = proceeding.scope_limitation_heading
         scope_limitation_description = proceeding.scope_description
         cost_limitation = proceeding.substantive_cost_limitation
-        care_order_description = proceeding.proceeding_description
+        proceeding_description = proceeding.proceeding_description
 
         effective_date = proceeding.certificate_start_date or date.today()
         date_work_can_commence = proceeding.certificate_start_date or date.today()
@@ -94,7 +94,7 @@ class CreateCertificateContextUseCase:
             scope_limitation_heading=scope_limitation_heading,
             scope_limitation_description=scope_limitation_description,
             cost_limitation=cost_limitation,
-            care_order_description=care_order_description,
+            proceeding_description=proceeding_description,
             effective_date=effective_date,
             date_work_can_commence=date_work_can_commence,
             date_current_level_of_service_effective=date_current_level_of_service_effective,

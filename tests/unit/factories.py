@@ -244,7 +244,7 @@ def create_base_certificate(
         "cost_limitation": str(proceeding.proceeding.substantive_cost_limitation),
         "cost_limitation_effective_date": None,
         "certificate_limitation": "Not applicable",
-        "care_order_description": proceeding.proceeding.proceeding_description,
+        "proceeding_description": proceeding.proceeding.proceeding_description,
         "category_of_law": proceeding.proceeding.category_of_law,
         "current_proceeding_status": application.status,
         "date_work_can_commence": proceeding.certificate_start_date or date.today(),
