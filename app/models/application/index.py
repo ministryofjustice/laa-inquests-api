@@ -29,7 +29,9 @@ class Proceeding(SQLModel, table=True):
     proceeding_id: ProceedingId = Field(
         sa_column=Column(Enum(ProceedingId), unique=True)
     )
+    proceeding_name: str | None = "This is the proceeding name"
     proceeding_description: str | None = "This is the proceeding description"
+
     category_of_law: str | None = "INQUESTS"
     certificate_type: str | None = "SUBSTANTIVE"
     level_of_service: str | None = "FULL_REPRESENTATION"
@@ -228,6 +230,10 @@ class ApplicationProceeding(SQLModel, table=True):
     application: Application = Relationship(back_populates="proceedings")
     certificate_issue_date: date = Field(nullable=True, default=None)
     certificate_start_date: date = Field(nullable=True, default=None)
+
+    @property
+    def proceeding_name(self):
+        return self.proceeding.proceeding_name
 
     @property
     def proceeding_description(self):
@@ -501,6 +507,7 @@ class ProceedingResponse(BaseModel):
         populate_by_name=True,
     )
     proceeding_id: str
+    proceeding_name: Optional[str] = None
     proceeding_description: Optional[str] = None
     category_of_law: str
     certificate_type: str

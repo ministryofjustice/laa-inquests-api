@@ -98,6 +98,7 @@ def create_base_proceeding(**overrides):
     defaults = {
         "id": 1,
         "proceeding_id": ProceedingId.TEST1,
+        "proceeding_name": "Inquest into death",
         "proceeding_description": "Inquest into death",
         "matter_type": "INQUESTS",
     }

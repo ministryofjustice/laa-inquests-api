@@ -44,6 +44,9 @@ def test_200_proceeding_details_included_on_application_response(
 
     requested_application = response.json()
     assert len(requested_application["proceedings"]) == 1
+    proceeding = requested_application["proceedings"][0]
+    assert isinstance(proceeding["proceedingName"], str)
+    assert isinstance(proceeding["proceedingDescription"], str)
 
 
 def test_200_client_addresses_included_on_application_response(
