@@ -6,6 +6,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
+from app.domain.claim_rejection import ClaimRejection, ClaimRejectionReason
 from app.domain.constants.claim_messages import (
     MIXED_VAT_MESSAGE,
     MISSING_GROSS_MESSAGE,
@@ -16,23 +17,12 @@ from app.domain.constants.claim_messages import (
     NET_GT_GROSS_MESSAGE,
     POA_NOT_ALLOWED_MESSAGE,
 )
-from app.domain.constants.claim_reason_codes import (
-    APPLICATION_CLAIMS_EXCEED_COST_LIMIT,
-    CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT,
-    MAX_POA_CLAIMS_EXCEEDED,
-)
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimStatus
 
 if TYPE_CHECKING:
     from app.models.claim.index import Claim as DBClaim
 from app.models.claim.enums import ClaimType, POAType
-
-
-@dataclass(frozen=True)
-class autodecision:
-    should_auto_reject: bool
-    reason_code: str | None
 
 
 def _as_utc(dt: datetime) -> datetime:
@@ -75,9 +65,9 @@ class Claim:
         self,
         existing_claims: list[DBClaim],
         reference_date: datetime | None = None,
-    ) -> autodecision:
+    ) -> ClaimRejectionReason | None:
         if self.poa_type != POAType.PROFIT_COST:
-            return autodecision(should_auto_reject=False, reason_code=None)
+            return None
 
         cutoff = (reference_date or datetime.now(UTC)) - timedelta(days=365)
         active_poas = [
@@ -88,40 +78,37 @@ class Claim:
             and _as_utc(c.submission_date) >= cutoff
         ]
         exceeds = len(active_poas) >= MAX_PROFIT_COST_POA_CLAIM_COUNT
-        return autodecision(
-            should_auto_reject=exceeds,
-            reason_code=MAX_POA_CLAIMS_EXCEEDED if exceeds else None,
-        )
+        return ClaimRejectionReason.MAX_POA_CLAIMS_EXCEEDED if exceeds else None
 
-    def should_auto_reject_for_limit(self, application: Application) -> autodecision:
+    def should_auto_reject_for_limit(
+        self, application: Application
+    ) -> ClaimRejectionReason | None:
         total = self.total_claim_cost_for_limit_check()
         if total is None:
-            return autodecision(should_auto_reject=False, reason_code=None)
+            return None
 
         limit = self._get_substantive_cost_limit(application)
         if limit is None:
-            return autodecision(should_auto_reject=False, reason_code=None)
+            return None
 
         exceeds_limit = total > limit
-
-        return autodecision(
-            should_auto_reject=exceeds_limit,
-            reason_code=(
-                CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT if exceeds_limit else None
-            ),
+        return (
+            ClaimRejectionReason.CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT
+            if exceeds_limit
+            else None
         )
 
     def should_auto_reject_for_application_total_limit(
         self,
         application: Application,
         existing_claims: list[DBClaim],
-    ) -> autodecision:
+    ) -> ClaimRejectionReason | None:
         if self.gross is None:
-            return autodecision(should_auto_reject=False, reason_code=None)
+            return None
 
         limit = self._get_substantive_cost_limit(application)
         if limit is None:
-            return autodecision(should_auto_reject=False, reason_code=None)
+            return None
 
         application_claims = [
             c
@@ -133,10 +120,10 @@ class Claim:
         )
         total = existing_total + self.gross
         exceeds_limit = total > limit
-
-        return autodecision(
-            should_auto_reject=exceeds_limit,
-            reason_code=APPLICATION_CLAIMS_EXCEED_COST_LIMIT if exceeds_limit else None,
+        return (
+            ClaimRejectionReason.APPLICATION_CLAIMS_EXCEED_COST_LIMIT
+            if exceeds_limit
+            else None
         )
 
     def should_auto_reject(
@@ -144,19 +131,26 @@ class Claim:
         application: Application,
         existing_claims: list[DBClaim],
         reference_date: datetime | None = None,
-    ) -> autodecision:
-        max_poa_decision = self.should_auto_reject_for_max_poa_count(
+    ) -> ClaimRejection:
+        reasons = []
+
+        max_poa_reason = self.should_auto_reject_for_max_poa_count(
             existing_claims, reference_date
         )
-        if max_poa_decision.should_auto_reject:
-            return max_poa_decision
+        if max_poa_reason:
+            reasons.append(max_poa_reason)
 
-        claim_limit_decision = self.should_auto_reject_for_limit(application)
-        if claim_limit_decision.should_auto_reject:
-            return claim_limit_decision
-        return self.should_auto_reject_for_application_total_limit(
+        limit_reason = self.should_auto_reject_for_limit(application)
+        if limit_reason:
+            reasons.append(limit_reason)
+
+        app_total_reason = self.should_auto_reject_for_application_total_limit(
             application, existing_claims
         )
+        if app_total_reason:
+            reasons.append(app_total_reason)
+
+        return ClaimRejection(reasons=reasons)
 
     def _get_substantive_cost_limit(self, application: Application) -> Decimal | None:
         if not application.proceedings:

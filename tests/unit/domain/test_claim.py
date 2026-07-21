@@ -4,12 +4,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.domain.constants.claim_reason_codes import (
-    APPLICATION_CLAIMS_EXCEED_COST_LIMIT,
-    CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT,
-    MAX_POA_CLAIMS_EXCEEDED,
-)
 from app.domain.claim import Claim
+from app.domain.claim_rejection import ClaimRejectionReason
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimStatus, ClaimType, POAType
@@ -222,10 +218,9 @@ def test_should_auto_reject_for_limit_when_total_exceeds_limit():
     application = MagicMock(spec=Application)
     application.proceedings = [MagicMock()]
     application.proceedings[0].substantive_cost_limitation = 1000
-    decision = claim.should_auto_reject_for_limit(application)
+    reason = claim.should_auto_reject_for_limit(application)
 
-    assert decision.should_auto_reject is True
-    assert decision.reason_code == CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT
+    assert reason is ClaimRejectionReason.CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT
 
 
 def test_should_not_auto_reject_for_limit_when_total_not_exceeding_limit():
@@ -241,10 +236,9 @@ def test_should_not_auto_reject_for_limit_when_total_not_exceeding_limit():
     application = MagicMock(spec=Application)
     application.proceedings = [MagicMock()]
     application.proceedings[0].substantive_cost_limitation = 1000
-    decision = claim.should_auto_reject_for_limit(application)
+    reason = claim.should_auto_reject_for_limit(application)
 
-    assert decision.should_auto_reject is False
-    assert decision.reason_code is None
+    assert reason is None
 
 
 def _make_domain_claim(gross=Decimal("500.00")):
@@ -278,33 +272,30 @@ def _make_db_claim(
 def test_should_auto_reject_for_application_total_limit_when_sum_exceeds_limit():
     claim = _make_domain_claim(gross=Decimal("600.00"))
     existing = [_make_db_claim(Decimal("500.00"))]
-    decision = claim.should_auto_reject_for_application_total_limit(
+    reason = claim.should_auto_reject_for_application_total_limit(
         _make_application(limit=1000), existing
     )
 
-    assert decision.should_auto_reject is True
-    assert decision.reason_code == APPLICATION_CLAIMS_EXCEED_COST_LIMIT
+    assert reason is ClaimRejectionReason.APPLICATION_CLAIMS_EXCEED_COST_LIMIT
 
 
 def test_should_not_auto_reject_for_application_total_limit_when_sum_within_limit():
     claim = _make_domain_claim(gross=Decimal("400.00"))
     existing = [_make_db_claim(Decimal("500.00"))]
-    decision = claim.should_auto_reject_for_application_total_limit(
+    reason = claim.should_auto_reject_for_application_total_limit(
         _make_application(limit=1000), existing
     )
 
-    assert decision.should_auto_reject is False
-    assert decision.reason_code is None
+    assert reason is None
 
 
 def test_should_not_auto_reject_for_application_total_limit_when_no_proceedings():
     claim = _make_domain_claim(gross=Decimal("900.00"))
     application = MagicMock(spec=Application)
     application.proceedings = []
-    decision = claim.should_auto_reject_for_application_total_limit(application, [])
+    reason = claim.should_auto_reject_for_application_total_limit(application, [])
 
-    assert decision.should_auto_reject is False
-    assert decision.reason_code is None
+    assert reason is None
 
 
 def test_should_not_auto_reject_for_application_total_limit_when_limit_is_none():
@@ -312,41 +303,37 @@ def test_should_not_auto_reject_for_application_total_limit_when_limit_is_none()
     application = MagicMock(spec=Application)
     application.proceedings = [MagicMock()]
     application.proceedings[0].substantive_cost_limitation = None
-    decision = claim.should_auto_reject_for_application_total_limit(application, [])
+    reason = claim.should_auto_reject_for_application_total_limit(application, [])
 
-    assert decision.should_auto_reject is False
-    assert decision.reason_code is None
+    assert reason is None
 
 
 def test_should_not_auto_reject_for_application_total_limit_when_gross_is_none():
     claim = _make_domain_claim(gross=None)
-    decision = claim.should_auto_reject_for_application_total_limit(
+    reason = claim.should_auto_reject_for_application_total_limit(
         _make_application(limit=1000), []
     )
 
-    assert decision.should_auto_reject is False
-    assert decision.reason_code is None
+    assert reason is None
 
 
 def test_should_not_auto_reject_for_application_total_limit_when_no_existing_claims():
     claim = _make_domain_claim(gross=Decimal("900.00"))
-    decision = claim.should_auto_reject_for_application_total_limit(
+    reason = claim.should_auto_reject_for_application_total_limit(
         _make_application(limit=1000), []
     )
 
-    assert decision.should_auto_reject is False
-    assert decision.reason_code is None
+    assert reason is None
 
 
 def test_should_auto_reject_for_application_total_limit_excludes_rejected_claims():
     claim = _make_domain_claim(gross=Decimal("600.00"))
     existing = [_make_db_claim(Decimal("500.00"), status=ClaimStatus.REJECTED)]
-    decision = claim.should_auto_reject_for_application_total_limit(
+    reason = claim.should_auto_reject_for_application_total_limit(
         _make_application(limit=1000), existing
     )
 
-    assert decision.should_auto_reject is False
-    assert decision.reason_code is None
+    assert reason is None
 
 
 def test_should_auto_reject_for_application_total_limit_excludes_rejected_with_amendment_claims():
@@ -354,38 +341,41 @@ def test_should_auto_reject_for_application_total_limit_excludes_rejected_with_a
     existing = [
         _make_db_claim(Decimal("500.00"), status=ClaimStatus.REJECTED_WITH_AMENDMENT)
     ]
-    decision = claim.should_auto_reject_for_application_total_limit(
+    reason = claim.should_auto_reject_for_application_total_limit(
         _make_application(limit=1000), existing
     )
 
-    assert decision.should_auto_reject is False
-    assert decision.reason_code is None
+    assert reason is None
 
 
 def test_should_auto_reject_returns_per_claim_rejection_when_single_claim_exceeds_limit():
     claim = _make_domain_claim(gross=Decimal("1200.00"))
-    decision = claim.should_auto_reject(_make_application(limit=1000), [])
+    rejection = claim.should_auto_reject(_make_application(limit=1000), [])
 
-    assert decision.should_auto_reject is True
-    assert decision.reason_code == CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT
+    assert rejection.is_rejected is True
+    assert (
+        ClaimRejectionReason.CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT in rejection.reasons
+    )
 
 
 def test_should_auto_reject_returns_application_total_rejection_when_total_exceeds_but_single_claim_does_not():
     claim = _make_domain_claim(gross=Decimal("600.00"))
     existing = [_make_db_claim(Decimal("500.00"))]
-    decision = claim.should_auto_reject(_make_application(limit=1000), existing)
+    rejection = claim.should_auto_reject(_make_application(limit=1000), existing)
 
-    assert decision.should_auto_reject is True
-    assert decision.reason_code == APPLICATION_CLAIMS_EXCEED_COST_LIMIT
+    assert rejection.is_rejected is True
+    assert (
+        ClaimRejectionReason.APPLICATION_CLAIMS_EXCEED_COST_LIMIT in rejection.reasons
+    )
 
 
 def test_should_auto_reject_returns_no_rejection_when_neither_check_fails():
     claim = _make_domain_claim(gross=Decimal("400.00"))
     existing = [_make_db_claim(Decimal("500.00"))]
-    decision = claim.should_auto_reject(_make_application(limit=1000), existing)
+    rejection = claim.should_auto_reject(_make_application(limit=1000), existing)
 
-    assert decision.should_auto_reject is False
-    assert decision.reason_code is None
+    assert rejection.is_rejected is False
+    assert rejection.reasons == []
 
 
 def _make_db_profit_cost_poa(
@@ -412,12 +402,11 @@ def test_should_auto_reject_for_max_poa_count_when_4_pending_accepted_exist_in_w
         ),
         _make_db_profit_cost_poa(reference - timedelta(days=120)),
     ]
-    decision = _make_domain_claim().should_auto_reject_for_max_poa_count(
+    reason = _make_domain_claim().should_auto_reject_for_max_poa_count(
         existing, reference
     )
 
-    assert decision.should_auto_reject is True
-    assert decision.reason_code == MAX_POA_CLAIMS_EXCEEDED
+    assert reason is ClaimRejectionReason.MAX_POA_CLAIMS_EXCEEDED
 
 
 def test_should_not_auto_reject_for_max_poa_count_when_only_3_exist_in_window():
@@ -427,12 +416,11 @@ def test_should_not_auto_reject_for_max_poa_count_when_only_3_exist_in_window():
         _make_db_profit_cost_poa(reference - timedelta(days=60)),
         _make_db_profit_cost_poa(reference - timedelta(days=90)),
     ]
-    decision = _make_domain_claim().should_auto_reject_for_max_poa_count(
+    reason = _make_domain_claim().should_auto_reject_for_max_poa_count(
         existing, reference
     )
 
-    assert decision.should_auto_reject is False
-    assert decision.reason_code is None
+    assert reason is None
 
 
 def test_should_not_auto_reject_for_max_poa_count_when_4_exist_outside_12_months():
@@ -443,12 +431,11 @@ def test_should_not_auto_reject_for_max_poa_count_when_4_exist_outside_12_months
         _make_db_profit_cost_poa(reference - timedelta(days=400)),
         _make_db_profit_cost_poa(reference - timedelta(days=400)),
     ]
-    decision = _make_domain_claim().should_auto_reject_for_max_poa_count(
+    reason = _make_domain_claim().should_auto_reject_for_max_poa_count(
         existing, reference
     )
 
-    assert decision.should_auto_reject is False
-    assert decision.reason_code is None
+    assert reason is None
 
 
 def test_should_not_auto_reject_for_max_poa_count_when_4_exist_but_rejected():
@@ -468,12 +455,11 @@ def test_should_not_auto_reject_for_max_poa_count_when_4_exist_but_rejected():
             reference - timedelta(days=120), status=ClaimStatus.REJECTED
         ),
     ]
-    decision = _make_domain_claim().should_auto_reject_for_max_poa_count(
+    reason = _make_domain_claim().should_auto_reject_for_max_poa_count(
         existing, reference
     )
 
-    assert decision.should_auto_reject is False
-    assert decision.reason_code is None
+    assert reason is None
 
 
 def test_should_not_auto_reject_for_max_poa_count_when_claim_is_not_profit_cost():
@@ -491,34 +477,36 @@ def test_should_not_auto_reject_for_max_poa_count_when_claim_is_not_profit_cost(
         _make_db_profit_cost_poa(reference - timedelta(days=90)),
         _make_db_profit_cost_poa(reference - timedelta(days=120)),
     ]
-    decision = claim.should_auto_reject_for_max_poa_count(existing, reference)
+    reason = claim.should_auto_reject_for_max_poa_count(existing, reference)
 
-    assert decision.should_auto_reject is False
-    assert decision.reason_code is None
+    assert reason is None
 
 
 def test_should_not_auto_reject_for_max_poa_count_with_no_existing_claims():
     reference = datetime(2026, 7, 20, tzinfo=UTC)
-    decision = _make_domain_claim().should_auto_reject_for_max_poa_count([], reference)
+    reason = _make_domain_claim().should_auto_reject_for_max_poa_count([], reference)
 
-    assert decision.should_auto_reject is False
-    assert decision.reason_code is None
+    assert reason is None
 
 
-def test_should_auto_reject_returns_max_poas_before_cost_limit_check():
+def test_should_auto_reject_returns_all_applicable_reasons_when_multiple_conditions_triggered():
     reference = datetime(2026, 7, 20, tzinfo=UTC)
-    claim = _make_domain_claim(
-        gross=Decimal("1200.00")
-    )  # would also trigger cost limit
+    claim = _make_domain_claim(gross=Decimal("1200.00"))  # triggers cost limit checks
     existing = [
         _make_db_profit_cost_poa(reference - timedelta(days=30)),
         _make_db_profit_cost_poa(reference - timedelta(days=60)),
         _make_db_profit_cost_poa(reference - timedelta(days=90)),
         _make_db_profit_cost_poa(reference - timedelta(days=120)),
     ]
-    decision = claim.should_auto_reject(
+    rejection = claim.should_auto_reject(
         _make_application(limit=1000), existing, reference
     )
 
-    assert decision.should_auto_reject is True
-    assert decision.reason_code == MAX_POA_CLAIMS_EXCEEDED
+    assert rejection.is_rejected is True
+    assert ClaimRejectionReason.MAX_POA_CLAIMS_EXCEEDED in rejection.reasons
+    assert (
+        ClaimRejectionReason.CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT in rejection.reasons
+    )
+    assert (
+        ClaimRejectionReason.APPLICATION_CLAIMS_EXCEED_COST_LIMIT in rejection.reasons
+    )
