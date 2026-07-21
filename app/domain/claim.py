@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
 from app.domain.claim_rejection import ClaimRejection, ClaimRejectionReason
+from app.domain.date_utils import add_calendar_months
 from app.domain.constants.claim_messages import (
     MIXED_VAT_MESSAGE,
     MISSING_GROSS_MESSAGE,
@@ -31,6 +32,7 @@ def _as_utc(dt: datetime) -> datetime:
 
 
 MAX_PROFIT_COST_POA_CLAIM_COUNT = 4
+MIN_MONTHS_BEFORE_PROFIT_COST_POA = 3
 
 
 @dataclass(frozen=True)
@@ -150,7 +152,40 @@ class Claim:
         if app_total_reason:
             reasons.append(app_total_reason)
 
+        early_poa_reason = self.should_auto_reject_for_early_profit_cost_poa(
+            application, reference_date
+        )
+        if early_poa_reason:
+            reasons.append(early_poa_reason)
+
         return ClaimRejection(reasons=reasons)
+
+    def should_auto_reject_for_early_profit_cost_poa(
+        self,
+        application: Application,
+        reference_date: datetime | None = None,
+    ) -> ClaimRejectionReason | None:
+        if self.poa_type != POAType.PROFIT_COST:
+            return None
+
+        certificate_start_date = self._get_certificate_start_date(application)
+        if certificate_start_date is None:
+            return None
+
+        submission_date = (reference_date or datetime.now(UTC)).date()
+        earliest_allowed = add_calendar_months(
+            certificate_start_date, MIN_MONTHS_BEFORE_PROFIT_COST_POA
+        )
+        return (
+            ClaimRejectionReason.PROFIT_COST_POA_CLAIM_SUBMITTED_TOO_EARLY
+            if submission_date < earliest_allowed
+            else None
+        )
+
+    def _get_certificate_start_date(self, application: Application) -> date | None:
+        if not application.proceedings:
+            return None
+        return application.proceedings[0].certificate_start_date
 
     def _get_substantive_cost_limit(self, application: Application) -> Decimal | None:
         if not application.proceedings:
