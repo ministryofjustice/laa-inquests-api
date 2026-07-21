@@ -103,3 +103,21 @@ class CreateCertificateContextUseCase:
             status=status,
             current_proceeding_status=current_proceeding_status,
         )
+
+    def prepare_context_for_display(
+        self, context: ApplicationCertificate
+    ) -> ApplicationCertificate:
+        """Prepare the certificate context for display by formatting enum fields."""
+        context.certificate_type = context.certificate_type.capitalize()
+        context.status = context.status.capitalize()
+        context.category_of_law = context.category_of_law.capitalize()
+        context.current_proceeding_status = (
+            context.current_proceeding_status.capitalize()
+        )
+        context.level_of_service = context.level_of_service.replace(
+            "_", " "
+        ).capitalize()
+        context.scope_limitation_heading = context.scope_limitation_heading.replace(
+            "_", " "
+        ).capitalize()
+        return context
