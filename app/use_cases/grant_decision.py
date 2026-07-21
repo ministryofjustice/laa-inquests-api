@@ -1,12 +1,11 @@
 from datetime import datetime, UTC
 import logging
 from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
+from app.use_cases.send_grant_email import SendGrantEmailUseCase
 from app.use_cases.send_grant_letter import SendGrantLetterUseCase
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import GrantApplicationUpdate
-from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.update_decision_port import ApplicationDecisionPort
-from app.ports.pdf_generation_port import PdfGenerationPort
 from app.use_cases.exceptions import ApplicationNotFoundError, ProceedingsNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -16,15 +15,13 @@ class GrantDecisionUseCase:
     def __init__(
         self,
         application_decision_port: ApplicationDecisionPort,
-        gov_notify_port: GovNotifyPort,
-        pdf_generation_port: PdfGenerationPort,
         create_certificate_context_use_case: CreateCertificateContextUseCase,
+        send_grant_email_use_case: SendGrantEmailUseCase,
         send_grant_letter_use_case: SendGrantLetterUseCase,
     ) -> None:
         self.application_decision_port = application_decision_port
-        self.gov_notify_port = gov_notify_port
-        self.pdf_generation_port = pdf_generation_port
         self.create_certificate_context_use_case = create_certificate_context_use_case
+        self.send_grant_email_use_case = send_grant_email_use_case
         self.send_grant_letter_use_case = send_grant_letter_use_case
 
     def execute(self, laa_reference: str, request: GrantApplicationUpdate) -> None:
@@ -60,15 +57,8 @@ class GrantDecisionUseCase:
                 )
             )
 
-            certificate_pdf = self.pdf_generation_port.generate_pdf(
-                "certificate.html", certificate_context
-            )
-
-            self.gov_notify_port.send_application_granted_decision_email(
-                application,
-                proceeding,
-                application.provider.email_address,
-                certificate_pdf,
+            self.send_grant_email_use_case.execute(
+                application, proceeding, certificate_context
             )
 
             self.send_grant_letter_use_case.execute(certificate_context)
