@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from app.domain.claim import Claim as DomainClaim
@@ -7,6 +8,7 @@ from app.models.claim.enums import ClaimType, POAType
 from app.models.claim.index import Claim
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.create_claim_port import CreateClaimPort
+from app.ports.get_claims_for_application_port import GetClaimsForApplicationPort
 from app.use_cases.exceptions import InvalidClaimError
 
 
@@ -26,9 +28,11 @@ class CreateClaimUseCase:
         self,
         create_claim_port: CreateClaimPort,
         application_lookup_port: ApplicationLookupPort,
+        get_claims_for_application_port: GetClaimsForApplicationPort,
     ) -> None:
         self.create_claim_port = create_claim_port
         self.application_lookup_port = application_lookup_port
+        self.get_claims_for_application_port = get_claims_for_application_port
 
     def execute(self, command: CreateClaimCommand) -> Claim:
         try:
@@ -43,6 +47,15 @@ class CreateClaimUseCase:
         except ClaimValidationError as e:
             raise InvalidClaimError(code=e.code, message=e.message) from e
 
+        application = self.application_lookup_port.get_application_by_laa_reference(
+            command.laa_reference
+        )
+        existing_claims = (
+            self.get_claims_for_application_port.get_claims_by_laa_reference(
+                command.laa_reference
+            )
+        )
+
         claim = self.create_claim_port.create_claim(
             laa_reference=command.laa_reference,
             claim=validated_claim,
@@ -50,10 +63,10 @@ class CreateClaimUseCase:
         )
         self.create_claim_port.commit()
 
-        application = self.application_lookup_port.get_application_by_laa_reference(
-            command.laa_reference
-        )
         if application is not None:
-            validated_claim.should_auto_reject_for_limit(application)
+            reference_date = datetime.now(UTC)
+            validated_claim.should_auto_reject(
+                application, existing_claims, reference_date
+            )
 
         return claim

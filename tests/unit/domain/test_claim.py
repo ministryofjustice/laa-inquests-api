@@ -1,15 +1,19 @@
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import MagicMock
 
 import pytest
 
 from app.domain.constants.claim_reason_codes import (
+    APPLICATION_CLAIMS_EXCEED_COST_LIMIT,
     CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT,
+    MAX_POA_CLAIMS_EXCEEDED,
 )
 from app.domain.claim import Claim
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
 from app.models.application.index import Application
-from app.models.claim.enums import ClaimType, POAType
+from app.models.claim.enums import ClaimStatus, ClaimType, POAType
+from app.models.claim.index import Claim as DBClaim
 
 
 def test_valid_with_net_and_gross():
@@ -241,3 +245,280 @@ def test_should_not_auto_reject_for_limit_when_total_not_exceeding_limit():
 
     assert decision.should_auto_reject is False
     assert decision.reason_code is None
+
+
+def _make_domain_claim(gross=Decimal("500.00")):
+    return Claim(
+        claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+        poa_type=POAType.PROFIT_COST,
+        net=Decimal("400.00"),
+        gross=gross,
+        vat_zero_total=None,
+    )
+
+
+def _make_application(limit=1000):
+    application = MagicMock(spec=Application)
+    application.proceedings = [MagicMock()]
+    application.proceedings[0].substantive_cost_limitation = limit
+    return application
+
+
+def _make_db_claim(
+    gross: Decimal, status: ClaimStatus = ClaimStatus.PENDING
+) -> DBClaim:
+    return DBClaim(
+        laa_reference=12345,
+        claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
+        total_profit_cost_gross=gross,
+        status_id=status,
+    )
+
+
+def test_should_auto_reject_for_application_total_limit_when_sum_exceeds_limit():
+    claim = _make_domain_claim(gross=Decimal("600.00"))
+    existing = [_make_db_claim(Decimal("500.00"))]
+    decision = claim.should_auto_reject_for_application_total_limit(
+        _make_application(limit=1000), existing
+    )
+
+    assert decision.should_auto_reject is True
+    assert decision.reason_code == APPLICATION_CLAIMS_EXCEED_COST_LIMIT
+
+
+def test_should_not_auto_reject_for_application_total_limit_when_sum_within_limit():
+    claim = _make_domain_claim(gross=Decimal("400.00"))
+    existing = [_make_db_claim(Decimal("500.00"))]
+    decision = claim.should_auto_reject_for_application_total_limit(
+        _make_application(limit=1000), existing
+    )
+
+    assert decision.should_auto_reject is False
+    assert decision.reason_code is None
+
+
+def test_should_not_auto_reject_for_application_total_limit_when_no_proceedings():
+    claim = _make_domain_claim(gross=Decimal("900.00"))
+    application = MagicMock(spec=Application)
+    application.proceedings = []
+    decision = claim.should_auto_reject_for_application_total_limit(application, [])
+
+    assert decision.should_auto_reject is False
+    assert decision.reason_code is None
+
+
+def test_should_not_auto_reject_for_application_total_limit_when_limit_is_none():
+    claim = _make_domain_claim(gross=Decimal("900.00"))
+    application = MagicMock(spec=Application)
+    application.proceedings = [MagicMock()]
+    application.proceedings[0].substantive_cost_limitation = None
+    decision = claim.should_auto_reject_for_application_total_limit(application, [])
+
+    assert decision.should_auto_reject is False
+    assert decision.reason_code is None
+
+
+def test_should_not_auto_reject_for_application_total_limit_when_gross_is_none():
+    claim = _make_domain_claim(gross=None)
+    decision = claim.should_auto_reject_for_application_total_limit(
+        _make_application(limit=1000), []
+    )
+
+    assert decision.should_auto_reject is False
+    assert decision.reason_code is None
+
+
+def test_should_not_auto_reject_for_application_total_limit_when_no_existing_claims():
+    claim = _make_domain_claim(gross=Decimal("900.00"))
+    decision = claim.should_auto_reject_for_application_total_limit(
+        _make_application(limit=1000), []
+    )
+
+    assert decision.should_auto_reject is False
+    assert decision.reason_code is None
+
+
+def test_should_auto_reject_for_application_total_limit_excludes_rejected_claims():
+    claim = _make_domain_claim(gross=Decimal("600.00"))
+    existing = [_make_db_claim(Decimal("500.00"), status=ClaimStatus.REJECTED)]
+    decision = claim.should_auto_reject_for_application_total_limit(
+        _make_application(limit=1000), existing
+    )
+
+    assert decision.should_auto_reject is False
+    assert decision.reason_code is None
+
+
+def test_should_auto_reject_for_application_total_limit_excludes_rejected_with_amendment_claims():
+    claim = _make_domain_claim(gross=Decimal("600.00"))
+    existing = [
+        _make_db_claim(Decimal("500.00"), status=ClaimStatus.REJECTED_WITH_AMENDMENT)
+    ]
+    decision = claim.should_auto_reject_for_application_total_limit(
+        _make_application(limit=1000), existing
+    )
+
+    assert decision.should_auto_reject is False
+    assert decision.reason_code is None
+
+
+def test_should_auto_reject_returns_per_claim_rejection_when_single_claim_exceeds_limit():
+    claim = _make_domain_claim(gross=Decimal("1200.00"))
+    decision = claim.should_auto_reject(_make_application(limit=1000), [])
+
+    assert decision.should_auto_reject is True
+    assert decision.reason_code == CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT
+
+
+def test_should_auto_reject_returns_application_total_rejection_when_total_exceeds_but_single_claim_does_not():
+    claim = _make_domain_claim(gross=Decimal("600.00"))
+    existing = [_make_db_claim(Decimal("500.00"))]
+    decision = claim.should_auto_reject(_make_application(limit=1000), existing)
+
+    assert decision.should_auto_reject is True
+    assert decision.reason_code == APPLICATION_CLAIMS_EXCEED_COST_LIMIT
+
+
+def test_should_auto_reject_returns_no_rejection_when_neither_check_fails():
+    claim = _make_domain_claim(gross=Decimal("400.00"))
+    existing = [_make_db_claim(Decimal("500.00"))]
+    decision = claim.should_auto_reject(_make_application(limit=1000), existing)
+
+    assert decision.should_auto_reject is False
+    assert decision.reason_code is None
+
+
+def _make_db_profit_cost_poa(
+    submission_date: datetime,
+    status: ClaimStatus = ClaimStatus.PENDING,
+) -> DBClaim:
+    return DBClaim(
+        laa_reference=12345,
+        claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
+        poa_type_id=POAType.PROFIT_COST,
+        total_profit_cost_gross=Decimal("500.00"),
+        status_id=status,
+        submission_date=submission_date,
+    )
+
+
+def test_should_auto_reject_for_max_poa_count_when_4_pending_accepted_exist_in_window():
+    reference = datetime(2026, 7, 20, tzinfo=UTC)
+    existing = [
+        _make_db_profit_cost_poa(reference - timedelta(days=30)),
+        _make_db_profit_cost_poa(reference - timedelta(days=60)),
+        _make_db_profit_cost_poa(
+            reference - timedelta(days=90), status=ClaimStatus.ACCEPTED
+        ),
+        _make_db_profit_cost_poa(reference - timedelta(days=120)),
+    ]
+    decision = _make_domain_claim().should_auto_reject_for_max_poa_count(
+        existing, reference
+    )
+
+    assert decision.should_auto_reject is True
+    assert decision.reason_code == MAX_POA_CLAIMS_EXCEEDED
+
+
+def test_should_not_auto_reject_for_max_poa_count_when_only_3_exist_in_window():
+    reference = datetime(2026, 7, 20, tzinfo=UTC)
+    existing = [
+        _make_db_profit_cost_poa(reference - timedelta(days=30)),
+        _make_db_profit_cost_poa(reference - timedelta(days=60)),
+        _make_db_profit_cost_poa(reference - timedelta(days=90)),
+    ]
+    decision = _make_domain_claim().should_auto_reject_for_max_poa_count(
+        existing, reference
+    )
+
+    assert decision.should_auto_reject is False
+    assert decision.reason_code is None
+
+
+def test_should_not_auto_reject_for_max_poa_count_when_4_exist_outside_12_months():
+    reference = datetime(2026, 7, 20, tzinfo=UTC)
+    existing = [
+        _make_db_profit_cost_poa(reference - timedelta(days=400)),
+        _make_db_profit_cost_poa(reference - timedelta(days=400)),
+        _make_db_profit_cost_poa(reference - timedelta(days=400)),
+        _make_db_profit_cost_poa(reference - timedelta(days=400)),
+    ]
+    decision = _make_domain_claim().should_auto_reject_for_max_poa_count(
+        existing, reference
+    )
+
+    assert decision.should_auto_reject is False
+    assert decision.reason_code is None
+
+
+def test_should_not_auto_reject_for_max_poa_count_when_4_exist_but_rejected():
+    reference = datetime(2026, 7, 20, tzinfo=UTC)
+    existing = [
+        _make_db_profit_cost_poa(
+            reference - timedelta(days=30), status=ClaimStatus.REJECTED
+        ),
+        _make_db_profit_cost_poa(
+            reference - timedelta(days=60), status=ClaimStatus.REJECTED
+        ),
+        _make_db_profit_cost_poa(
+            reference - timedelta(days=90),
+            status=ClaimStatus.REJECTED_WITH_AMENDMENT,
+        ),
+        _make_db_profit_cost_poa(
+            reference - timedelta(days=120), status=ClaimStatus.REJECTED
+        ),
+    ]
+    decision = _make_domain_claim().should_auto_reject_for_max_poa_count(
+        existing, reference
+    )
+
+    assert decision.should_auto_reject is False
+    assert decision.reason_code is None
+
+
+def test_should_not_auto_reject_for_max_poa_count_when_claim_is_not_profit_cost():
+    reference = datetime(2026, 7, 20, tzinfo=UTC)
+    claim = Claim(
+        claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+        poa_type=POAType.EXPERT_COST,
+        net=Decimal("500.00"),
+        gross=Decimal("500.00"),
+        vat_zero_total=None,
+    )
+    existing = [
+        _make_db_profit_cost_poa(reference - timedelta(days=30)),
+        _make_db_profit_cost_poa(reference - timedelta(days=60)),
+        _make_db_profit_cost_poa(reference - timedelta(days=90)),
+        _make_db_profit_cost_poa(reference - timedelta(days=120)),
+    ]
+    decision = claim.should_auto_reject_for_max_poa_count(existing, reference)
+
+    assert decision.should_auto_reject is False
+    assert decision.reason_code is None
+
+
+def test_should_not_auto_reject_for_max_poa_count_with_no_existing_claims():
+    reference = datetime(2026, 7, 20, tzinfo=UTC)
+    decision = _make_domain_claim().should_auto_reject_for_max_poa_count([], reference)
+
+    assert decision.should_auto_reject is False
+    assert decision.reason_code is None
+
+
+def test_should_auto_reject_returns_max_poas_before_cost_limit_check():
+    reference = datetime(2026, 7, 20, tzinfo=UTC)
+    claim = _make_domain_claim(
+        gross=Decimal("1200.00")
+    )  # would also trigger cost limit
+    existing = [
+        _make_db_profit_cost_poa(reference - timedelta(days=30)),
+        _make_db_profit_cost_poa(reference - timedelta(days=60)),
+        _make_db_profit_cost_poa(reference - timedelta(days=90)),
+        _make_db_profit_cost_poa(reference - timedelta(days=120)),
+    ]
+    decision = claim.should_auto_reject(
+        _make_application(limit=1000), existing, reference
+    )
+
+    assert decision.should_auto_reject is True
+    assert decision.reason_code == MAX_POA_CLAIMS_EXCEEDED

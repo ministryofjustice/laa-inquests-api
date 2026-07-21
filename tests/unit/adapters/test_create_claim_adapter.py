@@ -100,3 +100,38 @@ def test_create_claim_defaults_optional_fields_to_none_when_omitted(session):
 
     assert created_claim.poa_type_id is None
     assert created_claim.claimant_id is None
+
+
+def test_get_claims_by_laa_reference_returns_all_claims_regardless_of_status(session):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    adapter = ApplicationRepositoryAdapter(session)
+
+    adapter.create_claim(str(laa_reference), _make_domain_claim(), None)
+    pending_claim = session.exec(select(Claim)).first()
+    pending_claim.status_id = ClaimStatus.ACCEPTED
+    session.add(pending_claim)
+    session.commit()
+
+    adapter.create_claim(str(laa_reference), _make_domain_claim(), None)
+    adapter.create_claim(str(laa_reference), _make_domain_claim(), None)
+    all_claims = session.exec(select(Claim)).all()
+    all_claims[1].status_id = ClaimStatus.REJECTED
+    all_claims[2].status_id = ClaimStatus.REJECTED_WITH_AMENDMENT
+    session.commit()
+
+    result = adapter.get_claims_by_laa_reference(str(laa_reference))
+
+    assert len(result) == 3
+    returned_statuses = {c.status_id for c in result}
+    assert ClaimStatus.ACCEPTED in returned_statuses
+    assert ClaimStatus.REJECTED in returned_statuses
+    assert ClaimStatus.REJECTED_WITH_AMENDMENT in returned_statuses
+
+
+def test_get_claims_by_laa_reference_returns_empty_list_when_no_claims(session):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    adapter = ApplicationRepositoryAdapter(session)
+
+    result = adapter.get_claims_by_laa_reference(str(laa_reference))
+
+    assert result == []

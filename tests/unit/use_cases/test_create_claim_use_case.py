@@ -8,6 +8,7 @@ from app.models.claim.enums import ClaimType, POAType
 from app.models.claim.index import Claim
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.create_claim_port import CreateClaimPort
+from app.ports.get_claims_for_application_port import GetClaimsForApplicationPort
 from app.use_cases.create_claim import CreateClaimCommand, CreateClaimUseCase
 from app.domain.claim_error import ClaimErrorCode
 from app.use_cases.exceptions import InvalidClaimError
@@ -45,6 +46,12 @@ def _make_application_lookup_port(application: Application | None = None):
     return port
 
 
+def _make_get_claims_port(claims: list[Claim] | None = None):
+    port = MagicMock(spec=GetClaimsForApplicationPort)
+    port.get_claims_by_laa_reference.return_value = claims or []
+    return port
+
+
 def test_execute_creates_claim_and_commits():
     command = _make_command()
     claim = _make_claim()
@@ -56,6 +63,7 @@ def test_execute_creates_claim_and_commits():
     use_case = CreateClaimUseCase(
         create_claim_port=create_claim_port,
         application_lookup_port=application_lookup_port,
+        get_claims_for_application_port=_make_get_claims_port(),
     )
     use_case.execute(command)
 
@@ -79,6 +87,7 @@ def test_execute_returns_created_claim():
     use_case = CreateClaimUseCase(
         create_claim_port=create_claim_port,
         application_lookup_port=_make_application_lookup_port(),
+        get_claims_for_application_port=_make_get_claims_port(),
     )
     result = use_case.execute(command)
 
@@ -90,6 +99,7 @@ def test_execute_raises_invalid_claim_error_when_payment_on_account_without_poa_
     use_case = CreateClaimUseCase(
         create_claim_port=MagicMock(spec=CreateClaimPort),
         application_lookup_port=_make_application_lookup_port(),
+        get_claims_for_application_port=_make_get_claims_port(),
     )
 
     with pytest.raises(InvalidClaimError) as exc_info:
@@ -107,6 +117,7 @@ def test_execute_raises_invalid_claim_error_when_non_payment_on_account_with_poa
     use_case = CreateClaimUseCase(
         create_claim_port=MagicMock(spec=CreateClaimPort),
         application_lookup_port=_make_application_lookup_port(),
+        get_claims_for_application_port=_make_get_claims_port(),
     )
 
     with pytest.raises(InvalidClaimError) as exc_info:
@@ -122,6 +133,7 @@ def test_execute_raises_invalid_claim_error_when_profit_cost_has_no_costs():
     use_case = CreateClaimUseCase(
         create_claim_port=MagicMock(spec=CreateClaimPort),
         application_lookup_port=_make_application_lookup_port(),
+        get_claims_for_application_port=_make_get_claims_port(),
     )
 
     with pytest.raises(InvalidClaimError) as exc_info:
@@ -134,6 +146,7 @@ def test_execute_raises_invalid_claim_error_when_net_higher_than_gross():
     use_case = CreateClaimUseCase(
         create_claim_port=MagicMock(spec=CreateClaimPort),
         application_lookup_port=_make_application_lookup_port(),
+        get_claims_for_application_port=_make_get_claims_port(),
     )
 
     with pytest.raises(InvalidClaimError) as exc_info:
@@ -152,6 +165,7 @@ def test_execute_raises_invalid_claim_error_when_non_profit_cost_net_higher_than
     use_case = CreateClaimUseCase(
         create_claim_port=MagicMock(spec=CreateClaimPort),
         application_lookup_port=_make_application_lookup_port(),
+        get_claims_for_application_port=_make_get_claims_port(),
     )
 
     with pytest.raises(InvalidClaimError) as exc_info:
@@ -172,6 +186,7 @@ def test_execute_raises_invalid_claim_error_when_non_profit_cost_has_no_costs():
     use_case = CreateClaimUseCase(
         create_claim_port=MagicMock(spec=CreateClaimPort),
         application_lookup_port=_make_application_lookup_port(),
+        get_claims_for_application_port=_make_get_claims_port(),
     )
 
     with pytest.raises(InvalidClaimError) as exc_info:
@@ -185,6 +200,7 @@ def test_execute_raises_invalid_claim_error_when_mixing_vat_rates():
     use_case = CreateClaimUseCase(
         create_claim_port=MagicMock(spec=CreateClaimPort),
         application_lookup_port=_make_application_lookup_port(),
+        get_claims_for_application_port=_make_get_claims_port(),
     )
 
     with pytest.raises(InvalidClaimError) as exc_info:
@@ -207,6 +223,7 @@ def test_execute_does_not_raise_for_non_profit_cost_without_costs():
     use_case = CreateClaimUseCase(
         create_claim_port=port,
         application_lookup_port=_make_application_lookup_port(),
+        get_claims_for_application_port=_make_get_claims_port(),
     )
 
     use_case.execute(command)  # should not raise
@@ -226,6 +243,7 @@ def test_execute_accepts_non_profit_cost_with_vat_zero_only():
     use_case = CreateClaimUseCase(
         create_claim_port=port,
         application_lookup_port=_make_application_lookup_port(),
+        get_claims_for_application_port=_make_get_claims_port(),
     )
 
     use_case.execute(command)
@@ -245,6 +263,7 @@ def test_execute_uses_validated_domain_values_when_calling_port():
     use_case = CreateClaimUseCase(
         create_claim_port=port,
         application_lookup_port=_make_application_lookup_port(),
+        get_claims_for_application_port=_make_get_claims_port(),
     )
 
     use_case.execute(command)
@@ -255,35 +274,73 @@ def test_execute_uses_validated_domain_values_when_calling_port():
     assert kwargs["claim"].vat_zero_total == Decimal("150.00")
 
 
-def test_execute_commits_before_auto_decision_lookup():
+def test_execute_fetches_application_before_creating_claim():
     command = _make_command()
     claim = _make_claim()
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
 
-    application = MagicMock(spec=Application)
-    application.proceedings = []
-    application_lookup_port = _make_application_lookup_port(application)
+    application_lookup_port = _make_application_lookup_port()
 
-    marker = {"committed": False}
+    marker = {"application_fetched": False}
 
-    def mark_committed() -> None:
-        marker["committed"] = True
+    def mark_application_fetched(_laa_reference: str) -> None:
+        marker["application_fetched"] = True
 
-    def assert_committed_before_lookup(_laa_reference: str):
-        assert marker["committed"] is True
-        app = MagicMock(spec=Application)
-        app.proceedings = []
-        return app
+    def assert_application_fetched_before_create(*_args, **_kwargs) -> MagicMock:
+        assert marker["application_fetched"] is True
+        return claim
 
-    create_claim_port.commit.side_effect = mark_committed
     application_lookup_port.get_application_by_laa_reference.side_effect = (
-        assert_committed_before_lookup
+        mark_application_fetched
+    )
+    create_claim_port.create_claim.side_effect = (
+        assert_application_fetched_before_create
     )
 
     use_case = CreateClaimUseCase(
         create_claim_port=create_claim_port,
         application_lookup_port=application_lookup_port,
+        get_claims_for_application_port=_make_get_claims_port(),
     )
 
     use_case.execute(command)
+
+
+def test_execute_fetches_existing_claims_with_correct_laa_reference():
+    command = _make_command()
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = _make_claim()
+    get_claims_port = _make_get_claims_port()
+
+    use_case = CreateClaimUseCase(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(),
+        get_claims_for_application_port=get_claims_port,
+    )
+    use_case.execute(command)
+
+    get_claims_port.get_claims_by_laa_reference.assert_called_once_with(
+        command.laa_reference
+    )
+
+
+def test_execute_does_not_raise_when_application_total_exceeds_limit():
+    command = _make_command()
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = _make_claim()
+
+    existing_claim = MagicMock(spec=Claim)
+    existing_claim.total_profit_cost_gross = Decimal("9000.00")
+
+    application = MagicMock(spec=Application)
+    application.proceedings = [MagicMock()]
+    application.proceedings[0].substantive_cost_limitation = 1000
+
+    use_case = CreateClaimUseCase(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(application),
+        get_claims_for_application_port=_make_get_claims_port([existing_claim]),
+    )
+
+    use_case.execute(command)  # should not raise

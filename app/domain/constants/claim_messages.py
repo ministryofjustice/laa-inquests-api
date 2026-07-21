@@ -15,3 +15,4 @@ MISSING_POA_TYPE_MESSAGE = (
 POA_NOT_ALLOWED_MESSAGE = (
     "poa_type_id must not be provided when claim_type is not PAYMENT_ON_ACCOUNT"
 )
+MAX_POA_CLAIMS_EXCEEDED_MESSAGE = "Maximum number of POA claims exceeded"

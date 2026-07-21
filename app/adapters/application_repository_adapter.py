@@ -21,6 +21,7 @@ from app.models.claim.index import Claim
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.create_claim_port import CreateClaimPort
 from app.ports.get_application_port import GetApplicationPort
+from app.ports.get_claims_for_application_port import GetClaimsForApplicationPort
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.list_applications_port import ListApplicationsPort
 from app.ports.search_application_port import SearchApplicationPort
@@ -31,6 +32,7 @@ class ApplicationRepositoryAdapter(
     GetApplicationPort,
     CreateApplicationPort,
     CreateClaimPort,
+    GetClaimsForApplicationPort,
     ApplicationDecisionPort,
     ListApplicationsPort,
     SearchApplicationPort,
@@ -187,6 +189,10 @@ class ApplicationRepositoryAdapter(
 
     def rollback(self) -> None:
         self.session.rollback()
+
+    def get_claims_by_laa_reference(self, laa_reference: str) -> list[Claim]:
+        statement = select(Claim).where(Claim.laa_reference == int(laa_reference))
+        return list(self.session.exec(statement).all())
 
     def save_uploaded_coroners_letter(
         self,
