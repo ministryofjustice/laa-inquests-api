@@ -1,5 +1,3 @@
-"""Unit tests for WeasyPrint adapter."""
-
 from datetime import date
 from io import BytesIO
 
@@ -42,30 +40,34 @@ def _sample_context() -> ApplicationCertificate:
     )
 
 
-def test_generate_pdf_returns_bytes():
+@pytest.fixture(scope="module")
+def certificate_pdf() -> bytes:
+    """Generate the certificate PDF once for all tests that need it."""
+    adapter = PdfGeneratorAdapter()
+    return adapter.generate_pdf("certificate.html", _sample_context())
+
+
+@pytest.fixture(scope="module")
+def print_letter_pdf() -> bytes:
+    """Generate the print letter PDF once for all tests that need it."""
+    adapter = PdfGeneratorAdapter()
+    return adapter.generate_print_letter_pdf(_sample_context())
+
+
+def test_generate_pdf_returns_bytes(certificate_pdf):
     """Test that generate_pdf returns bytes."""
-    adapter = PdfGeneratorAdapter()
-    result = adapter.generate_pdf("certificate.html", _sample_context())
-
-    assert isinstance(result, bytes)
-    assert len(result) > 0
+    assert isinstance(certificate_pdf, bytes)
+    assert len(certificate_pdf) > 0
 
 
-def test_generate_pdf_returns_valid_pdf():
+def test_generate_pdf_returns_valid_pdf(certificate_pdf):
     """Test that generate_pdf returns content starting with PDF magic bytes."""
-    adapter = PdfGeneratorAdapter()
-    result = adapter.generate_pdf("certificate.html", _sample_context())
-
-    # PDF files start with %PDF
-    assert result.startswith(b"%PDF")
+    assert certificate_pdf.startswith(b"%PDF")
 
 
-def test_generate_pdf_returns_pdf_with_correct_content():
+def test_generate_pdf_returns_pdf_with_correct_content(certificate_pdf):
     """Test that generate_pdf returns a PDF containing expected content."""
-    adapter = PdfGeneratorAdapter()
-    result = adapter.generate_pdf("certificate.html", _sample_context())
-
-    reader = PdfReader(BytesIO(result))
+    reader = PdfReader(BytesIO(certificate_pdf))
     pdf_text = "\n".join(page.extract_text() or "" for page in reader.pages)
 
     assert "Jane Doe" in pdf_text
@@ -82,33 +84,24 @@ def test_generate_pdf_template_not_found_raises_error():
         adapter.generate_pdf("nonexistent_template.html", {})
 
 
-def test_generate_pdf_formats_cost_limitation_as_currency():
+def test_generate_pdf_formats_cost_limitation_as_currency(certificate_pdf):
     """Test that cost_limitation is formatted as currency with thousands separator."""
-    adapter = PdfGeneratorAdapter()
-    result = adapter.generate_pdf("certificate.html", _sample_context())
-
-    reader = PdfReader(BytesIO(result))
+    reader = PdfReader(BytesIO(certificate_pdf))
     pdf_text = "\n".join(page.extract_text() or "" for page in reader.pages)
 
     # Verify the cost limitation appears formatted as currency
     assert "£15,000" in pdf_text
 
 
-def test_generate_print_letter_pdf_returns_valid_pdf():
+def test_generate_print_letter_pdf_returns_valid_pdf(print_letter_pdf):
     """Test that generate_print_letter_pdf returns a valid PDF."""
-    adapter = PdfGeneratorAdapter()
-    result = adapter.generate_print_letter_pdf(_sample_context())
-
-    assert isinstance(result, bytes)
-    assert result.startswith(b"%PDF")
+    assert isinstance(print_letter_pdf, bytes)
+    assert print_letter_pdf.startswith(b"%PDF")
 
 
-def test_generate_print_letter_pdf_contains_cover_letter_content():
+def test_generate_print_letter_pdf_contains_cover_letter_content(print_letter_pdf):
     """Test that the combined PDF contains cover letter content."""
-    adapter = PdfGeneratorAdapter()
-    result = adapter.generate_print_letter_pdf(_sample_context())
-
-    reader = PdfReader(BytesIO(result))
+    reader = PdfReader(BytesIO(print_letter_pdf))
     pdf_text = "\n".join(page.extract_text() or "" for page in reader.pages)
 
     assert "Civil Case Management" in pdf_text
@@ -116,24 +109,18 @@ def test_generate_print_letter_pdf_contains_cover_letter_content():
     assert "We issued your legal aid certificate" in pdf_text
 
 
-def test_generate_print_letter_pdf_contains_certificate_content():
+def test_generate_print_letter_pdf_contains_certificate_content(print_letter_pdf):
     """Test that the combined PDF contains certificate content."""
-    adapter = PdfGeneratorAdapter()
-    result = adapter.generate_print_letter_pdf(_sample_context())
-
-    reader = PdfReader(BytesIO(result))
+    reader = PdfReader(BytesIO(print_letter_pdf))
     pdf_text = "\n".join(page.extract_text() or "" for page in reader.pages)
 
     assert "Civil legal aid certificate" in pdf_text
     assert "Test Firm Ltd" in pdf_text
 
 
-def test_generate_print_letter_pdf_contains_faq_content():
+def test_generate_print_letter_pdf_contains_faq_content(print_letter_pdf):
     """Test that the combined PDF contains FAQ content."""
-    adapter = PdfGeneratorAdapter()
-    result = adapter.generate_print_letter_pdf(_sample_context())
-
-    reader = PdfReader(BytesIO(result))
+    reader = PdfReader(BytesIO(print_letter_pdf))
     pdf_text = "\n".join(page.extract_text() or "" for page in reader.pages)
 
     assert "Important Information about your legal aid" in pdf_text
