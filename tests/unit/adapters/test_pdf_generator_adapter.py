@@ -123,5 +123,6 @@ def test_generate_print_letter_pdf_contains_faq_content(print_letter_pdf):
     reader = PdfReader(BytesIO(print_letter_pdf))
     pdf_text = "\n".join(page.extract_text() or "" for page in reader.pages)
 
+    assert "FAQs" in pdf_text
     assert "Important Information about your legal aid" in pdf_text
     assert "Statutory Charge" in pdf_text
