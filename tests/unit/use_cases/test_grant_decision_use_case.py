@@ -64,17 +64,24 @@ def create_certificate_context_use_case() -> MagicMock:
 
 
 @pytest.fixture
+def send_grant_letter_use_case() -> MagicMock:
+    return MagicMock()
+
+
+@pytest.fixture
 def use_case(
     update_decision_port: MagicMock,
     gov_notify_port: MagicMock,
     pdf_generation_port: MagicMock,
     create_certificate_context_use_case: MagicMock,
+    send_grant_letter_use_case: MagicMock,
 ) -> GrantDecisionUseCase:
     return GrantDecisionUseCase(
         update_decision_port,
         gov_notify_port,
         pdf_generation_port,
         create_certificate_context_use_case,
+        send_grant_letter_use_case,
     )
 
 
@@ -192,6 +199,35 @@ def test_grant_decision_raises_exception_when_pdf_generation_port_fails_and_roll
     use_case, update_decision_port, pdf_generation_port, grant_request
 ):
     pdf_generation_port.generate_pdf.side_effect = Exception("PDF generation failure")
+
+    with pytest.raises(Exception):
+        use_case.execute("1", grant_request)
+
+    update_decision_port.rollback.assert_called_once()
+
+
+def test_grant_decision_calls_send_grant_letter_use_case(
+    use_case,
+    create_certificate_context_use_case,
+    send_grant_letter_use_case,
+    grant_request,
+):
+    use_case.execute("1", grant_request)
+
+    send_grant_letter_use_case.execute.assert_called_once_with(
+        create_certificate_context_use_case.prepare_context_for_display.return_value,
+    )
+
+
+def test_grant_decision_raises_exception_when_send_grant_letter_fails_and_rollbacks(
+    use_case,
+    update_decision_port,
+    send_grant_letter_use_case,
+    grant_request,
+):
+    send_grant_letter_use_case.execute.side_effect = Exception(
+        "Send grant letter failure"
+    )
 
     with pytest.raises(Exception):
         use_case.execute("1", grant_request)

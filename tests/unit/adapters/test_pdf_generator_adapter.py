@@ -92,3 +92,49 @@ def test_generate_pdf_formats_cost_limitation_as_currency():
 
     # Verify the cost limitation appears formatted as currency
     assert "£15,000" in pdf_text
+
+
+def test_generate_print_letter_pdf_returns_valid_pdf():
+    """Test that generate_print_letter_pdf returns a valid PDF."""
+    adapter = PdfGeneratorAdapter()
+    result = adapter.generate_print_letter_pdf(_sample_context())
+
+    assert isinstance(result, bytes)
+    assert result.startswith(b"%PDF")
+
+
+def test_generate_print_letter_pdf_contains_cover_letter_content():
+    """Test that the combined PDF contains cover letter content."""
+    adapter = PdfGeneratorAdapter()
+    result = adapter.generate_print_letter_pdf(_sample_context())
+
+    reader = PdfReader(BytesIO(result))
+    pdf_text = "\n".join(page.extract_text() or "" for page in reader.pages)
+
+    assert "Civil Case Management" in pdf_text
+    assert "Dear Jane Doe" in pdf_text
+    assert "We issued your legal aid certificate" in pdf_text
+
+
+def test_generate_print_letter_pdf_contains_certificate_content():
+    """Test that the combined PDF contains certificate content."""
+    adapter = PdfGeneratorAdapter()
+    result = adapter.generate_print_letter_pdf(_sample_context())
+
+    reader = PdfReader(BytesIO(result))
+    pdf_text = "\n".join(page.extract_text() or "" for page in reader.pages)
+
+    assert "Civil legal aid certificate" in pdf_text
+    assert "Test Firm Ltd" in pdf_text
+
+
+def test_generate_print_letter_pdf_contains_faq_content():
+    """Test that the combined PDF contains FAQ content."""
+    adapter = PdfGeneratorAdapter()
+    result = adapter.generate_print_letter_pdf(_sample_context())
+
+    reader = PdfReader(BytesIO(result))
+    pdf_text = "\n".join(page.extract_text() or "" for page in reader.pages)
+
+    assert "Important Information about your legal aid" in pdf_text
+    assert "Statutory Charge" in pdf_text

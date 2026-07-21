@@ -73,3 +73,9 @@ class GovNotifyAdapter(GovNotifyPort):
             template_id=Config.GOV_NOTIFY_APPLICATION_GRANT_TEMPLATE_ID,
             personalisation=personalisation.model_dump(),
         )
+
+    def send_precompiled_letter(self, reference: str, pdf: bytes) -> None:
+        self.client.send_precompiled_letter_notification(
+            reference=f"{reference}-{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            pdf_file=BytesIO(pdf),
+        )

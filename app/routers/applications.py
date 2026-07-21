@@ -50,6 +50,7 @@ from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.create_claim import CreateClaimCommand, CreateClaimUseCase
 from app.use_cases.retrieve_certificate import RetrieveCertificateUseCase
 from app.use_cases.get_application import GetApplicationUseCase
+from app.use_cases.send_grant_letter import SendGrantLetterUseCase
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
     ApplicationNotGrantedError,
@@ -217,11 +218,16 @@ def get_grant_decision_use_case(
         get_create_certificate_context_use_case
     ),
 ) -> GrantDecisionUseCase:
+    send_grant_letter_use_case = SendGrantLetterUseCase(
+        pdf_generation_port=pdf_generation_port,
+        gov_notify_port=gov_notify_port,
+    )
     return GrantDecisionUseCase(
         application_decision_port=update_decision_port,
         gov_notify_port=gov_notify_port,
         pdf_generation_port=pdf_generation_port,
         create_certificate_context_use_case=create_certificate_context_use_case,
+        send_grant_letter_use_case=send_grant_letter_use_case,
     )
 
 

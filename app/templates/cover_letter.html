@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en" class="govuk-template">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b0c0c">
+    <title>Client Cover Letter - GOV.UK</title>
+    <link rel="stylesheet" href="../static/govuk-frontend.css">
+    <style>
+        /* Override font-family to use Arial consistently for PDF generation since GDS Transport fonts are not available */
+        * {
+            font-family: Arial, sans-serif !important;
+        }
+
+        /* Remove grey background for PDF generation */
+        html,
+        body,
+        .govuk-template {
+            background-color: #ffffff !important;
+        }
+
+        /* Gov Notify precompiled letter address window positioning:
+           10mm from left, 22mm from top, 110mm wide x 40mm tall */
+        .address-window {
+            position: absolute;
+            top: 22mm;
+            left: 10mm;
+            width: 110mm;
+            height: 40mm;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .letter-body {
+            margin-top: 75mm;
+            padding: 0 15mm;
+        }
+
+        .from-header {
+            background-color: #f3f2f1;
+            padding: 10px 15px;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .certificate-number {
+            background-color: #f3f2f1;
+            padding: 10px 15px;
+            margin-bottom: 30px;
+        }
+
+        .contact-section {
+            margin-top: 30px;
+        }
+
+        .contact-section ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .contact-section li {
+            margin-bottom: 15px;
+        }
+
+        .signature {
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body class="govuk-template__body">
+
+<div class="address-window">
+    {{ client_name }}<br>
+    {% if client_address %}
+        {{ client_address.address_line_1 }}<br>
+        {% if client_address.address_line_2 %}{{ client_address.address_line_2 }}<br>{% endif %}
+        {{ client_address.town_or_city }}<br>
+        {% if client_address.county %}{{ client_address.county }}<br>{% endif %}
+        {{ client_address.postcode }}
+    {% endif %}
+</div>
+
+<div class="letter-body">
+    <div class="from-header">
+        From Civil Case Management
+    </div>
+
+    <div class="certificate-number">
+        Certificate number: {{ laa_reference }}
+    </div>
+
+    <p class="govuk-body">Dear {{ client_name }},</p>
+
+    <p class="govuk-body">
+        We issued your legal aid certificate on {{ date_created.strftime("%d %B %Y") }} and a copy is included with this letter.
+    </p>
+
+    <p class="govuk-body">
+        There is also a frequently asked questions (FAQs) document included.
+    </p>
+
+    <div class="contact-section">
+        <h2 class="govuk-heading-m">Contact us</h2>
+        <p class="govuk-body">If you have any questions, you can:</p>
+        <ul>
+            <li>
+                <strong>Phone</strong>: 0345 345 4 345
+            </li>
+            <li>
+                <strong>Write to</strong>:<br>
+                Legal Aid Agency<br>
+                Unit B8<br>
+                Berkley Way<br>
+                Viking Business Park<br>
+                Jarrow<br>
+                NE31 1SF
+            </li>
+            <li>
+                <strong>Email</strong>: contactcivil@justice.gov.uk
+            </li>
+        </ul>
+    </div>
+
+    <div class="signature">
+        <p class="govuk-body">Yours sincerely,</p>
+        <p class="govuk-body">Civil Case Management</p>
+        <p class="govuk-body">On behalf of Director of Legal Aid Casework</p>
+    </div>
+</div>
+
+</body>
+</html>
+
