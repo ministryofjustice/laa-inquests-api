@@ -12,6 +12,7 @@ from app.routers.applications import (
     get_provider_details_port,
     get_gov_notify_port,
     get_sds_port,
+    get_pdf_generation_port,
 )
 from app.models import User
 from app.models.application.index import (
@@ -113,7 +114,7 @@ def session_fixture():
         db_session.refresh(new_deceased)
 
         new_provider = Provider(
-            firm_code="0A123B", office_id="001", email_address="test@example.com"
+            firm_code="0A123B", office_id="0U651L", email_address="test@example.com"
         )
         db_session.add(new_provider)
         db_session.commit()
@@ -136,9 +137,12 @@ def session_fixture():
 
 @pytest.fixture(name="client")
 def client_fixture(session: Session):
+    mock_pdf_generation_port = MagicMock()
     mock_gov_notify_port = MagicMock()
+
     mock_gov_notify_port.send_application_submit_confirmation_email.return_value = None
     mock_gov_notify_port.send_application_refused_decision_email.return_value = None
+    mock_gov_notify_port.send_application_granted_decision_email.return_value = None
 
     def get_session_override():
         return session
@@ -146,10 +150,18 @@ def client_fixture(session: Session):
     def get_provider_details_port_override():
         mock_port = MagicMock()
         mock_port.get_firm_name.return_value = "Test Firm Name"
+        mock_port.get_office_address.return_value = Address(
+            address_line_1="Test Office Street",
+            town_or_city="Test City",
+            postcode="TE1 1ST",
+        )
         return mock_port
 
     def get_gov_notify_port_override():
         return mock_gov_notify_port
+
+    def get_pdf_generation_port_override():
+        return mock_pdf_generation_port
 
     def get_sds_port_override():
         mock_sds = MagicMock()
@@ -171,6 +183,7 @@ def client_fixture(session: Session):
         get_provider_details_port_override
     )
     api.dependency_overrides[get_gov_notify_port] = get_gov_notify_port_override
+    api.dependency_overrides[get_pdf_generation_port] = get_pdf_generation_port_override
     api.dependency_overrides[get_sds_port] = get_sds_port_override
     api.dependency_overrides[get_entra_auth_port] = get_entra_auth_port_bypass
 
@@ -189,10 +202,20 @@ def entra_auth_client_fixture(session: Session):
     def get_provider_details_port_override():
         mock_port = MagicMock()
         mock_port.get_firm_name.return_value = "Test Firm Name"
+        mock_port.get_office_address.return_value = Address(
+            address_line_1="Test Office Street",
+            town_or_city="Test City",
+            postcode="TE1 1ST",
+        )
         return mock_port
 
     def get_gov_notify_port_override():
         return MagicMock()
+
+    def get_pdf_generation_port_override():
+        mock_port = MagicMock()
+        mock_port.generate_pdf.return_value = b"%PDF-1.4\n%Mock PDF content"
+        return mock_port
 
     def get_sds_port_override():
         mock_sds = MagicMock()
@@ -243,6 +266,7 @@ def entra_auth_client_fixture(session: Session):
         get_provider_details_port_override
     )
     api.dependency_overrides[get_gov_notify_port] = get_gov_notify_port_override
+    api.dependency_overrides[get_pdf_generation_port] = get_pdf_generation_port_override
     api.dependency_overrides[get_sds_port] = get_sds_port_override
     api.dependency_overrides[get_entra_auth_port] = get_entra_auth_port_override
 
@@ -264,3 +288,9 @@ def auth_token_disabled_user(client):
 def mock_gov_notify(client):
     """Return the shared mock Gov Notify port for E2E tests."""
     return api.dependency_overrides[get_gov_notify_port]()
+
+
+@pytest.fixture
+def mock_pdf_generation_port(client):
+    """Return the shared mock PDF generation port for E2E tests."""
+    return api.dependency_overrides[get_pdf_generation_port]()

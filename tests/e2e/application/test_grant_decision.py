@@ -1,5 +1,4 @@
 from datetime import date, datetime, UTC
-
 from sqlmodel import select
 
 from app.models.application.enums import MeritsDecision

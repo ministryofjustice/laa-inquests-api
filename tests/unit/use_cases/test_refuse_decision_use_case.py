@@ -3,17 +3,14 @@ from unittest.mock import MagicMock
 import pytest
 from pydantic import ValidationError
 
-from app.models.application.enums import MeritsDecision, ProceedingId
 from app.models.application.index import (
     Application,
-    ApplicationProceeding,
-    Client,
     RefuseApplicationUpdate,
-    Provider,
 )
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.use_cases.exceptions import ApplicationNotFoundError, ProceedingsNotFoundError
 from app.use_cases.refuse_decision import RefuseDecisionUseCase
+from tests.unit.factories import create_base_application
 
 
 def _make_request():
@@ -52,21 +49,9 @@ def test_refusal_update_rejects_invalid_reason_for_refusal():
 
 
 def test_refuse_decision_calls_session_add_and_commit():
-    proceeding = ApplicationProceeding(
-        laa_reference=1, proceeding_id=ProceedingId.TEST1
-    )
-    client = Client(
-        client_first_name="Test",
-        client_last_name="Client",
-        date_of_birth="01-01-1990",
-        correspondence_address_source="USE_CLIENT_HOME_ADDRESS",
-    )
-    provider = Provider(
-        firm_code="0A123B", office_id="001", email_address="test@example.com"
-    )
-    application = Application(
-        proceedings=[proceeding], provider=provider, client=client
-    )
+    application = create_base_application()
+    proceeding = application.proceedings[0]
+
     update_decision_port = MagicMock(spec=ApplicationDecisionPort)
     update_decision_port.get_application_by_laa_reference.return_value = application
     update_decision_port.update_decision.return_value = None
@@ -80,21 +65,9 @@ def test_refuse_decision_calls_session_add_and_commit():
 
 
 def test_refuse_decision_sets_merits_decision_to_refused():
-    proceeding = ApplicationProceeding(
-        laa_reference=1, proceeding_id=ProceedingId.TEST1
-    )
-    client = Client(
-        client_first_name="Test",
-        client_last_name="Client",
-        date_of_birth="01-01-1990",
-        correspondence_address_source="USE_CLIENT_HOME_ADDRESS",
-    )
-    provider = Provider(
-        firm_code="0A123B", office_id="001", email_address="test@example.com"
-    )
-    application = Application(
-        proceedings=[proceeding], provider=provider, client=client
-    )
+    application = create_base_application()
+    proceeding = application.proceedings[0]
+
     update_decision_port = MagicMock(spec=ApplicationDecisionPort)
     update_decision_port.get_application_by_laa_reference.return_value = application
     gov_notify_port = MagicMock()
@@ -102,7 +75,7 @@ def test_refuse_decision_sets_merits_decision_to_refused():
 
     use_case.execute("1", _make_request())
 
-    assert proceeding.merits_decision == MeritsDecision.REFUSED
+    assert proceeding.merits_decision == "REFUSED"
 
 
 def test_refuse_decision_raises_404_when_application_not_found():
@@ -125,21 +98,8 @@ def test_refuse_decision_raises_404_when_no_proceedings():
 
 
 def test_refuse_decision_sets_overall_decision_on_application():
-    proceeding = ApplicationProceeding(
-        laa_reference=1, proceeding_id=ProceedingId.TEST1
-    )
-    client = Client(
-        client_first_name="Test",
-        client_last_name="Client",
-        date_of_birth="01-01-1990",
-        correspondence_address_source="USE_CLIENT_HOME_ADDRESS",
-    )
-    provider = Provider(
-        firm_code="0A123B", office_id="001", email_address="test@example.com"
-    )
-    application = Application(
-        proceedings=[proceeding], provider=provider, client=client
-    )
+    application = create_base_application()
+
     update_decision_port = MagicMock(spec=ApplicationDecisionPort)
     update_decision_port.get_application_by_laa_reference.return_value = application
     gov_notify_port = MagicMock()
@@ -147,25 +107,12 @@ def test_refuse_decision_sets_overall_decision_on_application():
 
     use_case.execute("1", _make_request())
 
-    assert application.overall_decision == MeritsDecision.REFUSED
+    assert application.overall_decision == "REFUSED"
 
 
 def test_refuse_decision_raises_exception_and_rolls_back_if_gov_notify_fails():
-    proceeding = ApplicationProceeding(
-        laa_reference=1, proceeding_id=ProceedingId.TEST1
-    )
-    client = Client(
-        client_first_name="Test",
-        client_last_name="Client",
-        date_of_birth="01-01-1990",
-        correspondence_address_source="USE_CLIENT_HOME_ADDRESS",
-    )
-    provider = Provider(
-        firm_code="0A123B", office_id="001", email_address="test@example.com"
-    )
-    application = Application(
-        proceedings=[proceeding], provider=provider, client=client
-    )
+    application = create_base_application()
+
     update_decision_port = MagicMock(spec=ApplicationDecisionPort)
     update_decision_port.get_application_by_laa_reference.return_value = application
     gov_notify_port = MagicMock()

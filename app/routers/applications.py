@@ -8,6 +8,7 @@ from mimetypes import guess_type
 
 from app.adapters.sds_adapter import SdsAdapter
 from app.adapters.application_repository_adapter import ApplicationRepositoryAdapter
+from app.adapters.pdf_generator_adapter import PdfGeneratorAdapter
 from app.db import get_session
 from app.models.application.index import (
     Application,
@@ -37,6 +38,7 @@ from app.ports.provider_details_port import ProviderDetailsPort
 from app.ports.search_application_port import SearchApplicationPort
 from app.ports.sds_port import SdsPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
+from app.ports.pdf_generation_port import PdfGenerationPort
 from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.create_claim import CreateClaimCommand, CreateClaimUseCase
 from app.use_cases.retrieve_certificate import RetrieveCertificateUseCase
@@ -88,6 +90,10 @@ def get_sds_port() -> SdsPort:
         client_secret=Config.SDS_CLIENT_SECRET,
         scope=Config.SDS_SCOPE,
     )
+
+
+def get_pdf_generation_port() -> PdfGenerationPort:
+    return PdfGeneratorAdapter()
 
 
 def get_application_db_adapter(
@@ -184,9 +190,17 @@ def get_retrieve_certificate_use_case(
 
 def get_grant_decision_use_case(
     update_decision_port: ApplicationDecisionPort = Depends(get_application_db_adapter),
+    gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
+    pdf_generation_port: PdfGenerationPort = Depends(get_pdf_generation_port),
+    create_certificate_context_use_case=Depends(
+        get_create_certificate_context_use_case
+    ),
 ) -> GrantDecisionUseCase:
     return GrantDecisionUseCase(
         application_decision_port=update_decision_port,
+        gov_notify_port=gov_notify_port,
+        pdf_generation_port=pdf_generation_port,
+        create_certificate_context_use_case=create_certificate_context_use_case,
     )
 
 
@@ -407,6 +421,7 @@ def grant_decision(
     """Grant the merits decision on the single proceeding for a given application."""
     try:
         use_case.execute(laa_reference, request)
+
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
     except ProceedingsNotFoundError:

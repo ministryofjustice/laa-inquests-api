@@ -1,6 +1,9 @@
 """Gov Notify adapter for application emails."""
 
+from io import BytesIO
+from datetime import datetime
 from notifications_python_client.notifications import NotificationsAPIClient
+from notifications_python_client import prepare_upload
 
 from app.config import Config
 from app.models.application.index import Application, ApplicationProceeding
@@ -11,6 +14,9 @@ from app.use_cases.notify.create_application_refusal_email_personalisation impor
 )
 from app.use_cases.notify.create_application_submission_email_personalisation import (
     create_application_submission_email_personalisation,
+)
+from app.use_cases.notify.create_application_grant_email_personalisation import (
+    create_application_grant_email_personalisation,
 )
 
 
@@ -44,5 +50,26 @@ class GovNotifyAdapter(GovNotifyPort):
         self.client.send_email_notification(
             email_address=recipient_email,
             template_id=Config.GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID,
+            personalisation=personalisation.model_dump(),
+        )
+
+    def send_application_granted_decision_email(
+        self,
+        application: Application,
+        proceeding: ApplicationProceeding,
+        recipient_email: str,
+        certificate_pdf: bytes,
+    ) -> None:
+        filename = f"{application.laa_reference}_Certificate_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        certificate_payload = prepare_upload(
+            BytesIO(certificate_pdf), filename=filename
+        )
+
+        personalisation = create_application_grant_email_personalisation(
+            application, proceeding, certificate_payload
+        )
+        self.client.send_email_notification(
+            email_address=recipient_email,
+            template_id=Config.GOV_NOTIFY_APPLICATION_GRANT_TEMPLATE_ID,
             personalisation=personalisation.model_dump(),
         )

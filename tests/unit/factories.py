@@ -46,6 +46,19 @@ def create_base_correspondence_address(**overrides):
     return Address(**(defaults | overrides))
 
 
+def create_base_office_address(**overrides):
+    """Create a base office address with optional field overrides."""
+    defaults = {
+        "address_id": 3,
+        "address_line_1": "123 Main St",
+        "address_line_2": "Apt 4B",
+        "town_or_city": "London",
+        "county": "Greater London",
+        "postcode": "SW1A 1AA",
+    }
+    return Address(**(defaults | overrides))
+
+
 def create_base_client(
     home_address=_NOT_PROVIDED, correspondence_address=_NOT_PROVIDED, **overrides
 ):
@@ -55,6 +68,13 @@ def create_base_client(
 
     if correspondence_address is _NOT_PROVIDED:
         correspondence_address = create_base_correspondence_address()
+
+    if correspondence_address is not None:
+        correspondence_recipient = "John Smith"
+        correspondence_recipient_type = CorrespondenceRecipientType.PERSON
+    else:
+        correspondence_recipient = None
+        correspondence_recipient_type = None
 
     defaults = {
         "client_id": 1,
@@ -71,8 +91,8 @@ def create_base_client(
         "correspondence_address_id": 2,
         "correspondence_address": correspondence_address,
         "is_client_correspondence_recipient": False,
-        "correspondence_recipient_type": CorrespondenceRecipientType.PERSON,
-        "correspondence_recipient_name": "John Smith",
+        "correspondence_recipient_type": correspondence_recipient_type,
+        "correspondence_recipient_name": correspondence_recipient,
     }
     return Client(**(defaults | overrides))
 
@@ -191,66 +211,56 @@ def create_base_application(
 
 def create_base_certificate(
     application=_NOT_PROVIDED,
-    proceeding=_NOT_PROVIDED,
+    application_proceeding=_NOT_PROVIDED,
     public_bodies=_NOT_PROVIDED,
     **overrides,
 ):
     """Create a base certificate with optional field overrides."""
     if application is _NOT_PROVIDED:
         application = create_base_application()
-    if proceeding is _NOT_PROVIDED:
-        proceeding = create_base_application_proceeding()
+    if application_proceeding is _NOT_PROVIDED:
+        application_proceeding = create_base_application_proceeding()
     if public_bodies is _NOT_PROVIDED:
         public_bodies = [create_base_application_public_body()]
 
     client_address = (
         application.client.correspondence_address or application.client.home_address
     )
-    client_address_string = "\n".join(
-        part
-        for part in [
-            client_address.address_line_1,
-            client_address.address_line_2,
-            client_address.town_or_city,
-            client_address.county,
-            client_address.postcode,
-        ]
-        if part
-    )
-
     defaults = {
         "client_name": f"{application.client.client_first_name} {application.client.client_last_name}",
-        "client_address": client_address_string,
+        "client_address": client_address,
         "firm_name": application.provider.firm_code,
-        "office_address": "TBD",
-        "opponent_details": ", ".join(
-            body.public_body_description for body in public_bodies
-        ),
+        "office_address": create_base_office_address(),
+        "opponent_details": [body.public_body_description for body in public_bodies],
         "guardian_name": "Not applicable",
         "guardian_address": "Not applicable",
         "laa_reference": application.laa_reference,
-        "date_created": proceeding.certificate_issue_date or date.today(),
-        "certificate_type": proceeding.proceeding.certificate_type,
+        "date_created": application_proceeding.certificate_issue_date or date.today(),
+        "certificate_type": application_proceeding.proceeding.certificate_type,
         "status": application.status,
-        "effective_date": proceeding.certificate_start_date or date.today(),
+        "effective_date": application_proceeding.certificate_start_date or date.today(),
         "end_date": None,
         "reinstatement_date": None,
-        "cost_limitation": str(proceeding.proceeding.substantive_cost_limitation),
+        "cost_limitation": str(
+            application_proceeding.proceeding.substantive_cost_limitation
+        ),
         "cost_limitation_effective_date": None,
         "certificate_limitation": "Not applicable",
-        "care_order_description": proceeding.proceeding.proceeding_description,
-        "category_of_law": proceeding.proceeding.category_of_law,
+        "proceeding_name": application_proceeding.proceeding.proceeding_name,
+        "proceeding_description": application_proceeding.proceeding.proceeding_description,
+        "category_of_law": application_proceeding.proceeding.category_of_law,
         "current_proceeding_status": application.status,
-        "date_work_can_commence": proceeding.certificate_start_date or date.today(),
+        "date_work_can_commence": application_proceeding.certificate_start_date
+        or date.today(),
         "proceeding_end_date": None,
         "client_involvement_type": "Applicant",
-        "level_of_service": proceeding.proceeding.level_of_service,
+        "level_of_service": application_proceeding.proceeding.level_of_service,
         "date_current_level_of_service_effective": (
-            proceeding.certificate_start_date or date.today()
+            application_proceeding.certificate_start_date or date.today()
         ),
         "previous_level_of_service": "Not applicable",
         "date_previous_level_of_service_effective": "Not applicable",
-        "scope_limitation_heading": proceeding.proceeding.scope_limitation_heading,
-        "scope_limitation_description": proceeding.proceeding.scope_description,
+        "scope_limitation_heading": application_proceeding.proceeding.scope_limitation_heading,
+        "scope_limitation_description": application_proceeding.proceeding.scope_description,
     }
     return ApplicationCertificate(**(defaults | overrides))

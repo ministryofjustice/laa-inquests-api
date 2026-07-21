@@ -87,6 +87,11 @@ And install the requirements using
 pip install -r requirements/generated/requirements-development.txt
 ```
 
+You will also need to install WeasyPrint dependencies. On MacOS you can do this with:
+```bash
+brew install weasyprint
+```
+
 If you encounter issues such as `ModuleNotFoundError` restart your terminal session.
 
 ### Running the database

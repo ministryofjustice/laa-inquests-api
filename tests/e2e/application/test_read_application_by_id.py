@@ -214,7 +214,7 @@ def test_200_provider_details_included_on_application_response(
 
     provider = response.json()["provider"]
     assert provider["firmName"] == "Test Firm Name"
-    assert provider["accountNumber"] == "001"
+    assert provider["accountNumber"] == "0U651L"
 
 
 def test_200_provider_fields_are_null_when_provider_api_unavailable(

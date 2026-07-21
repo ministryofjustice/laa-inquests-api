@@ -1,0 +1,8 @@
+# System (apt) packages required at runtime.
+# One package per line. Lines starting with '#' are ignored.
+#
+# Required by WeasyPrint (>=60) for PDF generation.
+# See: https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#debian-ubuntu
+libpango-1.0-0
+libpangoft2-1.0-0
+

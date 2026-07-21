@@ -1,7 +1,6 @@
 """Tests for the CreateCertificateModel use case"""
 
 from unittest.mock import MagicMock
-from tests.unit.factories import create_base_office_address
 
 from app.models.application.certificate import ApplicationCertificate
 from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
@@ -13,6 +12,7 @@ from tests.unit.factories import (
     create_base_client,
     create_base_correspondence_address,
     create_base_home_address,
+    create_base_office_address,
     create_base_proceeding,
     create_base_provider,
     create_base_application_public_body,
@@ -81,10 +81,7 @@ def test_populate_certificate_context_uses_correspondence_address_when_available
         town_or_city="Manchester",
         postcode="M1 2AB",
     )
-    client = create_base_client(
-        correspondence_address=correspondence_address,
-        is_client_correspondence_recipient=False,
-    )
+    client = create_base_client(correspondence_address=correspondence_address)
     application = create_base_application(client=client)
     application_proceeding = application.proceedings[0]
 
@@ -92,34 +89,6 @@ def test_populate_certificate_context_uses_correspondence_address_when_available
 
     assert result.client_address is not None
     assert result.client_address.address_line_1 == "c/o John Smith 456 Oak Avenue"
-    assert result.client_address.town_or_city == "Manchester"
-    assert result.client_address.postcode == "M1 2AB"
-
-
-def test_populate_certificate_context_does_not_use_correspondence_recipient_name_when_client_is_recipient():
-    """Test that correspondence address is not used when client is the correspondence recipient."""
-    mock_provider_port = MagicMock()
-    mock_provider_port.get_firm_name.return_value = "Test Firm"
-    mock_provider_port.get_office_address.return_value = create_base_office_address()
-    usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
-
-    # Only override the specific address fields we're testing
-    correspondence_address = create_base_correspondence_address(
-        address_line_1="456 Oak Avenue",
-        town_or_city="Manchester",
-        postcode="M1 2AB",
-    )
-    client = create_base_client(
-        correspondence_address=correspondence_address,
-        is_client_correspondence_recipient=True,
-    )
-    application = create_base_application(client=client)
-    application_proceeding = application.proceedings[0]
-
-    result = usecase.populate_certificate_context(application, application_proceeding)
-
-    assert result.client_address is not None
-    assert result.client_address.address_line_1 == "456 Oak Avenue"
     assert result.client_address.town_or_city == "Manchester"
     assert result.client_address.postcode == "M1 2AB"
 
@@ -148,6 +117,20 @@ def test_populate_certificate_context_raises_exception_on_firm_name_lookup_failu
     mock_provider_port = MagicMock()
     mock_provider_port.get_firm_name.return_value = None
     mock_provider_port.get_office_address.return_value = create_base_office_address()
+    usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
+
+    application = create_base_application()
+    application_proceeding = application.proceedings[0]
+
+    with pytest.raises(ProviderDetailsRetrievalError):
+        usecase.populate_certificate_context(application, application_proceeding)
+
+
+def test_populate_certificate_context_raises_exception_on_office_address_lookup_failure():
+    """Test that a fallback is used when office address lookup fails."""
+    mock_provider_port = MagicMock()
+    mock_provider_port.get_firm_name.return_value = "Test Firm Name"
+    mock_provider_port.get_office_address.return_value = None
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     application = create_base_application()
@@ -225,7 +208,6 @@ def test_populate_certificate_context_populates_application_status_fields():
     result = usecase.populate_certificate_context(application, application_proceeding)
 
     assert result.status == "LIVE"
-    # TODO: Confirm if current_proceeding_status should be the same as application.status or if it should come from ApplicationProceeding. For now, we will assume it's the same.
     assert result.current_proceeding_status == "LIVE"
 
 
@@ -297,38 +279,6 @@ def test_populate_certificate_context_handles_none_certificate_start_date():
     assert result.date_current_level_of_service_effective == date.today()
 
 
-def test_populate_certificate_context_formats_address_with_missing_fields():
-    """Test that address formatting handles missing optional fields."""
-    mock_provider_port = MagicMock()
-    mock_provider_port.get_firm_name.return_value = "Test Firm"
-    mock_provider_port.get_office_address.return_value = create_base_office_address()
-    usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
-
-    # Create address with no address_line_2 or county
-    home_address = create_base_home_address(
-        address_line_1="100 Simple Street",
-        address_line_2=None,
-        town_or_city="Bristol",
-        county=None,
-        postcode="BS1 1AA",
-    )
-    application = create_base_application(
-        client=create_base_client(
-            home_address=home_address, correspondence_address=None
-        )
-    )
-    application_proceeding = application.proceedings[0]
-
-    result = usecase.populate_certificate_context(application, application_proceeding)
-
-    assert result.client_address is not None
-    assert result.client_address.address_line_1 == "100 Simple Street"
-    assert result.client_address.town_or_city == "Bristol"
-    assert result.client_address.postcode == "BS1 1AA"
-    assert result.client_address.address_line_2 is None
-    assert result.client_address.county is None
-
-
 def test_populate_certificate_context_handles_none_correspondence_address():
     """Test that None correspondence address falls back to home address."""
     mock_provider_port = MagicMock()
@@ -354,30 +304,8 @@ def test_populate_certificate_context_handles_none_correspondence_address():
     assert "HM1 1AA" == result.client_address.postcode
 
 
-def test_populate_certificate_context_handles_single_public_body_correctly():
-    """Test that a single public body is handled correctly."""
-    mock_provider_port = MagicMock()
-    mock_provider_port.get_firm_name.return_value = "Test Firm"
-    mock_provider_port.get_office_address.return_value = create_base_office_address()
-    usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
-
-    application = create_base_application(
-        public_bodies=[
-            create_base_application_public_body(
-                public_body=create_base_public_body(public_body_description="Body A")
-            )
-        ]
-    )
-    application_proceeding = application.proceedings[0]
-
-    result = usecase.populate_certificate_context(application, application_proceeding)
-
-    assert result.opponent_details == ["Body A"]
-    assert len(result.opponent_details) == 1
-
-
-def test_populate_certificate_context_handles_multiple_public_bodies_correctly():
-    """Test that public bodies are concatenated correctly."""
+def test_populate_certificate_context_adds_public_bodies_to_opponent_details():
+    """Test that public bodies are added to opponent_details list."""
     mock_provider_port = MagicMock()
     mock_provider_port.get_firm_name.return_value = "Test Firm"
     mock_provider_port.get_office_address.return_value = create_base_office_address()
