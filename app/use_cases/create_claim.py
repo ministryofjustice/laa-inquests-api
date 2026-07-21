@@ -68,5 +68,10 @@ class CreateClaimUseCase:
             validated_claim.should_auto_reject(
                 application, existing_claims, reference_date
             )
+            # CREATE DECISION REASON
+            # - take reasons for refusal, create DecisionReason for each, justification is null for all of the auto reject
+            # CREATE CLAIM DECISION PORT
+            # - claim id, decision status "REJECT", list of DecisionReasons
+            # UPDATE CLAIM STATUS to "REJECTED"
 
         return claim
