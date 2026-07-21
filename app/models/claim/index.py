@@ -4,9 +4,15 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field as PydanticField
 from pydantic.alias_generators import to_camel
 from sqlalchemy import Column, Numeric
-from sqlmodel import Enum, Field, SQLModel
+from sqlmodel import Enum, Field, Relationship, SQLModel
 
-from app.models.claim.enums import ClaimStatus, ClaimType, POAType
+from app.models.claim.enums import (
+    ClaimDecisionStatus,
+    ClaimStatus,
+    ClaimType,
+    POAType,
+    ReasonCode,
+)
 
 
 class ClaimBase(SQLModel):
@@ -33,6 +39,29 @@ class ClaimBase(SQLModel):
 
 class Claim(ClaimBase, table=True):
     claim_id: int | None = Field(default=None, primary_key=True)
+
+
+class ClaimDecision(SQLModel, table=True):
+    __tablename__ = "claim_decision"
+
+    claim_decision_id: int | None = Field(default=None, primary_key=True)
+    claim_id: int = Field(foreign_key="claim.claim_id")
+    decision: ClaimDecisionStatus = Field(
+        sa_column=Column(Enum(ClaimDecisionStatus), nullable=False)
+    )
+    decision_reasons: list["DecisionReason"] = Relationship(
+        back_populates="claim_decision"
+    )
+
+
+class DecisionReason(SQLModel, table=True):
+    __tablename__ = "decision_reason"
+
+    decision_reason_id: int | None = Field(default=None, primary_key=True)
+    claim_decision_id: int = Field(foreign_key="claim_decision.claim_decision_id")
+    reason_code: ReasonCode = Field(sa_column=Column(Enum(ReasonCode), nullable=False))
+    justification: str | None = Field(default=None)
+    claim_decision: ClaimDecision = Relationship(back_populates="decision_reasons")
 
 
 # REQUEST BODY -- Create

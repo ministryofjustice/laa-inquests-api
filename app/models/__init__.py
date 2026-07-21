@@ -11,7 +11,7 @@ from .application.index import (
     ApplicationPublicBody,
     Deceased,
 )  # noqa: F401
-from .claim.index import Claim  # noqa: F401
+from .claim.index import Claim, ClaimDecision, DecisionReason  # noqa: F401
 from .user import User  # noqa: F401
 
 __all__ = [
@@ -25,4 +25,6 @@ __all__ = [
     "ApplicationProceeding",
     "ApplicationPublicBody",
     "Claim",
+    "ClaimDecision",
+    "DecisionReason",
 ]
