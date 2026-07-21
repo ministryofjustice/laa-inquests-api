@@ -336,6 +336,7 @@ def test_execute_does_not_raise_when_application_total_exceeds_limit():
     application = MagicMock(spec=Application)
     application.proceedings = [MagicMock()]
     application.proceedings[0].substantive_cost_limitation = 1000
+    application.proceedings[0].certificate_start_date = None
 
     use_case = CreateClaimUseCase(
         create_claim_port=create_claim_port,

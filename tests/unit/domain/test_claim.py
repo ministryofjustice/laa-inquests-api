@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import MagicMock
 
@@ -255,6 +255,7 @@ def _make_application(limit=1000):
     application = MagicMock(spec=Application)
     application.proceedings = [MagicMock()]
     application.proceedings[0].substantive_cost_limitation = limit
+    application.proceedings[0].certificate_start_date = None
     return application
 
 
@@ -509,4 +510,73 @@ def test_should_auto_reject_returns_all_applicable_reasons_when_multiple_conditi
     )
     assert (
         ClaimRejectionReason.APPLICATION_CLAIMS_EXCEED_COST_LIMIT in rejection.reasons
+    )
+
+
+def _make_application_with_certificate(start: date | None, limit=1000000):
+    application = MagicMock(spec=Application)
+    proceeding = MagicMock()
+    proceeding.substantive_cost_limitation = limit
+    proceeding.certificate_start_date = start
+    application.proceedings = [proceeding]
+    return application
+
+
+def test_should_auto_reject_early_profit_cost_poa_claim_made_during_3_month_certificate_probationary_period():
+    claim = _make_domain_claim(gross=Decimal("500.00"))
+    application = _make_application_with_certificate(date(2026, 5, 1))
+    reference = datetime(2026, 7, 15, tzinfo=UTC)  # < 3 calendar months
+
+    reason = claim.should_auto_reject_for_early_profit_cost_poa(application, reference)
+
+    assert reason is ClaimRejectionReason.PROFIT_COST_POA_CLAIM_SUBMITTED_TOO_EARLY
+
+
+def test_should_not_auto_reject_early_profit_cost_poa_on_exact_3_month_boundary():
+    claim = _make_domain_claim(gross=Decimal("500.00"))
+    application = _make_application_with_certificate(date(2026, 5, 1))
+    reference = datetime(2026, 8, 1, tzinfo=UTC)  # exactly 3 calendar months
+
+    reason = claim.should_auto_reject_for_early_profit_cost_poa(application, reference)
+
+    assert reason is None
+
+
+def test_should_not_auto_reject_early_profit_cost_poa_when_after_3_months():
+    claim = _make_domain_claim(gross=Decimal("500.00"))
+    application = _make_application_with_certificate(date(2026, 5, 1))
+    reference = datetime(2026, 9, 1, tzinfo=UTC)
+
+    reason = claim.should_auto_reject_for_early_profit_cost_poa(application, reference)
+
+    assert reason is None
+
+
+def test_should_not_auto_reject_early_profit_cost_poa_when_not_profit_cost():
+    claim = Claim(
+        claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+        poa_type=POAType.EXPERT_COST,
+        net=None,
+        gross=None,
+        vat_zero_total=Decimal("500.00"),
+    )
+    application = _make_application_with_certificate(date(2026, 5, 1))
+    reference = datetime(2026, 5, 15, tzinfo=UTC)
+
+    reason = claim.should_auto_reject_for_early_profit_cost_poa(application, reference)
+
+    assert reason is None
+
+
+def test_should_auto_reject_aggregates_early_profit_cost_poa_reason():
+    claim = _make_domain_claim(gross=Decimal("500.00"))
+    application = _make_application_with_certificate(date(2026, 5, 1), limit=1000000)
+    reference = datetime(2026, 5, 15, tzinfo=UTC)
+
+    rejection = claim.should_auto_reject(application, [], reference)
+
+    assert rejection.is_rejected is True
+    assert (
+        ClaimRejectionReason.PROFIT_COST_POA_CLAIM_SUBMITTED_TOO_EARLY
+        in rejection.reasons
     )
