@@ -29,7 +29,7 @@ def _sample_context() -> ApplicationCertificate:
         certificate_type="SUBSTANTIVE",
         status="LIVE",
         effective_date=date(2026, 7, 15),
-        cost_limitation="15000",
+        cost_limitation=15000,
         proceeding_name="Inquest into death",
         proceeding_description="Inquest into death",
         category_of_law="INQUESTS",
@@ -80,3 +80,15 @@ def test_generate_pdf_template_not_found_raises_error():
 
     with pytest.raises(Exception):
         adapter.generate_pdf("nonexistent_template.html", {})
+
+
+def test_generate_pdf_formats_cost_limitation_as_currency():
+    """Test that cost_limitation is formatted as currency with thousands separator."""
+    adapter = PdfGeneratorAdapter()
+    result = adapter.generate_pdf("certificate.html", _sample_context())
+
+    reader = PdfReader(BytesIO(result))
+    pdf_text = "\n".join(page.extract_text() or "" for page in reader.pages)
+
+    # Verify the cost limitation appears formatted as currency
+    assert "£15,000" in pdf_text

@@ -51,6 +51,12 @@ class GrantDecisionUseCase:
                     application, proceeding
                 )
             )
+            certificate_context = (
+                self.create_certificate_context_use_case.prepare_context_for_display(
+                    certificate_context
+                )
+            )
+
             certificate_pdf = self.pdf_generation_port.generate_pdf(
                 "certificate.html", certificate_context
             )

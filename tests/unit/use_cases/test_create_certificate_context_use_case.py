@@ -399,3 +399,35 @@ def test_populate_certificate_context_handles_multiple_public_bodies_correctly()
 
     assert result.opponent_details == ["Body A", "Body B"]
     assert len(result.opponent_details) == 2
+
+
+def test_prepare_context_for_display_formats_fields_correctly():
+    """Test that prepare_context_for_display formats enum fields correctly."""
+    mock_provider_port = MagicMock()
+    mock_provider_port.get_firm_name.return_value = "Test Firm"
+    mock_provider_port.get_office_address.return_value = create_base_office_address()
+    usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
+
+    application = create_base_application(
+        proceedings=[
+            create_base_application_proceeding(
+                certificate_type="SUBSTANTIVE",
+                status="LIVE",
+                category_of_law="INQUESTS",
+                current_proceeding_status="LIVE",
+                level_of_service="FULL_REPRESENTATION",
+                scope_limitation_heading="FINAL_HEARING",
+            )
+        ]
+    )
+    application_proceeding = application.proceedings[0]
+
+    context = usecase.populate_certificate_context(application, application_proceeding)
+    formatted_context = usecase.prepare_context_for_display(context)
+
+    assert formatted_context.certificate_type == "Substantive"
+    assert formatted_context.status == "Live"
+    assert formatted_context.category_of_law == "Inquests"
+    assert formatted_context.current_proceeding_status == "Live"
+    assert formatted_context.level_of_service == "Full representation"
+    assert formatted_context.scope_limitation_heading == "Final hearing"
