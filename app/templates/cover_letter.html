@@ -28,16 +28,26 @@
 
         .page {
             position: relative;
-            width: 210mm;
+            width: 100%;
             min-height: 297mm;
         }
 
+        .govuk-grid-row {
+            display: flex;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+
         .govuk-grid-column-one-third {
+            width: 33.3333%;
             padding: 0;
+            flex: 0 0 33.3333%;
         }
 
         .govuk-grid-column-two-thirds {
+            width: 66.6666%;
             padding: 0;
+            flex: 0 0 66.6666%;
         }
 
         .logo img {
