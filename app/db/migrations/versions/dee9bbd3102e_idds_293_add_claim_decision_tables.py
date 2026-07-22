@@ -1,7 +1,7 @@
 """idds_293_add_claim_decision_tables
 
 Revision ID: dee9bbd3102e
-Revises: 4d7c2a91b6ef
+Revises: 576bb7f74f01
 Create Date: 2026-07-21 15:29:55.208030
 
 """
@@ -15,7 +15,7 @@ import sqlmodel
 
 # revision identifiers, used by Alembic.
 revision: str = "dee9bbd3102e"
-down_revision: Union[str, None] = "4d7c2a91b6ef"
+down_revision: Union[str, None] = "576bb7f74f01"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
