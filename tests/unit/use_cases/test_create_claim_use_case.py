@@ -1,14 +1,26 @@
 from unittest.mock import MagicMock
 from decimal import Decimal
+from datetime import UTC, datetime
 
 import pytest
 
 from app.models.application.index import Application
-from app.models.claim.enums import ClaimType, POAType
-from app.models.claim.index import Claim
+from app.models.claim.enums import (
+    ClaimDecisionStatus,
+    ClaimStatus,
+    ClaimType,
+    POAType,
+    ReasonCode,
+)
+from app.models.claim.index import Claim, ClaimDecision
 from app.ports.application_lookup_port import ApplicationLookupPort
+from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
+from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
+from app.ports.claim.update_claim_decision_status_port import (
+    UpdateClaimDecisionStatusPort,
+)
 from app.use_cases.create_claim import CreateClaimCommand, CreateClaimUseCase
 from app.domain.claim_error import ClaimErrorCode
 from app.use_cases.exceptions import InvalidClaimError
@@ -52,6 +64,24 @@ def _make_get_claims_port(claims: list[Claim] | None = None):
     return port
 
 
+def _make_create_claim_decision_port(claim_decision_id: int = 10):
+    port = MagicMock(spec=CreateClaimDecisionPort)
+    port.create_claim_decision.return_value = ClaimDecision(
+        claim_decision_id=claim_decision_id,
+        claim_id=1,
+        decision=ClaimDecisionStatus.REJECT,
+    )
+    return port
+
+
+def _make_create_decision_reason_port():
+    return MagicMock(spec=CreateDecisionReasonPort)
+
+
+def _make_update_claim_decision_status_port():
+    return MagicMock(spec=UpdateClaimDecisionStatusPort)
+
+
 def test_execute_creates_claim_and_commits():
     command = _make_command()
     claim = _make_claim()
@@ -91,7 +121,7 @@ def test_execute_returns_created_claim():
     )
     result = use_case.execute(command)
 
-    assert result is claim
+    assert result.claim is claim
 
 
 def test_execute_raises_invalid_claim_error_when_payment_on_account_without_poa_type():
@@ -345,3 +375,108 @@ def test_execute_does_not_raise_when_application_total_exceeds_limit():
     )
 
     use_case.execute(command)  # should not raise
+
+
+def test_execute_persists_auto_reject_and_returns_rejection_reasons():
+    command = _make_command({"net": Decimal("1.00"), "gross": Decimal("1.00")})
+    claim = _make_claim()
+
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+    create_claim_decision_port = _make_create_claim_decision_port()
+    create_decision_reason_port = _make_create_decision_reason_port()
+    update_claim_decision_status_port = _make_update_claim_decision_status_port()
+
+    application = MagicMock(spec=Application)
+    application.proceedings = [MagicMock()]
+    application.proceedings[0].substantive_cost_limitation = 999999
+    application.proceedings[0].certificate_start_date = None
+
+    existing_claims = [
+        Claim(
+            claim_id=index + 100,
+            laa_reference=12345,
+            claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
+            status_id=ClaimStatus.PENDING,
+            poa_type_id=POAType.PROFIT_COST,
+            submission_date=datetime.now(UTC),
+            total_profit_cost_net=Decimal("1.00"),
+            total_profit_cost_gross=Decimal("1.00"),
+        )
+        for index in range(4)
+    ]
+
+    use_case = CreateClaimUseCase(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(application),
+        get_claims_for_application_port=_make_get_claims_port(existing_claims),
+        create_claim_decision_port=create_claim_decision_port,
+        create_decision_reason_port=create_decision_reason_port,
+        update_claim_decision_status_port=update_claim_decision_status_port,
+    )
+
+    result = use_case.execute(command)
+
+    assert result.claim.status_id == ClaimStatus.REJECTED
+    assert result.rejection_reasons == [ReasonCode.MAX_POA_CLAIMS_EXCEEDED]
+    create_claim_decision_port.create_claim_decision.assert_called_once_with(
+        claim_id=1,
+        decision_status=ClaimDecisionStatus.REJECT,
+    )
+    create_decision_reason_port.create_decision_reason.assert_called_once_with(
+        claim_decision_id=10,
+        reason_code=ReasonCode.MAX_POA_CLAIMS_EXCEEDED,
+        justification=None,
+    )
+    update_claim_decision_status_port.update_claim_decision_status.assert_called_once_with(
+        claim_id=1,
+        status=ClaimStatus.REJECTED,
+    )
+    assert create_claim_port.commit.call_count == 2
+
+
+def test_execute_returns_pending_claim_when_auto_reject_persistence_fails():
+    command = _make_command({"net": Decimal("1.00"), "gross": Decimal("1.00")})
+    claim = _make_claim()
+
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+    create_claim_decision_port = _make_create_claim_decision_port()
+    create_decision_reason_port = _make_create_decision_reason_port()
+    create_decision_reason_port.create_decision_reason.side_effect = Exception("boom")
+    update_claim_decision_status_port = _make_update_claim_decision_status_port()
+
+    application = MagicMock(spec=Application)
+    application.proceedings = [MagicMock()]
+    application.proceedings[0].substantive_cost_limitation = 999999
+    application.proceedings[0].certificate_start_date = None
+
+    existing_claims = [
+        Claim(
+            claim_id=index + 200,
+            laa_reference=12345,
+            claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
+            status_id=ClaimStatus.PENDING,
+            poa_type_id=POAType.PROFIT_COST,
+            submission_date=datetime.now(UTC),
+            total_profit_cost_net=Decimal("1.00"),
+            total_profit_cost_gross=Decimal("1.00"),
+        )
+        for index in range(4)
+    ]
+
+    use_case = CreateClaimUseCase(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(application),
+        get_claims_for_application_port=_make_get_claims_port(existing_claims),
+        create_claim_decision_port=create_claim_decision_port,
+        create_decision_reason_port=create_decision_reason_port,
+        update_claim_decision_status_port=update_claim_decision_status_port,
+    )
+
+    result = use_case.execute(command)
+
+    assert result.claim.status_id == ClaimStatus.PENDING
+    assert result.rejection_reasons is None
+    create_claim_port.rollback.assert_called_once()
+    assert create_claim_port.commit.call_count == 1

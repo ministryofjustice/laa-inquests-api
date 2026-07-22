@@ -104,3 +104,4 @@ class ClaimResponse(BaseModel):
     total_profit_cost_vat_zero: Decimal | None = None
     claimant_id: str | None = None
     poa_type_id: POAType | None = None
+    rejection_reasons: list[ReasonCode] | None = None

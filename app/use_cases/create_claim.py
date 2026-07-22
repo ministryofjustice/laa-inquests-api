@@ -1,15 +1,30 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
+import logging
 
 from app.domain.claim import Claim as DomainClaim, ExistingClaimSummary
 from app.domain.claim_error import ClaimValidationError
-from app.models.claim.enums import ClaimType, POAType
+from app.models.claim.enums import (
+    ClaimDecisionStatus,
+    ClaimStatus,
+    ClaimType,
+    POAType,
+    ReasonCode,
+)
 from app.models.claim.index import Claim
 from app.ports.application_lookup_port import ApplicationLookupPort
+from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
+from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
+from app.ports.claim.update_claim_decision_status_port import (
+    UpdateClaimDecisionStatusPort,
+)
 from app.use_cases.exceptions import InvalidClaimError
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -23,18 +38,30 @@ class CreateClaimCommand:
     claimant_id: str | None
 
 
+@dataclass(frozen=True)
+class CreateClaimResult:
+    claim: Claim
+    rejection_reasons: list[ReasonCode] | None = None
+
+
 class CreateClaimUseCase:
     def __init__(
         self,
         create_claim_port: CreateClaimPort,
         application_lookup_port: ApplicationLookupPort,
         get_claims_for_application_port: GetClaimsForApplicationPort,
+        create_claim_decision_port: CreateClaimDecisionPort | None = None,
+        create_decision_reason_port: CreateDecisionReasonPort | None = None,
+        update_claim_decision_status_port: UpdateClaimDecisionStatusPort | None = None,
     ) -> None:
         self.create_claim_port = create_claim_port
         self.application_lookup_port = application_lookup_port
         self.get_claims_for_application_port = get_claims_for_application_port
+        self.create_claim_decision_port = create_claim_decision_port
+        self.create_decision_reason_port = create_decision_reason_port
+        self.update_claim_decision_status_port = update_claim_decision_status_port
 
-    def execute(self, command: CreateClaimCommand) -> Claim:
+    def execute(self, command: CreateClaimCommand) -> CreateClaimResult:
         try:
             validated_claim = DomainClaim(
                 claim_type=command.claim_type,
@@ -62,6 +89,7 @@ class CreateClaimUseCase:
             claimant_id=command.claimant_id,
         )
         self.create_claim_port.commit()
+        rejection_reasons: list[ReasonCode] | None = None
 
         if application is not None:
             reference_date = datetime.now(UTC)
@@ -76,13 +104,46 @@ class CreateClaimUseCase:
                 )
                 for c in existing_claims
             ]
-            validated_claim.should_auto_reject(
+            rejection = validated_claim.should_auto_reject(
                 application, existing_summaries, reference_date
             )
-            # CREATE DECISION REASON
-            # - take reasons for refusal, create DecisionReason for each, justification is null for all of the auto reject
-            # CREATE CLAIM DECISION PORT
-            # - claim id, decision status "REJECT", list of DecisionReasons
-            # UPDATE CLAIM STATUS to "REJECTED"
 
-        return claim
+            if (
+                rejection.is_rejected
+                and self.create_claim_decision_port is not None
+                and self.create_decision_reason_port is not None
+                and self.update_claim_decision_status_port is not None
+            ):
+                try:
+                    claim_decision = (
+                        self.create_claim_decision_port.create_claim_decision(
+                            claim_id=claim.claim_id,
+                            decision_status=ClaimDecisionStatus.REJECT,
+                        )
+                    )
+                    rejection_reasons = [
+                        ReasonCode(reason.value) for reason in rejection.reasons
+                    ]
+                    for reason_code in rejection_reasons:
+                        self.create_decision_reason_port.create_decision_reason(
+                            claim_decision_id=claim_decision.claim_decision_id,
+                            reason_code=reason_code,
+                            justification=None,
+                        )
+                    self.update_claim_decision_status_port.update_claim_decision_status(
+                        claim_id=claim.claim_id,
+                        status=ClaimStatus.REJECTED,
+                    )
+                    self.create_claim_port.commit()
+                    claim.status_id = ClaimStatus.REJECTED
+                except Exception:
+                    self.create_claim_port.rollback()
+                    claim.status_id = ClaimStatus.PENDING
+                    rejection_reasons = None
+                    logger.warning(
+                        "Failed to persist claim auto-rejection for claim %s",
+                        claim.claim_id,
+                        exc_info=True,
+                    )
+
+        return CreateClaimResult(claim=claim, rejection_reasons=rejection_reasons)
