@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from app.domain.claim import Claim as DomainClaim
+from app.domain.claim import Claim as DomainClaim, ExistingClaimSummary
 from app.domain.claim_error import ClaimValidationError
 from app.models.claim.enums import ClaimType, POAType
 from app.models.claim.index import Claim
@@ -65,8 +65,19 @@ class CreateClaimUseCase:
 
         if application is not None:
             reference_date = datetime.now(UTC)
+            existing_summaries = [
+                ExistingClaimSummary(
+                    status=c.status_id,
+                    poa_type=c.poa_type_id,
+                    submission_date=c.submission_date,
+                    net=c.total_profit_cost_net,
+                    gross=c.total_profit_cost_gross,
+                    vat_zero_total=c.total_profit_cost_vat_zero,
+                )
+                for c in existing_claims
+            ]
             validated_claim.should_auto_reject(
-                application, existing_claims, reference_date
+                application, existing_summaries, reference_date
             )
             # CREATE DECISION REASON
             # - take reasons for refusal, create DecisionReason for each, justification is null for all of the auto reject
