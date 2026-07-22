@@ -56,6 +56,10 @@
         }
 
         .header-right {
+            position: absolute;
+            top: 0mm;
+            right: 5mm;
+            width: 65mm;
             font-size: 12px;
             line-height: 1.5;
         }
@@ -72,7 +76,7 @@
         .header-contact {
             text-align: left;
             margin-bottom: 5mm;
-            margin-top: 10mm;
+            margin-top: 3mm;
         }
 
         .header-contact p {
@@ -81,7 +85,7 @@
 
         .header-date {
             text-align: right;
-            margin-top: 10mm;
+            margin-top: 3mm;
         }
 
         .header-date p {
@@ -90,7 +94,7 @@
 
         .address-window {
             margin-top: 9.5mm;
-            margin-bottom: 28.7mm;
+            margin-bottom: 33mm;
             margin-left: 9.6mm;
             font-size: 12px;
             line-height: 1;
@@ -164,7 +168,6 @@
             <div class="header-right">
                 <div class="header-from">
                     <p><strong>Legal Aid Agency</strong></p>
-                    </br>
                     <span class="write-to-address">
                     Legal Aid Agency<br>
                     Unit B8<br>
@@ -175,7 +178,7 @@
                 </span>
                 </div>
                 <div class="header-contact">
-                    <p><strong>Telephone:</strong> 0345 345 4 345</p>
+                    <p><strong>Telephone:</strong>0300 200 2020</p>
                     <p><strong>E-mail:</strong> contactcivil@justice.gov.uk</p>
                 </div>
                 <div class="header-date">
@@ -187,9 +190,9 @@
 
     <div class="header govuk-grid-row">
         <div class="govuk-grid-column-two-thirds">
-            <p class="cert-number"><strong>Certificate number:</strong> {{ laa_reference }}</p>
+            <p class="body-text"><strong>Certificate number:</strong> {{ laa_reference }}</p>
 
-            <p class="salutation">Dear {{ client_name }},</p>
+            <p class="body-text">Dear {{ client_name }},</p>
 
             <p class="body-text">
                 We issued your legal aid certificate on {{ date_created.strftime("%d %B %Y") }} and a copy is included with this letter.
