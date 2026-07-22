@@ -61,7 +61,7 @@ class Claim:
             self._validate_profit_cost()
 
     def total_claim_cost_for_limit_check(self) -> Decimal | None:
-        return self.gross
+        return self.net if self.net is not None else self.vat_zero_total
 
     def should_auto_reject_for_max_poa_count(
         self,

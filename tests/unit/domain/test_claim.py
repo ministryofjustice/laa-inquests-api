@@ -209,7 +209,7 @@ def test_should_auto_reject_for_limit_when_total_exceeds_limit():
     claim = Claim(
         claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
         poa_type=POAType.PROFIT_COST,
-        net=Decimal("1000.00"),
+        net=Decimal("1100.00"),
         gross=Decimal("1200.00"),
         vat_zero_total=None,
     )
@@ -228,7 +228,7 @@ def test_should_not_auto_reject_for_limit_when_total_not_exceeding_limit():
         claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
         poa_type=POAType.PROFIT_COST,
         net=Decimal("800.00"),
-        gross=Decimal("1000.00"),
+        gross=Decimal("1200.00"),
         vat_zero_total=None,
     )
     claim.validate_total_claim_cost()
@@ -241,11 +241,43 @@ def test_should_not_auto_reject_for_limit_when_total_not_exceeding_limit():
     assert reason is None
 
 
-def _make_domain_claim(gross=Decimal("500.00")):
+def test_should_auto_reject_for_limit_when_vat_zero_total_exceeds_limit():
+    claim = Claim(
+        claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+        poa_type=POAType.PROFIT_COST,
+        net=None,
+        gross=None,
+        vat_zero_total=Decimal("1500.00"),
+    )
+    application = MagicMock(spec=Application)
+    application.proceedings = [MagicMock()]
+    application.proceedings[0].substantive_cost_limitation = 1000
+    reason = claim.should_auto_reject_for_limit(application)
+
+    assert reason is ClaimRejectionReason.CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT
+
+
+def test_should_not_auto_reject_for_limit_when_vat_zero_total_within_limit():
+    claim = Claim(
+        claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+        poa_type=POAType.PROFIT_COST,
+        net=None,
+        gross=None,
+        vat_zero_total=Decimal("500.00"),
+    )
+    application = MagicMock(spec=Application)
+    application.proceedings = [MagicMock()]
+    application.proceedings[0].substantive_cost_limitation = 1000
+    reason = claim.should_auto_reject_for_limit(application)
+
+    assert reason is None
+
+
+def _make_domain_claim(gross=Decimal("500.00"), net=Decimal("400.00")):
     return Claim(
         claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
         poa_type=POAType.PROFIT_COST,
-        net=Decimal("400.00"),
+        net=net,
         gross=gross,
         vat_zero_total=None,
     )
@@ -350,7 +382,7 @@ def test_should_auto_reject_for_application_total_limit_excludes_rejected_with_a
 
 
 def test_should_auto_reject_returns_per_claim_rejection_when_single_claim_exceeds_limit():
-    claim = _make_domain_claim(gross=Decimal("1200.00"))
+    claim = _make_domain_claim(net=Decimal("1100.00"), gross=Decimal("1200.00"))
     rejection = claim.should_auto_reject(_make_application(limit=1000), [])
 
     assert rejection.is_rejected is True
@@ -492,7 +524,9 @@ def test_should_not_auto_reject_for_max_poa_count_with_no_existing_claims():
 
 def test_should_auto_reject_returns_all_applicable_reasons_when_multiple_conditions_triggered():
     reference = datetime(2026, 7, 20, tzinfo=UTC)
-    claim = _make_domain_claim(gross=Decimal("1200.00"))  # triggers cost limit checks
+    claim = _make_domain_claim(
+        net=Decimal("1100.00"), gross=Decimal("1200.00")
+    )  # triggers cost limit checks
     existing = [
         _make_db_profit_cost_poa(reference - timedelta(days=30)),
         _make_db_profit_cost_poa(reference - timedelta(days=60)),
