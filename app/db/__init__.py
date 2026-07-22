@@ -22,52 +22,52 @@ def get_session():
         {
             "proceeding_id": "PC049",
             "proceeding_name": "CAPA",
-            "proceeding_description": "CAPA",
+            "proceeding_description": "To be represented on an application for a CAPA",
         },
         {
             "proceeding_id": "MN035",
             "proceeding_name": "Clinical Negligence",
-            "proceeding_description": "Clinical Negligence",
+            "proceeding_description": "To be represented on an application for a Clinical Negligence",
         },
         {
             "proceeding_id": "MN036",
             "proceeding_name": "Death in Custody - Clinical Negligence",
-            "proceeding_description": "Death in Custody - Clinical Negligence",
+            "proceeding_description": "To be represented on an application for a Death in Custody - Clinical Negligence",
         },
         {
             "proceeding_id": "MH028",
             "proceeding_name": "Mental Health",
-            "proceeding_description": "Mental Health",
+            "proceeding_description": "To be represented on an application for a Mental Health",
         },
         {
             "proceeding_id": "MH030",
             "proceeding_name": "Death in Detention - Mental Health",
-            "proceeding_description": "Death in Detention - Mental Health",
+            "proceeding_description": "To be represented on an application for a Death in Detention - Mental Health",
         },
         {
             "proceeding_id": "IQ001",
             "proceeding_name": "Death in Custody",
-            "proceeding_description": "Death in Custody",
+            "proceeding_description": "To be represented on an application for a Death in Custody",
         },
         {
             "proceeding_id": "IQ002",
             "proceeding_name": "Inquest",
-            "proceeding_description": "Inquest",
+            "proceeding_description": "To be represented on an application for a Inquest",
         },
         {
             "proceeding_id": "IQ003",
             "proceeding_name": "Schedule 6 Town & Country Planning Act 1990",
-            "proceeding_description": "Schedule 6 Town & Country Planning Act 1990",
+            "proceeding_description": "To be represented on an application for a Schedule 6 Town & Country Planning Act 1990",
         },
         {
             "proceeding_id": "IQ004",
             "proceeding_name": "Public Inquiry s1 Inquiries Act 2005",
-            "proceeding_description": "Public Inquiry s1 Inquiries Act 2005",
+            "proceeding_description": "To be represented on an application for a Public Inquiry s1 Inquiries Act 2005",
         },
         {
             "proceeding_id": "IQ010",
             "proceeding_name": "S13 Coroner’s Act 1988 - Public Law",
-            "proceeding_description": "S13 Coroner’s Act 1988 - Public Law",
+            "proceeding_description": "To be represented on an application for a S13 Coroner’s Act 1988 - Public Law",
         },
     ]
 
