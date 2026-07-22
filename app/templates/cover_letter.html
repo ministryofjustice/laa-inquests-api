@@ -7,127 +7,220 @@
     <title>Client Cover Letter - GOV.UK</title>
     <link rel="stylesheet" href="../static/govuk-frontend.css">
     <style>
-        /* Override font-family to use Arial consistently for PDF generation since GDS Transport fonts are not available */
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
         * {
             font-family: Arial, sans-serif !important;
+            box-sizing: border-box;
         }
 
-        /* Remove grey background for PDF generation */
-        html,
-        body,
-        .govuk-template {
+        html, body, .govuk-template {
+            margin: 0;
+            padding: 0;
             background-color: #ffffff !important;
+            color: #0b0c0c;
+            font-size: 12px;
+            line-height: 1.5;
         }
 
-        /* Gov Notify precompiled letter address window positioning:
-           10mm from left, 22mm from top, 110mm wide x 40mm tall */
-        .address-window {
-            position: absolute;
-            top: 22mm;
-            left: 10mm;
-            width: 110mm;
-            height: 40mm;
-            font-size: 14px;
-            line-height: 1.4;
+        .page {
+            position: relative;
+            width: 210mm;
+            min-height: 297mm;
+            padding: 5mm 15mm 5mm 15mm;
         }
 
-        .letter-body {
-            margin-top: 75mm;
-            padding: 0 15mm;
-        }
-
-        .from-header {
-            background-color: #f3f2f1;
-            padding: 10px 15px;
-            margin-bottom: 20px;
-            font-weight: 700;
-        }
-
-        .certificate-number {
-            background-color: #f3f2f1;
-            padding: 10px 15px;
-            margin-bottom: 30px;
-        }
-
-        .contact-section {
-            margin-top: 30px;
-        }
-
-        .contact-section ul {
-            list-style: none;
+        .header .govuk-grid-column-one-third {
             padding-left: 0;
         }
 
-        .contact-section li {
-            margin-bottom: 15px;
+        .header .govuk-grid-column-two-thirds {
+            padding-right: 0;
         }
 
-        .signature {
-            margin-top: 30px;
+        .logo img {
+            width: 45mm;
+            height: auto;
+        }
+
+        .header-right {
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .header-from {
+            text-align: right;
+            margin-bottom: 5mm;
+        }
+
+        .header-from p {
+            margin: 0;
+        }
+
+        .header-contact {
+            text-align: left;
+            margin-bottom: 5mm;
+            margin-top: 10mm;
+        }
+
+        .header-contact p {
+            margin: 0;
+        }
+
+        .header-date {
+            text-align: right;
+            margin-top: 10mm;
+        }
+
+        .header-date p {
+            margin: 0;
+        }
+
+        .address-window {
+            margin-top: 9.5mm;
+            margin-bottom: 28.7mm;
+            margin-left: 9.6mm;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .body-text {
+            font-size: 12px;
+            margin-bottom: 5mm;
+            line-height: 1.5;
+        }
+
+        .section-heading {
+            font-size: 14px;
+            font-weight: 700;
+            margin-top: 10mm;
+            margin-bottom: 5mm;
+        }
+
+        .contact-list {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        .contact-list li {
+            margin-bottom: 5mm;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .contact-list li strong {
+            font-weight: 700;
+        }
+
+        .write-to-address {
+            display: block;
+        }
+
+        .signature-block {
+            margin-top: 10mm;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .signature-block p {
+            margin: 0 0 3mm 0;
         }
     </style>
 </head>
 <body class="govuk-template__body">
 
-<div class="address-window">
-    {{ client_name }}<br>
-    {% if client_address %}
-        {{ client_address.address_line_1 }}<br>
-        {% if client_address.address_line_2 %}{{ client_address.address_line_2 }}<br>{% endif %}
-        {{ client_address.town_or_city }}<br>
-        {% if client_address.county %}{{ client_address.county }}<br>{% endif %}
-        {{ client_address.postcode }}
-    {% endif %}
-</div>
+<div class="page">
+    <div class="govuk-grid-row">
+        <div class="govuk-grid-column-two-thirds">
+            <div class="logo">
+                <img src="assets/LAA_Lesser_Arms_Stacked_HEX-CH.png" alt="Legal Aid Agency">
+            </div>
 
-<div class="letter-body">
-    <div class="from-header">
-        From Civil Case Management
+            <div class="address-window">
+                {{ client_name }}<br>
+                {% if client_address %}
+                {{ client_address.address_line_1 }}<br>
+                {% if client_address.address_line_2 %}{{ client_address.address_line_2 }}<br>{% endif %}
+                {{ client_address.town_or_city }}<br>
+                {% if client_address.county %}{{ client_address.county }}<br>{% endif %}
+                {{ client_address.postcode }}
+                {% endif %}
+            </div>
+        </div>
+        <div class="govuk-grid-column-one-third">
+            <div class="header-right">
+                <div class="header-from">
+                    <p><strong>Legal Aid Agency</strong></p>
+                    </br>
+                    <span class="write-to-address">
+                    Legal Aid Agency<br>
+                    Unit B8<br>
+                    Berkley Way<br>
+                    Viking Business Park<br>
+                    Jarrow<br>
+                    NE31 1SF
+                </span>
+                </div>
+                <div class="header-contact">
+                    <p><strong>Telephone:</strong> 0345 345 4 345</p>
+                    <p><strong>E-mail:</strong> contactcivil@justice.gov.uk</p>
+                </div>
+                <div class="header-date">
+                    <p>{{ date_created.strftime("%d %B %Y") }}</p>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="certificate-number">
-        Certificate number: {{ laa_reference }}
-    </div>
+    <div class="header govuk-grid-row">
+        <div class="govuk-grid-column-two-thirds">
+            <p class="cert-number"><strong>Certificate number:</strong> {{ laa_reference }}</p>
 
-    <p class="govuk-body">Dear {{ client_name }},</p>
+            <p class="salutation">Dear {{ client_name }},</p>
 
-    <p class="govuk-body">
-        We issued your legal aid certificate on {{ date_created.strftime("%d %B %Y") }} and a copy is included with this letter.
-    </p>
+            <p class="body-text">
+                We issued your legal aid certificate on {{ date_created.strftime("%d %B %Y") }} and a copy is included with this letter.
+            </p>
 
-    <p class="govuk-body">
-        There is also a frequently asked questions (FAQs) document included.
-    </p>
+            <p class="body-text">
+                There is also a frequently asked questions (FAQs) document included.
+            </p>
 
-    <div class="contact-section">
-        <h2 class="govuk-heading-m">Contact us</h2>
-        <p class="govuk-body">If you have any questions, you can:</p>
-        <ul>
-            <li>
-                <strong>Phone</strong>: 0345 345 4 345
-            </li>
-            <li>
-                <strong>Write to</strong>:<br>
-                Legal Aid Agency<br>
-                Unit B8<br>
-                Berkley Way<br>
-                Viking Business Park<br>
-                Jarrow<br>
-                NE31 1SF
-            </li>
-            <li>
-                <strong>Email</strong>: contactcivil@justice.gov.uk
-            </li>
-        </ul>
-    </div>
+            <p class="section-heading">Contact us</p>
+            <p class="body-text">If you have any questions, you can:</p>
 
-    <div class="signature">
-        <p class="govuk-body">Yours sincerely,</p>
-        <p class="govuk-body">Civil Case Management</p>
-        <p class="govuk-body">On behalf of Director of Legal Aid Casework</p>
+            <ul class="contact-list">
+                <li>
+                    <strong>Telephone:</strong> 0345 345 4 345
+                </li>
+                <li>
+                    <strong>Write to:</strong>
+                    <span class="write-to-address">
+                    Legal Aid Agency<br>
+                    Unit B8<br>
+                    Berkley Way<br>
+                    Viking Business Park<br>
+                    Jarrow<br>
+                    NE31 1SF
+                </span>
+                </li>
+                <li>
+                    <strong>E-mail:</strong> contactcivil@justice.gov.uk
+                </li>
+            </ul>
+
+            <div class="signature-block">
+                <p>Yours sincerely,</p>
+                <p>Civil Case Management</p>
+                <p>On behalf of Director of Legal Aid Casework</p>
+            </div>
+        </div>
     </div>
 </div>
 
 </body>
 </html>
-
