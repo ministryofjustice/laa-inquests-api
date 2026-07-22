@@ -8,6 +8,7 @@ from mimetypes import guess_type
 
 from app.adapters.sds_adapter import SdsAdapter
 from app.adapters.application_repository_adapter import ApplicationRepositoryAdapter
+from app.adapters.claim_repository_adapter import ClaimRepositoryAdapter
 from app.adapters.pdf_generator_adapter import PdfGeneratorAdapter
 from app.db import get_session
 from app.models.application.index import (
@@ -29,9 +30,9 @@ from app.routers.dependencies import (
 from app.config import Config
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.application_lookup_port import ApplicationLookupPort
-from app.ports.create_claim_port import CreateClaimPort
+from app.ports.claim.create_claim_port import CreateClaimPort
 from app.ports.get_application_port import GetApplicationPort
-from app.ports.get_claims_for_application_port import GetClaimsForApplicationPort
+from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.list_applications_port import ListApplicationsPort
 from app.ports.provider_details_port import ProviderDetailsPort
@@ -96,6 +97,12 @@ def get_pdf_generation_port() -> PdfGenerationPort:
     return PdfGeneratorAdapter()
 
 
+def get_claim_db_adapter(
+    session: Session = Depends(get_session),
+) -> ClaimRepositoryAdapter:
+    return ClaimRepositoryAdapter(session=session)
+
+
 def get_application_db_adapter(
     session: Session = Depends(get_session),
 ) -> ApplicationRepositoryAdapter:
@@ -131,12 +138,12 @@ def get_list_applications_use_case(
 
 
 def get_create_claim_use_case(
-    create_claim_port: CreateClaimPort = Depends(get_application_db_adapter),
+    create_claim_port: CreateClaimPort = Depends(get_claim_db_adapter),
     application_lookup_port: ApplicationLookupPort = Depends(
         get_application_db_adapter
     ),
     get_claims_for_application_port: GetClaimsForApplicationPort = Depends(
-        get_application_db_adapter
+        get_claim_db_adapter
     ),
 ) -> CreateClaimUseCase:
     return CreateClaimUseCase(

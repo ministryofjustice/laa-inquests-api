@@ -1,7 +1,6 @@
 from sqlmodel import Session, select
 import uuid
 
-from app.domain.claim import Claim as DomainClaim
 from app.domain.coroners_letter import CoronersLetter
 from app.models.application.index import (
     Address,
@@ -17,11 +16,8 @@ from app.models.application.index import (
     Provider,
     PublicBodyId,
 )
-from app.models.claim.index import Claim
 from app.ports.create_application_port import CreateApplicationPort
-from app.ports.create_claim_port import CreateClaimPort
 from app.ports.get_application_port import GetApplicationPort
-from app.ports.get_claims_for_application_port import GetClaimsForApplicationPort
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.list_applications_port import ListApplicationsPort
 from app.ports.search_application_port import SearchApplicationPort
@@ -31,8 +27,6 @@ from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 class ApplicationRepositoryAdapter(
     GetApplicationPort,
     CreateApplicationPort,
-    CreateClaimPort,
-    GetClaimsForApplicationPort,
     ApplicationDecisionPort,
     ListApplicationsPort,
     SearchApplicationPort,
@@ -164,35 +158,11 @@ class ApplicationRepositoryAdapter(
         self.session.refresh(new_application)
         return new_application
 
-    def create_claim(
-        self,
-        laa_reference: str,
-        claim: DomainClaim,
-        claimant_id: str | None,
-    ) -> Claim:
-        new_claim = Claim(
-            laa_reference=int(laa_reference),
-            claim_type_id=claim.claim_type,
-            total_profit_cost_net=claim.net,
-            total_profit_cost_gross=claim.gross,
-            total_profit_cost_vat_zero=claim.vat_zero_total,
-            poa_type_id=claim.poa_type,
-            claimant_id=claimant_id,
-        )
-        self.session.add(new_claim)
-        self.session.flush()
-        self.session.refresh(new_claim)
-        return new_claim
-
     def commit(self) -> None:
         self.session.commit()
 
     def rollback(self) -> None:
         self.session.rollback()
-
-    def get_claims_by_laa_reference(self, laa_reference: str) -> list[Claim]:
-        statement = select(Claim).where(Claim.laa_reference == int(laa_reference))
-        return list(self.session.exec(statement).all())
 
     def save_uploaded_coroners_letter(
         self,

@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
-from typing import TYPE_CHECKING
 
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
 from app.domain.claim_rejection import ClaimRejection, ClaimRejectionReason
@@ -19,11 +18,7 @@ from app.domain.constants.claim_messages import (
     POA_NOT_ALLOWED_MESSAGE,
 )
 from app.models.application.index import Application
-from app.models.claim.enums import ClaimStatus
-
-if TYPE_CHECKING:
-    from app.models.claim.index import Claim as DBClaim
-from app.models.claim.enums import ClaimType, POAType
+from app.models.claim.enums import ClaimStatus, ClaimType, POAType
 
 
 def _as_utc(dt: datetime) -> datetime:
@@ -33,6 +28,16 @@ def _as_utc(dt: datetime) -> datetime:
 
 MAX_PROFIT_COST_POA_CLAIM_COUNT = 4
 MIN_MONTHS_BEFORE_PROFIT_COST_POA = 3
+
+
+@dataclass(frozen=True)
+class ExistingClaimSummary:
+    status: ClaimStatus
+    poa_type: POAType | None
+    submission_date: datetime
+    net: Decimal | None
+    gross: Decimal | None
+    vat_zero_total: Decimal | None
 
 
 @dataclass(frozen=True)
@@ -61,11 +66,11 @@ class Claim:
             self._validate_profit_cost()
 
     def total_claim_cost_for_limit_check(self) -> Decimal | None:
-        return self.gross
+        return self.net if self.net is not None else self.vat_zero_total
 
     def should_auto_reject_for_max_poa_count(
         self,
-        existing_claims: list[DBClaim],
+        existing_claims: list[ExistingClaimSummary],
         reference_date: datetime | None = None,
     ) -> ClaimRejectionReason | None:
         if self.poa_type != POAType.PROFIT_COST:
@@ -75,8 +80,8 @@ class Claim:
         active_poas = [
             c
             for c in existing_claims
-            if c.poa_type_id == POAType.PROFIT_COST
-            and c.status_id in (ClaimStatus.PENDING, ClaimStatus.ACCEPTED)
+            if c.poa_type == POAType.PROFIT_COST
+            and c.status in (ClaimStatus.PENDING, ClaimStatus.ACCEPTED)
             and _as_utc(c.submission_date) >= cutoff
         ]
         exceeds = len(active_poas) >= MAX_PROFIT_COST_POA_CLAIM_COUNT
@@ -103,9 +108,10 @@ class Claim:
     def should_auto_reject_for_application_total_limit(
         self,
         application: Application,
-        existing_claims: list[DBClaim],
+        existing_claims: list[ExistingClaimSummary],
     ) -> ClaimRejectionReason | None:
-        if self.gross is None:
+        new_claim_cost = self.total_claim_cost_for_limit_check()
+        if new_claim_cost is None:
             return None
 
         limit = self._get_substantive_cost_limit(application)
@@ -115,12 +121,13 @@ class Claim:
         application_claims = [
             c
             for c in existing_claims
-            if c.status_id in (ClaimStatus.PENDING, ClaimStatus.ACCEPTED)
+            if c.status in (ClaimStatus.PENDING, ClaimStatus.ACCEPTED)
         ]
         existing_total = sum(
-            (c.total_profit_cost_gross or Decimal(0)) for c in application_claims
+            (c.net if c.net is not None else c.vat_zero_total or Decimal(0))
+            for c in application_claims
         )
-        total = existing_total + self.gross
+        total = existing_total + new_claim_cost
         exceeds_limit = total > limit
         return (
             ClaimRejectionReason.APPLICATION_CLAIMS_EXCEED_COST_LIMIT
@@ -131,7 +138,7 @@ class Claim:
     def should_auto_reject(
         self,
         application: Application,
-        existing_claims: list[DBClaim],
+        existing_claims: list[ExistingClaimSummary],
         reference_date: datetime | None = None,
     ) -> ClaimRejection:
         reasons = []

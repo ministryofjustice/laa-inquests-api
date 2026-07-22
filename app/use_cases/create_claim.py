@@ -2,13 +2,13 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from app.domain.claim import Claim as DomainClaim
+from app.domain.claim import Claim as DomainClaim, ExistingClaimSummary
 from app.domain.claim_error import ClaimValidationError
 from app.models.claim.enums import ClaimType, POAType
 from app.models.claim.index import Claim
 from app.ports.application_lookup_port import ApplicationLookupPort
-from app.ports.create_claim_port import CreateClaimPort
-from app.ports.get_claims_for_application_port import GetClaimsForApplicationPort
+from app.ports.claim.create_claim_port import CreateClaimPort
+from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
 from app.use_cases.exceptions import InvalidClaimError
 
 
@@ -65,8 +65,24 @@ class CreateClaimUseCase:
 
         if application is not None:
             reference_date = datetime.now(UTC)
+            existing_summaries = [
+                ExistingClaimSummary(
+                    status=c.status_id,
+                    poa_type=c.poa_type_id,
+                    submission_date=c.submission_date,
+                    net=c.total_profit_cost_net,
+                    gross=c.total_profit_cost_gross,
+                    vat_zero_total=c.total_profit_cost_vat_zero,
+                )
+                for c in existing_claims
+            ]
             validated_claim.should_auto_reject(
-                application, existing_claims, reference_date
+                application, existing_summaries, reference_date
             )
+            # CREATE DECISION REASON
+            # - take reasons for refusal, create DecisionReason for each, justification is null for all of the auto reject
+            # CREATE CLAIM DECISION PORT
+            # - claim id, decision status "REJECT", list of DecisionReasons
+            # UPDATE CLAIM STATUS to "REJECTED"
 
         return claim

@@ -1,7 +1,7 @@
 from sqlmodel import select
 from decimal import Decimal
 
-from app.adapters.application_repository_adapter import ApplicationRepositoryAdapter
+from app.adapters.claim_repository_adapter import ClaimRepositoryAdapter
 from app.domain.claim import Claim as DomainClaim
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimStatus, ClaimType, POAType
@@ -23,7 +23,7 @@ def _make_domain_claim(overrides=None) -> DomainClaim:
 
 def test_create_claim_persists_claim_with_expected_values(session):
     laa_reference = session.exec(select(Application)).first().laa_reference
-    adapter = ApplicationRepositoryAdapter(session)
+    adapter = ClaimRepositoryAdapter(session)
 
     created_claim = adapter.create_claim(
         str(laa_reference),
@@ -48,7 +48,7 @@ def test_create_claim_persists_claim_with_expected_values(session):
 
 def test_create_claim_defaults_status_to_pending(session):
     laa_reference = session.exec(select(Application)).first().laa_reference
-    adapter = ApplicationRepositoryAdapter(session)
+    adapter = ClaimRepositoryAdapter(session)
 
     created_claim = adapter.create_claim(
         str(laa_reference),
@@ -61,7 +61,7 @@ def test_create_claim_defaults_status_to_pending(session):
 
 def test_create_claim_sets_submission_date(session):
     laa_reference = session.exec(select(Application)).first().laa_reference
-    adapter = ApplicationRepositoryAdapter(session)
+    adapter = ClaimRepositoryAdapter(session)
 
     created_claim = adapter.create_claim(
         str(laa_reference),
@@ -74,7 +74,7 @@ def test_create_claim_sets_submission_date(session):
 
 def test_create_claim_persists_optional_poa_type_and_claimant(session):
     laa_reference = session.exec(select(Application)).first().laa_reference
-    adapter = ApplicationRepositoryAdapter(session)
+    adapter = ClaimRepositoryAdapter(session)
 
     created_claim = adapter.create_claim(
         str(laa_reference),
@@ -88,7 +88,7 @@ def test_create_claim_persists_optional_poa_type_and_claimant(session):
 
 def test_create_claim_defaults_optional_fields_to_none_when_omitted(session):
     laa_reference = session.exec(select(Application)).first().laa_reference
-    adapter = ApplicationRepositoryAdapter(session)
+    adapter = ClaimRepositoryAdapter(session)
 
     claim = _make_domain_claim(
         {
@@ -104,7 +104,7 @@ def test_create_claim_defaults_optional_fields_to_none_when_omitted(session):
 
 def test_get_claims_by_laa_reference_returns_all_claims_regardless_of_status(session):
     laa_reference = session.exec(select(Application)).first().laa_reference
-    adapter = ApplicationRepositoryAdapter(session)
+    adapter = ClaimRepositoryAdapter(session)
 
     adapter.create_claim(str(laa_reference), _make_domain_claim(), None)
     pending_claim = session.exec(select(Claim)).first()
@@ -130,7 +130,7 @@ def test_get_claims_by_laa_reference_returns_all_claims_regardless_of_status(ses
 
 def test_get_claims_by_laa_reference_returns_empty_list_when_no_claims(session):
     laa_reference = session.exec(select(Application)).first().laa_reference
-    adapter = ApplicationRepositoryAdapter(session)
+    adapter = ClaimRepositoryAdapter(session)
 
     result = adapter.get_claims_by_laa_reference(str(laa_reference))
 
