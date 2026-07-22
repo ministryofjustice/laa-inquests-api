@@ -7,8 +7,8 @@ from app.domain.claim_error import ClaimValidationError
 from app.models.claim.enums import ClaimType, POAType
 from app.models.claim.index import Claim
 from app.ports.application_lookup_port import ApplicationLookupPort
-from app.ports.create_claim_port import CreateClaimPort
-from app.ports.get_claims_for_application_port import GetClaimsForApplicationPort
+from app.ports.claim.create_claim_port import CreateClaimPort
+from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
 from app.use_cases.exceptions import InvalidClaimError
 
 
