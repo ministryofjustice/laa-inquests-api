@@ -132,7 +132,7 @@ jobs:
     environment: uat
     needs: deploy-uat
     runs-on: ubuntu-latest
-    if: always() && github.ref_name == 'main'
+    if: always()
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
