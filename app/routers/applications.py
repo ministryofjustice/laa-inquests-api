@@ -1,8 +1,9 @@
 from app.models.application.certificate import ApplicationCertificateResponse
 from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
 from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File
+from fastapi.encoders import jsonable_encoder
 from sqlmodel import Session
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from typing import Sequence
 from mimetypes import guess_type
 
@@ -20,7 +21,7 @@ from app.models.application.index import (
     RefuseApplicationUpdate,
     UploadCoronersLetterResponse,
 )
-from app.models.claim.index import Claim, ClaimCreate, ClaimResponse
+from app.models.claim.index import ClaimCreate, ClaimResponse
 
 from app.adapters.provider_details_adapter import ProviderDetailsAdapter
 from app.routers.dependencies import (
@@ -31,8 +32,13 @@ from app.config import Config
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_port import CreateClaimPort
+from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
+from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
+from app.ports.claim.update_claim_decision_status_port import (
+    UpdateClaimDecisionStatusPort,
+)
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.list_applications_port import ListApplicationsPort
 from app.ports.provider_details_port import ProviderDetailsPort
@@ -139,6 +145,13 @@ def get_list_applications_use_case(
 
 def get_create_claim_use_case(
     create_claim_port: CreateClaimPort = Depends(get_claim_db_adapter),
+    create_claim_decision_port: CreateClaimDecisionPort = Depends(get_claim_db_adapter),
+    create_decision_reason_port: CreateDecisionReasonPort = Depends(
+        get_claim_db_adapter
+    ),
+    update_claim_decision_status_port: UpdateClaimDecisionStatusPort = Depends(
+        get_claim_db_adapter
+    ),
     application_lookup_port: ApplicationLookupPort = Depends(
         get_application_db_adapter
     ),
@@ -150,6 +163,9 @@ def get_create_claim_use_case(
         create_claim_port=create_claim_port,
         application_lookup_port=application_lookup_port,
         get_claims_for_application_port=get_claims_for_application_port,
+        create_claim_decision_port=create_claim_decision_port,
+        create_decision_reason_port=create_decision_reason_port,
+        update_claim_decision_status_port=update_claim_decision_status_port,
     )
 
 
@@ -373,13 +389,17 @@ def create_application(
     return use_case.execute(request)
 
 
-@router.post("/{laa_reference}/claim", response_model=ClaimResponse, status_code=201)
+@router.post(
+    "/{laa_reference}/claim",
+    response_model=ClaimResponse,
+    status_code=201,
+)
 def create_claim(
     laa_reference: str,
     request: ClaimCreate,
     use_case: CreateClaimUseCase = Depends(get_create_claim_use_case),
     _: None = Depends(verify_entra_provider_token),
-) -> Claim:
+) -> ClaimResponse:
     """Creates a new claim against an application."""
     try:
         command = CreateClaimCommand(
@@ -391,7 +411,19 @@ def create_claim(
             vat_zero_total=request.total_profit_cost_vat_zero,
             claimant_id=request.claimant_id,
         )
-        return use_case.execute(command)
+        result = use_case.execute(command)
+        response = ClaimResponse.model_validate(result.claim)
+        if result.rejection_reasons is not None:
+            response = response.model_copy(
+                update={"rejection_reasons": result.rejection_reasons}
+            )
+            payload = response.model_dump(by_alias=True)
+        else:
+            payload = response.model_dump(
+                by_alias=True,
+                exclude={"rejection_reasons"},
+            )
+        return JSONResponse(content=jsonable_encoder(payload), status_code=201)
     except InvalidClaimError as e:
         raise HTTPException(
             status_code=422, detail={"errorCode": e.code, "message": e.message}

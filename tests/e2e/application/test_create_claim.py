@@ -1,8 +1,9 @@
 from sqlmodel import select
 from decimal import Decimal
+from datetime import date
 
 from app.models.application.index import Application
-from app.models.claim.index import Claim
+from app.models.claim.index import Claim, ClaimDecision, DecisionReason
 
 
 def _make_request_body(overrides=None):
@@ -326,3 +327,165 @@ def test_201_create_claim_when_existing_claims_push_application_total_over_limit
     )
 
     assert response.status_code == 201
+
+
+def test_201_create_claim_auto_reject_returns_reason_and_updates_decision_status(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    for _ in range(4):
+        seed_response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "totalProfitCostNet": 1,
+                    "totalProfitCostGross": 1,
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+        assert seed_response.status_code == 201
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "totalProfitCostNet": 1,
+                "totalProfitCostGross": 1,
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    claim = response.json()
+    assert claim["statusId"] == "REJECTED"
+    assert claim["rejectionReasons"] == ["MAX_POA_CLAIMS_EXCEEDED"]
+
+    claim_id = claim["claimId"]
+    decision = session.exec(
+        select(ClaimDecision).where(ClaimDecision.claim_id == claim_id)
+    ).first()
+    assert decision is not None
+    assert decision.decision == "REJECT"
+
+    decision_reasons = session.exec(
+        select(DecisionReason).where(
+            DecisionReason.claim_decision_id == decision.claim_decision_id
+        )
+    ).all()
+    assert len(decision_reasons) == 1
+    assert decision_reasons[0].reason_code == "MAX_POA_CLAIMS_EXCEEDED"
+
+
+def test_201_create_claim_that_passes_rejection_rules_is_not_rejected(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "totalProfitCostNet": 1,
+                "totalProfitCostGross": 1,
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    claim = response.json()
+    assert claim["statusId"] != "REJECTED"
+    assert "rejectionReasons" not in claim
+
+    claim_id = claim["claimId"]
+    decision = session.exec(
+        select(ClaimDecision).where(ClaimDecision.claim_id == claim_id)
+    ).first()
+    assert decision is None
+
+
+def test_201_create_claim_auto_reject_returns_multiple_reasons_for_rejection_when_applicable(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    for _ in range(4):
+        seed_response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "totalProfitCostNet": 1,
+                    "totalProfitCostGross": 1,
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+        assert seed_response.status_code == 201
+        assert seed_response.json()["statusId"] == "PENDING"
+
+    application = session.exec(
+        select(Application).where(Application.laa_reference == laa_reference)
+    ).first()
+    application_proceeding = application.proceedings[0]
+    application_proceeding.proceeding.substantive_cost_limitation = 5
+    application_proceeding.certificate_start_date = date.today()
+    session.add(application_proceeding.proceeding)
+    session.add(application_proceeding)
+    session.commit()
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "totalProfitCostNet": 10,
+                "totalProfitCostGross": 10,
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    claim = response.json()
+    assert claim["statusId"] == "REJECTED"
+
+    expected_reasons = {
+        "MAX_POA_CLAIMS_EXCEEDED",
+        "CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT",
+        "APPLICATION_CLAIMS_EXCEED_COST_LIMIT",
+        "PROFIT_COST_POA_CLAIM_SUBMITTED_TOO_EARLY",
+    }
+    assert set(claim["rejectionReasons"]) == expected_reasons
+    assert len(claim["rejectionReasons"]) == 4
+
+    claim_id = claim["claimId"]
+    decision = session.exec(
+        select(ClaimDecision).where(ClaimDecision.claim_id == claim_id)
+    ).first()
+    assert decision is not None
+    assert decision.decision == "REJECT"
+
+    decision_reasons = session.exec(
+        select(DecisionReason).where(
+            DecisionReason.claim_decision_id == decision.claim_decision_id
+        )
+    ).all()
+    assert len(decision_reasons) == 4
+    assert {r.reason_code for r in decision_reasons} == expected_reasons
