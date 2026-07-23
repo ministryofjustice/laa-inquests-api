@@ -8,7 +8,7 @@ class ClaimType(str, enum.Enum):
 
 
 class ClaimStatus(str, enum.Enum):
-    PENDING = "PENDING"
+    SUBMITTED = "SUBMITTED"
     ACCEPTED = "ACCEPTED"
     REJECTED = "REJECTED"
     REJECTED_WITH_AMENDMENT = "REJECTED_WITH_AMENDMENT"

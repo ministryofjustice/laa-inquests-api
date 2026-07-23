@@ -138,7 +138,7 @@ class CreateClaimUseCase:
                     claim.status_id = ClaimStatus.REJECTED
                 except Exception:
                     self.create_claim_port.rollback()
-                    claim.status_id = ClaimStatus.PENDING
+                    claim.status_id = ClaimStatus.SUBMITTED
                     rejection_reasons = None
                     logger.warning(
                         "Failed to persist claim auto-rejection for claim %s",

@@ -19,7 +19,7 @@ class ClaimBase(SQLModel):
     laa_reference: int = Field(foreign_key="application.laa_reference")
     claim_type_id: ClaimType = Field(sa_column=Column(Enum(ClaimType)))
     status_id: ClaimStatus = Field(
-        default=ClaimStatus.PENDING, sa_column=Column(Enum(ClaimStatus))
+        default=ClaimStatus.SUBMITTED, sa_column=Column(Enum(ClaimStatus))
     )
     submission_date: datetime = Field(default_factory=lambda: datetime.now(UTC))
     total_profit_cost_net: Decimal | None = Field(

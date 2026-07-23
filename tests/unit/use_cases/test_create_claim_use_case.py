@@ -397,7 +397,7 @@ def test_execute_persists_auto_reject_and_returns_rejection_reasons():
             claim_id=index + 100,
             laa_reference=12345,
             claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
-            status_id=ClaimStatus.PENDING,
+            status_id=ClaimStatus.SUBMITTED,
             poa_type_id=POAType.PROFIT_COST,
             submission_date=datetime.now(UTC),
             total_profit_cost_net=Decimal("1.00"),
@@ -435,7 +435,7 @@ def test_execute_persists_auto_reject_and_returns_rejection_reasons():
     assert create_claim_port.commit.call_count == 2
 
 
-def test_execute_returns_pending_claim_when_auto_reject_persistence_fails():
+def test_execute_returns_submitted_claim_when_auto_reject_persistence_fails():
     command = _make_command({"net": Decimal("1.00"), "gross": Decimal("1.00")})
     claim = _make_claim()
 
@@ -456,7 +456,7 @@ def test_execute_returns_pending_claim_when_auto_reject_persistence_fails():
             claim_id=index + 200,
             laa_reference=12345,
             claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
-            status_id=ClaimStatus.PENDING,
+            status_id=ClaimStatus.SUBMITTED,
             poa_type_id=POAType.PROFIT_COST,
             submission_date=datetime.now(UTC),
             total_profit_cost_net=Decimal("1.00"),
@@ -476,7 +476,7 @@ def test_execute_returns_pending_claim_when_auto_reject_persistence_fails():
 
     result = use_case.execute(command)
 
-    assert result.claim.status_id == ClaimStatus.PENDING
+    assert result.claim.status_id == ClaimStatus.SUBMITTED
     assert result.rejection_reasons is None
     create_claim_port.rollback.assert_called_once()
     assert create_claim_port.commit.call_count == 1

@@ -294,7 +294,7 @@ def _make_existing_claim(
     net: Decimal | None = None,
     gross: Decimal | None = None,
     vat_zero_total: Decimal | None = None,
-    status: ClaimStatus = ClaimStatus.PENDING,
+    status: ClaimStatus = ClaimStatus.SUBMITTED,
     poa_type: POAType | None = None,
     submission_date: datetime | None = None,
 ) -> ExistingClaimSummary:
@@ -406,7 +406,7 @@ def test_should_auto_reject_for_application_total_limit_when_new_claim_has_only_
     )
     existing = [
         ExistingClaimSummary(
-            status=ClaimStatus.PENDING,
+            status=ClaimStatus.SUBMITTED,
             poa_type=None,
             submission_date=datetime.now(UTC),
             net=None,
@@ -455,7 +455,7 @@ def test_should_auto_reject_returns_no_rejection_when_neither_check_fails():
 
 def _make_existing_profit_cost_poa(
     submission_date: datetime,
-    status: ClaimStatus = ClaimStatus.PENDING,
+    status: ClaimStatus = ClaimStatus.SUBMITTED,
 ) -> ExistingClaimSummary:
     return ExistingClaimSummary(
         status=status,
@@ -467,7 +467,7 @@ def _make_existing_profit_cost_poa(
     )
 
 
-def test_should_auto_reject_for_max_poa_count_when_4_pending_accepted_exist_in_window():
+def test_should_auto_reject_for_max_poa_count_when_4_submitted_accepted_exist_in_window():
     reference = datetime(2026, 7, 20, tzinfo=UTC)
     existing = [
         _make_existing_profit_cost_poa(reference - timedelta(days=30)),
