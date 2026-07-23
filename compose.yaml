@@ -60,7 +60,7 @@ services:
   migrations:
     build: .
     container_name: db-migrations
-    command: alembic upgrade head
+    command: sh -c "alembic upgrade head && python bin/seed.py"
     environment:
       <<: *app_db_env
     depends_on:

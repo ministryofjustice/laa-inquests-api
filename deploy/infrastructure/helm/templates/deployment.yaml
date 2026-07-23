@@ -34,7 +34,7 @@ spec:
         - name: run-migrations
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: [ "alembic", "upgrade", "head" ]
+          command: ["sh", "-c", "alembic upgrade head && python bin/seed.py"]
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           env:
