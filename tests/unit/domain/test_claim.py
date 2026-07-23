@@ -537,6 +537,29 @@ def test_should_not_auto_reject_for_max_poa_count_when_4_exist_but_rejected():
     assert reason is None
 
 
+def test_should_not_auto_reject_for_max_poa_count_when_4_exist_but_one_rejected():
+    reference = datetime(2026, 7, 20, tzinfo=UTC)
+    existing = [
+        _make_existing_profit_cost_poa(
+            reference - timedelta(days=30), status=ClaimStatus.SUBMITTED
+        ),
+        _make_existing_profit_cost_poa(
+            reference - timedelta(days=60), status=ClaimStatus.ACCEPTED
+        ),
+        _make_existing_profit_cost_poa(
+            reference - timedelta(days=90), status=ClaimStatus.SUBMITTED
+        ),
+        _make_existing_profit_cost_poa(
+            reference - timedelta(days=120), status=ClaimStatus.REJECTED
+        ),
+    ]
+    reason = _make_domain_claim().should_auto_reject_for_max_poa_count(
+        existing, reference
+    )
+
+    assert reason is None
+
+
 def test_should_not_auto_reject_for_max_poa_count_when_claim_is_not_profit_cost():
     reference = datetime(2026, 7, 20, tzinfo=UTC)
     claim = Claim(
