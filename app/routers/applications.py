@@ -36,8 +36,8 @@ from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
-from app.ports.claim.update_claim_decision_status_port import (
-    UpdateClaimDecisionStatusPort,
+from app.ports.claim.update_claim_status_port import (
+    UpdateClaimStatusPort,
 )
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.list_applications_port import ListApplicationsPort
@@ -149,9 +149,7 @@ def get_create_claim_use_case(
     create_decision_reason_port: CreateDecisionReasonPort = Depends(
         get_claim_db_adapter
     ),
-    update_claim_decision_status_port: UpdateClaimDecisionStatusPort = Depends(
-        get_claim_db_adapter
-    ),
+    update_claim_status_port: UpdateClaimStatusPort = Depends(get_claim_db_adapter),
     application_lookup_port: ApplicationLookupPort = Depends(
         get_application_db_adapter
     ),
@@ -165,7 +163,7 @@ def get_create_claim_use_case(
         get_claims_for_application_port=get_claims_for_application_port,
         create_claim_decision_port=create_claim_decision_port,
         create_decision_reason_port=create_decision_reason_port,
-        update_claim_decision_status_port=update_claim_decision_status_port,
+        update_claim_status_port=update_claim_status_port,
     )
 
 

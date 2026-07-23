@@ -7,8 +7,8 @@ from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
-from app.ports.claim.update_claim_decision_status_port import (
-    UpdateClaimDecisionStatusPort,
+from app.ports.claim.update_claim_status_port import (
+    UpdateClaimStatusPort,
 )
 
 
@@ -17,12 +17,10 @@ class ClaimRepositoryAdapter(
     GetClaimsForApplicationPort,
     CreateClaimDecisionPort,
     CreateDecisionReasonPort,
-    UpdateClaimDecisionStatusPort,
+    UpdateClaimStatusPort,
 ):
     def __init__(self, session: Session) -> None:
         self.session = session
-
-    # --- CreateClaimPort ---
 
     def create_claim(
         self,
@@ -50,13 +48,9 @@ class ClaimRepositoryAdapter(
     def rollback(self) -> None:
         self.session.rollback()
 
-    # --- GetClaimsForApplicationPort ---
-
     def get_claims_by_laa_reference(self, laa_reference: str) -> list[Claim]:
         statement = select(Claim).where(Claim.laa_reference == int(laa_reference))
         return list(self.session.exec(statement).all())
-
-    # --- CreateClaimDecisionPort ---
 
     def create_claim_decision(
         self,
@@ -71,8 +65,6 @@ class ClaimRepositoryAdapter(
         self.session.flush()
         self.session.refresh(decision)
         return decision
-
-    # --- CreateDecisionReasonPort ---
 
     def create_decision_reason(
         self,
@@ -90,9 +82,9 @@ class ClaimRepositoryAdapter(
         self.session.refresh(reason)
         return reason
 
-    # --- UpdateClaimDecisionStatusPort ---
+    # --- UpdateClaimStatusPort ---
 
-    def update_claim_decision_status(
+    def update_claim_status(
         self,
         claim_id: int,
         status: ClaimStatus,
