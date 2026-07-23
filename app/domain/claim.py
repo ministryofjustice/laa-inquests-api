@@ -81,7 +81,8 @@ class Claim:
             c
             for c in existing_claims
             if c.poa_type == POAType.PROFIT_COST
-            and c.status in (ClaimStatus.SUBMITTED, ClaimStatus.ACCEPTED)
+            and c.status
+            not in (ClaimStatus.REJECTED, ClaimStatus.REJECTED_WITH_AMENDMENT)
             and _as_utc(c.submission_date) >= cutoff
         ]
         exceeds = len(active_poas) >= MAX_PROFIT_COST_POA_CLAIM_COUNT

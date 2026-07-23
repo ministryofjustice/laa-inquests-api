@@ -385,6 +385,60 @@ def test_201_create_claim_auto_reject_returns_reason_and_updates_decision_status
     assert decision_reasons[0].reason_code == "MAX_POA_CLAIMS_EXCEEDED"
 
 
+def test_201_create_claim_does_not_count_rejected_profit_cost_poa_towards_max_limit(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    seeded_claim_ids = []
+    for _ in range(4):
+        seed_response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "totalProfitCostNet": 1,
+                    "totalProfitCostGross": 1,
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+        assert seed_response.status_code == 201
+        seeded_claim_ids.append(seed_response.json()["claimId"])
+
+    claim_to_reject = session.get(Claim, seeded_claim_ids[0])
+    claim_to_reject.status_id = "REJECTED"
+    session.add(claim_to_reject)
+    session.commit()
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "totalProfitCostNet": 1,
+                "totalProfitCostGross": 1,
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    claim = response.json()
+    assert claim["statusId"] == "SUBMITTED"
+    assert "rejectionReasons" not in claim
+
+    claim_id = claim["claimId"]
+    decision = session.exec(
+        select(ClaimDecision).where(ClaimDecision.claim_id == claim_id)
+    ).first()
+    assert decision is None
+
+
 def test_201_create_claim_that_passes_rejection_rules_is_not_rejected(
     session, client, auth_token
 ):
