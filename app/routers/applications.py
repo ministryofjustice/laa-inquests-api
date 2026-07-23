@@ -412,7 +412,7 @@ def create_claim(
             claimant_id=request.claimant_id,
         )
         result = use_case.execute(command)
-        response = ClaimResponse.model_validate(result.claim)
+        response = ClaimResponse(claim_id=result.claim.claim_id)
         if result.rejection_reasons is not None:
             response = response.model_copy(
                 update={"rejection_reasons": result.rejection_reasons}

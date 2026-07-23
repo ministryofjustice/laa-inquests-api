@@ -95,13 +95,4 @@ class ClaimResponse(BaseModel):
         populate_by_name=True,
     )
     claim_id: int
-    laa_reference: int
-    claim_type_id: ClaimType
-    status_id: ClaimStatus
-    submission_date: datetime
-    total_profit_cost_net: Decimal | None = None
-    total_profit_cost_gross: Decimal | None = None
-    total_profit_cost_vat_zero: Decimal | None = None
-    claimant_id: str | None = None
-    poa_type_id: POAType | None = None
     rejection_reasons: list[ReasonCode] | None = None

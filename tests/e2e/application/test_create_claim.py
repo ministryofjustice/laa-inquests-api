@@ -2,6 +2,7 @@ from sqlmodel import select
 from decimal import Decimal
 from datetime import date
 
+from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 from app.models.claim.index import Claim, ClaimDecision, DecisionReason
 
@@ -19,7 +20,7 @@ def _make_request_body(overrides=None):
     return body
 
 
-def test_201_create_claim_response_contains_expected_properties(
+def test_201_create_claim_response_contains_only_claim_id_when_not_rejected(
     session, client, auth_token
 ):
     laa_reference = session.exec(select(Application)).first().laa_reference
@@ -36,16 +37,12 @@ def test_201_create_claim_response_contains_expected_properties(
     assert response.status_code == 201
     claim = response.json()
     assert isinstance(claim["claimId"], int)
-    assert claim["laaReference"] == laa_reference
-    assert claim["claimTypeId"] == "PAYMENT_ON_ACCOUNT"
-    assert Decimal(str(claim["totalProfitCostNet"])) == Decimal("1000.00")
-    assert Decimal(str(claim["totalProfitCostGross"])) == Decimal("1200.00")
-    assert claim["poaTypeId"] == "PROFIT_COST"
-    assert claim["claimantId"] == "claimant-123@provider.co.uk"
-    assert isinstance(claim["submissionDate"], str)
+    assert set(claim.keys()) == {"claimId"}
 
 
-def test_201_create_claim_defaults_status_to_submitted(session, client, auth_token):
+def test_201_create_claim_auto_approves_payment_on_account_when_eligible(
+    session, client, auth_token
+):
     laa_reference = session.exec(select(Application)).first().laa_reference
 
     response = client.post(
@@ -57,7 +54,19 @@ def test_201_create_claim_defaults_status_to_submitted(session, client, auth_tok
         },
     )
 
-    assert response.json()["statusId"] == "SUBMITTED"
+    assert response.status_code == 201
+    claim = response.json()
+    assert set(claim.keys()) == {"claimId"}
+
+    stored_claim = session.get(Claim, claim["claimId"])
+    assert stored_claim is not None
+    assert stored_claim.status_id == "PAY_IN_FULL"
+
+    decision = session.exec(
+        select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
+    ).first()
+    assert decision is not None
+    assert decision.decision == "PAY_IN_FULL"
 
 
 def test_201_create_claim_without_optional_fields(session, client, auth_token):
@@ -76,8 +85,7 @@ def test_201_create_claim_without_optional_fields(session, client, auth_token):
 
     assert response.status_code == 201
     claim = response.json()
-    assert claim["poaTypeId"] is None
-    assert claim["claimantId"] is None
+    assert set(claim.keys()) == {"claimId"}
 
 
 def test_201_create_claim_persists_claim_to_database(session, client, auth_token):
@@ -240,9 +248,13 @@ def test_201_non_profit_cost_with_vat_zero_only_defaults_missing_totals(
 
     assert response.status_code == 201
     claim = response.json()
-    assert Decimal(str(claim["totalProfitCostNet"])) == Decimal("0.00")
-    assert Decimal(str(claim["totalProfitCostGross"])) == Decimal("0.00")
-    assert Decimal(str(claim["totalProfitCostVatZero"])) == Decimal("150.00")
+    assert set(claim.keys()) == {"claimId"}
+
+    stored_claim = session.get(Claim, claim["claimId"])
+    assert stored_claim is not None
+    assert Decimal(str(stored_claim.total_profit_cost_net)) == Decimal("0.00")
+    assert Decimal(str(stored_claim.total_profit_cost_gross)) == Decimal("0.00")
+    assert Decimal(str(stored_claim.total_profit_cost_vat_zero)) == Decimal("150.00")
 
 
 def test_422_non_profit_cost_with_no_cost_fields(session, client, auth_token):
@@ -366,7 +378,7 @@ def test_201_create_claim_auto_reject_returns_reason_and_updates_decision_status
 
     assert response.status_code == 201
     claim = response.json()
-    assert claim["statusId"] == "REJECTED"
+    assert set(claim.keys()) == {"claimId", "rejectionReasons"}
     assert claim["rejectionReasons"] == ["MAX_POA_CLAIMS_EXCEEDED"]
 
     claim_id = claim["claimId"]
@@ -429,17 +441,18 @@ def test_201_create_claim_does_not_count_rejected_profit_cost_poa_towards_max_li
 
     assert response.status_code == 201
     claim = response.json()
-    assert claim["statusId"] == "SUBMITTED"
+    assert set(claim.keys()) == {"claimId"}
     assert "rejectionReasons" not in claim
 
     claim_id = claim["claimId"]
     decision = session.exec(
         select(ClaimDecision).where(ClaimDecision.claim_id == claim_id)
     ).first()
-    assert decision is None
+    assert decision is not None
+    assert decision.decision == "PAY_IN_FULL"
 
 
-def test_201_create_claim_that_passes_rejection_rules_is_not_rejected(
+def test_201_create_claim_that_passes_rejection_rules_auto_approves(
     session, client, auth_token
 ):
     laa_reference = session.exec(select(Application)).first().laa_reference
@@ -460,12 +473,137 @@ def test_201_create_claim_that_passes_rejection_rules_is_not_rejected(
 
     assert response.status_code == 201
     claim = response.json()
-    assert claim["statusId"] != "REJECTED"
+    assert set(claim.keys()) == {"claimId"}
     assert "rejectionReasons" not in claim
 
     claim_id = claim["claimId"]
+    stored_claim = session.get(Claim, claim_id)
+    assert stored_claim is not None
+    assert stored_claim.status_id == "PAY_IN_FULL"
+
     decision = session.exec(
         select(ClaimDecision).where(ClaimDecision.claim_id == claim_id)
+    ).first()
+    assert decision is not None
+    assert decision.decision == "PAY_IN_FULL"
+
+
+def test_201_create_claim_does_not_auto_approve_when_amount_exceeds_50000(
+    session, client, auth_token
+):
+    application = session.exec(select(Application)).first()
+    application_proceeding = application.proceedings[0]
+    application_proceeding.proceeding.substantive_cost_limitation = 999999
+    application_proceeding.certificate_start_date = date(2000, 1, 1)
+    session.add(application_proceeding.proceeding)
+    session.add(application_proceeding)
+    session.commit()
+
+    response = client.post(
+        f"/applications/{application.laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "totalProfitCostNet": 50000.01,
+                "totalProfitCostGross": 50000.01,
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    claim = response.json()
+    assert set(claim.keys()) == {"claimId"}
+
+    stored_claim = session.get(Claim, claim["claimId"])
+    assert stored_claim is not None
+    assert stored_claim.status_id == "SUBMITTED"
+
+    decision = session.exec(
+        select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
+    ).first()
+    assert decision is None
+
+
+def test_201_create_claim_does_not_auto_approve_when_application_status_is_withdrawn(
+    session, client, auth_token
+):
+    application = session.exec(select(Application)).first()
+    application_proceeding = application.proceedings[0]
+    application_proceeding.proceeding.substantive_cost_limitation = 999999
+    application_proceeding.certificate_start_date = date(2000, 1, 1)
+    application.status = "WITHDRAWN"
+    session.add(application_proceeding.proceeding)
+    session.add(application_proceeding)
+    session.add(application)
+    session.commit()
+
+    response = client.post(
+        f"/applications/{application.laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "totalProfitCostNet": 50000,
+                "totalProfitCostGross": 50000,
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    claim = response.json()
+    assert set(claim.keys()) == {"claimId"}
+
+    stored_claim = session.get(Claim, claim["claimId"])
+    assert stored_claim is not None
+    assert stored_claim.status_id == "SUBMITTED"
+
+    decision = session.exec(
+        select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
+    ).first()
+    assert decision is None
+
+
+def test_201_create_claim_does_not_auto_approve_when_merits_decision_is_granted(
+    session, client, auth_token
+):
+    application = session.exec(select(Application)).first()
+    application_proceeding = application.proceedings[0]
+    application_proceeding.proceeding.substantive_cost_limitation = 999999
+    application_proceeding.certificate_start_date = date(2000, 1, 1)
+    application.proceedings[0].merits_decision = MeritsDecision.GRANTED
+    session.add(application_proceeding.proceeding)
+    session.add(application.proceedings[0])
+    session.commit()
+
+    response = client.post(
+        f"/applications/{application.laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "totalProfitCostNet": 50000,
+                "totalProfitCostGross": 50000,
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    claim = response.json()
+    assert set(claim.keys()) == {"claimId"}
+
+    stored_claim = session.get(Claim, claim["claimId"])
+    assert stored_claim is not None
+    assert stored_claim.status_id == "SUBMITTED"
+
+    decision = session.exec(
+        select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
     ).first()
     assert decision is None
 
@@ -490,7 +628,7 @@ def test_201_create_claim_auto_reject_returns_multiple_reasons_for_rejection_whe
             },
         )
         assert seed_response.status_code == 201
-        assert seed_response.json()["statusId"] == "SUBMITTED"
+        assert set(seed_response.json().keys()) == {"claimId"}
 
     application = session.exec(
         select(Application).where(Application.laa_reference == laa_reference)
@@ -518,7 +656,7 @@ def test_201_create_claim_auto_reject_returns_multiple_reasons_for_rejection_whe
 
     assert response.status_code == 201
     claim = response.json()
-    assert claim["statusId"] == "REJECTED"
+    assert set(claim.keys()) == {"claimId", "rejectionReasons"}
 
     expected_reasons = {
         "MAX_POA_CLAIMS_EXCEEDED",

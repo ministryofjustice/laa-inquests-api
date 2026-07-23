@@ -480,3 +480,113 @@ def test_execute_returns_submitted_claim_when_auto_reject_persistence_fails():
     assert result.rejection_reasons is None
     create_claim_port.rollback.assert_called_once()
     assert create_claim_port.commit.call_count == 1
+
+
+def test_execute_auto_approves_eligible_payment_on_account_claim():
+    command = _make_command({"net": Decimal("50000.00"), "gross": Decimal("50000.00")})
+    claim = _make_claim()
+
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+    create_claim_decision_port = _make_create_claim_decision_port()
+    update_claim_decision_status_port = _make_update_claim_decision_status_port()
+
+    application = MagicMock(spec=Application)
+    application.status = "LIVE"
+    application.overall_decision = "PENDING"
+    application.proceedings = [MagicMock()]
+    application.proceedings[0].substantive_cost_limitation = 999999
+    application.proceedings[0].certificate_start_date = None
+
+    use_case = CreateClaimUseCase(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(application),
+        get_claims_for_application_port=_make_get_claims_port(),
+        create_claim_decision_port=create_claim_decision_port,
+        update_claim_decision_status_port=update_claim_decision_status_port,
+    )
+
+    result = use_case.execute(command)
+
+    assert result.claim.status_id == ClaimStatus.PAY_IN_FULL
+    assert result.rejection_reasons is None
+    create_claim_decision_port.create_claim_decision.assert_called_once_with(
+        claim_id=1,
+        decision_status=ClaimDecisionStatus.PAY_IN_FULL,
+    )
+    update_claim_decision_status_port.update_claim_decision_status.assert_called_once_with(
+        claim_id=1,
+        status=ClaimStatus.PAY_IN_FULL,
+    )
+    assert create_claim_port.commit.call_count == 2
+
+
+def test_execute_does_not_auto_approve_when_amount_exceeds_threshold():
+    command = _make_command({"net": Decimal("50000.01"), "gross": Decimal("50000.01")})
+    claim = _make_claim()
+
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+    create_claim_decision_port = _make_create_claim_decision_port()
+    update_claim_decision_status_port = _make_update_claim_decision_status_port()
+
+    application = MagicMock(spec=Application)
+    application.status = "LIVE"
+    application.overall_decision = "PENDING"
+    application.proceedings = [MagicMock()]
+    application.proceedings[0].substantive_cost_limitation = 999999
+    application.proceedings[0].certificate_start_date = None
+
+    use_case = CreateClaimUseCase(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(application),
+        get_claims_for_application_port=_make_get_claims_port(),
+        create_claim_decision_port=create_claim_decision_port,
+        update_claim_decision_status_port=update_claim_decision_status_port,
+    )
+
+    result = use_case.execute(command)
+
+    assert result.claim.status_id != ClaimStatus.PAY_IN_FULL
+    assert result.rejection_reasons is None
+    create_claim_decision_port.create_claim_decision.assert_not_called()
+    update_claim_decision_status_port.update_claim_decision_status.assert_not_called()
+    assert create_claim_port.commit.call_count == 1
+
+
+def test_execute_does_not_auto_approve_non_payment_on_account_claim():
+    command = _make_command(
+        {
+            "claim_type": ClaimType.FINAL_BILL,
+            "poa_type": None,
+            "net": Decimal("50000.00"),
+            "gross": Decimal("50000.00"),
+        }
+    )
+    claim = _make_claim()
+
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+    create_claim_decision_port = _make_create_claim_decision_port()
+    update_claim_decision_status_port = _make_update_claim_decision_status_port()
+
+    application = MagicMock(spec=Application)
+    application.status = "LIVE"
+    application.overall_decision = "PENDING"
+    application.proceedings = [MagicMock()]
+    application.proceedings[0].substantive_cost_limitation = 999999
+    application.proceedings[0].certificate_start_date = None
+
+    use_case = CreateClaimUseCase(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(application),
+        get_claims_for_application_port=_make_get_claims_port(),
+        create_claim_decision_port=create_claim_decision_port,
+        update_claim_decision_status_port=update_claim_decision_status_port,
+    )
+
+    result = use_case.execute(command)
+
+    assert result.claim.status_id != ClaimStatus.PAY_IN_FULL
+    create_claim_decision_port.create_claim_decision.assert_not_called()
+    update_claim_decision_status_port.update_claim_decision_status.assert_not_called()

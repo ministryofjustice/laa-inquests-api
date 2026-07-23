@@ -7,6 +7,7 @@ import pytest
 from app.domain.claim import Claim, ExistingClaimSummary
 from app.domain.claim_rejection import ClaimRejectionReason
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
+from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimStatus, ClaimType, POAType
 
@@ -679,3 +680,78 @@ def test_should_auto_reject_aggregates_early_profit_cost_poa_reason():
         ClaimRejectionReason.PROFIT_COST_POA_CLAIM_SUBMITTED_TOO_EARLY
         in rejection.reasons
     )
+
+
+def test_is_eligible_for_auto_approval_when_payment_on_account_total_is_50000():
+    claim = Claim(
+        claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+        poa_type=POAType.PROFIT_COST,
+        net=Decimal("50000.00"),
+        gross=Decimal("50000.00"),
+        vat_zero_total=None,
+    )
+    application = _make_application_with_certificate(start=None)
+    application.status = "LIVE"
+    application.overall_decision = MeritsDecision.PENDING
+
+    assert claim.is_eligible_for_auto_approval(application) is True
+
+
+def test_is_not_eligible_for_auto_approval_when_total_exceeds_50000():
+    claim = Claim(
+        claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+        poa_type=POAType.PROFIT_COST,
+        net=Decimal("50000.01"),
+        gross=Decimal("50000.01"),
+        vat_zero_total=None,
+    )
+    application = _make_application_with_certificate(start=None)
+    application.status = "LIVE"
+    application.overall_decision = MeritsDecision.PENDING
+
+    assert claim.is_eligible_for_auto_approval(application) is False
+
+
+def test_is_not_eligible_for_auto_approval_when_application_status_withdrawn():
+    claim = Claim(
+        claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+        poa_type=POAType.PROFIT_COST,
+        net=Decimal("50000.00"),
+        gross=Decimal("50000.00"),
+        vat_zero_total=None,
+    )
+    application = _make_application_with_certificate(start=None)
+    application.status = "WITHDRAWN"
+    application.overall_decision = MeritsDecision.PENDING
+
+    assert claim.is_eligible_for_auto_approval(application) is False
+
+
+def test_is_not_eligible_for_auto_approval_when_merits_decision_granted():
+    claim = Claim(
+        claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+        poa_type=POAType.PROFIT_COST,
+        net=Decimal("50000.00"),
+        gross=Decimal("50000.00"),
+        vat_zero_total=None,
+    )
+    application = _make_application_with_certificate(start=None)
+    application.status = "LIVE"
+    application.overall_decision = MeritsDecision.GRANTED
+
+    assert claim.is_eligible_for_auto_approval(application) is False
+
+
+def test_is_not_eligible_for_auto_approval_when_claim_is_not_payment_on_account():
+    claim = Claim(
+        claim_type=ClaimType.FINAL_BILL,
+        poa_type=None,
+        net=Decimal("50000.00"),
+        gross=Decimal("50000.00"),
+        vat_zero_total=None,
+    )
+    application = _make_application_with_certificate(start=None)
+    application.status = "LIVE"
+    application.overall_decision = MeritsDecision.PENDING
+
+    assert claim.is_eligible_for_auto_approval(application) is False

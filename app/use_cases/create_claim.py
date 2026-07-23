@@ -146,4 +146,30 @@ class CreateClaimUseCase:
                         exc_info=True,
                     )
 
+            if (
+                not rejection.is_rejected
+                and validated_claim.is_eligible_for_auto_approval(application)
+                and self.create_claim_decision_port is not None
+                and self.update_claim_decision_status_port is not None
+            ):
+                try:
+                    self.create_claim_decision_port.create_claim_decision(
+                        claim_id=claim.claim_id,
+                        decision_status=ClaimDecisionStatus.PAY_IN_FULL,
+                    )
+                    self.update_claim_decision_status_port.update_claim_decision_status(
+                        claim_id=claim.claim_id,
+                        status=ClaimStatus.PAY_IN_FULL,
+                    )
+                    self.create_claim_port.commit()
+                    claim.status_id = ClaimStatus.PAY_IN_FULL
+                except Exception:
+                    self.create_claim_port.rollback()
+                    claim.status_id = ClaimStatus.SUBMITTED
+                    logger.warning(
+                        "Failed to persist claim auto-approval for claim %s",
+                        claim.claim_id,
+                        exc_info=True,
+                    )
+
         return CreateClaimResult(claim=claim, rejection_reasons=rejection_reasons)
