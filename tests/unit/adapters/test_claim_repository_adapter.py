@@ -35,9 +35,6 @@ def _create_claim(session, laa_reference) -> Claim:
     )
 
 
-# --- create_claim ---
-
-
 def test_create_claim_persists_claim_with_expected_values(session):
     laa_reference = session.exec(select(Application)).first().laa_reference
     adapter = ClaimRepositoryAdapter(session)
@@ -94,9 +91,6 @@ def test_create_claim_persists_optional_fields_as_none_when_omitted(session):
     assert created.claimant_id is None
 
 
-# --- get_claims_by_laa_reference ---
-
-
 def test_get_claims_by_laa_reference_returns_claims_for_application(session):
     laa_reference = session.exec(select(Application)).first().laa_reference
     adapter = ClaimRepositoryAdapter(session)
@@ -118,9 +112,6 @@ def test_get_claims_by_laa_reference_returns_empty_list_when_no_claims(session):
     assert results == []
 
 
-# --- create_claim_decision ---
-
-
 def test_create_claim_decision_persists_decision_with_expected_values(session):
     laa_reference = session.exec(select(Application)).first().laa_reference
     adapter = ClaimRepositoryAdapter(session)
@@ -133,9 +124,6 @@ def test_create_claim_decision_persists_decision_with_expected_values(session):
     assert stored is not None
     assert stored.claim_id == claim.claim_id
     assert stored.decision == ClaimDecisionStatus.REJECT
-
-
-# --- create_decision_reason ---
 
 
 def test_create_decision_reason_persists_reason_with_expected_values(session):
@@ -172,22 +160,16 @@ def test_create_decision_reason_persists_justification_when_provided(session):
     assert reason.justification == "Some justification text"
 
 
-# --- update_claim_decision_status ---
-
-
-def test_update_claim_decision_status_sets_status_on_claim(session):
+def test_update_claim_status_sets_status_on_claim(session):
     laa_reference = session.exec(select(Application)).first().laa_reference
     adapter = ClaimRepositoryAdapter(session)
     claim = _create_claim(session, laa_reference)
     assert claim.status_id == ClaimStatus.SUBMITTED
 
-    adapter.update_claim_decision_status(claim.claim_id, ClaimStatus.REJECTED)
+    adapter.update_claim_status(claim.claim_id, ClaimStatus.REJECTED)
     session.refresh(claim)
 
     assert claim.status_id == ClaimStatus.REJECTED
-
-
-# --- commit / rollback ---
 
 
 def test_commit_commits_session(session):

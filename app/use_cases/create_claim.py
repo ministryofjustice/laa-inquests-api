@@ -18,8 +18,8 @@ from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
-from app.ports.claim.update_claim_decision_status_port import (
-    UpdateClaimDecisionStatusPort,
+from app.ports.claim.update_claim_status_port import (
+    UpdateClaimStatusPort,
 )
 from app.use_cases.exceptions import InvalidClaimError
 
@@ -52,14 +52,14 @@ class CreateClaimUseCase:
         get_claims_for_application_port: GetClaimsForApplicationPort,
         create_claim_decision_port: CreateClaimDecisionPort | None = None,
         create_decision_reason_port: CreateDecisionReasonPort | None = None,
-        update_claim_decision_status_port: UpdateClaimDecisionStatusPort | None = None,
+        update_claim_status_port: UpdateClaimStatusPort | None = None,
     ) -> None:
         self.create_claim_port = create_claim_port
         self.application_lookup_port = application_lookup_port
         self.get_claims_for_application_port = get_claims_for_application_port
         self.create_claim_decision_port = create_claim_decision_port
         self.create_decision_reason_port = create_decision_reason_port
-        self.update_claim_decision_status_port = update_claim_decision_status_port
+        self.update_claim_status_port = update_claim_status_port
 
     def execute(self, command: CreateClaimCommand) -> CreateClaimResult:
         try:
@@ -112,7 +112,7 @@ class CreateClaimUseCase:
                 rejection.is_rejected
                 and self.create_claim_decision_port is not None
                 and self.create_decision_reason_port is not None
-                and self.update_claim_decision_status_port is not None
+                and self.update_claim_status_port is not None
             ):
                 try:
                     claim_decision = (
@@ -130,7 +130,7 @@ class CreateClaimUseCase:
                             reason_code=reason_code,
                             justification=None,
                         )
-                    self.update_claim_decision_status_port.update_claim_decision_status(
+                    self.update_claim_status_port.update_claim_status(
                         claim_id=claim.claim_id,
                         status=ClaimStatus.REJECTED,
                     )
@@ -142,6 +142,32 @@ class CreateClaimUseCase:
                     rejection_reasons = None
                     logger.warning(
                         "Failed to persist claim auto-rejection for claim %s",
+                        claim.claim_id,
+                        exc_info=True,
+                    )
+
+            if (
+                not rejection.is_rejected
+                and validated_claim.is_eligible_for_auto_approval(application)
+                and self.create_claim_decision_port is not None
+                and self.update_claim_status_port is not None
+            ):
+                try:
+                    self.create_claim_decision_port.create_claim_decision(
+                        claim_id=claim.claim_id,
+                        decision_status=ClaimDecisionStatus.PAY_IN_FULL,
+                    )
+                    self.update_claim_status_port.update_claim_status(
+                        claim_id=claim.claim_id,
+                        status=ClaimStatus.PAY_IN_FULL,
+                    )
+                    self.create_claim_port.commit()
+                    claim.status_id = ClaimStatus.PAY_IN_FULL
+                except Exception:
+                    self.create_claim_port.rollback()
+                    claim.status_id = ClaimStatus.SUBMITTED
+                    logger.warning(
+                        "Failed to persist claim auto-approval for claim %s",
                         claim.claim_id,
                         exc_info=True,
                     )

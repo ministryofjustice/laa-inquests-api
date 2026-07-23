@@ -10,6 +10,7 @@ class ClaimType(str, enum.Enum):
 class ClaimStatus(str, enum.Enum):
     SUBMITTED = "SUBMITTED"
     ACCEPTED = "ACCEPTED"
+    PAY_IN_FULL = "PAY_IN_FULL"
     REJECTED = "REJECTED"
     REJECTED_WITH_AMENDMENT = "REJECTED_WITH_AMENDMENT"
 
@@ -23,6 +24,7 @@ class POAType(str, enum.Enum):
 class ClaimDecisionStatus(str, enum.Enum):
     REJECT = "REJECT"
     GRANT = "GRANT"
+    PAY_IN_FULL = "PAY_IN_FULL"
     PENDING = "PENDING"
 
 

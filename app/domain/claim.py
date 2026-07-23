@@ -17,6 +17,7 @@ from app.domain.constants.claim_messages import (
     NET_GT_GROSS_MESSAGE,
     POA_NOT_ALLOWED_MESSAGE,
 )
+from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimStatus, ClaimType, POAType
 
@@ -28,6 +29,7 @@ def _as_utc(dt: datetime) -> datetime:
 
 MAX_PROFIT_COST_POA_CLAIM_COUNT = 4
 MIN_MONTHS_BEFORE_PROFIT_COST_POA = 3
+AUTO_APPROVAL_MAX_TOTAL = Decimal("50000.00")
 
 
 @dataclass(frozen=True)
@@ -67,6 +69,22 @@ class Claim:
 
     def total_claim_cost_for_limit_check(self) -> Decimal | None:
         return self.net if self.net is not None else self.vat_zero_total
+
+    def is_eligible_for_auto_approval(self, application: Application) -> bool:
+        if self.claim_type != ClaimType.PAYMENT_ON_ACCOUNT:
+            return False
+
+        total = self.total_claim_cost_for_limit_check()
+        if total is None:
+            return False
+
+        if total > AUTO_APPROVAL_MAX_TOTAL:
+            return False
+
+        if application.status in ("WITHDRAWN", "GRANTED"):
+            return False
+
+        return application.overall_decision != MeritsDecision.GRANTED
 
     def should_auto_reject_for_max_poa_count(
         self,
