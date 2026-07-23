@@ -46,7 +46,7 @@ def test_create_claim_persists_claim_with_expected_values(session):
     assert stored_claim.total_profit_cost_vat_zero == Decimal("150.00")
 
 
-def test_create_claim_defaults_status_to_pending(session):
+def test_create_claim_defaults_status_to_submitted(session):
     laa_reference = session.exec(select(Application)).first().laa_reference
     adapter = ClaimRepositoryAdapter(session)
 
@@ -56,7 +56,7 @@ def test_create_claim_defaults_status_to_pending(session):
         "claimant-123@provider.co.uk",
     )
 
-    assert created_claim.status_id == ClaimStatus.PENDING
+    assert created_claim.status_id == ClaimStatus.SUBMITTED
 
 
 def test_create_claim_sets_submission_date(session):
@@ -107,9 +107,9 @@ def test_get_claims_by_laa_reference_returns_all_claims_regardless_of_status(ses
     adapter = ClaimRepositoryAdapter(session)
 
     adapter.create_claim(str(laa_reference), _make_domain_claim(), None)
-    pending_claim = session.exec(select(Claim)).first()
-    pending_claim.status_id = ClaimStatus.ACCEPTED
-    session.add(pending_claim)
+    submitted_claim = session.exec(select(Claim)).first()
+    submitted_claim.status_id = ClaimStatus.ACCEPTED
+    session.add(submitted_claim)
     session.commit()
 
     adapter.create_claim(str(laa_reference), _make_domain_claim(), None)

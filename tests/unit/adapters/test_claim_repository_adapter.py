@@ -62,13 +62,13 @@ def test_create_claim_persists_claim_with_expected_values(session):
     assert stored.claimant_id == "claimant-123@provider.co.uk"
 
 
-def test_create_claim_defaults_status_to_pending(session):
+def test_create_claim_defaults_status_to_submitted(session):
     laa_reference = session.exec(select(Application)).first().laa_reference
     adapter = ClaimRepositoryAdapter(session)
 
     created = adapter.create_claim(str(laa_reference), _make_domain_claim(), None)
 
-    assert created.status_id == ClaimStatus.PENDING
+    assert created.status_id == ClaimStatus.SUBMITTED
 
 
 def test_create_claim_sets_submission_date(session):
@@ -179,7 +179,7 @@ def test_update_claim_decision_status_sets_status_on_claim(session):
     laa_reference = session.exec(select(Application)).first().laa_reference
     adapter = ClaimRepositoryAdapter(session)
     claim = _create_claim(session, laa_reference)
-    assert claim.status_id == ClaimStatus.PENDING
+    assert claim.status_id == ClaimStatus.SUBMITTED
 
     adapter.update_claim_decision_status(claim.claim_id, ClaimStatus.REJECTED)
     session.refresh(claim)

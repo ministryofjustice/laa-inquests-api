@@ -45,7 +45,7 @@ def test_201_create_claim_response_contains_expected_properties(
     assert isinstance(claim["submissionDate"], str)
 
 
-def test_201_create_claim_defaults_status_to_pending(session, client, auth_token):
+def test_201_create_claim_defaults_status_to_submitted(session, client, auth_token):
     laa_reference = session.exec(select(Application)).first().laa_reference
 
     response = client.post(
@@ -57,7 +57,7 @@ def test_201_create_claim_defaults_status_to_pending(session, client, auth_token
         },
     )
 
-    assert response.json()["statusId"] == "PENDING"
+    assert response.json()["statusId"] == "SUBMITTED"
 
 
 def test_201_create_claim_without_optional_fields(session, client, auth_token):
@@ -436,7 +436,7 @@ def test_201_create_claim_auto_reject_returns_multiple_reasons_for_rejection_whe
             },
         )
         assert seed_response.status_code == 201
-        assert seed_response.json()["statusId"] == "PENDING"
+        assert seed_response.json()["statusId"] == "SUBMITTED"
 
     application = session.exec(
         select(Application).where(Application.laa_reference == laa_reference)

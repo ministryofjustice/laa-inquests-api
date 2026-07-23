@@ -81,7 +81,7 @@ class Claim:
             c
             for c in existing_claims
             if c.poa_type == POAType.PROFIT_COST
-            and c.status in (ClaimStatus.PENDING, ClaimStatus.ACCEPTED)
+            and c.status in (ClaimStatus.SUBMITTED, ClaimStatus.ACCEPTED)
             and _as_utc(c.submission_date) >= cutoff
         ]
         exceeds = len(active_poas) >= MAX_PROFIT_COST_POA_CLAIM_COUNT
@@ -121,7 +121,7 @@ class Claim:
         application_claims = [
             c
             for c in existing_claims
-            if c.status in (ClaimStatus.PENDING, ClaimStatus.ACCEPTED)
+            if c.status in (ClaimStatus.SUBMITTED, ClaimStatus.ACCEPTED)
         ]
         existing_total = sum(
             (c.net if c.net is not None else c.vat_zero_total or Decimal(0))
