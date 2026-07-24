@@ -16,7 +16,9 @@ def _sample_context() -> ApplicationCertificate:
         client_name="Jane Doe",
         client_address=Address(
             address_line_1="1 High Street",
+            address_line_2="Westminster",
             town_or_city="London",
+            county="Greater London",
             postcode="SW1A 1AA",
         ),
         firm_name="Test Firm Ltd",

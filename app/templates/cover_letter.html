@@ -23,7 +23,7 @@
             background-color: #ffffff !important;
             color: #0b0c0c;
             font-size: 12px;
-            line-height: 1.5;
+            line-height: 1.2;
         }
 
         .page {
@@ -60,8 +60,6 @@
             top: 0mm;
             right: 5mm;
             width: 65mm;
-            font-size: 12px;
-            line-height: 1.5;
         }
 
         .header-from {
@@ -93,29 +91,27 @@
         }
 
         .address-window {
-            margin-top: 9.5mm;
+            margin-top: 8mm; /* 9.5mm minus the line height padding of 1.5mm */
             margin-bottom: 33mm;
             margin-left: 9.6mm;
-            font-size: 12px;
-            line-height: 1.25;
+            max-height: 26.8mm;
+            line-height: 4.3mm;
         }
 
         .body-text{
-            font-size: 12px;
             margin-bottom: 5mm;
-            line-height: 1.5;
         }
 
         .write-to-address {
             display: block;
-            font-size: 12px;
-            line-height: 1.5;
+        }
+
+        .write-to-address-header {
+            display: block;
         }
 
         .signature-block {
             margin-top: 10mm;
-            font-size: 12px;
-            line-height: 1.5;
         }
 
         .signature-block p {
@@ -133,28 +129,29 @@
             </div>
 
             <div class="address-window">
-                {{ client_name }}<br>
-                {% if client_address %}
-                {{ client_address.address_line_1 }}<br>
-                {% if client_address.address_line_2 %}{{ client_address.address_line_2 }}<br>{% endif %}
-                {{ client_address.town_or_city }}<br>
-                {% if client_address.county %}{{ client_address.county }}<br>{% endif %}
-                {{ client_address.postcode }}
-                {% endif %}
+                <span style="line-height: 1.1; display: block;">
+                    {{ client_name }}<br>
+                    {% if client_address %}
+                    {{ client_address.address_line_1 }}<br>
+                    {% if client_address.address_line_2 %}{{ client_address.address_line_2 }}<br>{% endif %}
+                    {{ client_address.town_or_city }}<br>
+                    {% if client_address.county %}{{ client_address.county }}<br>{% endif %}
+                    {{ client_address.postcode }}
+                    {% endif %}
+                </span>
             </div>
         </div>
         <div class="govuk-grid-column-one-third">
             <div class="header-right">
                 <div class="header-from">
                     <p><strong>Legal Aid Agency</strong></p>
-                    <span class="write-to-address">
-                    Legal Aid Agency<br>
-                    Unit B8<br>
-                    Berkley Way<br>
-                    Viking Business Park<br>
-                    Jarrow<br>
-                    NE31 1SF
-                </span>
+                    <span class="write-to-address-header">
+                        Unit B8<br>
+                        Berkley Way<br>
+                        Viking Business Park<br>
+                        Jarrow<br>
+                        NE31 1SF
+                    </span>
                 </div>
                 <div class="header-contact">
                     <p><strong>Telephone:</strong> 0300 200 2020</p>
