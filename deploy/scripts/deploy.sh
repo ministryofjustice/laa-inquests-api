@@ -3,7 +3,7 @@
 ENVIRONMENT=$1
 
 deploy_branch() {
-  echo "SKIPPING Turning off the PR branches for UAT. Semi-temporary workaround for database migrations"
+  echo "SKIPPING Turning off the PR branches for dev. Semi-temporary workaround for database migrations"
   return 0
 # Convert the branch name into a string that can be turned into a valid URL
   BRANCH_RELEASE_NAME=$(echo "$branch_name" | tr '[:upper:]' '[:lower:]' | sed 's:^\w*\/::' | tr -s ' _/[]().' '-' | cut -c1-18 | sed 's/-$//')
@@ -103,7 +103,7 @@ if [ -z "$branch_name" ]; then
   branch_name="$GITHUB_REF_NAME" # Branch name if this is a push event
 fi
 
-if [[ ("$ENVIRONMENT" == 'uat') && "$branch_name" == "main" ]] || \
+if [[ ("$ENVIRONMENT" == 'dev') && "$branch_name" == "main" ]] || \
    [[ (("$ENVIRONMENT" == 'staging' || "$ENVIRONMENT" == 'prod') && "$branch_name" =~ $releaseTag) ]]
 then
   deploy_main
