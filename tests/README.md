@@ -14,6 +14,7 @@ To implement this client add it as an argument to your test function as shown:
 ```python
 from fastapi.testclient import TestClient
 
+
 def test_endpoint(client: TestClient):
     pass
 ```
@@ -23,6 +24,7 @@ This TestClient implements sending requests similarly to the requests module.
 ```python
 from fastapi.testclient import TestClient
 
+
 def test_endpoint(client: TestClient):
     response = client.get("/endpoint")
     assert response.status_code == 200
@@ -30,6 +32,7 @@ def test_endpoint(client: TestClient):
 
 ```python
 from fastapi.testclient import TestClient
+
 
 def test_endpoint(client: TestClient):
     response = client.post("/endpoint", json={"key": "value"})
@@ -56,7 +59,7 @@ from datetime import datetime as dt
 
 def test_database(session: Session):
     # Create a new case object
-    case = Case(id=1, name='test', category='Housing', time=dt.now())
+    case = Case(id=1, name="test", category="Housing", time=dt.now())
     session.add(case)  # Write it to the database
 
     db_case = session.get(Case, 1)  # Read case with ID: 1 from the database

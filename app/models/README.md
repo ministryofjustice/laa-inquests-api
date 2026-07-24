@@ -28,8 +28,10 @@ class Month(str, Enum):
 
 
 class Birthday(SQLModel):
-    day: int = Field(gt=0, le=31)  # A number greater than 0 but less than or equal to 31.
-    month: Month # Valid inputs would be "January", "February", "March"
+    day: int = Field(
+        gt=0, le=31
+    )  # A number greater than 0 but less than or equal to 31.
+    month: Month  # Valid inputs would be "January", "February", "March"
 ```
 
 ## How do I create a database table?
