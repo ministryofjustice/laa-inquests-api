@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout the repository
-      uses: actions/checkout@v7
+      uses: actions/checkout@v7.0.1
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
       - name: Lint
         uses: astral-sh/ruff-action@278981a28ce3188b1e39527901f38254bf3aac89 # v4.1.0
         with:
@@ -41,7 +41,7 @@ jobs:
   #  name: Sonar cloud
   #  runs-on: ubuntu-latest
   #  steps:
-  #    - uses: actions/checkout@v7
+  #    - uses: actions/checkout@v7.0.1
   #      with:
   #        # Number of commits to fetch. 0 indicates all history for all branches and tags.
   #        # Default: 1

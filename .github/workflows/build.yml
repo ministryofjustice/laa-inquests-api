@@ -22,7 +22,7 @@ jobs:
       contents: read  # This is required for actions/checkout
     steps:
       - name: Checkout GitHub repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
 
       - name: Assume role in Cloud Platform
         uses: aws-actions/configure-aws-credentials@v6
