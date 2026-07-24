@@ -1,12 +1,8 @@
 """Use case for sending grant letter print pack via Gov Notify precompiled letter."""
 
-import logging
-
 from app.models.application.certificate import ApplicationCertificate
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.pdf_generation_port import PdfGenerationPort
-
-logger = logging.getLogger(__name__)
 
 
 class SendGrantLetterUseCase:

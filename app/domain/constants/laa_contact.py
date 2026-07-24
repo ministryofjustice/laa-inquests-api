@@ -6,3 +6,4 @@ LAA_CONTACT_ADDRESS = (
 LAA_TEAM_NAME = "Civil Case Management"
 LAA_CONTACT_PHONE_NUMBER = "0300 200 2020"
 LAA_CONTACT_EMAIL_ADDRESS = "contactcivil@justice.gov.uk"
+LLA_WEBSITE = "https://www.gov.uk/civil-legal-advice"

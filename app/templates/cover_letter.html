@@ -91,11 +91,12 @@
         }
 
         .address-window {
+            display: block;
             margin-top: 8mm; /* 9.5mm minus the line height padding of 1.5mm */
             margin-bottom: 33mm;
             margin-left: 9.6mm;
             max-height: 26.8mm;
-            line-height: 4.3mm;
+            line-height: 1.1;
         }
 
         .body-text{
@@ -129,7 +130,7 @@
             </div>
 
             <div class="address-window">
-                <span style="line-height: 1.1; display: block;">
+                <span>
                     {{ client_name }}<br>
                     {% if client_address %}
                     {{ client_address.address_line_1 }}<br>

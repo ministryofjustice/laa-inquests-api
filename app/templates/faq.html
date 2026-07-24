@@ -175,11 +175,11 @@
         <div class="section">
             <p class="govuk-heading-m">Civil Legal Advice</p>
             <p class="govuk-body">Get free and confidential legal advice if you're eligible for Legal Aid:</p>
-            <p class="govuk-body">Telephone: 0345 345 4 345<br>
+            <p class="govuk-body">Telephone: {{ LAA_CONTACT_PHONE_NUMBER }}<br>
             Minicom: 0345 609 66 77<br>
             Monday to Friday, 9am to 8pm<br>
             Saturday, 9am to 12:30pm<br>
-            https://www.gov.uk/civil-legal-advice</p>
+            {{ LLA_WEBSITE }}</p>
         </div>
         </div>
 
@@ -281,19 +281,14 @@
 
             <p class="govuk-body">We always try to provide you with the best possible service.</p>
 
-            <p class="govuk-body">However sometimes things can go wrong. If you are not happy with something we have done, you can let us know.</p>
+            <p class="govuk-body">However, sometimes things can go wrong. If you are not happy with something we have done, you can let us know.</p>
 
             <p class="govuk-body">You can email laacomplaints@justice.gov.uk or you can write to us at:</p>
 
             <div class="contact-block">
                 <p class="govuk-body">
                     Complaints<br>
-                    Legal Aid Agency<br>
-                    Unit B8<br>
-                    Berkley Way<br>
-                    Viking Business Park<br>
-                    Jarrow<br>
-                    NE31 1SF
+                    {{ LAA_CONTACT_ADDRESS | replace("\n", "<br>") | safe }}
                 </p>
             </div>
 

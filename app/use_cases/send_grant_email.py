@@ -1,11 +1,7 @@
-import logging
-
 from app.models.application.certificate import ApplicationCertificate
 from app.models.application.index import Application, ApplicationProceeding
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.pdf_generation_port import PdfGenerationPort
-
-logger = logging.getLogger(__name__)
 
 
 class SendGrantEmailUseCase:
