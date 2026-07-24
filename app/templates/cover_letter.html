@@ -144,18 +144,13 @@
         <div class="govuk-grid-column-one-third">
             <div class="header-right">
                 <div class="header-from">
-                    <p><strong>Legal Aid Agency</strong></p>
                     <span class="write-to-address-header">
-                        Unit B8<br>
-                        Berkley Way<br>
-                        Viking Business Park<br>
-                        Jarrow<br>
-                        NE31 1SF
+                        {{ LAA_CONTACT_ADDRESS | replace("\n", "<br>") | safe }}
                     </span>
                 </div>
                 <div class="header-contact">
-                    <p><strong>Telephone:</strong> 0300 200 2020</p>
-                    <p><strong>E-mail:</strong> contactcivil@justice.gov.uk</p>
+                    <p><strong>Telephone:</strong> {{ LAA_CONTACT_PHONE_NUMBER }}</p>
+                    <p><strong>E-mail:</strong> {{ LAA_CONTACT_EMAIL_ADDRESS }}</p>
                 </div>
                 <div class="header-date">
                     <p>{{ date_created.strftime("%d %B %Y") }}</p>
@@ -183,27 +178,22 @@
 
             <div class="body-text">
                 <p>
-                    Telephone: 0300 200 2020
+                    Telephone: {{ LAA_CONTACT_PHONE_NUMBER }}
                 </p>
                 <p>
                     <span class="write-to-address">
                     Write to:<br>
-                    Legal Aid Agency<br>
-                    Unit B8<br>
-                    Berkley Way<br>
-                    Viking Business Park<br>
-                    Jarrow<br>
-                    NE31 1SF
+                    {{ LAA_CONTACT_ADDRESS | replace("\n", "<br>") | safe }}
                     </span>
                 </p>
                 <p>
-                    E-mail: contactcivil@justice.gov.uk
+                    E-mail: {{ LAA_CONTACT_EMAIL_ADDRESS }}
                 </p>
             </div>
 
             <div class="signature-block">
                 <p>Yours sincerely,</p>
-                <p>Civil Case Management</p>
+                <p>{{ LAA_TEAM_NAME }}</p>
                 <p>On behalf of Director of Legal Aid Casework</p>
             </div>
         </div>
