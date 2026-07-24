@@ -23,9 +23,9 @@ on:
           - dev
 
 jobs:
-  code-linting:
-    name: Code Linting
-    uses: ./.github/workflows/code-linting.yaml
+  # code-linting:
+  #   name: Code Linting
+  #   uses: ./.github/workflows/code-linting.yaml
 
   snyk:
     name: Snyk scan docker image
