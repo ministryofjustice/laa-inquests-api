@@ -1,4 +1,4 @@
-name: Delete UAT release
+name: Delete dev release
 
 on:
   pull_request:
@@ -8,7 +8,7 @@ on:
 jobs:
   delete_uat_job:
     runs-on: ubuntu-latest
-    environment: uat
+    environment: dev
     outputs:
       branch-name: ${{ steps.extract_branch.outputs.branch }}
       release-name: ${{ steps.extract_release.outputs.release }}
@@ -47,7 +47,7 @@ jobs:
           kube-cluster: ${{ secrets.KUBE_CLUSTER }}
           kube-namespace: ${{ secrets.KUBE_NAMESPACE }}
 
-      - name: Delete UAT release
+      - name: Delete dev release
         id: delete_release
         shell: bash
         run: |
@@ -58,9 +58,9 @@ jobs:
           then
             helm delete $release_name
 
-            echo "message=\"Deleted UAT release ${release_name}\"" >> $GITHUB_OUTPUT
+            echo "message=\"Deleted dev release ${release_name}\"" >> $GITHUB_OUTPUT
           else
-            echo "message=\"UAT release, ${release_name}, not found\"" >> $GITHUB_OUTPUT
+            echo "message=\"dev release, ${release_name}, not found\"" >> $GITHUB_OUTPUT
           fi
 
       - name: Output result

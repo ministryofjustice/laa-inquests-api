@@ -15,7 +15,7 @@ class GovNotifyCallbackPayload(BaseModel):
 
     Attributes:
         id: Unique notification ID from GovNotify
-        reference: Custom reference set when sending (e.g., "uat-APP-123456")
+        reference: Custom reference set when sending (e.g., "dev-APP-123456")
         to: Recipient email address or phone number
         status: Current delivery status
         created_at: ISO timestamp when notification was created

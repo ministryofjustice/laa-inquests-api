@@ -34,7 +34,7 @@ def _mock_save_response() -> MagicMock:
     mock = MagicMock()
     mock.status_code = 201
     mock.json.return_value = {
-        "success": "File saved successfully in laa-sds-inquests-uat with key letter.pdf",
+        "success": "File saved successfully in laa-sds-inquests-dev with key letter.pdf",
         "checksum": "abc123checksum",
     }
     return mock

@@ -87,10 +87,10 @@ runs:
     - uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076
       id: login-ecr
 
-    - name: Deploy infrastructure to UAT
+    - name: Deploy infrastructure to dev
       shell: bash
       run: |
-        if [ ${{ inputs.app-environment }} == 'uat' ]
+        if [ ${{ inputs.app-environment }} == 'dev' ]
         then
           echo "DEPLOYING"
           kubectl apply --record=false -f ./deploy/infrastructure/grafana/

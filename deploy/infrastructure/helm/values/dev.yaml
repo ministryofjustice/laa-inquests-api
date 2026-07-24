@@ -49,12 +49,12 @@ ingress:
   enabled: true
   className: modsec-non-prod
   hosts:
-    - host: laa-inquests-api-uat.apps.live.cloud-platform.service.justice.gov.uk
+    - host: laa-inquests-api-dev.apps.live.cloud-platform.service.justice.gov.uk
       paths:
         - path: /
           pathType: Prefix
   annotations:
-    external-dns.alpha.kubernetes.io/set-identifier: "laa-inquests-api-laa-inquests-api-uat-green"
+    external-dns.alpha.kubernetes.io/set-identifier: "laa-inquests-api-laa-inquests-api-dev-green"
     external-dns.alpha.kubernetes.io/aws-weight: "100"
     nginx.ingress.kubernetes.io/enable-modsecurity: "true"
     nginx.ingress.kubernetes.io/enable-owasp-core-rules: "true"
@@ -108,7 +108,7 @@ env:
   RATELIMIT_STORAGE_URI: ""
   RATE_LIMIT_MAX: 10000
   RATE_WINDOW_MS: 900000
-  NODE_ENV: "uat"
+  NODE_ENV: "dev"
 
 autoscaling:
   enabled: false

@@ -24,7 +24,7 @@ def _make_callback_payload(overrides=None):
     """Helper to create a valid GovNotify callback payload."""
     payload = {
         "id": "740e5834-3a29-46b4-9a6f-16142fde533a",
-        "reference": "uat-APP-123456",
+        "reference": "dev-APP-123456",
         "to": "provider@example.com",
         "status": "delivered",
         "created_at": "2026-06-17T12:00:00.000000Z",

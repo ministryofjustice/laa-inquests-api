@@ -10,7 +10,7 @@ sentry_config = {
     # of sampled transactions.
     # We recommend adjusting this value in production.
     "profiles_sample_rate": 0.2,
-    # This can either be dev, uat, staging, or production.
+    # This can either be dev, staging, or production.
     # It is set by CLA_ENVIRONMENT in the helm charts.
     "environment": Config.ENVIRONMENT,
 }
