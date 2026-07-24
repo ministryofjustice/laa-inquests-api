@@ -31,12 +31,10 @@ jobs:
         uses: astral-sh/ruff-action@278981a28ce3188b1e39527901f38254bf3aac89 # v4.1.0
         with:
           args: check --output-format=github
-          version: 0.15.20
       - name: Format
         uses: astral-sh/ruff-action@278981a28ce3188b1e39527901f38254bf3aac89 # v4.1.0
         with:
           args: format --check
-          version: 0.15.20
 
   # This skeleton app is not configured to be scanned by SonarCloud
   #sonarcloud:
