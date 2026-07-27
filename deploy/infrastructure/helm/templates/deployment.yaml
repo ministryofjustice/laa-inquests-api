@@ -91,7 +91,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.env.AWS_SECRETS_SDS_CONFIG }}
-                  key: sds-tenant-id
+                  key: SDS_TENANT_ID
             - name: SDS_CLIENT_ID
               valueFrom:
                 secretKeyRef:
