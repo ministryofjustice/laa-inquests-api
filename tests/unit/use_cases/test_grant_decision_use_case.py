@@ -11,9 +11,7 @@ from app.models.application.index import (
     GrantApplicationUpdate,
     Provider,
 )
-from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.update_decision_port import ApplicationDecisionPort
-from app.ports.pdf_generation_port import PdfGenerationPort
 from app.use_cases.exceptions import ApplicationNotFoundError, ProceedingsNotFoundError
 from app.use_cases.grant_decision import GrantDecisionUseCase
 
@@ -41,16 +39,6 @@ def application() -> Application:
 
 
 @pytest.fixture
-def pdf_generation_port() -> MagicMock:
-    return MagicMock(spec=PdfGenerationPort)
-
-
-@pytest.fixture
-def gov_notify_port() -> MagicMock:
-    return MagicMock(spec=GovNotifyPort)
-
-
-@pytest.fixture
 def update_decision_port(application: Application) -> MagicMock:
     port = MagicMock(spec=ApplicationDecisionPort)
     port.get_application_by_laa_reference.return_value = application
@@ -64,17 +52,27 @@ def create_certificate_context_use_case() -> MagicMock:
 
 
 @pytest.fixture
+def send_grant_email_use_case() -> MagicMock:
+    return MagicMock()
+
+
+@pytest.fixture
+def send_grant_letter_use_case() -> MagicMock:
+    return MagicMock()
+
+
+@pytest.fixture
 def use_case(
     update_decision_port: MagicMock,
-    gov_notify_port: MagicMock,
-    pdf_generation_port: MagicMock,
     create_certificate_context_use_case: MagicMock,
+    send_grant_email_use_case: MagicMock,
+    send_grant_letter_use_case: MagicMock,
 ) -> GrantDecisionUseCase:
     return GrantDecisionUseCase(
         update_decision_port,
-        gov_notify_port,
-        pdf_generation_port,
         create_certificate_context_use_case,
+        send_grant_email_use_case,
+        send_grant_letter_use_case,
     )
 
 
@@ -83,8 +81,7 @@ def test_grant_decision_calls_required_ports_and_commit(
     create_certificate_context_use_case,
     application,
     update_decision_port,
-    gov_notify_port,
-    pdf_generation_port,
+    send_grant_email_use_case,
     grant_request,
 ):
     use_case.execute("1", grant_request)
@@ -96,12 +93,10 @@ def test_grant_decision_calls_required_ports_and_commit(
         application.proceedings[0]
     )
     update_decision_port.commit.assert_called_once()
-    pdf_generation_port.generate_pdf.assert_called_once()
-    gov_notify_port.send_application_granted_decision_email.assert_called_once_with(
+    send_grant_email_use_case.execute.assert_called_once_with(
         application,
         application.proceedings[0],
-        application.provider.email_address,
-        pdf_generation_port.generate_pdf.return_value,
+        create_certificate_context_use_case.prepare_context_for_display.return_value,
     )
 
 
@@ -161,7 +156,6 @@ def test_grant_decision_raises_404_when_no_proceedings(
 def test_grant_decision_raises_exception_when_create_certificate_model_use_case_fails_and_rollbacks(
     use_case,
     update_decision_port,
-    gov_notify_port,
     create_certificate_context_use_case,
     grant_request,
 ):
@@ -175,11 +169,11 @@ def test_grant_decision_raises_exception_when_create_certificate_model_use_case_
     update_decision_port.rollback.assert_called_once()
 
 
-def test_grant_decision_raises_exception_when_gov_notify_fails_and_rollbacks(
-    use_case, update_decision_port, gov_notify_port, grant_request
+def test_grant_decision_raises_exception_when_send_grant_email_fails_and_rollbacks(
+    use_case, update_decision_port, send_grant_email_use_case, grant_request
 ):
-    gov_notify_port.send_application_granted_decision_email.side_effect = Exception(
-        "Gov Notify failure"
+    send_grant_email_use_case.execute.side_effect = Exception(
+        "Send grant email failure"
     )
 
     with pytest.raises(Exception):
@@ -188,10 +182,28 @@ def test_grant_decision_raises_exception_when_gov_notify_fails_and_rollbacks(
     update_decision_port.rollback.assert_called_once()
 
 
-def test_grant_decision_raises_exception_when_pdf_generation_port_fails_and_rollbacks(
-    use_case, update_decision_port, pdf_generation_port, grant_request
+def test_grant_decision_calls_send_grant_letter_use_case(
+    use_case,
+    create_certificate_context_use_case,
+    send_grant_letter_use_case,
+    grant_request,
 ):
-    pdf_generation_port.generate_pdf.side_effect = Exception("PDF generation failure")
+    use_case.execute("1", grant_request)
+
+    send_grant_letter_use_case.execute.assert_called_once_with(
+        create_certificate_context_use_case.prepare_context_for_display.return_value,
+    )
+
+
+def test_grant_decision_raises_exception_when_send_grant_letter_fails_and_rollbacks(
+    use_case,
+    update_decision_port,
+    send_grant_letter_use_case,
+    grant_request,
+):
+    send_grant_letter_use_case.execute.side_effect = Exception(
+        "Send grant letter failure"
+    )
 
     with pytest.raises(Exception):
         use_case.execute("1", grant_request)

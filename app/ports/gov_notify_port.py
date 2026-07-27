@@ -68,3 +68,6 @@ class GovNotifyPort(ABC):
             Exception: If the notification fails to send
         """
         ...
+
+    @abstractmethod
+    def send_precompiled_letter(self, reference: str, pdf: bytes) -> None: ...
