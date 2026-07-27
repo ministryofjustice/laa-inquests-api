@@ -85,28 +85,28 @@ spec:
             - name: SDS_BASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.env.AWS_SECRETS_SDS_BASE_URL }}
-                  key: sds-base-url
+                  name: {{ .Values.env.AWS_SECRETS_SDS_CONFIG }}
+                  key: SDS_BASE_URL
             - name: SDS_TENANT_ID
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.env.AWS_SECRETS_SDS_TENANT_ID }}
+                  name: {{ .Values.env.AWS_SECRETS_SDS_CONFIG }}
                   key: sds-tenant-id
             - name: SDS_CLIENT_ID
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.env.AWS_SECRETS_SDS_CLIENT_ID }}
-                  key: sds-client-id
+                  name: {{ .Values.env.AWS_SECRETS_SDS_CONFIG }}
+                  key: SDS_CLIENT_ID
             - name: SDS_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.env.AWS_SECRETS_SDS_CLIENT_SECRET }}
-                  key: sds-client-secret
+                  name: {{ .Values.env.AWS_SECRETS_SDS_CONFIG }}
+                  key: SDS_CLIENT_SECRET
             - name: SDS_SCOPE
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.env.AWS_SECRETS_SDS_SCOPE }}
-                  key: sds-scope
+                  name: {{ .Values.env.AWS_SECRETS_SDS_CONFIG }}
+                  key: SDS_SCOPE
           ports:
             - name: http
               containerPort: 8027

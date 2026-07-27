@@ -75,10 +75,7 @@ deploy_main() {
                 --set env.AWS_SECRETS_GOV_NOTIFY_CALLBACK_BEARER_TOKEN="gov-notify-callback-bearer-token-$ENVIRONMENT" \
                 --set env.AWS_SECRETS_GOV_NOTIFY_TEMPLATE_IDS="gov-notify-template-ids-$ENVIRONMENT" \
                 --set env.AWS_SECRETS_INQUESTS_API_ENTRA_CONFIG="entra-api-config-$ENVIRONMENT" \
-                --set env.AWS_SECRETS_SDS_BASE_URL="sds-base-url-$ENVIRONMENT" \
-                --set env.AWS_SECRETS_SDS_TENANT_ID="sds-tenant-id-$ENVIRONMENT" \
-                --set env.AWS_SECRETS_SDS_CLIENT_ID="sds-client-app-id-$ENVIRONMENT" \
-                --set env.AWS_SECRETS_SDS_CLIENT_SECRET="sds-client-secret-$ENVIRONMENT" \
+                --set env.AWS_SECRETS_SDS_CONFIG="sds-config-$ENVIRONMENT" \
                 --set env.AWS_SECRETS_SDS_SCOPE="sds-scope-$ENVIRONMENT" \
                 --set env.CONTACT_EMAIL="$CONTACT_EMAIL" \
                 --set env.CONTACT_PHONE="$CONTACT_PHONE" \
