@@ -36,6 +36,18 @@ class ProceedingId(str, enum.Enum):
     IQ004 = "IQ004"
     IQ010 = "IQ010"
     TEST1 = "TEST1"
+    IQPC = "IQPC"
+    IQPO = "IQPO"
+    IQMT = "IQMT"
+    IQMH = "IQMH"
+    IQMC = "IQMC"
+    IQCC = "IQCC"
+    IQHO = "IQHO"
+    IQCA = "IQCA"
+    IQDV = "IQDV"
+    IQED = "IQED"
+    IQTR = "IQTR"
+    IQOT = "IQOT"
 
 
 class PublicBodyId(str, enum.Enum):
