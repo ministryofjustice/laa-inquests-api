@@ -23,7 +23,7 @@ PUBLIC_BODIES: tuple[tuple[str, str], ...] = (
     ("DEPARTMENT_FOR_BUSINESS_AND_TRADE", "Department for Business and Trade"),
     (
         "DEPARTMENT_FOR_CULTURE_MEDIA_AND_SPORT",
-        "Department for Culture, Media, and Sport",
+        "Department for Culture, Media and Sport",
     ),
     ("DEPARTMENT_FOR_EDUCATION", "Department for Education"),
     (
