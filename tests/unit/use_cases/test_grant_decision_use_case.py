@@ -23,9 +23,7 @@ def grant_request() -> GrantApplicationUpdate:
 
 @pytest.fixture
 def application() -> Application:
-    proceeding = ApplicationProceeding(
-        laa_reference=1, proceeding_id=ProceedingId.TEST1
-    )
+    proceeding = ApplicationProceeding(laa_reference=1, proceeding_id=ProceedingId.IQOT)
     client = Client(
         client_first_name="Test",
         client_last_name="Client",

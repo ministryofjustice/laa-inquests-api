@@ -59,14 +59,14 @@ def session_fixture():
             )
             db_session.add(new_user)
         proceeding = Proceeding(
-            proceeding_id=ProceedingId.TEST1,
-            proceeding_name="Inquest into death",
-            proceeding_description="Inquest into death",
+            proceeding_id=ProceedingId.IQOT,
+            proceeding_name="Other",
+            proceeding_description="Other",
         )
         db_session.add(proceeding)
         db_session.commit()
         application_proceedings_to_add = [
-            ApplicationProceeding(proceeding_id=ProceedingId.TEST1)
+            ApplicationProceeding(proceeding_id=ProceedingId.IQOT)
         ]
 
         new_public_body = PublicBody(

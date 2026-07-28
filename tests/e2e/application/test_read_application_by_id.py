@@ -102,7 +102,7 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
         "/applications",
         json={
             "coronersLetterId": str(uuid.uuid4()),
-            "proceedings": [{"proceedingId": "TEST1"}],
+            "proceedings": [{"proceedingId": "IQOT"}],
             "client": {
                 "clientFirstName": "Test",
                 "clientLastName": "Surname",

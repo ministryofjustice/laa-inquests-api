@@ -52,7 +52,7 @@ def _make_request(with_addresses: bool = True) -> ApplicationCreate:
     return ApplicationCreate.model_validate(
         {
             "coronersLetterId": str(uuid.uuid4()),
-            "proceedings": [{"proceedingId": "TEST1"}],
+            "proceedings": [{"proceedingId": "IQOT"}],
             "client": client,
             "publicBodies": [{"publicBodyId": "Department for Transport"}],
             "deceased": {
@@ -116,7 +116,7 @@ def test_create_application_persists_application_and_nested_data(session):
     )
     assert stored_application.client.home_address_id is not None
     assert stored_application.client.correspondence_address_id is not None
-    assert stored_application.proceedings[0].proceeding_id == ProceedingId.TEST1
+    assert stored_application.proceedings[0].proceeding_id == ProceedingId.IQOT
     assert (
         stored_application.public_bodies[0].public_body_id
         == PublicBodyId.DEPARTMENT_FOR_TRANSPORT
@@ -184,9 +184,7 @@ def test_save_uploaded_coroners_letter_persists_and_commits():
 def test_update_decision_adds_entities_and_commits():
     mock_session = MagicMock()
     adapter = ApplicationRepositoryAdapter(mock_session)
-    proceeding = ApplicationProceeding(
-        laa_reference=1, proceeding_id=ProceedingId.TEST1
-    )
+    proceeding = ApplicationProceeding(laa_reference=1, proceeding_id=ProceedingId.IQOT)
 
     adapter.update_decision(proceeding)
 
