@@ -406,18 +406,16 @@ async def upload_coroners_letter(
 
 
 @router.post(
-    "/{laa_reference}/claim/upload-evidence",
+    "/claim/upload-evidence",
     response_model=UploadClaimEvidenceResponse,
     status_code=201,
 )
 async def upload_claim_evidence(
-    laa_reference: str,
     file: UploadFile = File(...),
     use_case: UploadClaimEvidenceUseCase = Depends(get_upload_claim_evidence_use_case),
     _: None = Depends(verify_entra_provider_token),
 ) -> UploadClaimEvidenceResponse:
     """Upload claim evidence to document storage and return its file ID."""
-    _ = laa_reference
     contents = await file.read()
     file_name = file.filename
     try:

@@ -16,7 +16,7 @@ def is_valid_uuid(val):
 
 def test_201_upload_claim_evidence_returns_claim_evidence_id(client, auth_token):
     response = client.post(
-        "/applications/1000/claim/upload-evidence",
+        "/applications/claim/upload-evidence",
         files={
             "file": (
                 "claim_evidence.pdf",
@@ -34,7 +34,7 @@ def test_201_upload_claim_evidence_returns_claim_evidence_id(client, auth_token)
 
 def test_422_upload_claim_evidence_with_no_file(client, auth_token):
     response = client.post(
-        "/applications/1000/claim/upload-evidence",
+        "/applications/claim/upload-evidence",
         headers={"Authorization": f"Bearer {auth_token}"},
     )
     assert response.status_code == 422
@@ -51,7 +51,7 @@ def test_422_upload_claim_evidence_with_failed_virus_check(client, auth_token):
     )
 
     response = client.post(
-        "/applications/1000/claim/upload-evidence",
+        "/applications/claim/upload-evidence",
         files={
             "file": (
                 "claim_evidence.pdf",
@@ -73,7 +73,7 @@ def test_500_upload_claim_evidence_with_sds_server_error(client, auth_token):
     api.dependency_overrides[get_sds_port] = get_sds_port_override_with_server_error
 
     response = client.post(
-        "/applications/1000/claim/upload-evidence",
+        "/applications/claim/upload-evidence",
         files={
             "file": (
                 "claim_evidence.pdf",
@@ -88,7 +88,7 @@ def test_500_upload_claim_evidence_with_sds_server_error(client, auth_token):
 
 def test_201_upload_claim_evidence_allows_multiple_uploads(client, auth_token):
     first = client.post(
-        "/applications/1000/claim/upload-evidence",
+        "/applications/claim/upload-evidence",
         files={
             "file": (
                 "claim_evidence_1.pdf",
@@ -99,7 +99,7 @@ def test_201_upload_claim_evidence_allows_multiple_uploads(client, auth_token):
         headers={"Authorization": f"Bearer {auth_token}"},
     )
     second = client.post(
-        "/applications/1000/claim/upload-evidence",
+        "/applications/claim/upload-evidence",
         files={
             "file": (
                 "claim_evidence_2.pdf",
