@@ -21,7 +21,11 @@ from app.models.application.index import (
     RefuseApplicationUpdate,
     UploadCoronersLetterResponse,
 )
-from app.models.claim.index import ClaimCreate, ClaimResponse
+from app.models.claim.index import (
+    ClaimCreate,
+    ClaimResponse,
+    UploadClaimEvidenceResponse,
+)
 
 from app.adapters.provider_details_adapter import ProviderDetailsAdapter
 from app.routers.dependencies import (
@@ -32,6 +36,7 @@ from app.config import Config
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_port import CreateClaimPort
+from app.ports.claim.upload_claim_evidence_port import UploadClaimEvidencePort
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
 from app.ports.get_application_port import GetApplicationPort
@@ -59,6 +64,8 @@ from app.use_cases.exceptions import (
     CoronersLetterRetrievalError,
     CoronersLetterUploadError,
     CoronersLetterVirusDetectedError,
+    ClaimEvidenceUploadError,
+    ClaimEvidenceVirusDetectedError,
     InvalidClaimError,
     InvalidCoronersLetterDocumentIdError,
     ProviderDetailsRetrievalError,
@@ -71,6 +78,7 @@ from app.use_cases.list_applications import ListApplicationsUseCase
 from app.use_cases.refuse_decision import RefuseDecisionUseCase
 from app.use_cases.grant_decision import GrantDecisionUseCase
 from app.use_cases.upload_coroners_letter import UploadCoronersLetterUseCase
+from app.use_cases.upload_claim_evidence import UploadClaimEvidenceUseCase
 from app.use_cases.retrieve_coroners_letter import RetrieveCoronersLetterUseCase
 
 
@@ -247,6 +255,16 @@ def get_upload_coroners_letter_use_case(
     )
 
 
+def get_upload_claim_evidence_use_case(
+    sds_port: SdsPort = Depends(get_sds_port),
+    upload_claim_evidence_port: UploadClaimEvidencePort = Depends(get_claim_db_adapter),
+) -> UploadClaimEvidenceUseCase:
+    return UploadClaimEvidenceUseCase(
+        sds_port=sds_port,
+        upload_claim_evidence_port=upload_claim_evidence_port,
+    )
+
+
 @router.get("/search", response_model=list[ApplicationSearchResponse])
 async def search_application(
     laa_reference: str,
@@ -384,6 +402,37 @@ async def upload_coroners_letter(
 
     return UploadCoronersLetterResponse(
         coroners_letter_id=coroners_letter_id, coroners_letter_file_name=file_name
+    )
+
+
+@router.post(
+    "/{laa_reference}/claim/upload-evidence",
+    response_model=UploadClaimEvidenceResponse,
+    status_code=201,
+)
+async def upload_claim_evidence(
+    laa_reference: str,
+    file: UploadFile = File(...),
+    use_case: UploadClaimEvidenceUseCase = Depends(get_upload_claim_evidence_use_case),
+    _: None = Depends(verify_entra_provider_token),
+) -> UploadClaimEvidenceResponse:
+    """Upload claim evidence to document storage and return its file ID."""
+    _ = laa_reference
+    contents = await file.read()
+    file_name = file.filename
+    try:
+        claim_evidence_id = use_case.execute(
+            contents,
+            file_name,
+        )
+    except ClaimEvidenceVirusDetectedError:
+        raise HTTPException(status_code=422, detail="Uploaded file failed virus check")
+    except ClaimEvidenceUploadError:
+        raise HTTPException(status_code=500, detail="Failed to upload claim evidence")
+
+    return UploadClaimEvidenceResponse(
+        claim_evidence_id=claim_evidence_id,
+        claim_evidence_file_name=file_name,
     )
 
 

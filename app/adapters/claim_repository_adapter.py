@@ -1,8 +1,17 @@
+import uuid
+
 from sqlmodel import Session, select
 
 from app.domain.claim import Claim as DomainClaim
+from app.domain.claim_evidence import ClaimEvidence as DomainClaimEvidence
 from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ReasonCode
-from app.models.claim.index import Claim, ClaimDecision, DecisionReason
+from app.models.claim.index import (
+    Claim,
+    ClaimDecision,
+    ClaimEvidence as ClaimEvidenceModel,
+    DecisionReason,
+)
+from app.ports.claim.upload_claim_evidence_port import UploadClaimEvidencePort
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
@@ -18,6 +27,7 @@ class ClaimRepositoryAdapter(
     CreateClaimDecisionPort,
     CreateDecisionReasonPort,
     UpdateClaimStatusPort,
+    UploadClaimEvidencePort,
 ):
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -93,3 +103,17 @@ class ClaimRepositoryAdapter(
         claim.status_id = status
         self.session.add(claim)
         self.session.flush()
+
+    def save_uploaded_claim_evidence(
+        self,
+        claim_evidence: DomainClaimEvidence,
+    ) -> uuid.UUID:
+        claim_evidence_model = ClaimEvidenceModel(
+            sds_file_name=claim_evidence.sds_file_name,
+            file_name=claim_evidence.file_name,
+        )
+        self.session.add(claim_evidence_model)
+        self.session.flush()
+        claim_evidence_id = claim_evidence_model.claim_evidence_id
+        self.session.commit()
+        return claim_evidence_id

@@ -15,3 +15,11 @@ class SdsPort(ABC):
     def virus_check_coroners_letter(
         self, coroners_letter: bytes, file_name: str
     ) -> bool: ...
+
+    def save_claim_evidence(
+        self, claim_evidence: bytes, file_name: str
+    ) -> SDSUploadCoronersLetterResponse: ...
+
+    def virus_check_claim_evidence(
+        self, claim_evidence: bytes, file_name: str
+    ) -> bool: ...
