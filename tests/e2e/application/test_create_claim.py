@@ -40,6 +40,32 @@ def test_201_create_claim_response_contains_only_claim_id_when_not_rejected(
     assert set(claim.keys()) == {"claimId"}
 
 
+def test_201_create_claim_sends_submission_confirmation_email_to_provider(
+    session, client, auth_token, mock_gov_notify
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    mock_gov_notify.send_claim_submit_confirmation_email.assert_called_once()
+
+    call_kwargs = mock_gov_notify.send_claim_submit_confirmation_email.call_args.kwargs
+    claim = call_kwargs["claim"]
+    application = call_kwargs["application"]
+    recipient_email = call_kwargs["recipient_email"]
+    assert claim.laa_reference == laa_reference
+    assert application.laa_reference == laa_reference
+    assert recipient_email == application.provider.email_address
+
+
 def test_201_create_claim_auto_approves_payment_on_account_when_eligible(
     session, client, auth_token
 ):

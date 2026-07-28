@@ -18,6 +18,7 @@ from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
+from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.claim.update_claim_status_port import (
     UpdateClaimStatusPort,
 )
@@ -50,6 +51,7 @@ class CreateClaimUseCase:
         create_claim_port: CreateClaimPort,
         application_lookup_port: ApplicationLookupPort,
         get_claims_for_application_port: GetClaimsForApplicationPort,
+        gov_notify_port: GovNotifyPort | None = None,
         create_claim_decision_port: CreateClaimDecisionPort | None = None,
         create_decision_reason_port: CreateDecisionReasonPort | None = None,
         update_claim_status_port: UpdateClaimStatusPort | None = None,
@@ -57,6 +59,7 @@ class CreateClaimUseCase:
         self.create_claim_port = create_claim_port
         self.application_lookup_port = application_lookup_port
         self.get_claims_for_application_port = get_claims_for_application_port
+        self.gov_notify_port = gov_notify_port
         self.create_claim_decision_port = create_claim_decision_port
         self.create_decision_reason_port = create_decision_reason_port
         self.update_claim_status_port = update_claim_status_port
@@ -89,6 +92,21 @@ class CreateClaimUseCase:
             claimant_id=command.claimant_id,
         )
         self.create_claim_port.commit()
+
+        if application is not None and self.gov_notify_port is not None:
+            try:
+                self.gov_notify_port.send_claim_submit_confirmation_email(
+                    claim=claim,
+                    application=application,
+                    recipient_email=application.provider.email_address,
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to send claim submission email for claim %s",
+                    claim.claim_id,
+                    exc_info=True,
+                )
+
         rejection_reasons: list[ReasonCode] | None = None
 
         if application is not None:
