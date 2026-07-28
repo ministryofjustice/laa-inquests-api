@@ -77,6 +77,66 @@ def seed():
             "proceeding_name": "Other",
             "proceeding_description": "Other",
         },
+        {
+            "proceeding_id": "IQPC",
+            "proceeding_name": "Death in police custody",
+            "proceeding_description": "Death in police custody",
+        },
+        {
+            "proceeding_id": "IQPO",
+            "proceeding_name": "Death in prison",
+            "proceeding_description": "Death in prison",
+        },
+        {
+            "proceeding_id": "IQMT",
+            "proceeding_name": "Death during medical treatment",
+            "proceeding_description": "Death during medical treatment",
+        },
+        {
+            "proceeding_id": "IQMH",
+            "proceeding_name": "Death in mental health detention",
+            "proceeding_description": "Death in mental health detention",
+        },
+        {
+            "proceeding_id": "IQMC",
+            "proceeding_name": "Death relating to mental health care in the community",
+            "proceeding_description": "Death relating to mental health care in the community",
+        },
+        {
+            "proceeding_id": "IQCC",
+            "proceeding_name": "Death relating to other care in the community",
+            "proceeding_description": "Death relating to other care in the community",
+        },
+        {
+            "proceeding_id": "IQHO",
+            "proceeding_name": "Death relating to issues with condition/safety of housing",
+            "proceeding_description": "Death relating to issues with condition/safety of housing",
+        },
+        {
+            "proceeding_id": "IQCA",
+            "proceeding_name": "Death relating to a child’s care arrangements",
+            "proceeding_description": "Death relating to a child’s care arrangements",
+        },
+        {
+            "proceeding_id": "IQDV",
+            "proceeding_name": "Death relating to failure to prevent domestic violence",
+            "proceeding_description": "Death relating to failure to prevent domestic violence",
+        },
+        {
+            "proceeding_id": "IQED",
+            "proceeding_name": "Death relating to issues in an educational setting",
+            "proceeding_description": "Death relating to issues in an educational setting",
+        },
+        {
+            "proceeding_id": "IQTR",
+            "proceeding_name": "Death relating to issues relating to transport",
+            "proceeding_description": "Death relating to issues relating to transport",
+        },
+        {
+            "proceeding_id": "IQOT",
+            "proceeding_name": "Other",
+            "proceeding_description": "Other",
+        },
     ]
 
     public_bodies = [
