@@ -57,6 +57,7 @@ def create_application_submission_email_personalisation(
 
     proceeding = application.proceedings[0] if application.proceedings else None
     proceeding_description = proceeding.proceeding_description if proceeding else "N/A"
+
     matter_type = proceeding.matter_type if proceeding else "N/A"
 
     if application.public_bodies:

@@ -34,7 +34,7 @@ def _make_request_body(client_overrides=None):
         client.update(client_overrides)
     return {
         "coronersLetterId": str(uuid.uuid4()),
-        "proceedings": [{"proceedingId": "TEST1"}],
+        "proceedings": [{"proceedingId": "IQOT"}],
         "client": client,
         "publicBodies": [{"publicBodyId": "Department for Transport"}],
         "deceased": {
@@ -91,7 +91,7 @@ def test_201_create_application_response_contains_expected_proceeding_informatio
     )
     new_application = response.json()
     proceeding = new_application["proceedings"][0]
-    assert proceeding["proceedingId"] == "TEST1"
+    assert proceeding["proceedingId"] == "IQOT"
     assert proceeding["categoryOfLaw"] == "INQUESTS"
     assert proceeding["matterType"] == "INQUESTS"
     assert proceeding["levelOfService"] == "FULL_REPRESENTATION"

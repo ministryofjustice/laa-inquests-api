@@ -10,7 +10,7 @@ from app.models.application.index import Application, CoronersLetter
 def _create_application_payload():
     return {
         "coronersLetterId": str(uuid.uuid4()),
-        "proceedings": [{"proceedingId": "TEST1"}],
+        "proceedings": [{"proceedingId": "IQOT"}],
         "client": {
             "clientFirstName": "Test",
             "clientLastName": "Surname",
