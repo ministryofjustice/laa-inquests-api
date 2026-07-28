@@ -4,8 +4,8 @@ from sqlmodel import create_engine
 
 from app.config import Config
 from app.db.session import CustomSession
-from app.models.application.enums import ProceedingId, PublicBodyId
-from app.models.application.index import Proceeding, PublicBody
+from app.models.application.enums import ProceedingId
+from app.models.application.index import Proceeding
 
 db_url = f"postgresql://{Config.DB_USER}:{Config.DB_PASSWORD}@{Config.DB_HOST}:{Config.DB_PORT}/{Config.DB_NAME}"
 
@@ -71,21 +71,6 @@ def get_session():
         },
     ]
 
-    public_bodies = [
-        "Prime Minister's Office 10 Downing Street",
-        "Cabinet Office",
-        "Attorney General's Office",
-        "Department for Business & Trade",
-        "Department for Culture, Media & Sport",
-        "Department for Education",
-        "Department for Energy Security & Net Zero",
-        "Department for Environment, Food & Rural Affairs",
-        "Department for Science, Innovation & Technology",
-        "Department for Transport",
-        "Department for Work & Pensions",
-        "Department of Health & Social Care",
-    ]
-
     with CustomSessionLocal() as db_session:
         for proceeding in proceedings:
             stmt = (
@@ -96,17 +81,6 @@ def get_session():
                     proceeding_description=proceeding["proceeding_description"],
                 )
                 .on_conflict_do_nothing(index_elements=["proceeding_id"])
-            )
-            db_session.exec(stmt)
-
-        for public_body in public_bodies:
-            stmt = (
-                insert(PublicBody)
-                .values(
-                    public_body_id=PublicBodyId(public_body),
-                    public_body_description=public_body,
-                )
-                .on_conflict_do_nothing(index_elements=["public_body_id"])
             )
             db_session.exec(stmt)
 
