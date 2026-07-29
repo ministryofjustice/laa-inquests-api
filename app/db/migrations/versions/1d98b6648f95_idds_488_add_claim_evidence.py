@@ -1,7 +1,7 @@
 """idds_488_add_claim_evidence
 
 Revision ID: 1d98b6648f95
-Revises: e8f6a1c2d4b0
+Revises: 0abbfeb39330
 Create Date: 2026-07-28 11:59:37.036768
 
 """
@@ -15,7 +15,7 @@ import sqlmodel
 
 # revision identifiers, used by Alembic.
 revision: str = "1d98b6648f95"
-down_revision: Union[str, None] = "e8f6a1c2d4b0"
+down_revision: Union[str, None] = "0abbfeb39330"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
