@@ -29,9 +29,12 @@ runs:
         if [ "$pipelineStatus" == "failed" ]; then
           runUrl=https://github.com/ministryofjustice/laa-inquests-api/actions/runs/${{ github.run_id }}
           message=":exclamation: $coreMessage Failed! :exclamation: \n $runUrl"
-        elif [ "$environment" != "UAT" ]; then
+        elif [ "$environment" = "STAGING" ] || [ "$environment" = "PRODUCTION" ]; then
           releaseUrl=https://github.com/ministryofjustice/laa-inquests-api/releases/tag/${{ github.ref_name }}
           message=":white_check_mark: $coreMessage Succeeded! :white_check_mark: \n $releaseUrl"
+        else
+          echo "Deployment to $environment succeeded - skipping Slack notification."
+          exit 0
         fi
 
         postBody="{
