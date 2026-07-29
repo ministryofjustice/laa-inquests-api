@@ -28,6 +28,7 @@ from app.models.application.index import (
     PublicBody,
     PublicBodyId,
     SDSUploadCoronersLetterResponse,
+    SDSUploadClaimEvidenceResponse
 )
 
 SECRET_KEY = "TEST_KEY"
@@ -172,7 +173,7 @@ def client_fixture(session: Session):
             status="SUCCESS",
         )
         mock_sds.virus_check_claim_evidence.return_value = True
-        mock_sds.save_claim_evidence.return_value = SDSUploadCoronersLetterResponse(
+        mock_sds.save_claim_evidence.return_value = SDSUploadClaimEvidenceResponse(
             sds_file_name="test-claim-evidence_abc123.pdf",
             status="SUCCESS",
         )
@@ -231,7 +232,7 @@ def entra_auth_client_fixture(session: Session):
             status="SUCCESS",
         )
         mock_sds.virus_check_claim_evidence.return_value = True
-        mock_sds.save_claim_evidence.return_value = SDSUploadCoronersLetterResponse(
+        mock_sds.save_claim_evidence.return_value = SDSUploadClaimEvidenceResponse(
             sds_file_name="test-claim-evidence_abc123.pdf",
             status="SUCCESS",
         )

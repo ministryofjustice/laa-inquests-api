@@ -6,7 +6,7 @@ from pathlib import Path
 
 import httpx
 
-from app.models.application.index import SDSUploadCoronersLetterResponse
+from app.models.application.index import SDSUploadClaimEvidenceResponse, SDSUploadCoronersLetterResponse
 from app.ports.sds_port import SdsPort
 from app.use_cases.exceptions import (
     InvalidCoronersLetterDocumentIdError,
@@ -140,7 +140,7 @@ class SdsAdapter(SdsPort):
 
     def save_claim_evidence(
         self, claim_evidence: bytes, file_name: str
-    ) -> SDSUploadCoronersLetterResponse:
+    ) -> SDSUploadClaimEvidenceResponse:
         path = Path(file_name)
         unique_file_name = f"{path.stem}_{uuid.uuid4()}{path.suffix}"
         token = self._get_token()
@@ -157,12 +157,12 @@ class SdsAdapter(SdsPort):
         )
 
         if response.status_code != 201:
-            return SDSUploadCoronersLetterResponse(
+            return SDSUploadClaimEvidenceResponse(
                 sds_file_name=unique_file_name,
                 status="FAILURE",
             )
 
-        return SDSUploadCoronersLetterResponse(
+        return SDSUploadClaimEvidenceResponse(
             sds_file_name=unique_file_name,
             status="SUCCESS",
         )

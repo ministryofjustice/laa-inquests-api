@@ -618,3 +618,12 @@ class SDSUploadCoronersLetterResponse(BaseModel):
     )
     sds_file_name: str
     status: str
+
+class SDSUploadClaimEvidenceResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        from_attributes=True,
+        populate_by_name=True,
+    )
+    sds_file_name: str
+    status: str

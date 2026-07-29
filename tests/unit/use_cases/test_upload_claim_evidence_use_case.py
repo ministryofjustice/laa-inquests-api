@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.domain.claim_evidence import ClaimEvidence
-from app.models.application.index import SDSUploadCoronersLetterResponse
+from app.models.application.index import SDSUploadClaimEvidenceResponse
 from app.ports.sds_port import SdsPort
 from app.ports.claim.upload_claim_evidence_port import UploadClaimEvidencePort
 from app.use_cases.exceptions import (
@@ -18,7 +18,7 @@ request_body = {
     "claim_evidence": b"test",
     "file_name": "test_file.pdf",
 }
-sds_response_body = SDSUploadCoronersLetterResponse(
+sds_response_body = SDSUploadClaimEvidenceResponse(
     sds_file_name="test_file.pdf", status="SUCCESS"
 )
 
@@ -86,7 +86,7 @@ def test_execute_raises_an_error_when_virus_check_fails():
 def test_execute_raises_an_error_when_sds_save_fails():
     sds_port = MagicMock(spec=SdsPort)
     sds_port.virus_check_claim_evidence.return_value = True
-    sds_failure_response = SDSUploadCoronersLetterResponse(
+    sds_failure_response = SDSUploadClaimEvidenceResponse(
         sds_file_name="test_file.pdf", status="FAILURE"
     )
     sds_port.save_claim_evidence.return_value = sds_failure_response
