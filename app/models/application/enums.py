@@ -40,21 +40,31 @@ class ProceedingId(str, enum.Enum):
 
 
 class PublicBodyId(str, enum.Enum):
-    PRIME_MINISTER_OFFICE = "Prime Minister's Office 10 Downing Street"
-    CABINET_OFFICE = "Cabinet Office"
     ATTORNEY_GENERAL = "Attorney General's Office"
-    DEPARTMENT_FOR_BUSINESS_AND_TRADE = "Department for Business & Trade"
-    DEPARTMENT_FOR_CULTURE_MEDIA_AND_SPORT = "Department for Culture, Media & Sport"
+    CABINET_OFFICE = "Cabinet Office"
+    DEPARTMENT_DEVOLVED_TO_WALES = "Department Devolved to Wales"
+    DEPARTMENT_FOR_BUSINESS_AND_TRADE = "Department for Business and Trade"
+    DEPARTMENT_FOR_CULTURE_MEDIA_AND_SPORT = "Department for Culture, Media and Sport"
     DEPARTMENT_FOR_EDUCATION = "Department for Education"
     DEPARTMENT_FOR_ENERGY_SECURITY_AND_NET_ZERO = (
-        "Department for Energy Security & Net Zero"
+        "Department for Energy Security and Net Zero"
     )
     DEPARTMENT_FOR_ENVIRONMENT_FOOD_AND_RURAL_AFFAIRS = (
-        "Department for Environment, Food & Rural Affairs"
+        "Department for Environment, Food and Rural Affairs"
+    )
+    DEPARTMENT_FOR_HOUSING_COMMUNITIES_AND_LOCAL_GOVERNMENT = (
+        "Department for Housing, Communities and Local Government"
     )
     DEPARTMENT_FOR_SCIENCE_INNOVATION_AND_TECHNOLOGY = (
-        "Department for Science, Innovation & Technology"
+        "Department for Science, Innovation and Technology"
     )
     DEPARTMENT_FOR_TRANSPORT = "Department for Transport"
-    DEPARTMENT_FOR_WORK_AND_PENSIONS = "Department for Work & Pensions"
-    DEPARTMENT_OF_HEALTH_AND_SOCIAL_CARE = "Department of Health & Social Care"
+    DEPARTMENT_FOR_WORK_AND_PENSIONS = "Department for Work and Pensions"
+    DEPARTMENT_OF_HEALTH_AND_SOCIAL_CARE = "Department of Health and Social Care"
+    FOREIGN_COMMONWEALTH_AND_DEVELOPMENT_OFFICE = (
+        "Foreign, Commonwealth and Development Office"
+    )
+    HM_TREASURY = "HM Treasury"
+    HOME_OFFICE = "Home Office"
+    MINISTRY_OF_DEFENCE = "Ministry of Defence"
+    MINISTRY_OF_JUSTICE = "Ministry of Justice"

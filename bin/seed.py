@@ -139,21 +139,6 @@ def seed():
         },
     ]
 
-    public_bodies = [
-        "Prime Minister's Office 10 Downing Street",
-        "Cabinet Office",
-        "Attorney General's Office",
-        "Department for Business & Trade",
-        "Department for Culture, Media & Sport",
-        "Department for Education",
-        "Department for Energy Security & Net Zero",
-        "Department for Environment, Food & Rural Affairs",
-        "Department for Science, Innovation & Technology",
-        "Department for Transport",
-        "Department for Work & Pensions",
-        "Department of Health & Social Care",
-    ]
-
     with CustomSessionLocal() as db_session:
         for proceeding in proceedings:
             values = {
@@ -188,12 +173,12 @@ def seed():
             )
             db_session.exec(stmt)
 
-        for public_body in public_bodies:
+        for member in PublicBodyId:
             stmt = (
                 insert(PublicBody)
                 .values(
-                    public_body_id=PublicBodyId(public_body),
-                    public_body_description=public_body,
+                    public_body_id=member,
+                    public_body_description=member.value,
                 )
                 .on_conflict_do_nothing(index_elements=["public_body_id"])
             )
