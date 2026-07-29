@@ -1,4 +1,4 @@
-"""IDDS-435 update public bodies
+"""IDDS-435 add public body enum values and description updates
 
 Revision ID: 0abbfeb39330
 Revises: fc72a3f74810
@@ -94,6 +94,10 @@ PRE_UPGRADE_ENUM_VALUES: tuple[str, ...] = tuple(
     enum_key for enum_key, _ in PRE_UPGRADE_PUBLIC_BODIES
 )
 
+NEW_ENUM_VALUES: tuple[str, ...] = tuple(
+    enum_key for enum_key, _ in PUBLIC_BODIES if enum_key not in PRE_UPGRADE_ENUM_VALUES
+)
+
 
 def _sql_quote(value: str) -> str:
     return value.replace("'", "''")
@@ -104,7 +108,7 @@ def _sql_string_list(values: tuple[str, ...]) -> str:
 
 
 def upgrade() -> None:
-    # Add non-existant enum values. With statement to add immediatley
+    # Add any new enum values.
     with op.get_context().autocommit_block():
         for enum_key, _ in PUBLIC_BODIES:
             op.execute(
@@ -123,76 +127,9 @@ def upgrade() -> None:
             "IS DISTINCT FROM EXCLUDED.public_body_description"
         )
 
-    # Update rows referencing to-be-deleted PRIME_MINISTER_OFFICE enum
-    op.execute(
-        "UPDATE application_public_body "
-        "SET public_body_id = 'CABINET_OFFICE' "
-        "WHERE public_body_id = 'PRIME_MINISTER_OFFICE'"
-    )
-
-    # We want to remove PRIME_MINISTER_OFFICE.
-    # We cannot remove an enum value directly. So the way to do this is create a new enum and swap it
-    # However, foreign keys block that, so we need to temporarily drop them
-    # This isn't great, but the only way we can really do this with enums as FKs
-    op.drop_constraint(
-        APPLICATION_PUBLIC_BODY_PUBLIC_BODY_FK,
-        "application_public_body",
-        type_="foreignkey",
-    )
-
-    # Recreate enum type without PRIME_MINISTER_OFFICE.
-    op.execute("ALTER TYPE publicbodyid RENAME TO publicbodyid_old")
-    op.execute(
-        "CREATE TYPE publicbodyid AS ENUM "
-        "('ATTORNEY_GENERAL', "
-        "'CABINET_OFFICE', "
-        "'DEPARTMENT_DEVOLVED_TO_WALES', "
-        "'DEPARTMENT_FOR_BUSINESS_AND_TRADE', "
-        "'DEPARTMENT_FOR_CULTURE_MEDIA_AND_SPORT', "
-        "'DEPARTMENT_FOR_EDUCATION', "
-        "'DEPARTMENT_FOR_ENERGY_SECURITY_AND_NET_ZERO', "
-        "'DEPARTMENT_FOR_ENVIRONMENT_FOOD_AND_RURAL_AFFAIRS', "
-        "'DEPARTMENT_FOR_HOUSING_COMMUNITIES_AND_LOCAL_GOVERNMENT', "
-        "'DEPARTMENT_FOR_SCIENCE_INNOVATION_AND_TECHNOLOGY', "
-        "'DEPARTMENT_FOR_TRANSPORT', "
-        "'DEPARTMENT_FOR_WORK_AND_PENSIONS', "
-        "'DEPARTMENT_OF_HEALTH_AND_SOCIAL_CARE', "
-        "'FOREIGN_COMMONWEALTH_AND_DEVELOPMENT_OFFICE', "
-        "'HM_TREASURY', "
-        "'HOME_OFFICE', "
-        "'MINISTRY_OF_DEFENCE', "
-        "'MINISTRY_OF_JUSTICE')"
-    )
-
-    # Re-assign enums
-    op.execute(
-        "ALTER TABLE public_body "
-        "ALTER COLUMN public_body_id "
-        "TYPE publicbodyid "
-        "USING public_body_id::text::publicbodyid"
-    )
-    op.execute(
-        "ALTER TABLE application_public_body "
-        "ALTER COLUMN public_body_id "
-        "TYPE publicbodyid "
-        "USING public_body_id::text::publicbodyid"
-    )
-
-    op.create_foreign_key(
-        APPLICATION_PUBLIC_BODY_PUBLIC_BODY_FK,
-        "application_public_body",
-        "public_body",
-        ["public_body_id"],
-        ["public_body_id"],
-    )
-
-    op.execute("DROP TYPE publicbodyid_old")
-
 
 def downgrade() -> None:
-    # Reintroduce PRIME_MINISTER_OFFICE by recreating the enum type.
-    # This mirrors the upgrade strategy in reverse because PostgreSQL enums
-    # do not support removing/adding values at specific positions directly.
+    # Remove only enum values introduced by this migration.
     op.drop_constraint(
         APPLICATION_PUBLIC_BODY_PUBLIC_BODY_FK,
         "application_public_body",
@@ -200,16 +137,17 @@ def downgrade() -> None:
     )
 
     pre_upgrade_enum_values_sql = _sql_string_list(PRE_UPGRADE_ENUM_VALUES)
+    new_enum_values_sql = _sql_string_list(NEW_ENUM_VALUES)
 
-    # Repoint existing applications with to-be-deleted public bodies
+    # Repoint existing applications using newly-added public bodies.
     op.execute(
         "UPDATE application_public_body "
         "SET public_body_id = 'CABINET_OFFICE' "
-        f"WHERE public_body_id NOT IN ({pre_upgrade_enum_values_sql})"
+        f"WHERE public_body_id IN ({new_enum_values_sql})"
     )
-    # Delete now unused public bodies
+    # Delete newly-added public bodies from lookup table.
     op.execute(
-        f"DELETE FROM public_body WHERE public_body_id NOT IN ({pre_upgrade_enum_values_sql})"
+        f"DELETE FROM public_body WHERE public_body_id IN ({new_enum_values_sql})"
     )
 
     # Create new enum
