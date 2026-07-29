@@ -1,8 +1,12 @@
+import logging
+
 import jwt
 from jwt import PyJWKClient
 from fastapi import HTTPException, status
 
 ENTRA_JWKS_URL = "https://login.microsoftonline.com/{tenant_id}/discovery/v2.0/keys"
+
+logger = logging.getLogger(__name__)
 
 
 class EntraAuthAdapter:
@@ -46,12 +50,24 @@ class EntraAuthAdapter:
                     f"https://sts.windows.net/{self.tenant_id}/",
                 ],
             )
+            payload2 = jwt.decode(
+                token,
+                options={
+                    "verify_signature": False,
+                    "verify_exp": False,
+                    "verify_aud": False,
+                    "verify_iss": False,
+                },
+                algorithms=["RS256"],
+            )
+            logger.critical(str(payload2))
             self._validate_scopes_or_roles(
                 payload, required_scopes or self.default_scopes
             )
         except HTTPException:
             raise
-        except Exception:
+        except Exception as e:
+            logger.critical(str(e))
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Could not validate credentials",
