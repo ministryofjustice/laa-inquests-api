@@ -124,6 +124,35 @@ def test_execute_returns_created_claim():
     assert result.claim is claim
 
 
+def test_execute_sends_claim_submission_email_when_application_exists():
+    command = _make_command()
+    claim = _make_claim()
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+    application = MagicMock(spec=Application)
+    proceeding = MagicMock()
+    proceeding.substantive_cost_limitation = 1000
+    proceeding.certificate_start_date = None
+    application.proceedings = [proceeding]
+    application.provider.email_address = "provider@example.com"
+    gov_notify_port = MagicMock()
+
+    use_case = CreateClaimUseCase(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(application),
+        get_claims_for_application_port=_make_get_claims_port(),
+        gov_notify_port=gov_notify_port,
+    )
+
+    use_case.execute(command)
+
+    gov_notify_port.send_claim_submit_confirmation_email.assert_called_once_with(
+        claim=claim,
+        application=application,
+        recipient_email="provider@example.com",
+    )
+
+
 def test_execute_raises_invalid_claim_error_when_payment_on_account_without_poa_type():
     command = _make_command({"poa_type": None})
     use_case = CreateClaimUseCase(

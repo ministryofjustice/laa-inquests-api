@@ -7,6 +7,7 @@ from notifications_python_client import prepare_upload
 
 from app.config import Config
 from app.models.application.index import Application, ApplicationProceeding
+from app.models.claim.index import Claim
 
 from app.ports.gov_notify_port import GovNotifyPort
 from app.use_cases.notify.create_application_refusal_email_personalisation import (
@@ -17,6 +18,9 @@ from app.use_cases.notify.create_application_submission_email_personalisation im
 )
 from app.use_cases.notify.create_application_grant_email_personalisation import (
     create_application_grant_email_personalisation,
+)
+from app.use_cases.notify.create_claim_submission_email_personalisation import (
+    create_claim_submission_email_personalisation,
 )
 
 
@@ -71,6 +75,22 @@ class GovNotifyAdapter(GovNotifyPort):
         self.client.send_email_notification(
             email_address=recipient_email,
             template_id=Config.GOV_NOTIFY_APPLICATION_GRANT_TEMPLATE_ID,
+            personalisation=personalisation.model_dump(),
+        )
+
+    def send_claim_submit_confirmation_email(
+        self,
+        claim: Claim,
+        application: Application,
+        recipient_email: str,
+    ) -> None:
+        personalisation = create_claim_submission_email_personalisation(
+            claim,
+            application,
+        )
+        self.client.send_email_notification(
+            email_address=recipient_email,
+            template_id=Config.GOV_NOTIFY_CLAIM_SUBMIT_TEMPLATE_ID,
             personalisation=personalisation.model_dump(),
         )
 

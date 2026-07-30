@@ -8,6 +8,7 @@ import pytest
 
 from app.adapters.gov_notify import GovNotifyAdapter
 from app.config import Config
+from app.models.claim.index import Claim
 from tests.unit.factories import (
     create_base_application,
     create_base_application_proceeding,
@@ -98,6 +99,49 @@ def test_gov_notify_adapter_sends_confirmation_email_successfully():
         assert isinstance(call_kwargs["personalisation"], dict)
         assert call_kwargs["personalisation"]["laa_reference"] == "12345"
         assert call_kwargs["personalisation"]["client_first_name"] == "Jane"
+
+
+def test_gov_notify_adapter_sends_claim_submit_confirmation_email_successfully():
+    application, _ = _create_test_application_and_proceeding()
+    claim = Claim(
+        claim_id=1,
+        laa_reference=12345,
+        claim_type_id="PAYMENT_ON_ACCOUNT",
+        submission_date=datetime(2026, 6, 18, 14, 3, tzinfo=ZoneInfo("UTC")),
+        total_profit_cost_net=1000,
+        total_profit_cost_gross=1200,
+        poa_type_id="PROFIT_COST",
+    )
+    mock_notifications_client = Mock()
+    mock_notifications_client.send_email_notification.return_value = {
+        "id": "test-notification-id"
+    }
+
+    with (
+        patch("app.adapters.gov_notify.NotificationsAPIClient") as mock_api_client,
+        patch.object(
+            Config,
+            "GOV_NOTIFY_CLAIM_SUBMIT_TEMPLATE_ID",
+            "test-claim-submit-template-id",
+        ),
+    ):
+        mock_api_client.return_value = mock_notifications_client
+
+        adapter = GovNotifyAdapter()
+        adapter.send_claim_submit_confirmation_email(
+            claim,
+            application,
+            "provider@example.com",
+        )
+
+        mock_api_client.assert_called_once_with(Config.GOV_NOTIFY_API_KEY)
+        call_kwargs = mock_notifications_client.send_email_notification.call_args.kwargs
+        assert call_kwargs["email_address"] == "provider@example.com"
+        assert call_kwargs["template_id"] == "test-claim-submit-template-id"
+        assert isinstance(call_kwargs["personalisation"], dict)
+        assert call_kwargs["personalisation"]["laa_reference"] == "12345"
+        assert call_kwargs["personalisation"]["client_name"] == "Jane Doe"
+        assert call_kwargs["personalisation"]["submission_date"] == "18 June 2026"
 
 
 def test_gov_notify_adapter_raises_exception_on_api_error():
