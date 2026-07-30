@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import uuid
 
 from app.domain.claim import Claim as DomainClaim
 from app.models.claim.index import Claim
@@ -12,6 +13,13 @@ class CreateClaimPort(ABC):
         claim: DomainClaim,
         claimant_id: str | None,
     ) -> Claim: ...
+
+    @abstractmethod
+    def link_evidence_to_claim(
+        self,
+        claim_id: int,
+        evidence_ids: list[uuid.UUID],
+    ) -> None: ...
 
     @abstractmethod
     def commit(self) -> None: ...
