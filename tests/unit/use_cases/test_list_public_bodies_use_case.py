@@ -5,61 +5,29 @@ from app.ports.list_public_bodies_port import ListPublicBodiesPort
 from app.use_cases.list_public_bodies import ListPublicBodiesUseCase
 
 
-def _make_body(public_body_id: PublicBodyId, description: str) -> PublicBody:
-    return PublicBody(
-        public_body_id=public_body_id, public_body_description=description
-    )
-
-
-def test_execute_sorts_department_for_and_of_by_meaningful_word():
-    # "Department of Health" normalises to "Department for Health" — sorts before Transport
-    bodies = [
-        _make_body(PublicBodyId.DEPARTMENT_FOR_TRANSPORT, "Department for Transport"),
-        _make_body(
-            PublicBodyId.DEPARTMENT_OF_HEALTH_AND_SOCIAL_CARE,
-            "Department of Health and Social Care",
-        ),
-    ]
+def test_execute_returns_empty_list_when_no_public_bodies_exist():
     port = MagicMock(spec=ListPublicBodiesPort)
-    port.list_public_bodies.return_value = bodies
+    port.list_public_bodies.return_value = []
 
     result = ListPublicBodiesUseCase(list_public_bodies_port=port).execute()
 
-    assert [b.public_body_description for b in result] == [
-        "Department of Health and Social Care",
-        "Department for Transport",
-    ]
+    assert result == []
 
 
-def test_execute_bare_department_entry_sorts_before_department_for_of_entries():
-    # "Department Devolved" has no for/of — 'd' < 'f' so it precedes all "Department for/of" entries
+def test_execute_sorts_alphabetically():
     bodies = [
-        _make_body(PublicBodyId.DEPARTMENT_FOR_TRANSPORT, "Department for Transport"),
-        _make_body(
-            PublicBodyId.DEPARTMENT_DEVOLVED_TO_WALES, "Department Devolved to Wales"
+        PublicBody(
+            public_body_id=PublicBodyId.HOME_OFFICE,
+            public_body_description="Home Office",
         ),
-        _make_body(
-            PublicBodyId.DEPARTMENT_OF_HEALTH_AND_SOCIAL_CARE,
-            "Department of Health and Social Care",
+        PublicBody(
+            public_body_id=PublicBodyId.DEPARTMENT_DEVOLVED_TO_WALES,
+            public_body_description="Department Devolved to Wales",
         ),
-    ]
-    port = MagicMock(spec=ListPublicBodiesPort)
-    port.list_public_bodies.return_value = bodies
-
-    result = ListPublicBodiesUseCase(list_public_bodies_port=port).execute()
-
-    assert [b.public_body_description for b in result] == [
-        "Department Devolved to Wales",
-        "Department of Health and Social Care",
-        "Department for Transport",
-    ]
-
-
-def test_execute_sorts_non_department_entries_by_full_name():
-    bodies = [
-        _make_body(PublicBodyId.HOME_OFFICE, "Home Office"),
-        _make_body(PublicBodyId.CABINET_OFFICE, "Cabinet Office"),
-        _make_body(PublicBodyId.HM_TREASURY, "HM Treasury"),
+        PublicBody(
+            public_body_id=PublicBodyId.CABINET_OFFICE,
+            public_body_description="Cabinet Office",
+        ),
     ]
     port = MagicMock(spec=ListPublicBodiesPort)
     port.list_public_bodies.return_value = bodies
@@ -68,15 +36,34 @@ def test_execute_sorts_non_department_entries_by_full_name():
 
     assert [b.public_body_description for b in result] == [
         "Cabinet Office",
-        "HM Treasury",
+        "Department Devolved to Wales",
         "Home Office",
     ]
 
 
-def test_execute_returns_empty_list_when_no_public_bodies_exist():
+def test_execute_sorts_department_for_and_of_entries_as_equivalent():
+    # "Department of Health" and "Department for Transport" compare as if both say "Department for ..."
+    bodies = [
+        PublicBody(
+            public_body_id=PublicBodyId.DEPARTMENT_FOR_TRANSPORT,
+            public_body_description="Department for Transport",
+        ),
+        PublicBody(
+            public_body_id=PublicBodyId.DEPARTMENT_OF_HEALTH_AND_SOCIAL_CARE,
+            public_body_description="Department of Health and Social Care",
+        ),
+        PublicBody(
+            public_body_id=PublicBodyId.DEPARTMENT_FOR_EDUCATION,
+            public_body_description="Department for Education",
+        ),
+    ]
     port = MagicMock(spec=ListPublicBodiesPort)
-    port.list_public_bodies.return_value = []
+    port.list_public_bodies.return_value = bodies
 
     result = ListPublicBodiesUseCase(list_public_bodies_port=port).execute()
 
-    assert result == []
+    assert [b.public_body_description for b in result] == [
+        "Department for Education",
+        "Department of Health and Social Care",
+        "Department for Transport",
+    ]
