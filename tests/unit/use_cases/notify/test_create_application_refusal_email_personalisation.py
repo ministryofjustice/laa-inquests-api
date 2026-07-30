@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 
 import pytest
+from pydantic import ValidationError
 
 from app.models.application.enums import AddressSource, MeritsDecision, ProceedingId
 from app.models.application.index import Application, ApplicationProceeding, Client
@@ -62,7 +63,7 @@ def test_create_application_refusal_email_personalisation_rejects_missing_requir
     """
     Test that NotifyApplicationRefuseTemplatePersonalisation model rejects creation with missing required fields.
     """
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         NotifyApplicationRefuseTemplatePersonalisation(
             laa_reference="12345",
         )
@@ -72,7 +73,7 @@ def test_create_application_refusal_email_personalisation_rejects_extra_fields()
     """
     Test that NotifyApplicationRefuseTemplatePersonalisation model rejects creation with extra/unexpected fields.
     """
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         NotifyApplicationRefuseTemplatePersonalisation(
             laa_reference="12345",
             client_first_name="Jane",

@@ -4,7 +4,11 @@ from app.models.application.enums import MeritsDecision
 from app.models.application.index import RefuseApplicationUpdate
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.update_decision_port import ApplicationDecisionPort
-from app.use_cases.exceptions import ApplicationNotFoundError, ProceedingsNotFoundError
+from app.use_cases.exceptions import (
+    ApplicationNotFoundError,
+    ProceedingsNotFoundError,
+    RefuseDecisionError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -51,4 +55,4 @@ class RefuseDecisionUseCase:
                 exc_info=True,
             )
             self.application_decision_port.rollback()
-            raise Exception("Failed to refuse application.") from exception
+            raise RefuseDecisionError("Failed to refuse application.") from exception

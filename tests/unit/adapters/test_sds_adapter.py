@@ -2,7 +2,7 @@ import uuid
 from unittest.mock import MagicMock, patch
 
 import pytest
-from httpx import HTTPStatusError
+from httpx import HTTPError, HTTPStatusError
 
 from app.use_cases.exceptions import (
     CoronersLetterUploadError,
@@ -88,9 +88,8 @@ def test_get_token_posts_client_credentials_to_correct_url():
 
 def test_get_token_raises_http_exception_on_unsuccessful_status_code():
     adapter = _make_adapter()
-    with patch("httpx.post", return_value=_mock_save_failure_response()):
-        with pytest.raises(HTTPStatusError):
-            adapter._get_token()
+    with patch("httpx.post", return_value=_mock_save_failure_response()), pytest.raises(HTTPStatusError):
+        adapter._get_token()
 
 
 def test_get_token_caches_token_and_does_not_call_post_again():
@@ -328,7 +327,7 @@ def test_retrieve_coroners_letter_raises_error_when_stream_fails():
     with (
         patch("httpx.post", return_value=_mock_token_response()),
         patch("httpx.get", return_value=_mock_retrieve_metadata_response()),
-        patch("httpx.stream", side_effect=RuntimeError("stream failed")),
+        patch("httpx.stream", side_effect=HTTPError("stream failed")),
         pytest.raises(
             SDSLetterRetrievalError,
             match="Failed to stream coroners letter: \n stream failed",

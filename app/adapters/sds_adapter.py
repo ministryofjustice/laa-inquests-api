@@ -66,18 +66,23 @@ class SdsAdapter(SdsPort):
     def virus_check_coroners_letter(
         self, coroners_letter: bytes, file_name: str
     ) -> bool:
-        token = self._get_token()
-        response = httpx.put(
-            f"{self.base_url}/virus_check_file",
-            files={
-                "file": (
-                    file_name,
-                    coroners_letter,
-                    "application/octet-stream",
-                )
-            },
-            headers={"Authorization": f"Bearer {token}"},
-        )
+        try:
+            token = self._get_token()
+            response = httpx.put(
+                f"{self.base_url}/virus_check_file",
+                files={
+                    "file": (
+                        file_name,
+                        coroners_letter,
+                        "application/octet-stream",
+                    )
+                },
+                headers={"Authorization": f"Bearer {token}"},
+            )
+        except httpx.HTTPError as exc:
+            raise CoronersLetterUploadError(
+                f"Failed to perform virus check due to a network error: {exc}"
+            ) from exc
 
         if response.status_code == 200:
             return True
@@ -118,18 +123,23 @@ class SdsAdapter(SdsPort):
         )
 
     def virus_check_claim_evidence(self, claim_evidence: bytes, file_name: str) -> bool:
-        token = self._get_token()
-        response = httpx.put(
-            f"{self.base_url}/virus_check_file",
-            files={
-                "file": (
-                    file_name,
-                    claim_evidence,
-                    "application/octet-stream",
-                )
-            },
-            headers={"Authorization": f"Bearer {token}"},
-        )
+        try:
+            token = self._get_token()
+            response = httpx.put(
+                f"{self.base_url}/virus_check_file",
+                files={
+                    "file": (
+                        file_name,
+                        claim_evidence,
+                        "application/octet-stream",
+                    )
+                },
+                headers={"Authorization": f"Bearer {token}"},
+            )
+        except httpx.HTTPError as exc:
+            raise ClaimEvidenceUploadError(
+                f"Failed to perform virus check due to a network error: {exc}"
+            ) from exc
 
         if response.status_code == 200:
             return True
@@ -192,7 +202,7 @@ class SdsAdapter(SdsPort):
         try:
             with httpx.stream("GET", file_url) as stream:
                 yield from stream.iter_bytes()
-        except Exception as exc:
+        except httpx.HTTPError as exc:
             _raise_sds_retrieval_error(f"Failed to stream coroners letter: \n {exc}")
 
 

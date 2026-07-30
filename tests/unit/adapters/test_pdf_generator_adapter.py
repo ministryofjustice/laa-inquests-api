@@ -2,6 +2,7 @@ from datetime import date
 from io import BytesIO
 
 import pytest
+from jinja2 import TemplateNotFound
 from pypdf import PdfReader
 
 from app.adapters.pdf_generator_adapter import PdfGeneratorAdapter
@@ -82,7 +83,7 @@ def test_generate_pdf_template_not_found_raises_error():
     """Test that requesting a non-existent template raises an error."""
     adapter = PdfGeneratorAdapter()
 
-    with pytest.raises(Exception):
+    with pytest.raises(TemplateNotFound):
         adapter.generate_pdf("nonexistent_template.html", {})
 
 

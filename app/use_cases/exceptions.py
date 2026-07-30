@@ -46,6 +46,14 @@ class ProviderDetailsRetrievalError(Exception):
     pass
 
 
+class GrantDecisionError(Exception):
+    pass
+
+
+class RefuseDecisionError(Exception):
+    pass
+
+
 class InvalidClaimError(Exception):
     def __init__(self, code: str, message: str) -> None:
         super().__init__(message)
