@@ -88,7 +88,7 @@ def test_refuse_decision_raises_404_when_application_not_found():
 
 
 def test_refuse_decision_raises_404_when_no_proceeding():
-    application = Application(proceeding=null)
+    application = Application(proceeding=None)
     update_decision_port = MagicMock(spec=ApplicationDecisionPort)
     update_decision_port.get_application_by_laa_reference.return_value = application
     use_case = RefuseDecisionUseCase(update_decision_port, MagicMock())

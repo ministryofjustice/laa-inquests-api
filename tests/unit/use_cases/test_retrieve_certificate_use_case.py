@@ -91,7 +91,7 @@ def test_execute_raises_application_not_found_error_when_application_is_missing(
 def test_execute_raises_proceeding_not_found_error_when_application_has_no_proceeding():
     get_application_port = MagicMock(spec=GetApplicationPort)
     application = MagicMock(spec=Application)
-    application.proceeding = null
+    application.proceeding = None
     application.overall_decision = MeritsDecision.GRANTED
     get_application_port.get_application_by_laa_reference.return_value = application
     create_certificate_context_use_case = MagicMock(

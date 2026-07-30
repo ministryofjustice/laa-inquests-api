@@ -333,7 +333,7 @@ def test_should_not_auto_reject_for_application_total_limit_when_sum_within_limi
 def test_should_not_auto_reject_for_application_total_limit_when_no_proceeding():
     claim = _make_domain_claim(gross=Decimal("900.00"))
     application = MagicMock(spec=Application)
-    application.proceeding = null
+    application.proceeding = None
     reason = claim.should_auto_reject_for_application_total_limit(application, [])
 
     assert reason is None

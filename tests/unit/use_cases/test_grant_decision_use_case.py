@@ -146,7 +146,7 @@ def test_grant_decision_raises_404_when_no_proceeding(
     use_case, update_decision_port, grant_request
 ):
     update_decision_port.get_application_by_laa_reference.return_value = Application(
-        proceeding=null
+        proceeding=None
     )
 
     with pytest.raises(ProceedingNotFoundError):
