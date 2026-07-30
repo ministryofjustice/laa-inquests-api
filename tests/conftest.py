@@ -28,7 +28,7 @@ from app.models.application.index import (
     PublicBody,
     PublicBodyId,
     SDSUploadCoronersLetterResponse,
-    SDSUploadClaimEvidenceResponse
+    SDSUploadClaimEvidenceResponse,
 )
 
 SECRET_KEY = "TEST_KEY"
@@ -184,6 +184,7 @@ def client_fixture(session: Session):
             status="SUCCESS",
         )
         mock_sds.retrieve_coroners_letter.return_value = iter([b"file bytes"])
+        mock_sds.retrieve_claim_evidence.return_value = iter([b"file bytes"])
         return mock_sds
 
     def get_entra_auth_port_bypass():
@@ -243,6 +244,7 @@ def entra_auth_client_fixture(session: Session):
             status="SUCCESS",
         )
         mock_sds.retrieve_coroners_letter.return_value = iter([b"file bytes"])
+        mock_sds.retrieve_claim_evidence.return_value = iter([b"file bytes"])
         return mock_sds
 
     def get_entra_auth_port_override():

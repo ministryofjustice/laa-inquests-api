@@ -1,3 +1,5 @@
+from collections.abc import Iterator
+from dataclasses import dataclass
 from datetime import datetime, UTC
 from decimal import Decimal
 from typing import Optional
@@ -124,3 +126,9 @@ class UploadClaimEvidenceResponse(BaseModel):
     )
     claim_evidence_id: uuid.UUID
     claim_evidence_file_name: str
+
+
+@dataclass
+class ClaimEvidenceResult:
+    file_name: str
+    content: Iterator[bytes]

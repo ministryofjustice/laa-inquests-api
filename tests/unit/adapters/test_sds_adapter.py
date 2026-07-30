@@ -6,7 +6,9 @@ import pytest
 
 from app.use_cases.exceptions import (
     CoronersLetterUploadError,
+    InvalidClaimEvidenceDocumentIdError,
     InvalidCoronersLetterDocumentIdError,
+    SDSClaimEvidenceRetrievalError,
     SDSLetterRetrievalError,
 )
 
@@ -352,6 +354,155 @@ def test_retrieve_coroners_letter_raises_error_when_file_url_missing():
         ),
     ):
         list(adapter.retrieve_coroners_letter("letter.pdf"))
+
+
+def test_retrieve_claim_evidence_gets_correct_url_with_file_key_param():
+    adapter = _make_adapter()
+
+    mock_get_file_response = _mock_retrieve_metadata_response()
+
+    mock_stream = MagicMock()
+    mock_stream.__enter__ = MagicMock(
+        return_value=MagicMock(iter_bytes=lambda: iter([]))
+    )
+    mock_stream.__exit__ = MagicMock(return_value=False)
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.get", return_value=mock_get_file_response),
+        patch("httpx.stream", return_value=mock_stream) as mock_stream,
+    ):
+        list(adapter.retrieve_claim_evidence("letter.pdf"))
+
+    mock_stream.assert_called_once_with("GET", "https://signed.example.com/letter.pdf")
+
+
+def test_retrieve_claim_evidence_returns_response_bytes():
+    adapter = _make_adapter()
+
+    mock_get_file_response = _mock_retrieve_metadata_response()
+
+    mock_stream_response = MagicMock()
+    mock_stream_response.iter_bytes.return_value = iter([b"chunk1", b"chunk2"])
+
+    mock_stream = MagicMock()
+    mock_stream.__enter__ = MagicMock(return_value=mock_stream_response)
+    mock_stream.__exit__ = MagicMock(return_value=False)
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.get", return_value=mock_get_file_response),
+        patch("httpx.stream", return_value=mock_stream),
+    ):
+        result = b"".join(adapter.retrieve_claim_evidence("letter.pdf"))
+
+    assert result == b"chunk1chunk2"
+
+
+def test_retrieve_claim_evidence_id_with_None_filename_raises_InvalidClaimEvidenceDocumentIdError():
+    adapter = _make_adapter()
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        pytest.raises(
+            InvalidClaimEvidenceDocumentIdError,
+            match="file_name must be a non-empty string",
+        ),
+    ):
+        list(adapter.retrieve_claim_evidence(None))
+
+
+def test_retrieve_claim_evidence_id_with_blank_filename_raises_InvalidClaimEvidenceDocumentIdError():
+    adapter = _make_adapter()
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        pytest.raises(
+            InvalidClaimEvidenceDocumentIdError,
+            match="file_name must be a non-empty string",
+        ),
+    ):
+        list(adapter.retrieve_claim_evidence(""))
+
+
+def test_retrieve_claim_evidence_raises_not_found_for_sds_404(caplog):
+    adapter = _make_adapter()
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.get", return_value=_mock_retrieve_metadata_response(404)),
+        pytest.raises(
+            SDSClaimEvidenceRetrievalError,
+            match="SDS returned 404 while retrieving claim evidence for file key missing.pdf",
+        ),
+    ):
+        list(adapter.retrieve_claim_evidence("missing.pdf"))
+
+    assert "SDS returned 404" in caplog.text
+
+
+def test_retrieve_claim_evidence_raises_invalid_id_for_sds_400(caplog):
+    adapter = _make_adapter()
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.get", return_value=_mock_retrieve_metadata_response(400)),
+        pytest.raises(
+            SDSClaimEvidenceRetrievalError,
+            match="SDS returned 400 while retrieving claim evidence for file key bad-id",
+        ),
+    ):
+        list(adapter.retrieve_claim_evidence("bad-id"))
+
+    assert "SDS returned 400" in caplog.text
+
+
+def test_retrieve_claim_evidence_logs_and_raises_for_other_sds_4xx(caplog):
+    adapter = _make_adapter()
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.get", return_value=_mock_retrieve_metadata_response(403)),
+        pytest.raises(
+            SDSClaimEvidenceRetrievalError,
+            match="SDS returned 403 while retrieving claim evidence for file key forbidden.pdf",
+        ),
+    ):
+        list(adapter.retrieve_claim_evidence("forbidden.pdf"))
+
+    assert "SDS returned 403" in caplog.text
+
+
+def test_retrieve_claim_evidence_raises_error_when_stream_fails():
+    adapter = _make_adapter()
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.get", return_value=_mock_retrieve_metadata_response()),
+        patch("httpx.stream", side_effect=RuntimeError("stream failed")),
+        pytest.raises(
+            SDSClaimEvidenceRetrievalError,
+            match="Failed to stream claim evidence: \n stream failed",
+        ),
+    ):
+        list(adapter.retrieve_claim_evidence("letter.pdf"))
+
+
+def test_retrieve_claim_evidence_raises_error_when_file_url_missing():
+    adapter = _make_adapter()
+
+    bad_metadata = MagicMock()
+    bad_metadata.status_code = 200
+    bad_metadata.json.return_value = {}
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.get", return_value=bad_metadata),
+        pytest.raises(
+            SDSClaimEvidenceRetrievalError, match="Failed to retrieve claim evidence"
+        ),
+    ):
+        list(adapter.retrieve_claim_evidence("letter.pdf"))
 
 
 def test_virus_check_coroners_letter_returns_true_for_safe_file():
