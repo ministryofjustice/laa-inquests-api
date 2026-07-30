@@ -1,7 +1,8 @@
 """E2E tests for GovNotify delivery receipt callback endpoint."""
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 
 @pytest.fixture

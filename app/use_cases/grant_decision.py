@@ -1,12 +1,13 @@
-from datetime import datetime, UTC
 import logging
-from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
-from app.use_cases.send_grant_email import SendGrantEmailUseCase
-from app.use_cases.send_grant_letter import SendGrantLetterUseCase
+from datetime import UTC, datetime
+
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import GrantApplicationUpdate
 from app.ports.update_decision_port import ApplicationDecisionPort
+from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
 from app.use_cases.exceptions import ApplicationNotFoundError, ProceedingsNotFoundError
+from app.use_cases.send_grant_email import SendGrantEmailUseCase
+from app.use_cases.send_grant_letter import SendGrantLetterUseCase
 
 logger = logging.getLogger(__name__)
 

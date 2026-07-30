@@ -2,9 +2,11 @@
 
 import logging
 from typing import Annotated
+
 from fastapi import APIRouter, Header, HTTPException, Response, status
-from app.models.notifications import GovNotifyCallbackPayload
+
 from app.config import Config
+from app.models.notifications import GovNotifyCallbackPayload
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 

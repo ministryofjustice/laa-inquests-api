@@ -1,6 +1,7 @@
 from datetime import date
 
 from app.models.application.certificate import ApplicationCertificate
+from app.models.application.enums import AddressSource, CorrespondenceRecipientType
 from app.models.application.index import (
     Address,
     Application,
@@ -14,8 +15,6 @@ from app.models.application.index import (
     PublicBody,
     PublicBodyId,
 )
-from app.models.application.enums import AddressSource, CorrespondenceRecipientType
-
 
 # Sentinel value to distinguish "not provided" from "explicitly None"
 _NOT_PROVIDED = object()

@@ -1,9 +1,9 @@
 from datetime import date
 from unittest.mock import MagicMock
-from fastapi import HTTPException
-from starlette.responses import Response
 
 import pytest
+from fastapi import HTTPException
+from starlette.responses import Response
 
 from app.models.application.index import GrantApplicationUpdate
 from app.routers.applications import grant_decision

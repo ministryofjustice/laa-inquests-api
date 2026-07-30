@@ -1,9 +1,10 @@
-import pytest
-from sqlmodel import select
-from app.models.application.enums import MeritsDecision
-from app.models.application.index import Application
 import uuid
 
+import pytest
+from sqlmodel import select
+
+from app.models.application.enums import MeritsDecision
+from app.models.application.index import Application
 
 pytestmark = pytest.mark.usefixtures("mock_gov_notify")
 

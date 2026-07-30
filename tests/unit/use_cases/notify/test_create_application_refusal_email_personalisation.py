@@ -1,5 +1,7 @@
 from datetime import UTC, datetime
 
+import pytest
+
 from app.models.application.enums import AddressSource, MeritsDecision, ProceedingId
 from app.models.application.index import Application, ApplicationProceeding, Client
 from app.models.gov_notify_templates.application_refuse_personalisation import (
@@ -8,8 +10,6 @@ from app.models.gov_notify_templates.application_refuse_personalisation import (
 from app.use_cases.notify.create_application_refusal_email_personalisation import (
     create_application_refusal_email_personalisation,
 )
-
-import pytest
 
 
 def _create_test_application_and_proceeding(laa_reference: int = 12345):

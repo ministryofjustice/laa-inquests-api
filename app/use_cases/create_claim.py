@@ -1,10 +1,11 @@
+import logging
+import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
-import logging
-import uuid
 
-from app.domain.claim import Claim as DomainClaim, ExistingClaimSummary
+from app.domain.claim import Claim as DomainClaim
+from app.domain.claim import ExistingClaimSummary
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
 from app.models.claim.enums import (
     ClaimDecisionStatus,
@@ -19,12 +20,11 @@ from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
-from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.claim.update_claim_status_port import (
     UpdateClaimStatusPort,
 )
+from app.ports.gov_notify_port import GovNotifyPort
 from app.use_cases.exceptions import InvalidClaimError
-
 
 logger = logging.getLogger(__name__)
 

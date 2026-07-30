@@ -1,6 +1,7 @@
+from unittest.mock import MagicMock
+
 import pytest
 from fastapi import HTTPException
-from unittest.mock import MagicMock
 
 from app.models.application.certificate import (
     ApplicationCertificateResponse,

@@ -5,14 +5,13 @@ import pytest
 
 from app.domain.claim_evidence import ClaimEvidence
 from app.models.application.index import SDSUploadClaimEvidenceResponse
-from app.ports.sds_port import SdsPort
 from app.ports.claim.upload_claim_evidence_port import UploadClaimEvidencePort
+from app.ports.sds_port import SdsPort
 from app.use_cases.exceptions import (
     ClaimEvidenceUploadError,
     ClaimEvidenceVirusDetectedError,
 )
 from app.use_cases.upload_claim_evidence import UploadClaimEvidenceUseCase
-
 
 request_body = {
     "claim_evidence": b"test",

@@ -30,7 +30,7 @@ class UploadCoronersLetterUseCase:
             )
         except Exception as e:
             raise CoronersLetterUploadError(
-                f"{file_name} upload failed due to server error during virus check: {str(e)}"
+                f"{file_name} upload failed due to server error during virus check: {e!s}"
             )
 
         if not is_safe:

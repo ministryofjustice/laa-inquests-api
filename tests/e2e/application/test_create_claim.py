@@ -1,7 +1,8 @@
-from sqlmodel import select
-from decimal import Decimal
-from datetime import date
 import uuid
+from datetime import date
+from decimal import Decimal
+
+from sqlmodel import select
 
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application

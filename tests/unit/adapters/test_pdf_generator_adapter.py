@@ -5,8 +5,8 @@ import pytest
 from pypdf import PdfReader
 
 from app.adapters.pdf_generator_adapter import PdfGeneratorAdapter
-from app.models.application.index import Address
 from app.models.application.certificate import ApplicationCertificate
+from app.models.application.index import Address
 from tests.unit.factories import create_base_office_address
 
 

@@ -1,10 +1,10 @@
 """WeasyPrint adapter for PDF generation."""
 
 from pathlib import Path
+
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
-from app.ports.pdf_generation_port import PdfGenerationPort
-from app.models.application.certificate import ApplicationCertificate
+
 from app.domain.constants.laa_contact import (
     LAA_CONTACT_ADDRESS,
     LAA_CONTACT_EMAIL_ADDRESS,
@@ -12,6 +12,8 @@ from app.domain.constants.laa_contact import (
     LAA_TEAM_NAME,
     LLA_WEBSITE,
 )
+from app.models.application.certificate import ApplicationCertificate
+from app.ports.pdf_generation_port import PdfGenerationPort
 
 
 class PdfGeneratorAdapter(PdfGenerationPort):

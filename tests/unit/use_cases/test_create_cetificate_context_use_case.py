@@ -1,24 +1,25 @@
 """Tests for the CreateCertificateModel use case"""
 
+from datetime import date
 from unittest.mock import MagicMock
+
+import pytest
 
 from app.models.application.certificate import ApplicationCertificate
 from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
 from app.use_cases.exceptions import ProviderDetailsRetrievalError
-import pytest
 from tests.unit.factories import (
     create_base_application,
     create_base_application_proceeding,
+    create_base_application_public_body,
     create_base_client,
     create_base_correspondence_address,
     create_base_home_address,
     create_base_office_address,
     create_base_proceeding,
     create_base_provider,
-    create_base_application_public_body,
     create_base_public_body,
 )
-from datetime import date
 
 
 def test_populate_certificate_context_returns_ApplicationCertificate():

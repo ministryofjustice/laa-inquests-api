@@ -1,10 +1,11 @@
 import asyncio
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 from fastapi import HTTPException
 
-from app.use_cases.exceptions import ApplicationNotFoundError
 from app.routers.applications import read_application
+from app.use_cases.exceptions import ApplicationNotFoundError
 
 
 def test_200_read_application_returns_application_response():

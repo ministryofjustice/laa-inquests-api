@@ -1,5 +1,5 @@
-from abc import ABC, abstractmethod
 import uuid
+from abc import ABC, abstractmethod
 
 from app.domain.claim import Claim as DomainClaim
 from app.models.claim.index import Claim

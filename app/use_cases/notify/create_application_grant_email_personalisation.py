@@ -1,6 +1,7 @@
 """Use case for building grant email personalisation data from Application objects."""
 
 from typing import Any
+
 from app.models.application.index import Application, ApplicationProceeding
 from app.models.gov_notify_templates.application_grant_personalisation import (
     NotifyApplicationGrantTemplatePersonalisation,
