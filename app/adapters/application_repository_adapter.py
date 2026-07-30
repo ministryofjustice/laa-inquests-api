@@ -14,12 +14,14 @@ from app.models.application.index import (
     Deceased,
     ProceedingId,
     Provider,
+    PublicBody,
     PublicBodyId,
 )
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.list_applications_port import ListApplicationsPort
+from app.ports.list_public_bodies_port import ListPublicBodiesPort
 from app.ports.search_application_port import SearchApplicationPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 
@@ -29,6 +31,7 @@ class ApplicationRepositoryAdapter(
     CreateApplicationPort,
     ApplicationDecisionPort,
     ListApplicationsPort,
+    ListPublicBodiesPort,
     SearchApplicationPort,
     UploadCoronersLetterPort,
 ):
@@ -42,6 +45,9 @@ class ApplicationRepositoryAdapter(
 
     def list_applications(self) -> list[Application]:
         return self.session.exec(select(Application)).all()
+
+    def list_public_bodies(self) -> list[PublicBody]:
+        return self.session.exec(select(PublicBody)).all()
 
     def search_applications(self, laa_reference: str) -> list[Application]:
         try:

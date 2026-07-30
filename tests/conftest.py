@@ -75,6 +75,11 @@ def session_fixture():
             public_body_description="Department for Transport",
         )
         db_session.add(new_public_body)
+        new_public_body_2 = PublicBody(
+            public_body_id=PublicBodyId.DEPARTMENT_OF_HEALTH_AND_SOCIAL_CARE,
+            public_body_description="Department of Health and Social Care",
+        )
+        db_session.add(new_public_body_2)
         db_session.commit()
         application_public_bodies = [
             ApplicationPublicBody(public_body_id=PublicBodyId.DEPARTMENT_FOR_TRANSPORT)

@@ -346,3 +346,40 @@ def test_403_retrieve_coroners_letter_returns_403_when_provider_token(
     )
 
     assert response.status_code == 403
+
+
+def test_200_list_public_bodies_returns_200_when_provider_token(entra_auth_client):
+    response = entra_auth_client.get(
+        "/applications/public-bodies",
+        headers={"Authorization": "Bearer valid-provider-entra-token"},
+    )
+
+    assert response.status_code == 200
+
+
+def test_401_list_public_bodies_returns_401_when_no_authorization_header(
+    entra_auth_client,
+):
+    response = entra_auth_client.get("/applications/public-bodies")
+
+    assert response.status_code == 401
+
+
+def test_401_list_public_bodies_returns_401_when_bearer_token_is_invalid(
+    entra_auth_client,
+):
+    response = entra_auth_client.get(
+        "/applications/public-bodies",
+        headers={"Authorization": "Bearer invalid-token"},
+    )
+
+    assert response.status_code == 401
+
+
+def test_403_list_public_bodies_returns_403_when_caseworker_token(entra_auth_client):
+    response = entra_auth_client.get(
+        "/applications/public-bodies",
+        headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+    )
+
+    assert response.status_code == 403

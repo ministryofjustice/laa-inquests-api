@@ -18,6 +18,8 @@ from app.models.application.index import (
     ApplicationResponse,
     ApplicationSearchResponse,
     GrantApplicationUpdate,
+    PublicBody,
+    PublicBodyResponse,
     RefuseApplicationUpdate,
     UploadCoronersLetterResponse,
 )
@@ -46,6 +48,7 @@ from app.ports.claim.update_claim_status_port import (
 )
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.list_applications_port import ListApplicationsPort
+from app.ports.list_public_bodies_port import ListPublicBodiesPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.ports.search_application_port import SearchApplicationPort
 from app.ports.sds_port import SdsPort
@@ -75,6 +78,7 @@ from app.use_cases.search_application import SearchApplicationUseCase
 from app.adapters.gov_notify import GovNotifyAdapter
 from app.ports.gov_notify_port import GovNotifyPort
 from app.use_cases.list_applications import ListApplicationsUseCase
+from app.use_cases.list_public_bodies import ListPublicBodiesUseCase
 from app.use_cases.refuse_decision import RefuseDecisionUseCase
 from app.use_cases.grant_decision import GrantDecisionUseCase
 from app.use_cases.upload_coroners_letter import UploadCoronersLetterUseCase
@@ -151,6 +155,12 @@ def get_list_applications_use_case(
     list_applications_port: ListApplicationsPort = Depends(get_application_db_adapter),
 ) -> ListApplicationsUseCase:
     return ListApplicationsUseCase(list_applications_port=list_applications_port)
+
+
+def get_list_public_bodies_use_case(
+    list_public_bodies_port: ListPublicBodiesPort = Depends(get_application_db_adapter),
+) -> ListPublicBodiesUseCase:
+    return ListPublicBodiesUseCase(list_public_bodies_port=list_public_bodies_port)
 
 
 def get_create_claim_use_case(
@@ -273,6 +283,14 @@ async def search_application(
 ) -> list[ApplicationSearchResponse]:
     """Search for an application by exact LAA reference number."""
     return use_case.execute(laa_reference)
+
+
+@router.get("/public-bodies", response_model=list[PublicBodyResponse])
+def list_public_bodies(
+    use_case: ListPublicBodiesUseCase = Depends(get_list_public_bodies_use_case),
+    _: None = Depends(verify_entra_provider_token),
+) -> list[PublicBody]:
+    return use_case.execute()
 
 
 def get_coroners_letter_use_case(
