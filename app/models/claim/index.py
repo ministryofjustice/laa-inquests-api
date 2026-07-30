@@ -1,5 +1,6 @@
 from datetime import datetime, UTC
 from decimal import Decimal
+import uuid
 
 from pydantic import BaseModel, ConfigDict, Field as PydanticField
 from pydantic.alias_generators import to_camel
@@ -64,6 +65,17 @@ class DecisionReason(SQLModel, table=True):
     claim_decision: ClaimDecision = Relationship(back_populates="decision_reasons")
 
 
+class ClaimEvidence(SQLModel, table=True):
+    __tablename__ = "claim_evidence"
+    claim_evidence_id: uuid.UUID = Field(
+        default_factory=uuid.uuid4,
+        primary_key=True,
+        unique=True,
+    )
+    sds_file_name: str
+    file_name: str
+
+
 # REQUEST BODY -- Create
 class ClaimCreate(BaseModel):
     model_config = ConfigDict(
@@ -96,3 +108,12 @@ class ClaimResponse(BaseModel):
     )
     claim_id: int
     rejection_reasons: list[ReasonCode] | None = None
+
+
+class UploadClaimEvidenceResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+    claim_evidence_id: uuid.UUID
+    claim_evidence_file_name: str

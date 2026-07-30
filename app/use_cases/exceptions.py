@@ -14,6 +14,14 @@ class CoronersLetterVirusDetectedError(Exception):
     pass
 
 
+class ClaimEvidenceUploadError(Exception):
+    pass
+
+
+class ClaimEvidenceVirusDetectedError(Exception):
+    pass
+
+
 class ProceedingsNotFoundError(Exception):
     pass
 

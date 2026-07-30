@@ -6,11 +6,12 @@ from pathlib import Path
 
 import httpx
 
-from app.models.application.index import SDSUploadCoronersLetterResponse
+from app.models.application.index import SDSUploadClaimEvidenceResponse, SDSUploadCoronersLetterResponse
 from app.ports.sds_port import SdsPort
 from app.use_cases.exceptions import (
     InvalidCoronersLetterDocumentIdError,
     SDSLetterRetrievalError,
+    ClaimEvidenceUploadError,
     CoronersLetterUploadError,
 )
 
@@ -110,6 +111,58 @@ class SdsAdapter(SdsPort):
             )
 
         return SDSUploadCoronersLetterResponse(
+            sds_file_name=unique_file_name,
+            status="SUCCESS",
+        )
+
+    def virus_check_claim_evidence(self, claim_evidence: bytes, file_name: str) -> bool:
+        token = self._get_token()
+        response = httpx.put(
+            f"{self.base_url}/virus_check_file",
+            files={
+                "file": (
+                    file_name,
+                    claim_evidence,
+                    "application/octet-stream",
+                )
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        if response.status_code == 200:
+            return True
+        elif response.status_code == 400:
+            return False
+        else:
+            raise ClaimEvidenceUploadError(
+                f"Failed to perform virus check. API status code: {response.status_code}"
+            )
+
+    def save_claim_evidence(
+        self, claim_evidence: bytes, file_name: str
+    ) -> SDSUploadClaimEvidenceResponse:
+        path = Path(file_name)
+        unique_file_name = f"{path.stem}_{uuid.uuid4()}{path.suffix}"
+        token = self._get_token()
+        response = httpx.post(
+            f"{self.base_url}/save_file",
+            files={
+                "file": (
+                    unique_file_name,
+                    claim_evidence,
+                    "application/octet-stream",
+                )
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        if response.status_code != 201:
+            return SDSUploadClaimEvidenceResponse(
+                sds_file_name=unique_file_name,
+                status="FAILURE",
+            )
+
+        return SDSUploadClaimEvidenceResponse(
             sds_file_name=unique_file_name,
             status="SUCCESS",
         )

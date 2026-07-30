@@ -16,7 +16,8 @@ Authorised caseworkers can:
 Authorised providers can:
 * Create an application by posting to **/applications/**.
 * Create a claim by posting to **/applications/{laa_reference}/claim**.
-* Upload evidence by posting to **/applications/coroners-letter**.
+* Upload a coroner's letter by posting to **/applications/upload-coroners-letter**.
+* Upload claim evidence by posting to **/applications/claim/upload-evidence**.
 * Search for an application by LAA reference by sending a get request to **/applications/search**.
 
 

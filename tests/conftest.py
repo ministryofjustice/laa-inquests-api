@@ -28,6 +28,7 @@ from app.models.application.index import (
     PublicBody,
     PublicBodyId,
     SDSUploadCoronersLetterResponse,
+    SDSUploadClaimEvidenceResponse
 )
 
 SECRET_KEY = "TEST_KEY"
@@ -171,6 +172,11 @@ def client_fixture(session: Session):
             sds_file_name="test-file_abc123.pdf",
             status="SUCCESS",
         )
+        mock_sds.virus_check_claim_evidence.return_value = True
+        mock_sds.save_claim_evidence.return_value = SDSUploadClaimEvidenceResponse(
+            sds_file_name="test-claim-evidence_abc123.pdf",
+            status="SUCCESS",
+        )
         mock_sds.retrieve_coroners_letter.return_value = iter([b"file bytes"])
         return mock_sds
 
@@ -223,6 +229,11 @@ def entra_auth_client_fixture(session: Session):
         mock_sds.virus_check_coroners_letter.return_value = True
         mock_sds.save_coroners_letter.return_value = SDSUploadCoronersLetterResponse(
             sds_file_name="test-file_abc123.pdf",
+            status="SUCCESS",
+        )
+        mock_sds.virus_check_claim_evidence.return_value = True
+        mock_sds.save_claim_evidence.return_value = SDSUploadClaimEvidenceResponse(
+            sds_file_name="test-claim-evidence_abc123.pdf",
             status="SUCCESS",
         )
         mock_sds.retrieve_coroners_letter.return_value = iter([b"file bytes"])
