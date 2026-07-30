@@ -1,4 +1,5 @@
 [project]
+name = "Inquests API"
 requires-python = ">= 3.12"
 
 [tool.ruff]
