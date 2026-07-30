@@ -29,7 +29,7 @@ class Config(object):
     )
     GOV_NOTIFY_CLAIM_SUBMIT_TEMPLATE_ID = os.environ.get(
         "GOV_NOTIFY_CLAIM_SUBMIT_TEMPLATE_ID",
-        "678421d3-bcdc-47df-b247-2067504d73b5",
+        "",
     )
     GOV_NOTIFY_CALLBACK_BEARER_TOKEN = os.environ.get(
         "GOV_NOTIFY_CALLBACK_BEARER_TOKEN", ""
