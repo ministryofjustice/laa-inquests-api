@@ -277,7 +277,7 @@ class ProceedingCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    proceeding_id: ProceedingId = PydanticField(examples="IQPC")
+    proceeding_id: ProceedingId = PydanticField(examples=["IQPC"])
 
 
 class AddressCreate(BaseModel):
@@ -583,7 +583,7 @@ class ApplicationResponse(BaseModel):
     application_type: str
     auto_grant: bool
     overall_decision: str
-    proceeding: ProceedingResponse = None
+    proceeding: ProceedingResponse | None = None
     public_bodies: list[PublicBodyResponse] = []
     client: ClientResponse
     deceased: DeceasedResponse

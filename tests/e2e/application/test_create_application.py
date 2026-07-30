@@ -76,7 +76,7 @@ def test_201_create_application_response_contains_expected_base_properties(
     assert isinstance(new_application["applicationType"], str)
     assert isinstance(new_application["autoGrant"], bool)
     assert isinstance(new_application["overallDecision"], str)
-    assert isinstance(new_application.proceeding, Proceeding)
+    assert isinstance(new_application["proceeding"], dict)
 
 
 def test_201_create_application_response_contains_expected_proceeding_information(
@@ -91,7 +91,7 @@ def test_201_create_application_response_contains_expected_proceeding_informatio
         },
     )
     new_application = response.json()
-    proceeding = new_application.proceeding
+    proceeding = new_application["proceeding"]
     assert proceeding["proceedingId"] == "IQOT"
     assert proceeding["categoryOfLaw"] == "INQUESTS"
     assert proceeding["matterType"] == "INQUESTS"

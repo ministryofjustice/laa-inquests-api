@@ -43,8 +43,8 @@ def test_200_proceeding_details_included_on_application_response(
     )
 
     requested_application = response.json()
-    assert len(requested_application.proceeding) == 1
-    proceeding = requested_application.proceeding
+    proceeding = requested_application["proceeding"]
+    assert proceeding is not None
     assert isinstance(proceeding["proceedingName"], str)
     assert isinstance(proceeding["proceedingDescription"], str)
 

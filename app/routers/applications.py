@@ -346,7 +346,7 @@ def read_certificate(
         )
     except ProceedingNotFoundError:
         raise HTTPException(
-            status_code=404, detail="No Proceeding found for application"
+            status_code=404, detail="No proceeding found for application"
         )
     except ProviderDetailsRetrievalError:
         raise HTTPException(
@@ -460,7 +460,7 @@ def refuse_decision(
         raise HTTPException(status_code=404, detail="Application not found")
     except ProceedingNotFoundError:
         raise HTTPException(
-            status_code=404, detail="No Proceeding found for application"
+            status_code=404, detail="No proceeding found for application"
         )
 
     return Response(status_code=204)
@@ -481,7 +481,7 @@ def grant_decision(
         raise HTTPException(status_code=404, detail="Application not found")
     except ProceedingNotFoundError:
         raise HTTPException(
-            status_code=404, detail="No Proceeding found for application"
+            status_code=404, detail="No proceeding found for application"
         )
 
     return Response(status_code=204)

@@ -193,7 +193,7 @@ def create_base_application(
     if provider is _NOT_PROVIDED:
         provider = create_base_provider()
     if proceeding is _NOT_PROVIDED:
-        proceeding = [create_base_application_proceeding()]
+        proceeding = create_base_application_proceeding()
     if public_bodies is _NOT_PROVIDED:
         public_bodies = [create_base_application_public_body()]
 
