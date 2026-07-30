@@ -234,10 +234,12 @@ def create_base_certificate(
         "guardian_name": "Not applicable",
         "guardian_address": "Not applicable",
         "laa_reference": application.laa_reference,
-        "date_created": application_proceeding.certificate_issue_date or datetime.now(tz=UTC).date(),
+        "date_created": application_proceeding.certificate_issue_date
+        or datetime.now(tz=UTC).date(),
         "certificate_type": application_proceeding.proceeding.certificate_type,
         "status": application.status,
-        "effective_date": application_proceeding.certificate_start_date or datetime.now(tz=UTC).date(),
+        "effective_date": application_proceeding.certificate_start_date
+        or datetime.now(tz=UTC).date(),
         "end_date": None,
         "reinstatement_date": None,
         "cost_limitation": str(
