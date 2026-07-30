@@ -12,7 +12,11 @@ from app.models.application.index import (
     Provider,
 )
 from app.ports.update_decision_port import ApplicationDecisionPort
-from app.use_cases.exceptions import ApplicationNotFoundError, ProceedingsNotFoundError
+from app.use_cases.exceptions import (
+    ApplicationNotFoundError,
+    GrantDecisionError,
+    ProceedingsNotFoundError,
+)
 from app.use_cases.grant_decision import GrantDecisionUseCase
 
 
@@ -161,7 +165,7 @@ def test_grant_decision_raises_exception_when_create_certificate_model_use_case_
         Exception("Create Certificate Model failure")
     )
 
-    with pytest.raises(Exception):
+    with pytest.raises(GrantDecisionError):
         use_case.execute("1", grant_request)
 
     update_decision_port.rollback.assert_called_once()
@@ -174,7 +178,7 @@ def test_grant_decision_raises_exception_when_send_grant_email_fails_and_rollbac
         "Send grant email failure"
     )
 
-    with pytest.raises(Exception):
+    with pytest.raises(GrantDecisionError):
         use_case.execute("1", grant_request)
 
     update_decision_port.rollback.assert_called_once()
@@ -203,7 +207,7 @@ def test_grant_decision_raises_exception_when_send_grant_letter_fails_and_rollba
         "Send grant letter failure"
     )
 
-    with pytest.raises(Exception):
+    with pytest.raises(GrantDecisionError):
         use_case.execute("1", grant_request)
 
     update_decision_port.rollback.assert_called_once()

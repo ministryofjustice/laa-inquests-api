@@ -36,7 +36,7 @@ class CustomSession(Session):
                             )
                             instance.id = uuid.uuid4()  # Regenerate UUID
                 else:
-                    raise e
+                    raise
         raise HTTPException(
             status_code=500,
             detail="Could not generate a unique UUID after multiple attempts.",

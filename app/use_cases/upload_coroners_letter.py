@@ -28,10 +28,10 @@ class UploadCoronersLetterUseCase:
             is_safe = self.sds_port.virus_check_coroners_letter(
                 coroners_letter, file_name
             )
-        except Exception as e:
+        except CoronersLetterUploadError as e:
             raise CoronersLetterUploadError(
                 f"{file_name} upload failed due to server error during virus check: {e!s}"
-            )
+            ) from e
 
         if not is_safe:
             raise CoronersLetterVirusDetectedError(

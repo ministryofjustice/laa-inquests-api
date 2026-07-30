@@ -1,4 +1,5 @@
 import pytest
+from pydantic import ValidationError
 
 from app.models.gov_notify_templates.application_grant_personalisation import (
     NotifyApplicationGrantTemplatePersonalisation,
@@ -41,7 +42,7 @@ def test_create_application_grant_email_personalisation_rejects_missing_required
     """
     Test that NotifyApplicationGrantTemplatePersonalisation model rejects creation with missing required fields.
     """
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         NotifyApplicationGrantTemplatePersonalisation(
             laa_reference="12345",
         )
@@ -51,7 +52,7 @@ def test_create_application_grant_email_personalisation_rejects_extra_fields():
     """
     Test that NotifyApplicationGrantTemplatePersonalisation model rejects creation with extra/unexpected fields.
     """
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         NotifyApplicationGrantTemplatePersonalisation(
             laa_reference="12345",
             issue_date="18 June 2026",
