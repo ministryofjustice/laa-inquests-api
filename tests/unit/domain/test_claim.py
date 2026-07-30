@@ -216,8 +216,8 @@ def test_should_auto_reject_for_limit_when_total_exceeds_limit():
     claim.validate_total_claim_cost()
 
     application = MagicMock(spec=Application)
-    application.proceedings = [MagicMock()]
-    application.proceedings[0].substantive_cost_limitation = 1000
+    application.proceeding = MagicMock()
+    application.proceeding.substantive_cost_limitation = 1000
     reason = claim.should_auto_reject_for_limit(application)
 
     assert reason is ClaimRejectionReason.CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT
@@ -234,8 +234,8 @@ def test_should_not_auto_reject_for_limit_when_total_not_exceeding_limit():
     claim.validate_total_claim_cost()
 
     application = MagicMock(spec=Application)
-    application.proceedings = [MagicMock()]
-    application.proceedings[0].substantive_cost_limitation = 1000
+    application.proceeding = MagicMock()
+    application.proceeding.substantive_cost_limitation = 1000
     reason = claim.should_auto_reject_for_limit(application)
 
     assert reason is None
@@ -250,8 +250,8 @@ def test_should_auto_reject_for_limit_when_vat_zero_total_exceeds_limit():
         vat_zero_total=Decimal("1500.00"),
     )
     application = MagicMock(spec=Application)
-    application.proceedings = [MagicMock()]
-    application.proceedings[0].substantive_cost_limitation = 1000
+    application.proceeding = MagicMock()
+    application.proceeding.substantive_cost_limitation = 1000
     reason = claim.should_auto_reject_for_limit(application)
 
     assert reason is ClaimRejectionReason.CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT
@@ -266,8 +266,8 @@ def test_should_not_auto_reject_for_limit_when_vat_zero_total_within_limit():
         vat_zero_total=Decimal("500.00"),
     )
     application = MagicMock(spec=Application)
-    application.proceedings = [MagicMock()]
-    application.proceedings[0].substantive_cost_limitation = 1000
+    application.proceeding = MagicMock()
+    application.proceeding.substantive_cost_limitation = 1000
     reason = claim.should_auto_reject_for_limit(application)
 
     assert reason is None
@@ -285,9 +285,9 @@ def _make_domain_claim(gross=Decimal("500.00"), net=Decimal("400.00")):
 
 def _make_application(limit=1000):
     application = MagicMock(spec=Application)
-    application.proceedings = [MagicMock()]
-    application.proceedings[0].substantive_cost_limitation = limit
-    application.proceedings[0].certificate_start_date = None
+    application.proceeding = MagicMock()
+    application.proceeding.substantive_cost_limitation = limit
+    application.proceeding.certificate_start_date = None
     return application
 
 
@@ -330,10 +330,10 @@ def test_should_not_auto_reject_for_application_total_limit_when_sum_within_limi
     assert reason is None
 
 
-def test_should_not_auto_reject_for_application_total_limit_when_no_proceedings():
+def test_should_not_auto_reject_for_application_total_limit_when_no_proceeding():
     claim = _make_domain_claim(gross=Decimal("900.00"))
     application = MagicMock(spec=Application)
-    application.proceedings = []
+    application.proceeding = null
     reason = claim.should_auto_reject_for_application_total_limit(application, [])
 
     assert reason is None
@@ -342,8 +342,8 @@ def test_should_not_auto_reject_for_application_total_limit_when_no_proceedings(
 def test_should_not_auto_reject_for_application_total_limit_when_limit_is_none():
     claim = _make_domain_claim(gross=Decimal("900.00"))
     application = MagicMock(spec=Application)
-    application.proceedings = [MagicMock()]
-    application.proceedings[0].substantive_cost_limitation = None
+    application.proceeding = MagicMock()
+    application.proceeding.substantive_cost_limitation = None
     reason = claim.should_auto_reject_for_application_total_limit(application, [])
 
     assert reason is None
@@ -618,7 +618,7 @@ def _make_application_with_certificate(start: date | None, limit=1000000):
     proceeding = MagicMock()
     proceeding.substantive_cost_limitation = limit
     proceeding.certificate_start_date = start
-    application.proceedings = [proceeding]
+    application.proceeding = proceeding
     return application
 
 

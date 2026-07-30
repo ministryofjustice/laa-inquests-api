@@ -37,7 +37,7 @@ def application() -> Application:
     provider = Provider(
         firm_code="0A123B", office_id="001", email_address="test@example.com"
     )
-    return Application(proceedings=[proceeding], provider=provider, client=client)
+    return Application(proceeding=proceeding, provider=provider, client=client)
 
 
 @pytest.fixture
@@ -59,7 +59,7 @@ def use_case(
 def test_execute_calls_generate_pdf_with_certificate_template(
     use_case, pdf_generation_port, application, certificate_context
 ):
-    use_case.execute(application, application.proceedings[0], certificate_context)
+    use_case.execute(application, application.proceeding, certificate_context)
 
     pdf_generation_port.generate_pdf.assert_called_once_with(
         "certificate.html", certificate_context
@@ -71,11 +71,11 @@ def test_execute_calls_send_granted_decision_email_with_pdf(
 ):
     pdf_generation_port.generate_pdf.return_value = b"%PDF-certificate"
 
-    use_case.execute(application, application.proceedings[0], certificate_context)
+    use_case.execute(application, application.proceeding, certificate_context)
 
     gov_notify_port.send_application_granted_decision_email.assert_called_once_with(
         application,
-        application.proceedings[0],
+        application.proceeding,
         "test@example.com",
         b"%PDF-certificate",
     )
@@ -87,7 +87,7 @@ def test_execute_raises_exception_when_pdf_generation_fails(
     pdf_generation_port.generate_pdf.side_effect = Exception("PDF generation failed")
 
     with pytest.raises(Exception, match="PDF generation failed"):
-        use_case.execute(application, application.proceedings[0], certificate_context)
+        use_case.execute(application, application.proceeding, certificate_context)
 
 
 def test_execute_raises_exception_when_email_send_fails(
@@ -98,4 +98,4 @@ def test_execute_raises_exception_when_email_send_fails(
     )
 
     with pytest.raises(Exception, match="Email send failed"):
-        use_case.execute(application, application.proceedings[0], certificate_context)
+        use_case.execute(application, application.proceeding, certificate_context)

@@ -209,14 +209,14 @@ class Claim:
         )
 
     def _get_certificate_start_date(self, application: Application) -> date | None:
-        if not application.proceedings:
+        if not application.proceeding:
             return None
-        return application.proceedings[0].certificate_start_date
+        return application.proceeding.certificate_start_date
 
     def _get_substantive_cost_limit(self, application: Application) -> Decimal | None:
-        if not application.proceedings:
+        if not application.proceeding:
             return None
-        raw_limit = application.proceedings[0].substantive_cost_limitation
+        raw_limit = application.proceeding.substantive_cost_limitation
         if raw_limit is None:
             return None
         return Decimal(str(raw_limit))

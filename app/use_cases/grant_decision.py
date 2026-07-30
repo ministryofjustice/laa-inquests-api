@@ -8,7 +8,7 @@ from app.use_cases.create_certificate_context import CreateCertificateContextUse
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
     GrantDecisionError,
-    ProceedingsNotFoundError,
+    ProceedingNotFoundError,
 )
 from app.use_cases.send_grant_email import SendGrantEmailUseCase
 from app.use_cases.send_grant_letter import SendGrantLetterUseCase
@@ -36,12 +36,12 @@ class GrantDecisionUseCase:
         if application is None:
             raise ApplicationNotFoundError(f"Application {laa_reference} not found")
 
-        if not application.proceedings:
-            raise ProceedingsNotFoundError(
-                f"No proceedings found for application {laa_reference}"
+        if not application.proceeding:
+            raise ProceedingNotFoundError(
+                f"No proceeding found for application {laa_reference}"
             )
 
-        proceeding = application.proceedings[0]
+        proceeding = application.proceeding
         proceeding.merits_decision = MeritsDecision.GRANTED
         proceeding.reason_for_refusal = None
         proceeding.justification = None

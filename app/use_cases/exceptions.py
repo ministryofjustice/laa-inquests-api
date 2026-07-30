@@ -30,7 +30,7 @@ class ClaimEvidenceVirusDetectedError(Exception):
     pass
 
 
-class ProceedingsNotFoundError(Exception):
+class ProceedingNotFoundError(Exception):
     pass
 
 

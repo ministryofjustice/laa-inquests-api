@@ -55,7 +55,7 @@ def create_application_submission_email_personalisation(
         recipient_name = client.correspondence_recipient_name or "Unknown"
         correspondence_recipient = f"{recipient_name} ({recipient_type})"
 
-    proceeding = application.proceedings[0] if application.proceedings else None
+    proceeding = application.proceeding
     proceeding_description = proceeding.proceeding_description if proceeding else "N/A"
 
     matter_type = proceeding.matter_type if proceeding else "N/A"

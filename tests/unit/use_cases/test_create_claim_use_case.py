@@ -163,7 +163,7 @@ def test_execute_sends_claim_submission_email_when_application_exists():
     proceeding = MagicMock()
     proceeding.substantive_cost_limitation = 1000
     proceeding.certificate_start_date = None
-    application.proceedings = [proceeding]
+    application.proceeding = proceeding
     application.provider.email_address = "provider@example.com"
     gov_notify_port = MagicMock()
 
@@ -423,9 +423,9 @@ def test_execute_does_not_raise_when_application_total_exceeds_limit():
     existing_claim.total_profit_cost_gross = Decimal("9000.00")
 
     application = MagicMock(spec=Application)
-    application.proceedings = [MagicMock()]
-    application.proceedings[0].substantive_cost_limitation = 1000
-    application.proceedings[0].certificate_start_date = None
+    application.proceeding = MagicMock()
+    application.proceeding.substantive_cost_limitation = 1000
+    application.proceeding.certificate_start_date = None
 
     use_case = CreateClaimUseCase(
         create_claim_port=create_claim_port,
@@ -447,9 +447,9 @@ def test_execute_persists_auto_reject_and_returns_rejection_reasons():
     update_claim_status_port = _make_update_claim_status_port()
 
     application = MagicMock(spec=Application)
-    application.proceedings = [MagicMock()]
-    application.proceedings[0].substantive_cost_limitation = 999999
-    application.proceedings[0].certificate_start_date = None
+    application.proceeding = MagicMock()
+    application.proceeding.substantive_cost_limitation = 999999
+    application.proceeding.certificate_start_date = None
 
     existing_claims = [
         Claim(
@@ -506,9 +506,9 @@ def test_execute_returns_submitted_claim_when_auto_reject_persistence_fails():
     update_claim_status_port = _make_update_claim_status_port()
 
     application = MagicMock(spec=Application)
-    application.proceedings = [MagicMock()]
-    application.proceedings[0].substantive_cost_limitation = 999999
-    application.proceedings[0].certificate_start_date = None
+    application.proceeding = MagicMock()
+    application.proceeding.substantive_cost_limitation = 999999
+    application.proceeding.certificate_start_date = None
 
     existing_claims = [
         Claim(
@@ -553,9 +553,9 @@ def test_execute_auto_approves_eligible_payment_on_account_claim():
     application = MagicMock(spec=Application)
     application.status = "LIVE"
     application.overall_decision = "PENDING"
-    application.proceedings = [MagicMock()]
-    application.proceedings[0].substantive_cost_limitation = 999999
-    application.proceedings[0].certificate_start_date = None
+    application.proceeding = MagicMock()
+    application.proceeding.substantive_cost_limitation = 999999
+    application.proceeding.certificate_start_date = None
 
     use_case = CreateClaimUseCase(
         create_claim_port=create_claim_port,
@@ -592,9 +592,9 @@ def test_execute_does_not_auto_approve_when_amount_exceeds_threshold():
     application = MagicMock(spec=Application)
     application.status = "LIVE"
     application.overall_decision = "PENDING"
-    application.proceedings = [MagicMock()]
-    application.proceedings[0].substantive_cost_limitation = 999999
-    application.proceedings[0].certificate_start_date = None
+    application.proceeding = MagicMock()
+    application.proceeding.substantive_cost_limitation = 999999
+    application.proceeding.certificate_start_date = None
 
     use_case = CreateClaimUseCase(
         create_claim_port=create_claim_port,
@@ -632,9 +632,9 @@ def test_execute_does_not_auto_approve_non_payment_on_account_claim():
     application = MagicMock(spec=Application)
     application.status = "LIVE"
     application.overall_decision = "PENDING"
-    application.proceedings = [MagicMock()]
-    application.proceedings[0].substantive_cost_limitation = 999999
-    application.proceedings[0].certificate_start_date = None
+    application.proceeding = MagicMock()
+    application.proceeding.substantive_cost_limitation = 999999
+    application.proceeding.certificate_start_date = None
 
     use_case = CreateClaimUseCase(
         create_claim_port=create_claim_port,

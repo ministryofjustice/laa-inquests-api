@@ -43,8 +43,8 @@ def test_200_proceeding_details_included_on_application_response(
     )
 
     requested_application = response.json()
-    assert len(requested_application["proceedings"]) == 1
-    proceeding = requested_application["proceedings"][0]
+    assert len(requested_application.proceeding) == 1
+    proceeding = requested_application.proceeding
     assert isinstance(proceeding["proceedingName"], str)
     assert isinstance(proceeding["proceedingDescription"], str)
 
@@ -102,7 +102,7 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
         "/applications",
         json={
             "coronersLetterId": str(uuid.uuid4()),
-            "proceedings": [{"proceedingId": "IQOT"}],
+            "proceeding": {"proceedingId": "IQOT"},
             "client": {
                 "clientFirstName": "Test",
                 "clientLastName": "Surname",

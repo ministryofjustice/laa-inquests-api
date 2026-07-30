@@ -65,12 +65,12 @@ class ApplicationRepositoryAdapter(
         return list(self.session.exec(statement).all())
 
     def create_application(self, request: ApplicationCreate) -> Application:
-        proceedings_to_add = []
+        proceeding_to_add = []
         public_bodies_to_add = []
 
-        for proceeding in request.proceedings:
+        for proceeding in request.proceeding:
             code_str = proceeding.proceeding_id
-            proceedings_to_add.append(
+            proceeding_to_add.append(
                 ApplicationProceeding(proceeding_id=ProceedingId(code_str))
             )
 
@@ -157,7 +157,7 @@ class ApplicationRepositoryAdapter(
         new_application = Application(
             client_id=new_client.client_id,
             deceased_id=new_deceased.deceased_id,
-            proceedings=proceedings_to_add,
+            Proceeding=Proceeding_to_add,
             public_bodies=public_bodies_to_add,
             provider_id=new_provider.provider_id,
             coroners_letter_id=request.coroners_letter_id,

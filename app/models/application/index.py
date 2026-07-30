@@ -43,7 +43,7 @@ class Proceeding(SQLModel, table=True):
     scope_limitation_heading: str | None = "FINAL_HEARING"
     scope_description: str | None = "This is the scope description"
     substantive_cost_limitation: int | None = 10000
-    application_proceedings: list["ApplicationProceeding"] = Relationship(
+    application_proceeding: "ApplicationProceeding" = Relationship(
         back_populates="proceeding"
     )
 
@@ -176,9 +176,7 @@ class CoronersLetter(SQLModel, table=True):
 
 
 class Application(ApplicationBase, table=True):
-    proceedings: list["ApplicationProceeding"] = Relationship(
-        back_populates="application"
-    )
+    proceeding: "ApplicationProceeding" = Relationship(back_populates="application")
     public_bodies: list["ApplicationPublicBody"] = Relationship(
         back_populates="application"
     )
@@ -202,9 +200,9 @@ class Application(ApplicationBase, table=True):
     @computed_field
     @property
     def overall_decision(self) -> str:
-        """Calculate overall_decision from the first proceeding's merits_decision."""
-        if self.proceedings and len(self.proceedings) > 0:
-            return self.proceedings[0].merits_decision
+        """Calculate overall_decision from the proceeding's merits_decision."""
+        if self.proceeding:
+            return self.proceeding.merits_decision
         return MeritsDecision.PENDING
 
 
@@ -230,8 +228,8 @@ class ApplicationProceeding(SQLModel, table=True):
     justification: str | None = None
     laa_reference: int = Field(foreign_key="application.laa_reference")
     proceeding_id: ProceedingId = Field(foreign_key="proceeding.proceeding_id")
-    proceeding: Proceeding = Relationship(back_populates="application_proceedings")
-    application: Application = Relationship(back_populates="proceedings")
+    proceeding: Proceeding = Relationship(back_populates="application_proceeding")
+    application: Application = Relationship(back_populates="proceeding")
     certificate_issue_date: date = Field(nullable=True, default=None)
     certificate_start_date: date = Field(nullable=True, default=None)
 
@@ -279,7 +277,7 @@ class ProceedingCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    proceeding_id: ProceedingId = PydanticField(examples=["IQPC"])
+    proceeding_id: ProceedingId = PydanticField(examples="IQPC")
 
 
 class AddressCreate(BaseModel):
@@ -411,7 +409,7 @@ class ApplicationCreate(BaseModel):
     client: ClientCreate
     deceased: DeceasedCreate
     publicBodies: list[PublicBodyCreate]
-    proceedings: list[ProceedingCreate]
+    proceeding: ProceedingCreate
     provider: ProviderCreate
 
 
@@ -585,7 +583,7 @@ class ApplicationResponse(BaseModel):
     application_type: str
     auto_grant: bool
     overall_decision: str
-    proceedings: list[ProceedingResponse] = []
+    proceeding: ProceedingResponse = None
     public_bodies: list[PublicBodyResponse] = []
     client: ClientResponse
     deceased: DeceasedResponse
