@@ -90,7 +90,10 @@ def test_get_token_posts_client_credentials_to_correct_url():
 
 def test_get_token_raises_http_exception_on_unsuccessful_status_code():
     adapter = _make_adapter()
-    with patch("httpx.post", return_value=_mock_save_failure_response()), pytest.raises(HTTPStatusError):
+    with (
+        patch("httpx.post", return_value=_mock_save_failure_response()),
+        pytest.raises(HTTPStatusError),
+    ):
         adapter._get_token()
 
 
