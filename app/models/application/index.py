@@ -221,7 +221,7 @@ class ApplicationPublicBody(SQLModel, table=True):
 
 class ApplicationProceeding(SQLModel, table=True):
     __tablename__ = "application_proceeding"
-    application_proceeding_id: int | None = Field(default=None, primary_key=True)
+    application_proceeding_id: int = Field(primary_key=True, nullable=False)
     client_involvement_type: str | None = "RESPONDENT"
     merits_decision: str = MeritsDecision.PENDING
     reason_for_refusal: str | None = None
@@ -583,7 +583,7 @@ class ApplicationResponse(BaseModel):
     application_type: str
     auto_grant: bool
     overall_decision: str
-    proceeding: ProceedingResponse | None = None
+    proceeding: ProceedingResponse
     public_bodies: list[PublicBodyResponse] = []
     client: ClientResponse
     deceased: DeceasedResponse

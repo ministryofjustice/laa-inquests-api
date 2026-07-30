@@ -36,11 +36,30 @@ def _make_application(
         further_information=None,
         client_relationship_to_deceased="sibling",
     )
+    proceeding = Proceeding(
+        id=1,
+        proceeding_id=ProceedingId.IQOT,
+        proceeding_name="Inquest into death",
+        proceeding_description="Inquest into death",
+        category_of_law="INQUESTS",
+        certificate_type="SUBSTANTIVE",
+        level_of_service="FULL_REPRESENTATION",
+        matter_type="INQUESTS",
+        scope_limitation_heading="FINAL_HEARING",
+        scope_description="This is the scope description",
+        substantive_cost_limitation=10000,
+    )
+    application_proceeding = ApplicationProceeding(
+        laa_reference=1,
+        proceeding_id=ProceedingId.IQOT,
+        proceeding=proceeding,
+    )
     return Application(
         laa_reference=1,
         client=client,
         deceased=deceased,
         provider=provider,
+        proceeding=application_proceeding,
     )
 
 
