@@ -22,8 +22,8 @@ from app.models.application.index import (
     Provider,
     PublicBody,
     PublicBodyId,
-    SDSUploadClaimEvidenceResponse,
     SDSUploadCoronersLetterResponse,
+    SDSUploadClaimEvidenceResponse,
 )
 from app.routers.applications import (
     get_gov_notify_port,

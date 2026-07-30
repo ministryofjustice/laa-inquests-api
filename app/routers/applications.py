@@ -1,5 +1,7 @@
+import uuid
 from collections.abc import Sequence
 from mimetypes import guess_type
+from typing import Literal
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from fastapi.encoders import jsonable_encoder
@@ -63,6 +65,8 @@ from app.use_cases.create_claim import CreateClaimCommand, CreateClaimUseCase
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
     ApplicationNotGrantedError,
+    ClaimEvidenceNotFoundError,
+    ClaimEvidenceRetrievalError,
     ClaimEvidenceUploadError,
     ClaimEvidenceVirusDetectedError,
     ClaimEvidenceNotFoundError,
@@ -82,6 +86,7 @@ from app.use_cases.list_applications import ListApplicationsUseCase
 from app.use_cases.list_public_bodies import ListPublicBodiesUseCase
 from app.use_cases.refuse_decision import RefuseDecisionUseCase
 from app.use_cases.retrieve_certificate import RetrieveCertificateUseCase
+from app.use_cases.retrieve_claim_evidence import RetrieveClaimEvidenceUseCase
 from app.use_cases.retrieve_coroners_letter import RetrieveCoronersLetterUseCase
 from app.use_cases.search_application import SearchApplicationUseCase
 from app.use_cases.send_grant_email import SendGrantEmailUseCase
