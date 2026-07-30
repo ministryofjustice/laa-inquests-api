@@ -1,5 +1,6 @@
 from datetime import datetime, UTC
 from decimal import Decimal
+from typing import Optional
 import uuid
 
 from pydantic import BaseModel, ConfigDict, Field as PydanticField
@@ -40,6 +41,7 @@ class ClaimBase(SQLModel):
 
 class Claim(ClaimBase, table=True):
     claim_id: int | None = Field(default=None, primary_key=True)
+    claim_evidence: list["ClaimEvidence"] = Relationship(back_populates="claim")
 
 
 class ClaimDecision(SQLModel, table=True):
@@ -74,6 +76,8 @@ class ClaimEvidence(SQLModel, table=True):
     )
     sds_file_name: str
     file_name: str
+    claim_id: int | None = Field(default=None, foreign_key="claim.claim_id")
+    claim: Optional["Claim"] = Relationship(back_populates="claim_evidence")
 
 
 # REQUEST BODY -- Create
@@ -96,6 +100,9 @@ class ClaimCreate(BaseModel):
     poa_type_id: POAType | None = PydanticField(default=None, examples=["PROFIT_COST"])
     claimant_id: str | None = PydanticField(
         default=None, examples=["claimant-123@provider.co.uk"]
+    )
+    claim_evidence_ids: list[uuid.UUID] = PydanticField(
+        examples=[["3fa85f64-5717-4562-b3fc-2c963f66afa6"]]
     )
 
 

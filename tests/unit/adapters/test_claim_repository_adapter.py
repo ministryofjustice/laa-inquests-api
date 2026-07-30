@@ -1,4 +1,5 @@
 from decimal import Decimal
+import uuid
 
 from sqlmodel import select
 
@@ -12,7 +13,7 @@ from app.models.claim.enums import (
     POAType,
     ReasonCode,
 )
-from app.models.claim.index import Claim, ClaimDecision, DecisionReason
+from app.models.claim.index import Claim, ClaimDecision, ClaimEvidence, DecisionReason
 
 
 def _make_domain_claim(overrides=None) -> DomainClaim:
@@ -158,6 +159,29 @@ def test_create_decision_reason_persists_justification_when_provided(session):
     )
 
     assert reason.justification == "Some justification text"
+
+
+def test_link_evidence_to_claim_sets_claim_id_on_existing_evidence(session):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    adapter = ClaimRepositoryAdapter(session)
+    claim = _create_claim(session, laa_reference)
+    evidence = ClaimEvidence(sds_file_name="stored.pdf", file_name="original.pdf")
+    session.add(evidence)
+    session.commit()
+    session.refresh(evidence)
+
+    adapter.link_evidence_to_claim(claim.claim_id, [evidence.claim_evidence_id])
+
+    stored = session.get(ClaimEvidence, evidence.claim_evidence_id)
+    assert stored.claim_id == claim.claim_id
+
+
+def test_link_evidence_to_claim_ignores_unknown_evidence_ids(session):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    adapter = ClaimRepositoryAdapter(session)
+    claim = _create_claim(session, laa_reference)
+
+    adapter.link_evidence_to_claim(claim.claim_id, [uuid.uuid4()])  # should not raise
 
 
 def test_update_claim_status_sets_status_on_claim(session):

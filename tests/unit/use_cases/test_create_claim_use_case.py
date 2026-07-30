@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock
 from decimal import Decimal
 from datetime import UTC, datetime
+import uuid
 
 import pytest
 
@@ -35,6 +36,7 @@ def _make_command(overrides=None) -> CreateClaimCommand:
         "gross": Decimal("1200.00"),
         "vat_zero_total": None,
         "claimant_id": "claimant-123@provider.co.uk",
+        "claim_evidence_ids": [uuid.uuid4()],
     }
     if overrides is not None:
         payload.update(overrides)
@@ -82,6 +84,19 @@ def _make_update_claim_status_port():
     return MagicMock(spec=UpdateClaimStatusPort)
 
 
+def test_execute_raises_invalid_claim_error_when_no_evidence_ids_provided():
+    command = _make_command({"claim_evidence_ids": []})
+    use_case = CreateClaimUseCase(
+        create_claim_port=MagicMock(spec=CreateClaimPort),
+        application_lookup_port=_make_application_lookup_port(),
+        get_claims_for_application_port=_make_get_claims_port(),
+    )
+
+    with pytest.raises(InvalidClaimError) as exc_info:
+        use_case.execute(command)
+    assert exc_info.value.code == ClaimErrorCode.MISSING_CLAIM_EVIDENCE
+
+
 def test_execute_creates_claim_and_commits():
     command = _make_command()
     claim = _make_claim()
@@ -103,8 +118,23 @@ def test_execute_creates_claim_and_commits():
     assert kwargs["claimant_id"] == command.claimant_id
     assert kwargs["claim"].claim_type == command.claim_type
     create_claim_port.commit.assert_called_once()
-    application_lookup_port.get_application_by_laa_reference.assert_called_once_with(
-        command.laa_reference
+
+
+def test_execute_links_claim_evidence_to_created_claim():
+    command = _make_command()
+    claim = _make_claim()
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+
+    use_case = CreateClaimUseCase(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(),
+        get_claims_for_application_port=_make_get_claims_port(),
+    )
+    use_case.execute(command)
+
+    create_claim_port.link_evidence_to_claim.assert_called_once_with(
+        claim.claim_id, command.claim_evidence_ids
     )
 
 

@@ -12,6 +12,7 @@ class ClaimErrorCode(str, enum.Enum):
     POA_TYPE_NOT_ALLOWED_FOR_NON_PAYMENT_ON_ACCOUNT = (
         "POA_TYPE_NOT_ALLOWED_FOR_NON_PAYMENT_ON_ACCOUNT"
     )
+    MISSING_CLAIM_EVIDENCE = "MISSING_CLAIM_EVIDENCE"
 
 
 class ClaimValidationError(Exception):

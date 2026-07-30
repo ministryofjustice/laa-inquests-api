@@ -2,9 +2,10 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 import logging
+import uuid
 
 from app.domain.claim import Claim as DomainClaim, ExistingClaimSummary
-from app.domain.claim_error import ClaimValidationError
+from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
 from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
@@ -37,6 +38,7 @@ class CreateClaimCommand:
     gross: Decimal | None
     vat_zero_total: Decimal | None
     claimant_id: str | None
+    claim_evidence_ids: list[uuid.UUID]
 
 
 @dataclass(frozen=True)
@@ -65,6 +67,12 @@ class CreateClaimUseCase:
         self.update_claim_status_port = update_claim_status_port
 
     def execute(self, command: CreateClaimCommand) -> CreateClaimResult:
+        if not command.claim_evidence_ids:
+            raise InvalidClaimError(
+                code=ClaimErrorCode.MISSING_CLAIM_EVIDENCE,
+                message="Claim evidence is required",
+            )
+
         try:
             validated_claim = DomainClaim(
                 claim_type=command.claim_type,
@@ -90,6 +98,9 @@ class CreateClaimUseCase:
             laa_reference=command.laa_reference,
             claim=validated_claim,
             claimant_id=command.claimant_id,
+        )
+        self.create_claim_port.link_evidence_to_claim(
+            claim.claim_id, command.claim_evidence_ids
         )
         self.create_claim_port.commit()
 

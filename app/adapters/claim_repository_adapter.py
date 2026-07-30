@@ -52,6 +52,18 @@ class ClaimRepositoryAdapter(
         self.session.refresh(new_claim)
         return new_claim
 
+    def link_evidence_to_claim(
+        self,
+        claim_id: int,
+        evidence_ids: list[uuid.UUID],
+    ) -> None:
+        for evidence_id in evidence_ids:
+            evidence = self.session.get(ClaimEvidenceModel, evidence_id)
+            if evidence is not None:
+                evidence.claim_id = claim_id
+                self.session.add(evidence)
+        self.session.flush()
+
     def commit(self) -> None:
         self.session.commit()
 

@@ -1,10 +1,11 @@
 from sqlmodel import select
 from decimal import Decimal
 from datetime import date
+import uuid
 
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
-from app.models.claim.index import Claim, ClaimDecision, DecisionReason
+from app.models.claim.index import Claim, ClaimDecision, ClaimEvidence, DecisionReason
 
 
 def _make_request_body(overrides=None):
@@ -14,6 +15,7 @@ def _make_request_body(overrides=None):
         "totalProfitCostGross": 1200,
         "poaTypeId": "PROFIT_COST",
         "claimantId": "claimant-123@provider.co.uk",
+        "claimEvidenceIds": [str(uuid.uuid4())],
     }
     if overrides is not None:
         body.update(overrides)
@@ -130,6 +132,50 @@ def test_201_create_claim_persists_claim_to_database(session, client, auth_token
     stored_claim = session.get(Claim, claim_id)
     assert stored_claim is not None
     assert stored_claim.laa_reference == laa_reference
+
+
+def test_201_create_claim_links_provided_evidence_ids_to_claim(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    evidence = ClaimEvidence(sds_file_name="stored.pdf", file_name="original.pdf")
+    session.add(evidence)
+    session.commit()
+    session.refresh(evidence)
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {"claimEvidenceIds": [str(evidence.claim_evidence_id)]}
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    claim_id = response.json()["claimId"]
+    stored_evidence = session.get(ClaimEvidence, evidence.claim_evidence_id)
+    assert stored_evidence.claim_id == claim_id
+
+
+def test_422_create_claim_with_empty_evidence_ids_returns_error(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body({"claimEvidenceIds": []}),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "MISSING_CLAIM_EVIDENCE"
 
 
 def test_422_payment_on_account_without_poa_type_id(session, client, auth_token):
