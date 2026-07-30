@@ -5,7 +5,7 @@ from app.ports.list_public_bodies_port import ListPublicBodiesPort
 
 
 def _sort_key(body: PublicBody) -> str:
-    # Normalise "Department of X" to "Department for X" so both sort identically;
+    # Normalise "Department of X" to "Department for X" so both sort identically
     return re.sub(
         r"^Department of ",
         "Department for ",
