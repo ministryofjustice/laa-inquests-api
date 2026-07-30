@@ -14,12 +14,13 @@ from app.use_cases.exceptions import (
 
 
 def _make_coroners_letter(
-    coroners_letter_id: uuid.UUID = uuid.uuid4(),
+    coroners_letter_id: uuid.UUID | None = None,
     sds_file_name: str = "letter_abc123.pdf",
     file_name: str = "test-document.pdf",
 ) -> CoronersLetter:
+
     return CoronersLetter(
-        coroners_letter_id=coroners_letter_id,
+        coroners_letter_id=coroners_letter_id or uuid.uuid4(),
         sds_file_name=sds_file_name,
         file_name=file_name,
     )
@@ -41,6 +42,7 @@ def test_execute_calls_sds_port_with_sds_file_name():
     session = MagicMock()
     session.get.return_value = _make_application(
         coroners_letter=_make_coroners_letter(
+            coroners_letter_id=uuid.uuid4(),
             sds_file_name="letter_abc123.pdf", file_name="test-document.pdf"
         )
     )

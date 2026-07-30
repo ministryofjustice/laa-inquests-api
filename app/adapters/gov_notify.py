@@ -1,6 +1,6 @@
 """Gov Notify adapter for application emails."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from io import BytesIO
 
 from notifications_python_client import prepare_upload
@@ -64,7 +64,7 @@ class GovNotifyAdapter(GovNotifyPort):
         recipient_email: str,
         certificate_pdf: bytes,
     ) -> None:
-        filename = f"{application.laa_reference}_Certificate_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        filename = f"{application.laa_reference}_Certificate_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.pdf"
         certificate_payload = prepare_upload(
             BytesIO(certificate_pdf), filename=filename
         )
@@ -96,6 +96,6 @@ class GovNotifyAdapter(GovNotifyPort):
 
     def send_precompiled_letter(self, reference: str, pdf: bytes) -> None:
         self.client.send_precompiled_letter_notification(
-            reference=f"{reference}-{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            reference=f"{reference}-{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}",
             pdf_file=BytesIO(pdf),
         )
