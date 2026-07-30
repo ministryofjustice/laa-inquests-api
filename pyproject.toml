@@ -12,6 +12,8 @@ extend-immutable-calls = ["fastapi.Depends", "fastapi.File"]
 [tool.ruff.lint.per-file-ignores]
 # Local dev/seed scripts may log via the root logger.
 "bin/*.py" = ["LOG015"]
+# Alembic migrations star-import models so autogenerate can see all tables.
+"app/db/migrations/*.py" = ["F403"]
 
 [tool.pytest.ini_options]
 filterwarnings = [
