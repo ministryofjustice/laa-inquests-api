@@ -48,25 +48,25 @@ repos:
             requirements/generated/requirements-production.txt,
             "--no-annotate",
           ]
-  # - repo: https://github.com/astral-sh/ruff-pre-commit
-  #   rev: v0.9.3
-  #   hooks:
-  #     - id: ruff
-  #       args: [--fix]
-  #     - id: ruff-format
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.3
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
   - repo: local
     hooks:
-        - id: prepare-commit-msg
-          name: Prepend jira id to commit message
-          entry: /bin/bash scripts/prepare-commit-msg.sh
-          language: script
-          stages: [ prepare-commit-msg ]
-          always_run: true
+      - id: prepare-commit-msg
+        name: Prepend jira id to commit message
+        entry: /bin/bash scripts/prepare-commit-msg.sh
+        language: script
+        stages: [prepare-commit-msg]
+        always_run: true
 
-        - id: pytest
-          name: Run unit tests
-          entry: pytest
-          pass_filenames: false
-          language: system
-          stages: [ pre-push ]
-          always_run: true
+      - id: pytest
+        name: Run unit tests
+        entry: pytest
+        pass_filenames: false
+        language: system
+        stages: [pre-push]
+        always_run: true
