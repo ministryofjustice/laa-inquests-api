@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from sqlmodel import select
@@ -567,7 +567,7 @@ def test_201_create_claim_does_not_auto_approve_when_amount_exceeds_50000(
     application = session.exec(select(Application)).first()
     application_proceeding = application.proceedings[0]
     application_proceeding.proceeding.substantive_cost_limitation = 999999
-    application_proceeding.certificate_start_date = date(2000, 1, 1)
+    application_proceeding.certificate_start_date = datetime(2000, 1, 1, tzinfo=UTC)
     session.add(application_proceeding.proceeding)
     session.add(application_proceeding)
     session.commit()
@@ -606,7 +606,7 @@ def test_201_create_claim_does_not_auto_approve_when_application_status_is_withd
     application = session.exec(select(Application)).first()
     application_proceeding = application.proceedings[0]
     application_proceeding.proceeding.substantive_cost_limitation = 999999
-    application_proceeding.certificate_start_date = date(2000, 1, 1)
+    application_proceeding.certificate_start_date = datetime(2000, 1, 1, tzinfo=UTC)
     application.status = "WITHDRAWN"
     session.add(application_proceeding.proceeding)
     session.add(application_proceeding)
@@ -647,7 +647,7 @@ def test_201_create_claim_does_not_auto_approve_when_merits_decision_is_granted(
     application = session.exec(select(Application)).first()
     application_proceeding = application.proceedings[0]
     application_proceeding.proceeding.substantive_cost_limitation = 999999
-    application_proceeding.certificate_start_date = date(2000, 1, 1)
+    application_proceeding.certificate_start_date = datetime(2000, 1, 1, tzinfo=UTC)
     application.proceedings[0].merits_decision = MeritsDecision.GRANTED
     session.add(application_proceeding.proceeding)
     session.add(application.proceedings[0])
@@ -708,7 +708,7 @@ def test_201_create_claim_auto_reject_returns_multiple_reasons_for_rejection_whe
     ).first()
     application_proceeding = application.proceedings[0]
     application_proceeding.proceeding.substantive_cost_limitation = 5
-    application_proceeding.certificate_start_date = date.today()
+    application_proceeding.certificate_start_date = datetime.now(tz=UTC).date()
     session.add(application_proceeding.proceeding)
     session.add(application_proceeding)
     session.commit()

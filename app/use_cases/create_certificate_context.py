@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import UTC, datetime
 
 from app.models.application.certificate import ApplicationCertificate
 from app.models.application.index import Application, ApplicationProceeding
@@ -70,10 +70,10 @@ class CreateCertificateContextUseCase:
         proceeding_name = proceeding.proceeding_name
         proceeding_description = proceeding.proceeding_description
 
-        effective_date = proceeding.certificate_start_date or date.today()
-        date_work_can_commence = proceeding.certificate_start_date or date.today()
+        effective_date = proceeding.certificate_start_date or datetime.now(tz=UTC).date()
+        date_work_can_commence = proceeding.certificate_start_date or datetime.now(tz=UTC).date()
         date_current_level_of_service_effective = (
-            proceeding.certificate_start_date or date.today()
+            proceeding.certificate_start_date or datetime.now(tz=UTC).date()
         )
 
         # Application status fields
@@ -89,7 +89,7 @@ class CreateCertificateContextUseCase:
             firm_name=firm_name,
             office_address=office_address,
             laa_reference=application.laa_reference,
-            date_created=proceeding.certificate_issue_date or date.today(),
+            date_created=proceeding.certificate_issue_date or datetime.now(tz=UTC).date(),
             certificate_type=certificate_type,
             category_of_law=category_of_law,
             level_of_service=level_of_service,

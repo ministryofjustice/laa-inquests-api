@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import UTC, datetime
 
 from sqlmodel import select
 
@@ -32,8 +32,8 @@ def test_200_read_certificate_returns_expected_certificate_context(
     assert body["officeAddress"]["townOrCity"] == "Test City"
     assert body["officeAddress"]["postcode"] == "TE1 1ST"
     assert body["opponentDetails"] == ["Department for Transport"]
-    assert body["dateCreated"] == date.today().isoformat()
-    assert body["effectiveDate"] == date.today().isoformat()
+    assert body["dateCreated"] == datetime.now(tz=UTC).date().isoformat()
+    assert body["effectiveDate"] == datetime.now(tz=UTC).date().isoformat()
 
 
 def test_404_read_certificate_returns_404_when_application_not_found(
