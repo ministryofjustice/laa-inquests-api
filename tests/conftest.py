@@ -1,35 +1,38 @@
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
+from fastapi.testclient import TestClient
 from passlib.hash import argon2
-from sqlmodel import SQLModel, create_engine, Session, StaticPool
+from sqlalchemy.orm import sessionmaker
+from sqlmodel import Session, SQLModel, StaticPool, create_engine
+
 from app import api
 from app.db import get_session
 from app.db.session import CustomSession
-from fastapi.testclient import TestClient
-from sqlalchemy.orm import sessionmaker
-from app.routers.dependencies import get_entra_auth_port
-from app.routers.applications import (
-    get_provider_details_port,
-    get_gov_notify_port,
-    get_sds_port,
-    get_pdf_generation_port,
-)
 from app.models import User
 from app.models.application.index import (
     Address,
     Application,
+    ApplicationProceeding,
     ApplicationPublicBody,
     Client,
     Deceased,
     Proceeding,
     ProceedingId,
-    ApplicationProceeding,
     Provider,
     PublicBody,
     PublicBodyId,
-    SDSUploadCoronersLetterResponse,
     SDSUploadClaimEvidenceResponse,
+    SDSUploadCoronersLetterResponse,
 )
+from app.routers.applications import (
+    get_gov_notify_port,
+    get_pdf_generation_port,
+    get_provider_details_port,
+    get_sds_port,
+)
+from app.routers.dependencies import get_entra_auth_port
+
 
 SECRET_KEY = "TEST_KEY"
 

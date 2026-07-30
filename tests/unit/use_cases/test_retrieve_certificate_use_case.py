@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 
 from app.models.application.certificate import ApplicationCertificate
 from app.models.application.enums import MeritsDecision

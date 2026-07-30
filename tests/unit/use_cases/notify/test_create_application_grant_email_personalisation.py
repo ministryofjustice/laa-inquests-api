@@ -1,15 +1,15 @@
+import pytest
+
 from app.models.gov_notify_templates.application_grant_personalisation import (
     NotifyApplicationGrantTemplatePersonalisation,
 )
 from app.use_cases.notify.create_application_grant_email_personalisation import (
     create_application_grant_email_personalisation,
 )
-
-import pytest
 from tests.unit.factories import (
     create_base_application,
-    create_base_client,
     create_base_application_proceeding,
+    create_base_client,
 )
 
 

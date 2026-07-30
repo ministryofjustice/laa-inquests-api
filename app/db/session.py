@@ -1,8 +1,9 @@
 import logging
-from sqlmodel import Session
+import uuid
+
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
-import uuid
+from sqlmodel import Session
 
 logger = logging.getLogger(__name__)
 

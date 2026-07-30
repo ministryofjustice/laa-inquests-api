@@ -1,6 +1,6 @@
 from app.models.application.index import ApplicationSearchResponse
-from app.ports.search_application_port import SearchApplicationPort
 from app.ports.provider_details_port import ProviderDetailsPort
+from app.ports.search_application_port import SearchApplicationPort
 
 
 class SearchApplicationUseCase:

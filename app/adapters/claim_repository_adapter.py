@@ -8,10 +8,11 @@ from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ReasonCode
 from app.models.claim.index import (
     Claim,
     ClaimDecision,
-    ClaimEvidence as ClaimEvidenceModel,
     DecisionReason,
 )
-from app.ports.claim.upload_claim_evidence_port import UploadClaimEvidencePort
+from app.models.claim.index import (
+    ClaimEvidence as ClaimEvidenceModel,
+)
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
@@ -20,6 +21,7 @@ from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicat
 from app.ports.claim.update_claim_status_port import (
     UpdateClaimStatusPort,
 )
+from app.ports.claim.upload_claim_evidence_port import UploadClaimEvidencePort
 
 
 class ClaimRepositoryAdapter(

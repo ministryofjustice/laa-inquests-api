@@ -1,26 +1,30 @@
+import uuid
 from collections.abc import Iterator
 from dataclasses import dataclass
+from datetime import UTC, date, datetime
 from typing import Optional
+
 from pydantic import (
     BaseModel,
     ConfigDict,
-    model_validator,
-    Field as PydanticField,
     computed_field,
+    model_validator,
+)
+from pydantic import (
+    Field as PydanticField,
 )
 from pydantic.alias_generators import to_camel
 from sqlalchemy import Column
-from sqlmodel import Field, Relationship, SQLModel, Enum
-from datetime import date, datetime, UTC
+from sqlmodel import Enum, Field, Relationship, SQLModel
+
 from app.models.application.enums import (
     AddressSource,
     CorrespondenceRecipientType,
     MeritsDecision,
-    ReasonForRefusal,
     ProceedingId,
     PublicBodyId,
+    ReasonForRefusal,
 )
-import uuid
 
 
 # RELATIONS
@@ -285,9 +289,9 @@ class AddressCreate(BaseModel):
         from_attributes=True,
     )
     address_line_1: str = PydanticField(examples=["123 Example Street"])
-    address_line_2: Optional[str] = PydanticField(default=None, examples=["Jones"])
+    address_line_2: str | None = PydanticField(default=None, examples=["Jones"])
     town_or_city: str = PydanticField(examples=["Example Town"])
-    county: Optional[str] = PydanticField(default=None, examples=["Jones"])
+    county: str | None = PydanticField(default=None, examples=["Jones"])
     postcode: str = PydanticField(examples=["AA1 1AA"])
 
 
@@ -309,22 +313,22 @@ class ClientCreate(BaseModel):
     )
     client_first_name: str = PydanticField(examples=["Jane"])
     client_last_name: str = PydanticField(examples=["Smith"])
-    client_last_name_at_birth: Optional[str] = PydanticField(
+    client_last_name_at_birth: str | None = PydanticField(
         default=None, examples=["Jones"]
     )
     date_of_birth: str = PydanticField(examples=["2000-01-01"])
-    national_insurance_number: Optional[str] = PydanticField(
+    national_insurance_number: str | None = PydanticField(
         default=None, examples=["AA123456A"]
     )
     has_applied_previously: bool = PydanticField(default=False, examples=[False])
-    prev_application_reference: Optional[str] = PydanticField(
+    prev_application_reference: str | None = PydanticField(
         default=None, examples=["TBD"]
     )
     correspondence_address_source: str = PydanticField(
         examples=["USE_SPECIFIED_ADDRESS"]
     )
-    correspondence_address: Optional[AddressCreate] = None
-    home_address: Optional[AddressCreate] = None
+    correspondence_address: AddressCreate | None = None
+    home_address: AddressCreate | None = None
     has_no_fixed_abode: bool = PydanticField(default=False, examples=[False])
     is_client_correspondence_recipient: bool = PydanticField(examples=[False])
     correspondence_recipient: CorrespondenceRecipientCreate | None = None
@@ -452,9 +456,9 @@ class AddressResponse(BaseModel):
         from_attributes=True,
     )
     address_line_1: str
-    address_line_2: Optional[str] = None
+    address_line_2: str | None = None
     town_or_city: str
-    county: Optional[str] = None
+    county: str | None = None
     postcode: str
 
 
@@ -477,14 +481,14 @@ class ClientResponse(BaseModel):
     client_id: int
     client_first_name: str
     client_last_name: str
-    client_last_name_at_birth: Optional[str] = None
+    client_last_name_at_birth: str | None = None
     date_of_birth: str
-    national_insurance_number: Optional[str] = None
+    national_insurance_number: str | None = None
     correspondence_address_source: str
-    correspondence_address: Optional[AddressResponse] = None
-    home_address: Optional[AddressResponse] = None
+    correspondence_address: AddressResponse | None = None
+    home_address: AddressResponse | None = None
     has_applied_previously: bool = False
-    prev_application_reference: Optional[str] = None
+    prev_application_reference: str | None = None
     has_no_fixed_abode: bool = False
     is_client_correspondence_recipient: bool
     correspondence_recipient: CorrespondenceRecipientResponse | None = None
@@ -507,8 +511,8 @@ class ProceedingResponse(BaseModel):
         populate_by_name=True,
     )
     proceeding_id: str
-    proceeding_name: Optional[str] = None
-    proceeding_description: Optional[str] = None
+    proceeding_name: str | None = None
+    proceeding_description: str | None = None
     category_of_law: str
     certificate_type: str
     level_of_service: str

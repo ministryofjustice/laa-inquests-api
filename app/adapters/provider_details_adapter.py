@@ -1,6 +1,6 @@
-from app.models.application.index import Address
 import httpx
 
+from app.models.application.index import Address
 from app.ports.provider_details_port import ProviderDetailsPort
 
 

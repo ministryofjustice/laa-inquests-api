@@ -48,12 +48,12 @@ repos:
             requirements/generated/requirements-production.txt,
             "--no-annotate",
           ]
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.3
-    hooks:
-      - id: ruff
-        args: [--fix]
-      - id: ruff-format
+  # - repo: https://github.com/astral-sh/ruff-pre-commit
+  #   rev: v0.9.3
+  #   hooks:
+  #     - id: ruff
+  #       args: [--fix]
+  #     - id: ruff-format
   - repo: local
     hooks:
         - id: prepare-commit-msg

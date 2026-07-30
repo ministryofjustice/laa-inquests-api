@@ -5,27 +5,32 @@ from .application.index import (
     Address,
     Application,
     ApplicationProceeding,
-    Proceeding,
-    Client,
-    PublicBody,
     ApplicationPublicBody,
+    Client,
     Deceased,
-)  # noqa: F401
-from .claim.index import Claim, ClaimDecision, ClaimEvidence, DecisionReason  # noqa: F401
-from .user import User  # noqa: F401
+    Proceeding,
+    PublicBody,
+)
+from .claim.index import (
+    Claim,
+    ClaimDecision,
+    ClaimEvidence,
+    DecisionReason,
+)
+from .user import User
 
 __all__ = [
     "Address",
-    "Proceeding",
-    "PublicBody",
-    "Deceased",
-    "Client",
     "Application",
-    "User",
     "ApplicationProceeding",
     "ApplicationPublicBody",
     "Claim",
     "ClaimDecision",
     "ClaimEvidence",
+    "Client",
+    "Deceased",
     "DecisionReason",
+    "Proceeding",
+    "PublicBody",
+    "User",
 ]

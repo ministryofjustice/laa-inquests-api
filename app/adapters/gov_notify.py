@@ -1,23 +1,23 @@
 """Gov Notify adapter for application emails."""
 
-from io import BytesIO
 from datetime import datetime
-from notifications_python_client.notifications import NotificationsAPIClient
+from io import BytesIO
+
 from notifications_python_client import prepare_upload
+from notifications_python_client.notifications import NotificationsAPIClient
 
 from app.config import Config
 from app.models.application.index import Application, ApplicationProceeding
 from app.models.claim.index import Claim
-
 from app.ports.gov_notify_port import GovNotifyPort
+from app.use_cases.notify.create_application_grant_email_personalisation import (
+    create_application_grant_email_personalisation,
+)
 from app.use_cases.notify.create_application_refusal_email_personalisation import (
     create_application_refusal_email_personalisation,
 )
 from app.use_cases.notify.create_application_submission_email_personalisation import (
     create_application_submission_email_personalisation,
-)
-from app.use_cases.notify.create_application_grant_email_personalisation import (
-    create_application_grant_email_personalisation,
 )
 from app.use_cases.notify.create_claim_submission_email_personalisation import (
     create_claim_submission_email_personalisation,

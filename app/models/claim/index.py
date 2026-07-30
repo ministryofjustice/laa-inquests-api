@@ -1,11 +1,12 @@
+import uuid
 from collections.abc import Iterator
 from dataclasses import dataclass
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Optional
-import uuid
 
-from pydantic import BaseModel, ConfigDict, Field as PydanticField
+from pydantic import BaseModel, ConfigDict
+from pydantic import Field as PydanticField
 from pydantic.alias_generators import to_camel
 from sqlalchemy import Column, Numeric
 from sqlmodel import Enum, Field, Relationship, SQLModel

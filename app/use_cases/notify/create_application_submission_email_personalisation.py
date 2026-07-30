@@ -1,6 +1,6 @@
 """Use case for building email personalisation data from Application objects."""
 
-from app.models.application.index import Application, Address
+from app.models.application.index import Address, Application
 from app.models.gov_notify_templates.application_submit_personalisation import (
     NotifyApplicationSubmitTemplatePersonalisation,
 )

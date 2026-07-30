@@ -1,8 +1,9 @@
-from app.ports.provider_details_port import ProviderDetailsPort
-from app.models.application.index import Application, ApplicationProceeding
-from app.models.application.certificate import ApplicationCertificate
-from app.use_cases.exceptions import ProviderDetailsRetrievalError
 from datetime import date
+
+from app.models.application.certificate import ApplicationCertificate
+from app.models.application.index import Application, ApplicationProceeding
+from app.ports.provider_details_port import ProviderDetailsPort
+from app.use_cases.exceptions import ProviderDetailsRetrievalError
 
 
 class CreateCertificateContextUseCase:

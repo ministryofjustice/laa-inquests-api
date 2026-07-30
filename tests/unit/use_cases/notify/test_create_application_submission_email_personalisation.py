@@ -1,9 +1,11 @@
+import pytest
+
 from app.models.application.enums import AddressSource
-from app.use_cases.notify.create_application_submission_email_personalisation import (
-    create_application_submission_email_personalisation,
-)
 from app.models.gov_notify_templates.application_submit_personalisation import (
     NotifyApplicationSubmitTemplatePersonalisation,
+)
+from app.use_cases.notify.create_application_submission_email_personalisation import (
+    create_application_submission_email_personalisation,
 )
 from tests.unit.factories import (
     create_base_application,
@@ -11,8 +13,6 @@ from tests.unit.factories import (
     create_base_deceased,
     create_base_home_address,
 )
-
-import pytest
 
 
 def test_create_application_submission_email_personalisation_returns_all_required_fields():

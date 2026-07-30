@@ -1,10 +1,11 @@
-from unittest.mock import MagicMock
-from decimal import Decimal
-from datetime import UTC, datetime
 import uuid
+from datetime import UTC, datetime
+from decimal import Decimal
+from unittest.mock import MagicMock
 
 import pytest
 
+from app.domain.claim_error import ClaimErrorCode
 from app.models.application.index import Application
 from app.models.claim.enums import (
     ClaimDecisionStatus,
@@ -23,7 +24,6 @@ from app.ports.claim.update_claim_status_port import (
     UpdateClaimStatusPort,
 )
 from app.use_cases.create_claim import CreateClaimCommand, CreateClaimUseCase
-from app.domain.claim_error import ClaimErrorCode
 from app.use_cases.exceptions import InvalidClaimError
 
 

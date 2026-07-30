@@ -6,17 +6,17 @@ from decimal import Decimal
 
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
 from app.domain.claim_rejection import ClaimRejection, ClaimRejectionReason
-from app.domain.date_utils import add_calendar_months
 from app.domain.constants.claim_messages import (
-    MIXED_VAT_MESSAGE,
     MISSING_GROSS_MESSAGE,
     MISSING_NON_PROFIT_COST_TOTAL_MESSAGE,
     MISSING_POA_TYPE_MESSAGE,
     MISSING_TOTAL_MESSAGE,
+    MIXED_VAT_MESSAGE,
     NEGATIVE_NET_MESSAGE,
     NET_GT_GROSS_MESSAGE,
     POA_NOT_ALLOWED_MESSAGE,
 )
+from app.domain.date_utils import add_calendar_months
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimStatus, ClaimType, POAType

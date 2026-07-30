@@ -1,5 +1,5 @@
-from unittest.mock import MagicMock, call
 import uuid
+from unittest.mock import MagicMock, call
 
 from sqlmodel import select
 
@@ -15,6 +15,8 @@ from app.models.application.index import (
     Application,
     ApplicationCreate,
     ApplicationProceeding,
+)
+from app.models.application.index import (
     CoronersLetter as CoronersLetterModel,
 )
 

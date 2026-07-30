@@ -5,8 +5,8 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.domain.claim import Claim, ExistingClaimSummary
-from app.domain.claim_rejection import ClaimRejectionReason
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
+from app.domain.claim_rejection import ClaimRejectionReason
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimStatus, ClaimType, POAType

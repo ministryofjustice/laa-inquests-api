@@ -1,28 +1,31 @@
-from sqlmodel import Session, select
 import uuid
+
+from sqlmodel import Session, select
 
 from app.domain.coroners_letter import CoronersLetter
 from app.models.application.index import (
     Address,
+    AddressSource,
     Application,
     ApplicationCreate,
     ApplicationProceeding,
     ApplicationPublicBody,
-    AddressSource,
     Client,
-    CoronersLetter as CoronersLetterModel,
     Deceased,
     ProceedingId,
     Provider,
     PublicBody,
     PublicBodyId,
 )
+from app.models.application.index import (
+    CoronersLetter as CoronersLetterModel,
+)
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.get_application_port import GetApplicationPort
-from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.list_applications_port import ListApplicationsPort
 from app.ports.list_public_bodies_port import ListPublicBodiesPort
 from app.ports.search_application_port import SearchApplicationPort
+from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 
 

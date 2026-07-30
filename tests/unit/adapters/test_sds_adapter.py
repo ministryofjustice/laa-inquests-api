@@ -1,8 +1,8 @@
 import uuid
 from unittest.mock import MagicMock, patch
 
-from httpx import HTTPStatusError
 import pytest
+from httpx import HTTPStatusError
 
 from app.use_cases.exceptions import (
     CoronersLetterUploadError,
@@ -544,9 +544,9 @@ def test_virus_check_coroners_letter_raises_upload_error_on_sds_failure():
     with (
         patch("httpx.post", side_effect=[_mock_token_response(), mock]),
         patch("httpx.put", return_value=mock),
-    ):
-        with pytest.raises(
+        pytest.raises(
             CoronersLetterUploadError,
             match="Failed to perform virus check. API status code: 500",
-        ):
-            adapter.virus_check_coroners_letter(b"unsafe content", "test_file.pdf")
+        ),
+    ):
+        adapter.virus_check_coroners_letter(b"unsafe content", "test_file.pdf")

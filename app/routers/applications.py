@@ -1,18 +1,21 @@
-from app.models.application.certificate import ApplicationCertificateResponse
-from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
-from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File
-from fastapi.encoders import jsonable_encoder
-from sqlmodel import Session
-from fastapi.responses import JSONResponse, StreamingResponse
-from typing import Literal, Sequence
+from collections.abc import Sequence
 from mimetypes import guess_type
+
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse, StreamingResponse
+from sqlmodel import Literal, Session
 import uuid
 
-from app.adapters.sds_adapter import SdsAdapter
 from app.adapters.application_repository_adapter import ApplicationRepositoryAdapter
 from app.adapters.claim_repository_adapter import ClaimRepositoryAdapter
+from app.adapters.gov_notify import GovNotifyAdapter
 from app.adapters.pdf_generator_adapter import PdfGeneratorAdapter
+from app.adapters.provider_details_adapter import ProviderDetailsAdapter
+from app.adapters.sds_adapter import SdsAdapter
+from app.config import Config
 from app.db import get_session
+from app.models.application.certificate import ApplicationCertificateResponse
 from app.models.application.index import (
     Application,
     ApplicationCreate,
@@ -29,65 +32,62 @@ from app.models.claim.index import (
     ClaimResponse,
     UploadClaimEvidenceResponse,
 )
-
-from app.adapters.provider_details_adapter import ProviderDetailsAdapter
-from app.routers.dependencies import (
-    verify_entra_caseworker_token,
-    verify_entra_provider_token,
-)
-from app.config import Config
-from app.ports.create_application_port import CreateApplicationPort
 from app.ports.application_lookup_port import ApplicationLookupPort
-from app.ports.claim.create_claim_port import CreateClaimPort
-from app.ports.claim.upload_claim_evidence_port import UploadClaimEvidencePort
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
+from app.ports.claim.create_claim_port import CreateClaimPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
 from app.ports.claim.get_claim_evidence_port import GetClaimEvidencePort
-from app.ports.get_application_port import GetApplicationPort
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
 from app.ports.claim.update_claim_status_port import (
     UpdateClaimStatusPort,
 )
-from app.ports.update_decision_port import ApplicationDecisionPort
+from app.ports.claim.upload_claim_evidence_port import UploadClaimEvidencePort
+from app.ports.create_application_port import CreateApplicationPort
+from app.ports.get_application_port import GetApplicationPort
+from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.list_applications_port import ListApplicationsPort
 from app.ports.list_public_bodies_port import ListPublicBodiesPort
-from app.ports.provider_details_port import ProviderDetailsPort
-from app.ports.search_application_port import SearchApplicationPort
-from app.ports.sds_port import SdsPort
-from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 from app.ports.pdf_generation_port import PdfGenerationPort
+from app.ports.provider_details_port import ProviderDetailsPort
+from app.ports.sds_port import SdsPort
+from app.ports.search_application_port import SearchApplicationPort
+from app.ports.update_decision_port import ApplicationDecisionPort
+from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
+from app.routers.dependencies import (
+    verify_entra_caseworker_token,
+    verify_entra_provider_token,
+)
 from app.use_cases.create_application import CreateApplicationUseCase
+from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
 from app.use_cases.create_claim import CreateClaimCommand, CreateClaimUseCase
-from app.use_cases.retrieve_certificate import RetrieveCertificateUseCase
-from app.use_cases.get_application import GetApplicationUseCase
-from app.use_cases.send_grant_email import SendGrantEmailUseCase
-from app.use_cases.send_grant_letter import SendGrantLetterUseCase
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
     ApplicationNotGrantedError,
+    ClaimEvidenceUploadError,
+    ClaimEvidenceVirusDetectedError,
     ClaimEvidenceNotFoundError,
     ClaimEvidenceRetrievalError,
     CoronersLetterNotFoundError,
     CoronersLetterRetrievalError,
     CoronersLetterUploadError,
     CoronersLetterVirusDetectedError,
-    ClaimEvidenceUploadError,
-    ClaimEvidenceVirusDetectedError,
     InvalidClaimError,
     InvalidCoronersLetterDocumentIdError,
-    ProviderDetailsRetrievalError,
     ProceedingsNotFoundError,
+    ProviderDetailsRetrievalError,
 )
-from app.use_cases.search_application import SearchApplicationUseCase
-from app.adapters.gov_notify import GovNotifyAdapter
-from app.ports.gov_notify_port import GovNotifyPort
+from app.use_cases.get_application import GetApplicationUseCase
+from app.use_cases.grant_decision import GrantDecisionUseCase
 from app.use_cases.list_applications import ListApplicationsUseCase
 from app.use_cases.list_public_bodies import ListPublicBodiesUseCase
 from app.use_cases.refuse_decision import RefuseDecisionUseCase
-from app.use_cases.grant_decision import GrantDecisionUseCase
-from app.use_cases.upload_coroners_letter import UploadCoronersLetterUseCase
-from app.use_cases.upload_claim_evidence import UploadClaimEvidenceUseCase
+from app.use_cases.retrieve_certificate import RetrieveCertificateUseCase
 from app.use_cases.retrieve_coroners_letter import RetrieveCoronersLetterUseCase
+from app.use_cases.search_application import SearchApplicationUseCase
+from app.use_cases.send_grant_email import SendGrantEmailUseCase
+from app.use_cases.send_grant_letter import SendGrantLetterUseCase
+from app.use_cases.upload_claim_evidence import UploadClaimEvidenceUseCase
+from app.use_cases.upload_coroners_letter import UploadCoronersLetterUseCase
 from app.use_cases.retrieve_claim_evidence import RetrieveClaimEvidenceUseCase
 
 

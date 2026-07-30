@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from app.routers import applications, notifications
+
 from app.config.docs import docs_config
+from app.routers import applications, notifications
 
 
 def create_app():

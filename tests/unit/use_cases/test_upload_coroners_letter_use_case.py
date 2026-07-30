@@ -1,16 +1,17 @@
-import pytest
-from unittest.mock import MagicMock
 import uuid
+from unittest.mock import MagicMock
+
+import pytest
 
 from app.domain.coroners_letter import CoronersLetter
 from app.models.application.index import SDSUploadCoronersLetterResponse
 from app.ports.sds_port import SdsPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
-from app.use_cases.upload_coroners_letter import UploadCoronersLetterUseCase
 from app.use_cases.exceptions import (
     CoronersLetterUploadError,
     CoronersLetterVirusDetectedError,
 )
+from app.use_cases.upload_coroners_letter import UploadCoronersLetterUseCase
 
 request_body = {
     "coroners_letter": b"test",

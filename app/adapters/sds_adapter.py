@@ -12,14 +12,13 @@ from app.models.application.index import (
 )
 from app.ports.sds_port import SdsPort
 from app.use_cases.exceptions import (
+    ClaimEvidenceUploadError,
+    CoronersLetterUploadError,
     InvalidClaimEvidenceDocumentIdError,
     InvalidCoronersLetterDocumentIdError,
     SDSClaimEvidenceRetrievalError,
     SDSLetterRetrievalError,
-    ClaimEvidenceUploadError,
-    CoronersLetterUploadError,
 )
-
 
 logger = logging.getLogger(__name__)
 

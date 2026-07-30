@@ -1,5 +1,6 @@
-from sqlmodel import select
 from decimal import Decimal
+
+from sqlmodel import select
 
 from app.adapters.claim_repository_adapter import ClaimRepositoryAdapter
 from app.domain.claim import Claim as DomainClaim
