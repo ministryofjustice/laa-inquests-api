@@ -1,7 +1,7 @@
 """add claim_id fk to claim_evidence
 
 Revision ID: 9c0ab4f5baa3
-Revises: 1d98b6648f95
+Revises: 46d24adfe893
 Create Date: 2026-07-29 15:30:38.442713
 
 """
@@ -14,7 +14,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = "9c0ab4f5baa3"
-down_revision: Union[str, None] = "1d98b6648f95"
+down_revision: Union[str, None] = "46d24adfe893"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
