@@ -24,7 +24,7 @@ def test_200_retrieve_claim_evidence_returns_file_content_before_claim_exists(
     claim_evidence = _create_claim_evidence(session)
 
     response = client.get(
-        f"/applications/claim/evidence/{claim_evidence.claim_evidence_id}",
+        f"/claims/{claim_evidence.claim_evidence_id}",
         headers={"Authorization": f"Bearer {auth_token}"},
     )
 
@@ -38,7 +38,7 @@ def test_200_retrieve_claim_evidence_defaults_to_inline_disposition(
     claim_evidence = _create_claim_evidence(session)
 
     response = client.get(
-        f"/applications/claim/evidence/{claim_evidence.claim_evidence_id}",
+        f"/claims/{claim_evidence.claim_evidence_id}",
         headers={"Authorization": f"Bearer {auth_token}"},
     )
 
@@ -55,7 +55,7 @@ def test_200_retrieve_claim_evidence_supports_attachment_disposition(
     claim_evidence = _create_claim_evidence(session)
 
     response = client.get(
-        f"/applications/claim/evidence/{claim_evidence.claim_evidence_id}",
+        f"/claims/{claim_evidence.claim_evidence_id}",
         params={"disposition": "attachment"},
         headers={"Authorization": f"Bearer {auth_token}"},
     )
@@ -81,7 +81,7 @@ def test_200_retrieve_claim_evidence_returns_file_content_after_linked_to_claim(
     claim_evidence = _create_claim_evidence(session, claim_id=claim.claim_id)
 
     response = client.get(
-        f"/applications/claim/evidence/{claim_evidence.claim_evidence_id}",
+        f"/claims/{claim_evidence.claim_evidence_id}",
         headers={"Authorization": f"Bearer {auth_token}"},
     )
 
@@ -91,7 +91,7 @@ def test_200_retrieve_claim_evidence_returns_file_content_after_linked_to_claim(
 
 def test_404_retrieve_claim_evidence_returns_404_when_not_found(client, auth_token):
     response = client.get(
-        f"/applications/claim/evidence/{uuid.uuid4()}",
+        f"/claims/{uuid.uuid4()}",
         headers={"Authorization": f"Bearer {auth_token}"},
     )
 
@@ -110,7 +110,7 @@ def test_415_retrieve_claim_evidence_returns_415_for_unsupported_mime_type(
     session.refresh(claim_evidence)
 
     response = client.get(
-        f"/applications/claim/evidence/{claim_evidence.claim_evidence_id}",
+        f"/claims/{claim_evidence.claim_evidence_id}",
         headers={"Authorization": f"Bearer {auth_token}"},
     )
 
