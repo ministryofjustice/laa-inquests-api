@@ -14,6 +14,7 @@ from app.models.claim.index import (
     ClaimEvidence as ClaimEvidenceModel,
 )
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
+from app.ports.claim.delete_claim_evidence_port import DeleteClaimEvidencePort
 from app.ports.claim.create_claim_port import CreateClaimPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
 from app.ports.claim.get_claim_evidence_port import GetClaimEvidencePort
@@ -32,6 +33,7 @@ class ClaimRepositoryAdapter(
     UpdateClaimStatusPort,
     UploadClaimEvidencePort,
     GetClaimEvidencePort,
+    DeleteClaimEvidencePort,
 ):
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -145,3 +147,15 @@ class ClaimRepositoryAdapter(
             sds_file_name=claim_evidence_model.sds_file_name,
             file_name=claim_evidence_model.file_name,
         )
+
+    def delete_claim_evidence_by_id(
+        self,
+        claim_evidence_id: uuid.UUID,
+    ) -> bool:
+        claim_evidence_model = self.session.get(ClaimEvidenceModel, claim_evidence_id)
+        if claim_evidence_model is None:
+            return False
+        self.session.delete(claim_evidence_model)
+        self.session.flush()
+        self.session.commit()
+        return True

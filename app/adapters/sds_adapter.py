@@ -12,6 +12,7 @@ from app.models.application.index import (
 )
 from app.ports.sds_port import SdsPort
 from app.use_cases.exceptions import (
+    ClaimEvidenceDeleteError,
     ClaimEvidenceUploadError,
     CoronersLetterUploadError,
     InvalidClaimEvidenceDocumentIdError,
@@ -235,6 +236,22 @@ class SdsAdapter(SdsPort):
         except (httpx.HTTPError, httpx.StreamError) as exc:
             _raise_sds_claim_evidence_retrieval_error(
                 f"Failed to stream claim evidence: \n {exc}"
+            )
+
+    def delete_claim_evidence(self, file_name: str) -> None:
+        if not file_name or not file_name.strip():
+            raise InvalidClaimEvidenceDocumentIdError(
+                "file_name must be a non-empty string"
+            )
+        token = self._get_token()
+        response = httpx.delete(
+            f"{self.base_url}/delete_file",
+            params={"file_key": file_name},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        if response.status_code not in (200, 204):
+            raise ClaimEvidenceDeleteError(
+                f"SDS returned {response.status_code} while deleting claim evidence for file key {file_name}"
             )
 
 

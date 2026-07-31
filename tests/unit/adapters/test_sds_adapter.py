@@ -5,6 +5,7 @@ import pytest
 from httpx import HTTPError, HTTPStatusError, StreamError
 
 from app.use_cases.exceptions import (
+    ClaimEvidenceDeleteError,
     CoronersLetterUploadError,
     InvalidClaimEvidenceDocumentIdError,
     InvalidCoronersLetterDocumentIdError,
@@ -520,6 +521,55 @@ def test_retrieve_claim_evidence_raises_error_when_file_url_missing():
         ),
     ):
         list(adapter.retrieve_claim_evidence("letter.pdf"))
+
+
+def test_delete_claim_evidence_calls_sds_delete_with_file_key():
+    adapter = _make_adapter()
+
+    mock_response = MagicMock()
+    mock_response.status_code = 204
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.delete", return_value=mock_response) as mock_delete,
+    ):
+        adapter.delete_claim_evidence("claim-evidence.pdf")
+
+    mock_delete.assert_called_once_with(
+        "https://sds.example.com/delete_file",
+        params={"file_key": "claim-evidence.pdf"},
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+
+def test_delete_claim_evidence_with_blank_filename_raises_invalid_document_error():
+    adapter = _make_adapter()
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        pytest.raises(
+            InvalidClaimEvidenceDocumentIdError,
+            match="file_name must be a non-empty string",
+        ),
+    ):
+        adapter.delete_claim_evidence("")
+
+
+def test_delete_claim_evidence_raises_error_for_non_success_response():
+    adapter = _make_adapter()
+
+    mock_response = MagicMock()
+    mock_response.status_code = 500
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.delete", return_value=mock_response),
+        pytest.raises(
+            ClaimEvidenceDeleteError,
+            match="SDS returned 500 while deleting claim evidence for file key claim-evidence.pdf",
+        ),
+    ):
+        adapter.delete_claim_evidence("claim-evidence.pdf")
 
 
 def test_virus_check_coroners_letter_returns_true_for_safe_file():

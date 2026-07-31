@@ -58,6 +58,10 @@ class ClaimEvidenceRetrievalError(Exception):
     pass
 
 
+class ClaimEvidenceDeleteError(Exception):
+    pass
+
+
 class InvalidClaimEvidenceDocumentIdError(Exception):
     pass
 

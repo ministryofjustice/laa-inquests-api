@@ -2,10 +2,11 @@ import uuid
 from mimetypes import guess_type
 from typing import Literal
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from fastapi.responses import StreamingResponse
 
 from app.models.claim.index import UploadClaimEvidenceResponse
+from app.ports.claim.delete_claim_evidence_port import DeleteClaimEvidencePort
 from app.ports.claim.get_claim_evidence_port import GetClaimEvidencePort
 from app.ports.claim.upload_claim_evidence_port import UploadClaimEvidencePort
 from app.ports.sds_port import SdsPort
@@ -15,11 +16,13 @@ from app.routers.dependencies import (
     verify_entra_provider_token,
 )
 from app.use_cases.exceptions import (
+    ClaimEvidenceDeleteError,
     ClaimEvidenceNotFoundError,
     ClaimEvidenceRetrievalError,
     ClaimEvidenceUploadError,
     ClaimEvidenceVirusDetectedError,
 )
+from app.use_cases.delete_claim_evidence import DeleteClaimEvidenceUseCase
 from app.use_cases.retrieve_claim_evidence import RetrieveClaimEvidenceUseCase
 from app.use_cases.upload_claim_evidence import UploadClaimEvidenceUseCase
 
@@ -47,6 +50,18 @@ def get_upload_claim_evidence_use_case(
     return UploadClaimEvidenceUseCase(
         sds_port=sds_port,
         upload_claim_evidence_port=upload_claim_evidence_port,
+    )
+
+
+def get_delete_claim_evidence_use_case(
+    get_claim_evidence_port: GetClaimEvidencePort = Depends(get_claim_db_adapter),
+    delete_claim_evidence_port: DeleteClaimEvidencePort = Depends(get_claim_db_adapter),
+    sds_port: SdsPort = Depends(get_sds_port),
+) -> DeleteClaimEvidenceUseCase:
+    return DeleteClaimEvidenceUseCase(
+        get_claim_evidence_port=get_claim_evidence_port,
+        delete_claim_evidence_port=delete_claim_evidence_port,
+        sds_port=sds_port,
     )
 
 
@@ -113,3 +128,18 @@ def retrieve_claim_evidence(
             "Content-Disposition": f'{disposition}; filename="{result.file_name}"'
         },
     )
+
+
+@router.delete("/{claim_evidence_id}", status_code=204)
+def delete_claim_evidence(
+    claim_evidence_id: uuid.UUID,
+    use_case: DeleteClaimEvidenceUseCase = Depends(get_delete_claim_evidence_use_case),
+    _: None = Depends(verify_entra_provider_token),
+) -> Response:
+    try:
+        use_case.execute(claim_evidence_id)
+    except ClaimEvidenceNotFoundError:
+        raise HTTPException(status_code=404, detail="Claim evidence not found")
+    except ClaimEvidenceDeleteError:
+        raise HTTPException(status_code=500, detail="Failed to delete claim evidence")
+    return Response(status_code=204)
