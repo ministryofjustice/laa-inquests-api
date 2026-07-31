@@ -1,8 +1,8 @@
 from unittest.mock import MagicMock
-from fastapi import HTTPException
-from starlette.responses import Response
 
 import pytest
+from fastapi import HTTPException
+from starlette.responses import Response
 
 from app.models.application.index import RefuseApplicationUpdate
 from app.routers.applications import refuse_decision

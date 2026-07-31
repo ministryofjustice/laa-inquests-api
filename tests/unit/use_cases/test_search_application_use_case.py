@@ -1,9 +1,9 @@
 from unittest.mock import MagicMock
 
-from app.models.application.index import Application, Client, Deceased, Provider
 from app.models.application.enums import AddressSource, MeritsDecision
-from app.ports.search_application_port import SearchApplicationPort
+from app.models.application.index import Application, Client, Deceased, Provider
 from app.ports.provider_details_port import ProviderDetailsPort
+from app.ports.search_application_port import SearchApplicationPort
 from app.use_cases.search_application import SearchApplicationUseCase
 
 

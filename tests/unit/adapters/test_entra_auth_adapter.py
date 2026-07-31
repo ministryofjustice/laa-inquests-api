@@ -6,8 +6,8 @@ import pytest
 from fastapi import HTTPException
 from jwt.exceptions import (
     ExpiredSignatureError,
-    InvalidSignatureError,
     InvalidAudienceError,
+    InvalidSignatureError,
     PyJWKClientError,
 )
 
@@ -35,12 +35,14 @@ def test_verify_token_raises_403_when_required_scope_missing(adapter):
     mock_signing_key = MagicMock()
     adapter._jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
 
-    with patch(
-        "app.adapters.entra_auth_adapter.jwt.decode",
-        return_value={"sub": "user", "scp": "User.Other"},
+    with (
+        patch(
+            "app.adapters.entra_auth_adapter.jwt.decode",
+            return_value={"sub": "user", "scp": "User.Other"},
+        ),
+        pytest.raises(HTTPException) as exc_info,
     ):
-        with pytest.raises(HTTPException) as exc_info:
-            adapter.verify_token("valid.jwt.token", {"User.Provider"})
+        adapter.verify_token("valid.jwt.token", {"User.Provider"})
 
     assert exc_info.value.status_code == 403
 

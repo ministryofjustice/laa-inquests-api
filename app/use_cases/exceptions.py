@@ -10,11 +10,19 @@ class CoronersLetterUploadError(Exception):
     pass
 
 
+class CoronersLetterVirusCheckError(CoronersLetterUploadError):
+    pass
+
+
 class CoronersLetterVirusDetectedError(Exception):
     pass
 
 
 class ClaimEvidenceUploadError(Exception):
+    pass
+
+
+class ClaimEvidenceVirusCheckError(ClaimEvidenceUploadError):
     pass
 
 
@@ -43,6 +51,14 @@ class SDSLetterRetrievalError(Exception):
 
 
 class ProviderDetailsRetrievalError(Exception):
+    pass
+
+
+class GrantDecisionError(Exception):
+    pass
+
+
+class RefuseDecisionError(Exception):
     pass
 
 

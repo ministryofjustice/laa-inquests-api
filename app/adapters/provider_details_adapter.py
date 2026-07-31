@@ -1,7 +1,8 @@
-from app.models.application.index import Address
 import httpx
 
+from app.models.application.index import Address
 from app.ports.provider_details_port import ProviderDetailsPort
+from app.use_cases.exceptions import ProviderDetailsRetrievalError
 
 
 class ProviderDetailsAdapter(ProviderDetailsPort):
@@ -20,8 +21,12 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
             response.raise_for_status()
             result = response.json()["firm"]["firmName"]
             return result
-        except Exception:
+        except httpx.HTTPError:
             return None
+        except (KeyError, ValueError) as exc:
+            raise ProviderDetailsRetrievalError(
+                f"Unexpected provider-firms response for firm {firm_code}"
+            ) from exc
 
     def get_office_address(self, office_id: str) -> Address | None:
         try:
@@ -40,5 +45,9 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
                 county=response.json()["office"]["county"],
             )
             return address
-        except Exception:
+        except httpx.HTTPError:
             return None
+        except (KeyError, ValueError) as exc:
+            raise ProviderDetailsRetrievalError(
+                f"Unexpected provider-offices response for office {office_id}"
+            ) from exc

@@ -1,6 +1,5 @@
 from app.config import Config
 
-
 sentry_config = {
     "dsn": Config.SENTRY_DSN,
     # Set traces_sample_rate to 1.0 to capture 100%

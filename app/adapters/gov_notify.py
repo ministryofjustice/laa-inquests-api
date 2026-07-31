@@ -1,23 +1,23 @@
 """Gov Notify adapter for application emails."""
 
+from datetime import UTC, datetime
 from io import BytesIO
-from datetime import datetime
-from notifications_python_client.notifications import NotificationsAPIClient
+
 from notifications_python_client import prepare_upload
+from notifications_python_client.notifications import NotificationsAPIClient
 
 from app.config import Config
 from app.models.application.index import Application, ApplicationProceeding
 from app.models.claim.index import Claim
-
 from app.ports.gov_notify_port import GovNotifyPort
+from app.use_cases.notify.create_application_grant_email_personalisation import (
+    create_application_grant_email_personalisation,
+)
 from app.use_cases.notify.create_application_refusal_email_personalisation import (
     create_application_refusal_email_personalisation,
 )
 from app.use_cases.notify.create_application_submission_email_personalisation import (
     create_application_submission_email_personalisation,
-)
-from app.use_cases.notify.create_application_grant_email_personalisation import (
-    create_application_grant_email_personalisation,
 )
 from app.use_cases.notify.create_claim_submission_email_personalisation import (
     create_claim_submission_email_personalisation,
@@ -64,7 +64,7 @@ class GovNotifyAdapter(GovNotifyPort):
         recipient_email: str,
         certificate_pdf: bytes,
     ) -> None:
-        filename = f"{application.laa_reference}_Certificate_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        filename = f"{application.laa_reference}_Certificate_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.pdf"
         certificate_payload = prepare_upload(
             BytesIO(certificate_pdf), filename=filename
         )
@@ -96,6 +96,6 @@ class GovNotifyAdapter(GovNotifyPort):
 
     def send_precompiled_letter(self, reference: str, pdf: bytes) -> None:
         self.client.send_precompiled_letter_notification(
-            reference=f"{reference}-{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            reference=f"{reference}-{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}",
             pdf_file=BytesIO(pdf),
         )

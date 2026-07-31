@@ -1,9 +1,9 @@
-import pytest
-
-from app.models.application.index import Application, CoronersLetter
-from sqlmodel import select
 import uuid
 
+import pytest
+from sqlmodel import select
+
+from app.models.application.index import Application, CoronersLetter
 
 pytestmark = pytest.mark.usefixtures("mock_gov_notify")
 
@@ -221,10 +221,12 @@ def test_200_provider_fields_are_null_when_provider_api_unavailable(
     session, auth_token
 ):
     from unittest.mock import MagicMock
+
+    from fastapi.testclient import TestClient
+
     from app import api
     from app.db import get_session
     from app.routers.applications import get_provider_details_port
-    from fastapi.testclient import TestClient
 
     mock_port = MagicMock()
     mock_port.get_firm_name.return_value = None

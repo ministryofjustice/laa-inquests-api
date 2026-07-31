@@ -1,24 +1,25 @@
 """Tests for the CreateCertificateModel use case"""
 
+from datetime import UTC, date
 from unittest.mock import MagicMock
+
+import pytest
 
 from app.models.application.certificate import ApplicationCertificate
 from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
 from app.use_cases.exceptions import ProviderDetailsRetrievalError
-import pytest
 from tests.unit.factories import (
     create_base_application,
     create_base_application_proceeding,
+    create_base_application_public_body,
     create_base_client,
     create_base_correspondence_address,
     create_base_home_address,
     create_base_office_address,
     create_base_proceeding,
     create_base_provider,
-    create_base_application_public_body,
     create_base_public_body,
 )
-from datetime import date
 
 
 def test_populate_certificate_context_returns_ApplicationCertificate():
@@ -272,11 +273,11 @@ def test_populate_certificate_context_handles_none_certificate_start_date():
 
     assert isinstance(result, ApplicationCertificate)
     # Date fields are required by ApplicationCertificate model, so fallback to today's date
-    from datetime import date
+    from datetime import datetime
 
-    assert result.effective_date == date.today()
-    assert result.date_work_can_commence == date.today()
-    assert result.date_current_level_of_service_effective == date.today()
+    assert result.effective_date == datetime.now(tz=UTC).date()
+    assert result.date_work_can_commence == datetime.now(tz=UTC).date()
+    assert result.date_current_level_of_service_effective == datetime.now(tz=UTC).date()
 
 
 def test_populate_certificate_context_handles_none_correspondence_address():

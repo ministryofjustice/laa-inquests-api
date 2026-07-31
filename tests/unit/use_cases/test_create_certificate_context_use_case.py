@@ -1,24 +1,25 @@
 """Tests for the CreateCertificateModel use case"""
 
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
-from tests.unit.factories import create_base_office_address
+
+import pytest
 
 from app.models.application.certificate import ApplicationCertificate
 from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
 from app.use_cases.exceptions import ProviderDetailsRetrievalError
-import pytest
 from tests.unit.factories import (
     create_base_application,
     create_base_application_proceeding,
+    create_base_application_public_body,
     create_base_client,
     create_base_correspondence_address,
     create_base_home_address,
+    create_base_office_address,
     create_base_proceeding,
     create_base_provider,
-    create_base_application_public_body,
     create_base_public_body,
 )
-from datetime import date
 
 
 def test_populate_certificate_context_returns_ApplicationCertificate():
@@ -175,7 +176,7 @@ def test_populate_certificate_context_populates_proceeding_fields():
     )
     application_proceeding = create_base_application_proceeding(
         proceeding=proceeding,
-        certificate_start_date=date(2026, 7, 1),
+        certificate_start_date=datetime(2026, 7, 1, tzinfo=UTC),
     )
     application = create_base_application(proceedings=[application_proceeding])
 
@@ -197,7 +198,7 @@ def test_populate_certificate_context_populates_application_proceeding_date_fiel
     mock_provider_port.get_office_address.return_value = create_base_office_address()
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
-    test_date = date(2026, 8, 15)
+    test_date = datetime(2026, 8, 15, tzinfo=UTC)
     application = create_base_application(
         proceedings=[
             create_base_application_proceeding(certificate_start_date=test_date)
@@ -207,9 +208,9 @@ def test_populate_certificate_context_populates_application_proceeding_date_fiel
 
     result = usecase.populate_certificate_context(application, application_proceeding)
 
-    assert result.effective_date == test_date
-    assert result.date_work_can_commence == test_date
-    assert result.date_current_level_of_service_effective == test_date
+    assert result.effective_date == test_date.date()
+    assert result.date_work_can_commence == test_date.date()
+    assert result.date_current_level_of_service_effective == test_date.date()
 
 
 def test_populate_certificate_context_populates_application_status_fields():
@@ -236,7 +237,7 @@ def test_populate_certificate_context_populates_identifiers_and_dates():
     mock_provider_port.get_office_address.return_value = create_base_office_address()
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
-    issue_date = date(2026, 7, 15)
+    issue_date = datetime(2026, 7, 15, tzinfo=UTC)
     application = create_base_application(
         laa_reference=98765,
         proceedings=[
@@ -248,7 +249,7 @@ def test_populate_certificate_context_populates_identifiers_and_dates():
     result = usecase.populate_certificate_context(application, application_proceeding)
 
     assert result.laa_reference == 98765
-    assert result.date_created == issue_date
+    assert result.date_created == issue_date.date()
 
 
 def test_populate_certificate_context_populates_default_static_fields():
@@ -289,12 +290,10 @@ def test_populate_certificate_context_handles_none_certificate_start_date():
     result = usecase.populate_certificate_context(application, application_proceeding)
 
     assert isinstance(result, ApplicationCertificate)
-    # Date fields are required by ApplicationCertificate model, so fallback to today's date
-    from datetime import date
 
-    assert result.effective_date == date.today()
-    assert result.date_work_can_commence == date.today()
-    assert result.date_current_level_of_service_effective == date.today()
+    assert result.effective_date == datetime.now(tz=UTC).date()
+    assert result.date_work_can_commence == datetime.now(tz=UTC).date()
+    assert result.date_current_level_of_service_effective == datetime.now(tz=UTC).date()
 
 
 def test_populate_certificate_context_formats_address_with_missing_fields():

@@ -1,8 +1,9 @@
 import logging
-from sqlmodel import Session
+import uuid
+
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
-import uuid
+from sqlmodel import Session
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,7 @@ class CustomSession(Session):
                             )
                             instance.id = uuid.uuid4()  # Regenerate UUID
                 else:
-                    raise e
+                    raise
         raise HTTPException(
             status_code=500,
             detail="Could not generate a unique UUID after multiple attempts.",

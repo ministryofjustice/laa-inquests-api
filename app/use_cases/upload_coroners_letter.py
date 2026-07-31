@@ -5,6 +5,7 @@ from app.ports.sds_port import SdsPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 from app.use_cases.exceptions import (
     CoronersLetterUploadError,
+    CoronersLetterVirusCheckError,
     CoronersLetterVirusDetectedError,
 )
 
@@ -28,10 +29,10 @@ class UploadCoronersLetterUseCase:
             is_safe = self.sds_port.virus_check_coroners_letter(
                 coroners_letter, file_name
             )
-        except Exception as e:
-            raise CoronersLetterUploadError(
-                f"{file_name} upload failed due to server error during virus check: {str(e)}"
-            )
+        except CoronersLetterUploadError as e:
+            raise CoronersLetterVirusCheckError(
+                f"{file_name} upload failed due to server error during virus check: {e!s}"
+            ) from e
 
         if not is_safe:
             raise CoronersLetterVirusDetectedError(

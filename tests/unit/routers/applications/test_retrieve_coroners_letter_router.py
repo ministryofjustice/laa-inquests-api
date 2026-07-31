@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock
 
-from fastapi import HTTPException
 import pytest
+from fastapi import HTTPException
 
 from app.routers.applications import retrieve_coroners_letter
 from app.use_cases.exceptions import (

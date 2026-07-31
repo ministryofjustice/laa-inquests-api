@@ -1,6 +1,7 @@
 """Pydantic model for application grant email personalisation data."""
 
 from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field
 
 

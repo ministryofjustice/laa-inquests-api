@@ -1,6 +1,6 @@
 """Unit tests for GovNotifyAdapter."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import Mock, patch
 from zoneinfo import ZoneInfo
 
@@ -225,7 +225,7 @@ def test_gov_notify_formats_filename():
     mock_notifications_client.send_email_notification.return_value = {
         "id": "test-notification-id"
     }
-    mock_datetime = datetime(2026, 6, 18, 14, 3, 0)
+    mock_datetime = datetime(2026, 6, 18, 14, 3, 0, tzinfo=UTC)
     expected_filename = "12345_Certificate_20260618_140300.pdf"
 
     with (

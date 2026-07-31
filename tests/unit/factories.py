@@ -1,6 +1,7 @@
-from datetime import date
+from datetime import UTC, datetime
 
 from app.models.application.certificate import ApplicationCertificate
+from app.models.application.enums import AddressSource, CorrespondenceRecipientType
 from app.models.application.index import (
     Address,
     Application,
@@ -14,8 +15,6 @@ from app.models.application.index import (
     PublicBody,
     PublicBodyId,
 )
-from app.models.application.enums import AddressSource, CorrespondenceRecipientType
-
 
 # Sentinel value to distinguish "not provided" from "explicitly None"
 _NOT_PROVIDED = object()
@@ -135,8 +134,8 @@ def create_base_application_proceeding(proceeding=_NOT_PROVIDED, **overrides):
         "laa_reference": 12345,
         "proceeding_id": ProceedingId.IQOT,
         "proceeding": proceeding,
-        "certificate_start_date": date(2026, 6, 18),
-        "certificate_issue_date": date(2026, 6, 18),
+        "certificate_start_date": datetime(2026, 6, 18, tzinfo=UTC),
+        "certificate_issue_date": datetime(2026, 6, 18, tzinfo=UTC),
     }
     return ApplicationProceeding(**(defaults | overrides))
 
@@ -235,10 +234,12 @@ def create_base_certificate(
         "guardian_name": "Not applicable",
         "guardian_address": "Not applicable",
         "laa_reference": application.laa_reference,
-        "date_created": application_proceeding.certificate_issue_date or date.today(),
+        "date_created": application_proceeding.certificate_issue_date
+        or datetime.now(tz=UTC).date(),
         "certificate_type": application_proceeding.proceeding.certificate_type,
         "status": application.status,
-        "effective_date": application_proceeding.certificate_start_date or date.today(),
+        "effective_date": application_proceeding.certificate_start_date
+        or datetime.now(tz=UTC).date(),
         "end_date": None,
         "reinstatement_date": None,
         "cost_limitation": str(
@@ -251,12 +252,12 @@ def create_base_certificate(
         "category_of_law": application_proceeding.proceeding.category_of_law,
         "current_proceeding_status": application.status,
         "date_work_can_commence": application_proceeding.certificate_start_date
-        or date.today(),
+        or datetime.now(tz=UTC).date(),
         "proceeding_end_date": None,
         "client_involvement_type": "Applicant",
         "level_of_service": application_proceeding.proceeding.level_of_service,
         "date_current_level_of_service_effective": (
-            application_proceeding.certificate_start_date or date.today()
+            application_proceeding.certificate_start_date or datetime.now(tz=UTC).date()
         ),
         "previous_level_of_service": "Not applicable",
         "date_previous_level_of_service_effective": "Not applicable",

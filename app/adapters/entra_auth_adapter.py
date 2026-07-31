@@ -1,6 +1,6 @@
 import jwt
-from jwt import PyJWKClient
 from fastapi import HTTPException, status
+from jwt import PyJWKClient
 
 ENTRA_JWKS_URL = "https://login.microsoftonline.com/{tenant_id}/discovery/v2.0/keys"
 
@@ -51,7 +51,7 @@ class EntraAuthAdapter:
             )
         except HTTPException:
             raise
-        except Exception:
+        except (jwt.PyJWTError, jwt.PyJWKClientError):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Could not validate credentials",

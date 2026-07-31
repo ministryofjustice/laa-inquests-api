@@ -1,7 +1,7 @@
 import os
 
 
-class Config(object):
+class Config:
     ENVIRONMENT = os.environ.get("ENV", "unknown")
 
     # The default DB parameters are set to allow you to connect to the Docker DB
