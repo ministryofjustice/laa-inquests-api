@@ -106,7 +106,7 @@ To migrate the database to the latest revision run:
 alembic upgrade head
 ```
 
-To seed reference data (proceeding and public bodies) into the database run:
+To seed reference data (proceedings and public bodies) into the database run:
 ```bash
 python bin/seed.py
 ```

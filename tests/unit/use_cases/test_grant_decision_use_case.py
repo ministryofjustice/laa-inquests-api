@@ -3,13 +3,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.models.application.enums import MeritsDecision, ProceedingId
+from app.models.application.enums import MeritsDecision
 from app.models.application.index import (
     Application,
-    ApplicationProceeding,
-    Client,
     GrantApplicationUpdate,
-    Provider,
 )
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.use_cases.exceptions import (
@@ -17,6 +14,7 @@ from app.use_cases.exceptions import (
     GrantDecisionError,
 )
 from app.use_cases.grant_decision import GrantDecisionUseCase
+from tests.unit.factories import create_base_application
 
 
 @pytest.fixture
@@ -26,17 +24,7 @@ def grant_request() -> GrantApplicationUpdate:
 
 @pytest.fixture
 def application() -> Application:
-    proceeding = ApplicationProceeding(laa_reference=1, proceeding_id=ProceedingId.IQOT)
-    client = Client(
-        client_first_name="Test",
-        client_last_name="Client",
-        date_of_birth="01-01-1990",
-        correspondence_address_source="USE_CLIENT_HOME_ADDRESS",
-    )
-    provider = Provider(
-        firm_code="0A123B", office_id="001", email_address="test@example.com"
-    )
-    return Application(proceeding=proceeding, provider=provider, client=client)
+    return create_base_application()
 
 
 @pytest.fixture

@@ -2,17 +2,15 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.models.application.enums import ProceedingId
-from app.models.application.index import (
-    Application,
-    ApplicationProceeding,
-    Client,
-    Provider,
-)
+from app.models.application.index import Application
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.pdf_generation_port import PdfGenerationPort
 from app.use_cases.send_grant_email import SendGrantEmailUseCase
-from tests.unit.factories import create_base_certificate
+from tests.unit.factories import (
+    create_base_application,
+    create_base_certificate,
+    create_base_provider,
+)
 
 
 @pytest.fixture
@@ -27,17 +25,10 @@ def gov_notify_port() -> MagicMock:
 
 @pytest.fixture
 def application() -> Application:
-    proceeding = ApplicationProceeding(laa_reference=1, proceeding_id=ProceedingId.IQOT)
-    client = Client(
-        client_first_name="Test",
-        client_last_name="Client",
-        date_of_birth="01-01-1990",
-        correspondence_address_source="USE_CLIENT_HOME_ADDRESS",
-    )
-    provider = Provider(
+    provider = create_base_provider(
         firm_code="0A123B", office_id="001", email_address="test@example.com"
     )
-    return Application(proceeding=proceeding, provider=provider, client=client)
+    return create_base_application(provider=provider)
 
 
 @pytest.fixture

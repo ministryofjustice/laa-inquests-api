@@ -1,5 +1,5 @@
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from sqlmodel import select
@@ -647,7 +647,7 @@ def test_201_create_claim_does_not_auto_approve_when_merits_decision_is_granted(
     application = session.exec(select(Application)).first()
     application_proceeding = application.proceeding
     application_proceeding.proceeding.substantive_cost_limitation = 999999
-    application_proceeding.certificate_start_date = date(2000, 1, 1)
+    application_proceeding.certificate_start_date = datetime(2000, 1, 1, tzinfo=UTC)
     application.proceeding.merits_decision = MeritsDecision.GRANTED
     session.add(application_proceeding.proceeding)
     session.add(application.proceeding)

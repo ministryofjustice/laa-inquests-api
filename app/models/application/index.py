@@ -201,9 +201,7 @@ class Application(ApplicationBase, table=True):
     @property
     def overall_decision(self) -> str:
         """Calculate overall_decision from the proceeding's merits_decision."""
-        if self.proceeding:
-            return self.proceeding.merits_decision
-        return MeritsDecision.PENDING
+        return self.proceeding.merits_decision
 
 
 class ApplicationPublicBody(SQLModel, table=True):

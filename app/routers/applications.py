@@ -394,7 +394,7 @@ def create_application(
     use_case: CreateApplicationUseCase = Depends(get_create_application_use_case),
     _: None = Depends(verify_entra_provider_token),
 ) -> Application:
-    """Creates a new application with Proceeding and public bodies."""
+    """Creates a new application with proceeding and public bodies."""
     return use_case.execute(request)
 
 

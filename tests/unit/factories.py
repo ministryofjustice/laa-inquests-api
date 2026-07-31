@@ -173,6 +173,7 @@ def create_base_provider(**overrides):
         "provider_id": 1,
         "firm_code": "ABC123",
         "office_id": "001",
+        "email_address": "provider@example.com",
     }
     return Provider(**(defaults | overrides))
 

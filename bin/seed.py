@@ -13,7 +13,7 @@ from app.models.application.index import Proceeding, PublicBody
 
 def seed():
     """
-    Seeds reference data (proceeding and public bodies) into the database.
+    Seeds reference data (proceedings and public bodies) into the database.
     This function is idempotent and safe to run multiple times.
     """
     proceedings = [
