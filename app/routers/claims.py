@@ -15,6 +15,7 @@ from app.routers.dependencies import (
     get_sds_port,
     verify_entra_provider_token,
 )
+from app.use_cases.delete_claim_evidence import DeleteClaimEvidenceUseCase
 from app.use_cases.exceptions import (
     ClaimEvidenceDeleteError,
     ClaimEvidenceNotFoundError,
@@ -22,7 +23,6 @@ from app.use_cases.exceptions import (
     ClaimEvidenceUploadError,
     ClaimEvidenceVirusDetectedError,
 )
-from app.use_cases.delete_claim_evidence import DeleteClaimEvidenceUseCase
 from app.use_cases.retrieve_claim_evidence import RetrieveClaimEvidenceUseCase
 from app.use_cases.upload_claim_evidence import UploadClaimEvidenceUseCase
 

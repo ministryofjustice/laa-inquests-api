@@ -14,9 +14,9 @@ from app.models.claim.index import (
     ClaimEvidence as ClaimEvidenceModel,
 )
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
-from app.ports.claim.delete_claim_evidence_port import DeleteClaimEvidencePort
 from app.ports.claim.create_claim_port import CreateClaimPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
+from app.ports.claim.delete_claim_evidence_port import DeleteClaimEvidencePort
 from app.ports.claim.get_claim_evidence_port import GetClaimEvidencePort
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
 from app.ports.claim.update_claim_status_port import (
