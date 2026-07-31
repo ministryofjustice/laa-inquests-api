@@ -385,7 +385,9 @@ class PublicBodyCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    public_body_id: str = PydanticField(examples=["Department of Health & Social Care"])
+    public_body_id: str = PydanticField(
+        examples=["Department of Health and Social Care"]
+    )
 
 
 class ProviderCreate(BaseModel):
