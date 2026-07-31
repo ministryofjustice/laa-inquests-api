@@ -5,7 +5,6 @@ from app.use_cases.create_certificate_context import CreateCertificateContextUse
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
     ApplicationNotGrantedError,
-    ProceedingNotFoundError,
 )
 
 
@@ -28,11 +27,6 @@ class RetrieveCertificateUseCase:
         if application.overall_decision != MeritsDecision.GRANTED:
             raise ApplicationNotGrantedError(
                 f"Application {laa_reference} is not granted"
-            )
-
-        if not application.proceeding:
-            raise ProceedingNotFoundError(
-                f"No proceeding found for application {laa_reference}"
             )
 
         proceeding = application.proceeding

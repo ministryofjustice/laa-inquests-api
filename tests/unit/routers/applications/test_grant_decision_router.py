@@ -7,7 +7,7 @@ from starlette.responses import Response
 
 from app.models.application.index import GrantApplicationUpdate
 from app.routers.applications import grant_decision
-from app.use_cases.exceptions import ApplicationNotFoundError, ProceedingNotFoundError
+from app.use_cases.exceptions import ApplicationNotFoundError
 
 
 def _grant_request() -> GrantApplicationUpdate:
@@ -41,14 +41,3 @@ def test_grant_decision_raises_404_when_application_not_found():
 
     assert exception.value.status_code == 404
     assert exception.value.detail == "Application not found"
-
-
-def test_grant_decision_raises_404_when_no_proceeding_found():
-    use_case = MagicMock()
-    use_case.execute.side_effect = ProceedingNotFoundError()
-
-    with pytest.raises(HTTPException) as exception:
-        grant_decision("1", request=_grant_request(), use_case=use_case)
-
-    assert exception.value.status_code == 404
-    assert exception.value.detail == "No proceeding found for application"

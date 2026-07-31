@@ -15,7 +15,6 @@ from app.ports.update_decision_port import ApplicationDecisionPort
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
     GrantDecisionError,
-    ProceedingNotFoundError,
 )
 from app.use_cases.grant_decision import GrantDecisionUseCase
 
@@ -140,17 +139,6 @@ def test_grant_decision_raises_404_when_application_not_found(
 
     with pytest.raises(ApplicationNotFoundError):
         use_case.execute("99999", grant_request)
-
-
-def test_grant_decision_raises_404_when_no_proceeding(
-    use_case, update_decision_port, grant_request
-):
-    update_decision_port.get_application_by_laa_reference.return_value = Application(
-        proceeding=None
-    )
-
-    with pytest.raises(ProceedingNotFoundError):
-        use_case.execute("1", grant_request)
 
 
 def test_grant_decision_raises_exception_when_create_certificate_model_use_case_fails_and_rollbacks(

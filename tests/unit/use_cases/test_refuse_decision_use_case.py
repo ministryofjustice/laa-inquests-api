@@ -4,11 +4,10 @@ import pytest
 from pydantic import ValidationError
 
 from app.models.application.index import (
-    Application,
     RefuseApplicationUpdate,
 )
 from app.ports.update_decision_port import ApplicationDecisionPort
-from app.use_cases.exceptions import ApplicationNotFoundError, ProceedingNotFoundError
+from app.use_cases.exceptions import ApplicationNotFoundError
 from app.use_cases.refuse_decision import RefuseDecisionUseCase
 from tests.unit.factories import create_base_application
 
@@ -85,16 +84,6 @@ def test_refuse_decision_raises_404_when_application_not_found():
 
     with pytest.raises(ApplicationNotFoundError):
         use_case.execute("99999", _make_request())
-
-
-def test_refuse_decision_raises_404_when_no_proceeding():
-    application = Application(proceeding=None)
-    update_decision_port = MagicMock(spec=ApplicationDecisionPort)
-    update_decision_port.get_application_by_laa_reference.return_value = application
-    use_case = RefuseDecisionUseCase(update_decision_port, MagicMock())
-
-    with pytest.raises(ProceedingNotFoundError):
-        use_case.execute("1", _make_request())
 
 
 def test_refuse_decision_sets_overall_decision_on_application():
