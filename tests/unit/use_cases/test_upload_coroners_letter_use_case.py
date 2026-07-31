@@ -9,6 +9,7 @@ from app.ports.sds_port import SdsPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 from app.use_cases.exceptions import (
     CoronersLetterUploadError,
+    CoronersLetterVirusCheckError,
     CoronersLetterVirusDetectedError,
 )
 from app.use_cases.upload_coroners_letter import UploadCoronersLetterUseCase
@@ -106,7 +107,7 @@ def test_execute_raises_an_error_when_virus_check_returns_server_error():
         upload_coroners_letter_port=upload_port,
     )
 
-    with pytest.raises(CoronersLetterUploadError):
+    with pytest.raises(CoronersLetterVirusCheckError):
         use_case.execute(request_body["coroners_letter"], request_body["file_name"])
 
     port.save_coroners_letter.assert_not_called()

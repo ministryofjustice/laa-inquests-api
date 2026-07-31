@@ -5,6 +5,7 @@ from app.ports.claim.upload_claim_evidence_port import UploadClaimEvidencePort
 from app.ports.sds_port import SdsPort
 from app.use_cases.exceptions import (
     ClaimEvidenceUploadError,
+    ClaimEvidenceVirusCheckError,
     ClaimEvidenceVirusDetectedError,
 )
 
@@ -28,7 +29,7 @@ class UploadClaimEvidenceUseCase:
                 claim_evidence, file_name
             )
         except ClaimEvidenceUploadError as e:
-            raise ClaimEvidenceUploadError(
+            raise ClaimEvidenceVirusCheckError(
                 f"{file_name} upload failed due to server error during virus check: {e!s}"
             ) from e
 
