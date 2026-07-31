@@ -14,7 +14,9 @@ from app.ports.sds_port import SdsPort
 from app.use_cases.exceptions import (
     ClaimEvidenceUploadError,
     CoronersLetterUploadError,
+    InvalidClaimEvidenceDocumentIdError,
     InvalidCoronersLetterDocumentIdError,
+    SDSClaimEvidenceRetrievalError,
     SDSLetterRetrievalError,
 )
 
@@ -202,10 +204,45 @@ class SdsAdapter(SdsPort):
         try:
             with httpx.stream("GET", file_url) as stream:
                 yield from stream.iter_bytes()
-        except httpx.HTTPError as exc:
+        except (httpx.HTTPError, httpx.StreamError) as exc:
             _raise_sds_retrieval_error(f"Failed to stream coroners letter: \n {exc}")
+
+    def retrieve_claim_evidence(self, file_name: str) -> Iterator[bytes]:
+        if not file_name or not file_name.strip():
+            raise InvalidClaimEvidenceDocumentIdError(
+                "file_name must be a non-empty string"
+            )
+        token = self._get_token()
+        response = httpx.get(
+            f"{self.base_url}/get_file",
+            params={"file_key": file_name},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        if response.status_code != 200:
+            message = f"SDS returned {response.status_code} while retrieving claim evidence for file key {file_name}"
+            _raise_sds_claim_evidence_retrieval_error(message)
+
+        try:
+            file_url = response.json()["fileURL"]
+        except (KeyError, TypeError, ValueError):
+            _raise_sds_claim_evidence_retrieval_error(
+                "Failed to retrieve claim evidence"
+            )
+
+        try:
+            with httpx.stream("GET", file_url) as stream:
+                yield from stream.iter_bytes()
+        except (httpx.HTTPError, httpx.StreamError) as exc:
+            _raise_sds_claim_evidence_retrieval_error(
+                f"Failed to stream claim evidence: \n {exc}"
+            )
 
 
 def _raise_sds_retrieval_error(message_str):
     logger.error(message_str)
     raise SDSLetterRetrievalError(message_str)
+
+
+def _raise_sds_claim_evidence_retrieval_error(message_str):
+    logger.error(message_str)
+    raise SDSClaimEvidenceRetrievalError(message_str)

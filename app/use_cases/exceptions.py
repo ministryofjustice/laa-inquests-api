@@ -50,6 +50,22 @@ class SDSLetterRetrievalError(Exception):
     pass
 
 
+class ClaimEvidenceNotFoundError(Exception):
+    pass
+
+
+class ClaimEvidenceRetrievalError(Exception):
+    pass
+
+
+class InvalidClaimEvidenceDocumentIdError(Exception):
+    pass
+
+
+class SDSClaimEvidenceRetrievalError(Exception):
+    pass
+
+
 class ProviderDetailsRetrievalError(Exception):
     pass
 

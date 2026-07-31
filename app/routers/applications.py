@@ -1,5 +1,7 @@
+import uuid
 from collections.abc import Sequence
 from mimetypes import guess_type
+from typing import Literal
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from fastapi.encoders import jsonable_encoder
@@ -35,6 +37,7 @@ from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
+from app.ports.claim.get_claim_evidence_port import GetClaimEvidencePort
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
 from app.ports.claim.update_claim_status_port import (
     UpdateClaimStatusPort,
@@ -61,6 +64,8 @@ from app.use_cases.create_claim import CreateClaimCommand, CreateClaimUseCase
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
     ApplicationNotGrantedError,
+    ClaimEvidenceNotFoundError,
+    ClaimEvidenceRetrievalError,
     ClaimEvidenceUploadError,
     ClaimEvidenceVirusDetectedError,
     CoronersLetterNotFoundError,
@@ -78,6 +83,7 @@ from app.use_cases.list_applications import ListApplicationsUseCase
 from app.use_cases.list_public_bodies import ListPublicBodiesUseCase
 from app.use_cases.refuse_decision import RefuseDecisionUseCase
 from app.use_cases.retrieve_certificate import RetrieveCertificateUseCase
+from app.use_cases.retrieve_claim_evidence import RetrieveClaimEvidenceUseCase
 from app.use_cases.retrieve_coroners_letter import RetrieveCoronersLetterUseCase
 from app.use_cases.search_application import SearchApplicationUseCase
 from app.use_cases.send_grant_email import SendGrantEmailUseCase
@@ -338,6 +344,52 @@ def retrieve_coroners_letter(
         result.content,
         media_type=mime_type[0],
         headers={"Content-Disposition": f'inline; filename="{result.file_name}"'},
+    )
+
+
+def get_claim_evidence_use_case(
+    get_claim_evidence_port: GetClaimEvidencePort = Depends(get_claim_db_adapter),
+    sds_port: SdsPort = Depends(get_sds_port),
+) -> RetrieveClaimEvidenceUseCase:
+    return RetrieveClaimEvidenceUseCase(
+        get_claim_evidence_port=get_claim_evidence_port,
+        sds_port=sds_port,
+    )
+
+
+@router.get(
+    "/claim/evidence/{claim_evidence_id}",
+    response_class=StreamingResponse,
+    responses={200: {"content": {"image/png": {}}}},
+)
+def retrieve_claim_evidence(
+    claim_evidence_id: uuid.UUID,
+    disposition: Literal["inline", "attachment"] = "inline",
+    use_case: RetrieveClaimEvidenceUseCase = Depends(get_claim_evidence_use_case),
+    _: None = Depends(verify_entra_provider_token),
+) -> StreamingResponse:
+    """Stream a piece of claim evidence, independent of whether it is linked to a claim yet."""
+    try:
+        result = use_case.execute(claim_evidence_id)
+    except ClaimEvidenceNotFoundError:
+        raise HTTPException(status_code=404, detail="Claim evidence not found")
+    except ClaimEvidenceRetrievalError:
+        raise HTTPException(status_code=500, detail="Failed to retrieve claim evidence")
+
+    mime_type = guess_type(result.file_name)
+    supported_mime_types = ["image/png", "image/jpeg", "image/bmp", "application/pdf"]
+    if mime_type[0] not in supported_mime_types:
+        raise HTTPException(
+            status_code=415,
+            detail="Returned file type is not supported for streaming. Supported file types are: .png, .jpg, .jpeg, .bmp, .pdf",
+        )
+
+    return StreamingResponse(
+        result.content,
+        media_type=mime_type[0],
+        headers={
+            "Content-Disposition": f'{disposition}; filename="{result.file_name}"'
+        },
     )
 
 

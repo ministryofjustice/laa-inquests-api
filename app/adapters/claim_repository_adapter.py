@@ -16,6 +16,7 @@ from app.models.claim.index import (
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
+from app.ports.claim.get_claim_evidence_port import GetClaimEvidencePort
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
 from app.ports.claim.update_claim_status_port import (
     UpdateClaimStatusPort,
@@ -30,6 +31,7 @@ class ClaimRepositoryAdapter(
     CreateDecisionReasonPort,
     UpdateClaimStatusPort,
     UploadClaimEvidencePort,
+    GetClaimEvidencePort,
 ):
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -131,3 +133,15 @@ class ClaimRepositoryAdapter(
         claim_evidence_id = claim_evidence_model.claim_evidence_id
         self.session.commit()
         return claim_evidence_id
+
+    def get_claim_evidence_by_id(
+        self,
+        claim_evidence_id: uuid.UUID,
+    ) -> DomainClaimEvidence | None:
+        claim_evidence_model = self.session.get(ClaimEvidenceModel, claim_evidence_id)
+        if claim_evidence_model is None:
+            return None
+        return DomainClaimEvidence(
+            sds_file_name=claim_evidence_model.sds_file_name,
+            file_name=claim_evidence_model.file_name,
+        )
