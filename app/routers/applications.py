@@ -6,8 +6,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, StreamingResponse
-from sqlmodel import Literal, Session
-import uuid
+from sqlmodel import Session
 
 from app.adapters.application_repository_adapter import ApplicationRepositoryAdapter
 from app.adapters.claim_repository_adapter import ClaimRepositoryAdapter
@@ -69,8 +68,6 @@ from app.use_cases.exceptions import (
     ClaimEvidenceRetrievalError,
     ClaimEvidenceUploadError,
     ClaimEvidenceVirusDetectedError,
-    ClaimEvidenceNotFoundError,
-    ClaimEvidenceRetrievalError,
     CoronersLetterNotFoundError,
     CoronersLetterRetrievalError,
     CoronersLetterUploadError,
@@ -93,8 +90,6 @@ from app.use_cases.send_grant_email import SendGrantEmailUseCase
 from app.use_cases.send_grant_letter import SendGrantLetterUseCase
 from app.use_cases.upload_claim_evidence import UploadClaimEvidenceUseCase
 from app.use_cases.upload_coroners_letter import UploadCoronersLetterUseCase
-from app.use_cases.retrieve_claim_evidence import RetrieveClaimEvidenceUseCase
-
 
 router = APIRouter(
     prefix="/applications",

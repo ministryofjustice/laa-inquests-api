@@ -232,7 +232,7 @@ class SdsAdapter(SdsPort):
         try:
             with httpx.stream("GET", file_url) as stream:
                 yield from stream.iter_bytes()
-        except Exception as exc:
+        except httpx.HTTPError as exc:
             _raise_sds_claim_evidence_retrieval_error(
                 f"Failed to stream claim evidence: \n {exc}"
             )
