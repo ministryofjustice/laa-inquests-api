@@ -5,12 +5,12 @@ import pytest
 from app.models.application.enums import AddressSource
 from app.models.application.index import (
     Application,
+    ApplicationProceeding,
     Client,
     Deceased,
-    Provider,
     Proceeding,
-    ApplicationProceeding,
     ProceedingId,
+    Provider,
 )
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.provider_details_port import ProviderDetailsPort
