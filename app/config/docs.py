@@ -1,7 +1,8 @@
 description = """
+A valid access token is required to perform the below requests.
+
 ## Applications
 
-A valid access token is required to perform the below requests.
 
 ### Caseworkers
 Authorised caseworkers can:
@@ -17,8 +18,15 @@ Authorised providers can:
 * Create an application by posting to **/applications/**.
 * Create a claim by posting to **/applications/{laa_reference}/claim**.
 * Upload a coroner's letter by posting to **/applications/upload-coroners-letter**.
-* Upload claim evidence by posting to **/applications/claim/upload-evidence**.
 * Search for an application by LAA reference by sending a get request to **/applications/search**.
+
+
+## Claims
+
+### Providers
+Authorised providers can:
+* Upload claim evidence to SDS by posting to **/claims/evidence**.
+* Retrieve a piece of claim evidence from SDS by sending a get request to **/claims/{claim_evidence_id}**.
 
 
 ## Notifications

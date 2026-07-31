@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app.config.docs import docs_config
-from app.routers import applications, notifications
+from app.routers import applications, claims, notifications
 
 
 def create_app():
@@ -17,6 +17,7 @@ def create_app():
         )
 
     app.include_router(applications)
+    app.include_router(claims)
     app.include_router(notifications)
 
     return app
