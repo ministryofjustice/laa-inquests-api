@@ -23,7 +23,9 @@ def _make_claim_evidence(
 
 def test_execute_deletes_file_from_sds_and_db():
     get_claim_evidence_port = MagicMock(spec=GetClaimEvidencePort)
-    get_claim_evidence_port.get_claim_evidence_by_id.return_value = _make_claim_evidence()
+    get_claim_evidence_port.get_claim_evidence_by_id.return_value = (
+        _make_claim_evidence()
+    )
 
     delete_claim_evidence_port = MagicMock(spec=DeleteClaimEvidencePort)
     delete_claim_evidence_port.delete_claim_evidence_by_id.return_value = True
@@ -67,7 +69,9 @@ def test_execute_raises_not_found_when_claim_evidence_missing():
 
 def test_execute_raises_delete_error_when_sds_delete_fails():
     get_claim_evidence_port = MagicMock(spec=GetClaimEvidencePort)
-    get_claim_evidence_port.get_claim_evidence_by_id.return_value = _make_claim_evidence()
+    get_claim_evidence_port.get_claim_evidence_by_id.return_value = (
+        _make_claim_evidence()
+    )
 
     delete_claim_evidence_port = MagicMock(spec=DeleteClaimEvidencePort)
     sds_port = MagicMock(spec=SdsPort)
@@ -85,7 +89,9 @@ def test_execute_raises_delete_error_when_sds_delete_fails():
 
 def test_execute_raises_not_found_when_db_delete_returns_false():
     get_claim_evidence_port = MagicMock(spec=GetClaimEvidencePort)
-    get_claim_evidence_port.get_claim_evidence_by_id.return_value = _make_claim_evidence()
+    get_claim_evidence_port.get_claim_evidence_by_id.return_value = (
+        _make_claim_evidence()
+    )
 
     delete_claim_evidence_port = MagicMock(spec=DeleteClaimEvidencePort)
     delete_claim_evidence_port.delete_claim_evidence_by_id.return_value = False
