@@ -9,6 +9,7 @@ from app.ports.claim.upload_claim_evidence_port import UploadClaimEvidencePort
 from app.ports.sds_port import SdsPort
 from app.use_cases.exceptions import (
     ClaimEvidenceUploadError,
+    ClaimEvidenceVirusCheckError,
     ClaimEvidenceVirusDetectedError,
 )
 from app.use_cases.upload_claim_evidence import UploadClaimEvidenceUseCase
@@ -114,7 +115,7 @@ def test_execute_raises_an_error_when_virus_check_returns_server_error():
         upload_claim_evidence_port=upload_port,
     )
 
-    with pytest.raises(ClaimEvidenceUploadError):
+    with pytest.raises(ClaimEvidenceVirusCheckError):
         use_case.execute(request_body["claim_evidence"], request_body["file_name"])
 
     sds_port.save_claim_evidence.assert_not_called()
