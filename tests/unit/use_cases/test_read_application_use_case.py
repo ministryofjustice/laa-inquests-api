@@ -3,7 +3,15 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.models.application.enums import AddressSource
-from app.models.application.index import Application, Client, Deceased, Provider
+from app.models.application.index import (
+    Application,
+    Client,
+    Deceased,
+    Provider,
+    Proceeding,
+    ApplicationProceeding,
+    ProceedingId,
+)
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.exceptions import ApplicationNotFoundError

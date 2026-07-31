@@ -65,7 +65,6 @@ from app.use_cases.exceptions import (
     CoronersLetterVirusDetectedError,
     InvalidClaimError,
     InvalidCoronersLetterDocumentIdError,
-    ProceedingsNotFoundError,
     ProviderDetailsRetrievalError,
 )
 from app.use_cases.get_application import GetApplicationUseCase

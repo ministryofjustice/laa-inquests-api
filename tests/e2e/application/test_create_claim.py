@@ -1,5 +1,5 @@
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from sqlmodel import select
