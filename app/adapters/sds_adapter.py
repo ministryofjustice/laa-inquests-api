@@ -204,7 +204,7 @@ class SdsAdapter(SdsPort):
         try:
             with httpx.stream("GET", file_url) as stream:
                 yield from stream.iter_bytes()
-        except httpx.HTTPError as exc:
+        except (httpx.HTTPError, httpx.StreamError) as exc:
             _raise_sds_retrieval_error(f"Failed to stream coroners letter: \n {exc}")
 
     def retrieve_claim_evidence(self, file_name: str) -> Iterator[bytes]:

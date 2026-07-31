@@ -341,6 +341,21 @@ def test_retrieve_coroners_letter_raises_error_when_stream_fails():
         list(adapter.retrieve_coroners_letter("letter.pdf"))
 
 
+def test_retrieve_coroners_letter_raises_error_when_stream_error_occurs():
+    adapter = _make_adapter()
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.get", return_value=_mock_retrieve_metadata_response()),
+        patch("httpx.stream", side_effect=StreamError("stream failed")),
+        pytest.raises(
+            SDSLetterRetrievalError,
+            match="Failed to stream coroners letter: \n stream failed",
+        ),
+    ):
+        list(adapter.retrieve_coroners_letter("letter.pdf"))
+
+
 def test_retrieve_coroners_letter_raises_error_when_file_url_missing():
     adapter = _make_adapter()
 
