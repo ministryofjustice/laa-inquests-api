@@ -2,7 +2,7 @@ import uuid
 from unittest.mock import MagicMock, patch
 
 import pytest
-from httpx import HTTPError, HTTPStatusError
+from httpx import HTTPError, HTTPStatusError, StreamError
 
 from app.use_cases.exceptions import (
     CoronersLetterUploadError,
@@ -481,7 +481,7 @@ def test_retrieve_claim_evidence_raises_error_when_stream_fails():
     with (
         patch("httpx.post", return_value=_mock_token_response()),
         patch("httpx.get", return_value=_mock_retrieve_metadata_response()),
-        patch("httpx.stream", side_effect=RuntimeError("stream failed")),
+        patch("httpx.stream", side_effect=StreamError("stream failed")),
         pytest.raises(
             SDSClaimEvidenceRetrievalError,
             match="Failed to stream claim evidence: \n stream failed",

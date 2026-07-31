@@ -22,8 +22,8 @@ from app.models.application.index import (
     Provider,
     PublicBody,
     PublicBodyId,
-    SDSUploadCoronersLetterResponse,
     SDSUploadClaimEvidenceResponse,
+    SDSUploadCoronersLetterResponse,
 )
 from app.routers.applications import (
     get_gov_notify_port,
@@ -32,7 +32,6 @@ from app.routers.applications import (
     get_sds_port,
 )
 from app.routers.dependencies import get_entra_auth_port
-
 
 SECRET_KEY = "TEST_KEY"
 
