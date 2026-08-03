@@ -69,7 +69,7 @@ def test_populate_certificate_context_populates_client_fields_correctly():
     assert result.client_address.postcode == "SW1A 2AA"
 
 
-def test_populate_certificate_context_uses_correspondence_address_when_available():
+def test_populate_certificate_context_uses_correspondence_address_and_care_of_recipient_when_available():
     """Test that correspondence address is used when available."""
     mock_provider_port = MagicMock()
     mock_provider_port.get_firm_name.return_value = "Test Firm"
@@ -82,7 +82,10 @@ def test_populate_certificate_context_uses_correspondence_address_when_available
         town_or_city="Manchester",
         postcode="M1 2AB",
     )
-    client = create_base_client(correspondence_address=correspondence_address)
+    client = create_base_client(
+        correspondence_address=correspondence_address,
+        is_client_correspondence_recipient=False,
+    )
     application = create_base_application(client=client)
     application_proceeding = application.proceedings[0]
 
