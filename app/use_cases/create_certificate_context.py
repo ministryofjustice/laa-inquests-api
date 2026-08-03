@@ -37,11 +37,8 @@ class CreateCertificateContextUseCase:
             application.client.correspondence_address or application.client.home_address
         )
 
-        if (
-            application.client.correspondence_recipient
-            and not application.client.is_client_correspondence_recipient
-        ):
-            client_address.address_line_1 = f"c/o {application.client.correspondence_recipient.recipient_name} {application.client.correspondence_address.address_line_1}"
+        if application.client.correspondence_recipient:
+            client_address.address_line_1 = f"c/o {application.client.correspondence_recipient.recipient_name} {client_address.address_line_1}"
 
         firm_name = self.provider_details_port.get_firm_name(
             application.provider.firm_code
