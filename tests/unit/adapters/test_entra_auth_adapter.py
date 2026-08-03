@@ -20,7 +20,25 @@ def adapter():
         yield EntraAuthAdapter(tenant_id="test-tenant", client_id="test-client-id")
 
 
-def test_verify_token_does_not_raise_when_token_is_valid(adapter):
+def test_verify_token_returns_user_with_firm_code_when_token_is_valid(adapter):
+    mock_signing_key = MagicMock()
+    adapter._jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
+
+    with patch(
+        "app.adapters.entra_auth_adapter.jwt.decode",
+        return_value={
+            "sub": "user",
+            "scp": "User.Provider",
+            "FIRM_CODE": "0A123B",
+        },
+    ):
+        user = adapter.verify_token("valid.jwt.token")
+
+    assert user.firm_code == "0A123B"
+    assert "User.Provider" in user.scopes
+
+
+def test_verify_token_returns_none_firm_code_when_claim_absent(adapter):
     mock_signing_key = MagicMock()
     adapter._jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
 
@@ -28,7 +46,9 @@ def test_verify_token_does_not_raise_when_token_is_valid(adapter):
         "app.adapters.entra_auth_adapter.jwt.decode",
         return_value={"sub": "user", "scp": "User.Provider"},
     ):
-        adapter.verify_token("valid.jwt.token")
+        user = adapter.verify_token("valid.jwt.token")
+
+    assert user.firm_code is None
 
 
 def test_verify_token_raises_403_when_required_scope_missing(adapter):

@@ -5,7 +5,7 @@ from decimal import Decimal
 from sqlmodel import select
 
 from app.models.application.enums import MeritsDecision
-from app.models.application.index import Application
+from app.models.application.index import Application, Provider
 from app.models.claim.index import Claim, ClaimDecision, ClaimEvidence, DecisionReason
 
 
@@ -21,6 +21,41 @@ def _make_request_body(overrides=None):
     if overrides is not None:
         body.update(overrides)
     return body
+
+
+def test_404_create_claim_when_application_belongs_to_another_firm(
+    session, client, auth_token
+):
+    other_provider = Provider(
+        firm_code="ZZ999Z",
+        office_id="002",
+        email_address="other@example.com",
+    )
+    session.add(other_provider)
+    session.commit()
+    session.refresh(other_provider)
+
+    existing = session.exec(select(Application)).first()
+    other_application = Application(
+        client_id=existing.client_id,
+        deceased_id=existing.deceased_id,
+        provider_id=other_provider.provider_id,
+    )
+    session.add(other_application)
+    session.commit()
+    session.refresh(other_application)
+
+    response = client.post(
+        f"/applications/{other_application.laa_reference}/claim",
+        json=_make_request_body(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Application not found"
 
 
 def test_201_create_claim_response_contains_only_claim_id_when_not_rejected(

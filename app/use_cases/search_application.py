@@ -12,10 +12,12 @@ class SearchApplicationUseCase:
         self.search_application_port = search_application_port
         self.provider_details_port = provider_details_port
 
-    def execute(self, laa_reference: str) -> list[ApplicationSearchResponse]:
+    def execute(
+        self, laa_reference: str, firm_code: str
+    ) -> list[ApplicationSearchResponse]:
         normalised_reference = laa_reference.strip()
         matching_applications = self.search_application_port.search_applications(
-            normalised_reference
+            normalised_reference, firm_code
         )
         if not matching_applications:
             return []

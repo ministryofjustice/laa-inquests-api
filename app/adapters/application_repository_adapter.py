@@ -52,15 +52,18 @@ class ApplicationRepositoryAdapter(
     def list_public_bodies(self) -> list[PublicBody]:
         return self.session.exec(select(PublicBody)).all()
 
-    def search_applications(self, laa_reference: str) -> list[Application]:
+    def search_applications(
+        self, laa_reference: str, firm_code: str
+    ) -> list[Application]:
         try:
             laa_reference_int = int(laa_reference)
         except ValueError:
             return []
         statement = (
             select(Application)
-            .join(Deceased, Application.deceased_id == Deceased.deceased_id)
+            .join(Provider, Application.provider_id == Provider.provider_id)
             .where(Application.laa_reference == laa_reference_int)
+            .where(Provider.firm_code == firm_code)
         )
         return list(self.session.exec(statement).all())
 

@@ -24,12 +24,15 @@ from app.ports.claim.update_claim_status_port import (
     UpdateClaimStatusPort,
 )
 from app.use_cases.create_claim import CreateClaimCommand, CreateClaimUseCase
-from app.use_cases.exceptions import InvalidClaimError
+from app.use_cases.exceptions import ApplicationNotFoundError, InvalidClaimError
+
+_UNSET = object()
 
 
 def _make_command(overrides=None) -> CreateClaimCommand:
     payload = {
         "laa_reference": "12345",
+        "firm_code": "0A123B",
         "claim_type": ClaimType.PAYMENT_ON_ACCOUNT,
         "poa_type": POAType.PROFIT_COST,
         "net": Decimal("1000.00"),
@@ -54,7 +57,22 @@ def _make_claim() -> Claim:
     )
 
 
-def _make_application_lookup_port(application: Application | None = None):
+def _make_matching_application(firm_code: str = "0A123B") -> Application:
+    application = MagicMock(spec=Application)
+    proceeding = MagicMock()
+    proceeding.substantive_cost_limitation = 1000
+    proceeding.certificate_start_date = None
+    application.proceedings = [proceeding]
+    application.provider.firm_code = firm_code
+    application.provider.email_address = "provider@example.com"
+    return application
+
+
+def _make_application_lookup_port(application: Application | None = _UNSET):
+    if application is _UNSET:
+        application = _make_matching_application()
+    if application is not None:
+        application.provider.firm_code = "0A123B"
     port = MagicMock(spec=ApplicationLookupPort)
     port.get_application_by_laa_reference.return_value = application
     return port
@@ -95,6 +113,38 @@ def test_execute_raises_invalid_claim_error_when_no_evidence_ids_provided():
     with pytest.raises(InvalidClaimError) as exc_info:
         use_case.execute(command)
     assert exc_info.value.code == ClaimErrorCode.MISSING_CLAIM_EVIDENCE
+
+
+def test_execute_raises_application_not_found_when_firm_code_does_not_match():
+    command = _make_command()
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    application_lookup_port = MagicMock(spec=ApplicationLookupPort)
+    application_lookup_port.get_application_by_laa_reference.return_value = (
+        _make_matching_application(firm_code="ZZ999Z")
+    )
+    use_case = CreateClaimUseCase(
+        create_claim_port=create_claim_port,
+        application_lookup_port=application_lookup_port,
+        get_claims_for_application_port=_make_get_claims_port(),
+    )
+
+    with pytest.raises(ApplicationNotFoundError):
+        use_case.execute(command)
+    create_claim_port.create_claim.assert_not_called()
+
+
+def test_execute_raises_application_not_found_when_application_missing():
+    command = _make_command()
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    use_case = CreateClaimUseCase(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(None),
+        get_claims_for_application_port=_make_get_claims_port(),
+    )
+
+    with pytest.raises(ApplicationNotFoundError):
+        use_case.execute(command)
+    create_claim_port.create_claim.assert_not_called()
 
 
 def test_execute_creates_claim_and_commits():
@@ -164,6 +214,7 @@ def test_execute_sends_claim_submission_email_when_application_exists():
     proceeding.substantive_cost_limitation = 1000
     proceeding.certificate_start_date = None
     application.proceedings = [proceeding]
+    application.provider.firm_code = "0A123B"
     application.provider.email_address = "provider@example.com"
     gov_notify_port = MagicMock()
 
@@ -373,8 +424,9 @@ def test_execute_fetches_application_before_creating_claim():
 
     marker = {"application_fetched": False}
 
-    def mark_application_fetched(_laa_reference: str) -> None:
+    def mark_application_fetched(_laa_reference: str) -> Application:
         marker["application_fetched"] = True
+        return _make_matching_application()
 
     def assert_application_fetched_before_create(*_args, **_kwargs) -> MagicMock:
         assert marker["application_fetched"] is True
