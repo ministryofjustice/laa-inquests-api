@@ -69,7 +69,7 @@ def test_populate_certificate_context_populates_client_fields_correctly():
     assert result.client_address.postcode == "SW1A 2AA"
 
 
-def test_populate_certificate_context_uses_correspondence_address_when_available():
+def test_populate_certificate_context_uses_correspondence_address_and_care_of_recipient_when_available():
     """Test that correspondence address is used when available."""
     mock_provider_port = MagicMock()
     mock_provider_port.get_firm_name.return_value = "Test Firm"
@@ -176,12 +176,30 @@ def test_populate_certificate_context_populates_provider_fields():
 def test_populate_certificate_context_raises_exception_on_firm_name_lookup_failure():
     """Test that a fallback is used when firm name lookup fails."""
     mock_provider_port = MagicMock()
-    mock_provider_port.get_firm_name.return_value = None
+    mock_provider_port.get_firm_name.side_effect = ProviderDetailsRetrievalError(
+        "HTTP error occurred while retrieving provider details"
+    )
     mock_provider_port.get_office_address.return_value = create_base_office_address()
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     application = create_base_application()
     application_proceeding = application.proceeding
+
+    with pytest.raises(ProviderDetailsRetrievalError):
+        usecase.populate_certificate_context(application, application_proceeding)
+
+
+def test_populate_certificate_context_raises_exception_on_office_address_lookup_failure():
+    """Test that a fallback is used when office address lookup fails."""
+    mock_provider_port = MagicMock()
+    mock_provider_port.get_firm_name.return_value = "Test Firm Name"
+    mock_provider_port.get_office_address.side_effect = ProviderDetailsRetrievalError(
+        "HTTP error occurred while retrieving provider details"
+    )
+    usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
+
+    application = create_base_application()
+    application_proceeding = application.proceedings[0]
 
     with pytest.raises(ProviderDetailsRetrievalError):
         usecase.populate_certificate_context(application, application_proceeding)
@@ -253,7 +271,6 @@ def test_populate_certificate_context_populates_application_status_fields():
     result = usecase.populate_certificate_context(application, application_proceeding)
 
     assert result.status == "LIVE"
-    # TODO: Confirm if current_proceeding_status should be the same as application.status or if it should come from ApplicationProceeding. For now, we will assume it's the same.
     assert result.current_proceeding_status == "LIVE"
 
 
@@ -402,7 +419,7 @@ def test_populate_certificate_context_handles_single_public_body_correctly():
     assert len(result.opponent_details) == 1
 
 
-def test_populate_certificate_context_handles_multiple_public_bodies_correctly():
+def test_populate_certificate_context_adds_public_bodies_to_opponent_details():
     """Test that public bodies are concatenated correctly."""
     mock_provider_port = MagicMock()
     mock_provider_port.get_firm_name.return_value = "Test Firm"

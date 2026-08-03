@@ -44,11 +44,6 @@ class CreateCertificateContextUseCase:
             application.provider.firm_code
         )
 
-        if firm_name is None:
-            raise ProviderDetailsRetrievalError(
-                "Failed to retrieve firm name from provider details service."
-            )
-
         office_address = self.provider_details_port.get_office_address(
             application.provider.office_id
         )

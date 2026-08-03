@@ -7,7 +7,10 @@ from app.models.application.index import Address, AddressResponse
 from app.models.application.index import Application, Client, Deceased, Provider
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.provider_details_port import ProviderDetailsPort
-from app.use_cases.exceptions import ApplicationNotFoundError
+from app.use_cases.exceptions import (
+    ApplicationNotFoundError,
+    ProviderDetailsRetrievalError,
+)
 from app.use_cases.get_application import GetApplicationUseCase
 from tests.unit.factories import create_base_application, create_base_provider
 
@@ -61,21 +64,25 @@ def test_execute_returns_application_response_with_firm_name():
     assert result.provider.firm_name == "Test Firm"
 
 
-def test_execute_returns_firm_name_as_none_when_port_returns_none():
+def test_execute_raises_exception_when_provider_details_port_get_firm_name_raises_exception():
     get_application_port = MagicMock(spec=GetApplicationPort)
     get_application_port.get_application_by_laa_reference.return_value = (
         create_base_application()
     )
     port = MagicMock(spec=ProviderDetailsPort)
-    port.get_firm_name.return_value = None
+    port.get_firm_name.side_effect = ProviderDetailsRetrievalError(
+        "Provider details service error"
+    )
 
     use_case = GetApplicationUseCase(
         get_application_port=get_application_port,
         provider_details_port=port,
     )
-    result = use_case.execute("1")
 
-    assert result.provider.firm_name is None
+    with pytest.raises(ProviderDetailsRetrievalError) as exc_info:
+        use_case.execute("1")
+
+    assert str(exc_info.value) == "Provider details service error"
 
 
 def test_execute_returns_correct_account_number():
@@ -188,3 +195,27 @@ def test_execute_returns_application_response_with_office_correspondence_address
     assert result.client.correspondence_address == AddressResponse(
         **office_address.__dict__
     )
+
+
+def test_execute_raises_exception_when_provider_details_port_get_office_address_raises_exception():
+    get_application_port = MagicMock(spec=GetApplicationPort)
+    get_application_port.get_application_by_laa_reference.return_value = (
+        _make_application(
+            correspondence_address_source=AddressSource.USE_PROVIDER_ADDRESS
+        )
+    )
+    port = MagicMock(spec=ProviderDetailsPort)
+    port.get_firm_name.return_value = "Test Firm"
+    port.get_office_address.side_effect = ProviderDetailsRetrievalError(
+        "Provider details service error"
+    )
+
+    use_case = GetApplicationUseCase(
+        get_application_port=get_application_port,
+        provider_details_port=port,
+    )
+
+    with pytest.raises(ProviderDetailsRetrievalError) as exc_info:
+        use_case.execute("1")
+
+    assert str(exc_info.value) == "Provider details service error"
