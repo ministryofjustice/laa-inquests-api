@@ -28,6 +28,13 @@ class GetApplicationUseCase:
             account_number=application.provider.office_id,
             email_address=application.provider.email_address,
         )
+        if application.client.correspondence_address_source == "USE_PROVIDER_ADDRESS":
+            office_address = self.provider_details_port.get_office_address(
+                application.provider.office_id
+            )
+            if office_address:
+                application.client.correspondence_address = office_address
+
         response = ApplicationResponse.model_validate(application)
         response.provider = provider_response
         return response
