@@ -59,15 +59,19 @@ class ApplicationRepositoryAdapter(
             laa_reference_int = int(laa_reference)
         except ValueError:
             return []
+
         statement = (
             select(Application)
+            .join(Deceased, Application.deceased_id == Deceased.deceased_id)
             .join(Provider, Application.provider_id == Provider.provider_id)
             .where(Application.laa_reference == laa_reference_int)
             .where(Provider.firm_code == firm_code)
         )
         return list(self.session.exec(statement).all())
 
-    def create_application(self, request: ApplicationCreate) -> Application:
+    def create_application(
+        self, request: ApplicationCreate, firm_code: str
+    ) -> Application:
         proceedings_to_add = []
         public_bodies_to_add = []
 
@@ -149,7 +153,7 @@ class ApplicationRepositoryAdapter(
         self.session.refresh(new_deceased)
 
         new_provider = Provider(
-            firm_code=request.provider.firm_code,
+            firm_code=firm_code,
             office_id=request.provider.office_id,
             email_address=request.provider.email_address,
         )

@@ -66,7 +66,6 @@ def _make_request(with_addresses: bool = True) -> ApplicationCreate:
                 "clientRelationshipToDeceased": "guardian",
             },
             "provider": {
-                "firmCode": "0A123B",
                 "officeId": "001",
                 "emailAddress": "provider@example.com",
             },
@@ -98,7 +97,7 @@ def test_create_application_persists_application_and_nested_data(session):
     adapter = ApplicationRepositoryAdapter(session)
 
     initial_count = len(session.exec(select(Application)).all())
-    created_application = adapter.create_application(request)
+    created_application = adapter.create_application(request, "0A123B")
     stored_application = session.get(Application, created_application.laa_reference)
 
     assert created_application.laa_reference is not None
@@ -124,6 +123,7 @@ def test_create_application_persists_application_and_nested_data(session):
         == PublicBodyId.DEPARTMENT_FOR_TRANSPORT
     )
     assert stored_application.provider.email_address == "provider@example.com"
+    assert stored_application.provider.firm_code == "0A123B"
     assert stored_application.coroners_letter_id == request.coroners_letter_id
 
 
@@ -133,7 +133,7 @@ def test_create_application_handles_request_without_home_or_correspondence_addre
     request = _make_request(with_addresses=False)
     adapter = ApplicationRepositoryAdapter(session)
 
-    created_application = adapter.create_application(request)
+    created_application = adapter.create_application(request, "0A123B")
     stored_application = session.get(Application, created_application.laa_reference)
 
     assert stored_application is not None

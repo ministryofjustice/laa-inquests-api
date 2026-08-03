@@ -398,11 +398,11 @@ async def upload_coroners_letter(
 @router.post("/", response_model=ApplicationResponse, status_code=201)
 def create_application(
     request: ApplicationCreate,
+    firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
     use_case: CreateApplicationUseCase = Depends(get_create_application_use_case),
-    _: None = Depends(verify_entra_provider_token),
 ) -> Application:
     """Creates a new application with proceedings and public bodies."""
-    return use_case.execute(request)
+    return use_case.execute(request, firm_code)
 
 
 @router.post(

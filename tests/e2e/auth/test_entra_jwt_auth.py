@@ -44,7 +44,6 @@ def _create_application_payload():
             "clientRelationshipToDeceased": "guardian",
         },
         "provider": {
-            "firmCode": "0A123B",
             "officeId": "001",
             "emailAddress": "provider@example.com",
         },

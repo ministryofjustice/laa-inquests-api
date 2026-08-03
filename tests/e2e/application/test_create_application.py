@@ -48,7 +48,6 @@ def _make_request_body(client_overrides=None):
             "clientRelationshipToDeceased": "guardian",
         },
         "provider": {
-            "firmCode": "0A123B",
             "officeId": "001",
             "emailAddress": "provider@example.com",
         },
@@ -140,6 +139,26 @@ def test_201_responds_with_expected_client_details(client, auth_token):
         "postcode": "SW1A 1AA",
     }
     assert not client["hasAppliedPreviously"]
+
+
+def test_201_create_application_stores_authenticated_users_firm_code(
+    client, auth_token, session
+):
+    response = client.post(
+        "/applications",
+        json=_make_request_body(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    laa_reference = response.json()["laaReference"]
+    application = session.exec(
+        select(Application).where(Application.laa_reference == laa_reference)
+    ).one()
+    assert application.provider.firm_code == "0A123B"
 
 
 def test_201_create_application_can_omit_correspondence_address(client, auth_token):
@@ -428,22 +447,6 @@ def test_422_rejected_when_is_client_correspondence_recipient_is_missing(
 def test_422_create_application_fails_without_provider(client, auth_token):
     body = _make_request_body()
     del body["provider"]
-
-    response = client.post(
-        "/applications",
-        json=body,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-
-
-def test_422_create_application_fails_without_firm_code(client, auth_token):
-    body = _make_request_body()
-    del body["provider"]["firmCode"]
 
     response = client.post(
         "/applications",
