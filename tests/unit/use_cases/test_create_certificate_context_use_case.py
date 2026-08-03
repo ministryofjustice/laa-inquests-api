@@ -125,6 +125,35 @@ def test_populate_certificate_context_does_not_use_correspondence_recipient_name
     assert result.client_address.postcode == "M1 2AB"
 
 
+def test_populate_certificate_context_uses_client_home_address_when_correspondence_address_is_none_and_care_of_recipient_is_set():
+    """Test that home address is used when correspondence address is None and client is the correspondence recipient."""
+    mock_provider_port = MagicMock()
+    mock_provider_port.get_firm_name.return_value = "Test Firm"
+    mock_provider_port.get_office_address.return_value = create_base_office_address()
+    usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
+
+    # Only override the specific address fields we're testing
+    home_address = create_base_home_address(
+        address_line_1="789 Pine Road",
+        town_or_city="Liverpool",
+        postcode="L1 3CD",
+    )
+    client = create_base_client(
+        home_address=home_address,
+        correspondence_address=None,
+        is_client_correspondence_recipient=False,
+    )
+    application = create_base_application(client=client)
+    application_proceeding = application.proceedings[0]
+
+    result = usecase.populate_certificate_context(application, application_proceeding)
+
+    assert result.client_address is not None
+    assert result.client_address.address_line_1 == "c/o John Smith 789 Pine Road"
+    assert result.client_address.town_or_city == "Liverpool"
+    assert result.client_address.postcode == "L1 3CD"
+
+
 def test_populate_certificate_context_populates_provider_fields():
     """Test that firm name and office address are populated correctly."""
     mock_provider_port = MagicMock()
