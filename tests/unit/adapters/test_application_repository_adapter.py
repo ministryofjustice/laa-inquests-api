@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, call
 
 from sqlmodel import select
@@ -8,6 +9,7 @@ from app.domain.coroners_letter import CoronersLetter
 from app.models.application.enums import (
     AddressSource,
     CorrespondenceRecipientType,
+    MeritsDecision,
     ProceedingId,
     PublicBodyId,
 )
@@ -228,3 +230,40 @@ def test_search_applications_returns_empty_list_for_unknown_reference(session):
     result = adapter.search_applications("99999", "0A123B")
 
     assert result == []
+
+
+class TestGetPendingApplications:
+    def test_returns_applications_with_pending_decision(self, session):
+        adapter = ApplicationRepositoryAdapter(session)
+
+        result = adapter.get_pending_applications()
+
+        assert len(result) == 1
+        assert result[0].proceedings[0].merits_decision == "PENDING"
+
+    def test_excludes_granted_applications(self, session):
+        app = session.exec(select(Application)).first()
+        app.proceedings[0].merits_decision = MeritsDecision.GRANTED
+        session.add(app.proceedings[0])
+        session.flush()
+
+        adapter = ApplicationRepositoryAdapter(session)
+
+        result = adapter.get_pending_applications()
+
+        assert len(result) == 0
+
+    def test_ordered_by_created_at_ascending(self, session):
+        from tests.e2e.factories import create_application_in_db
+
+        older_app = create_application_in_db(
+            session,
+            created_at=datetime(2019, 1, 1, tzinfo=UTC),
+        )
+
+        adapter = ApplicationRepositoryAdapter(session)
+
+        result = adapter.get_pending_applications()
+
+        assert len(result) == 2
+        assert result[0].laa_reference == older_app.laa_reference

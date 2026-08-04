@@ -27,6 +27,7 @@ from app.ports.list_public_bodies_port import ListPublicBodiesPort
 from app.ports.search_application_port import SearchApplicationPort
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
+from app.ports.application_backlog_port import ApplicationBacklogPort
 
 
 class ApplicationRepositoryAdapter(
@@ -37,6 +38,7 @@ class ApplicationRepositoryAdapter(
     ListPublicBodiesPort,
     SearchApplicationPort,
     UploadCoronersLetterPort,
+    ApplicationBacklogPort,
 ):
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -198,3 +200,15 @@ class ApplicationRepositoryAdapter(
     ) -> None:
         self.session.add(proceeding)
         self.session.flush()
+
+    def get_pending_applications(self) -> list[Application]:
+        statement = (
+            select(Application)
+            .join(
+                ApplicationProceeding,
+                Application.laa_reference == ApplicationProceeding.laa_reference,
+            )
+            .where(ApplicationProceeding.merits_decision == "PENDING")
+            .order_by(Application.created_at.asc())
+        )
+        return list(self.session.exec(statement).unique().all())

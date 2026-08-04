@@ -55,3 +55,7 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
             raise ProviderDetailsRetrievalError(
                 f"Unexpected provider-offices response for office {office_id}"
             ) from exc
+
+    def get_advocate_firms(self) -> dict[str, str]:
+        # TODO: Replace with real call to /api/v1/provider-firms/advocates when available
+        return {}
