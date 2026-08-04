@@ -84,7 +84,7 @@ def test_populate_certificate_context_uses_correspondence_address_and_care_of_re
     client = create_base_client(
         correspondence_address_source="USE_SPECIFIED_ADDRESS",
         correspondence_address=correspondence_address,
-        is_client_correspondence_recipient=False,
+        is_client_the_correspondence_addressee=False,
     )
     application = create_base_application(client=client)
 
@@ -112,7 +112,7 @@ def test_populate_certificate_context_does_not_use_care_of_recipient_name_when_c
     client = create_base_client(
         correspondence_address_source="USE_SPECIFIED_ADDRESS",
         correspondence_address=correspondence_address,
-        is_client_correspondence_recipient=True,
+        is_client_the_correspondence_addressee=True,
     )
     application = create_base_application(client=client)
 
@@ -140,7 +140,7 @@ def test_populate_certificate_context_uses_client_home_address_when_corresponden
     client = create_base_client(
         home_address=home_address,
         correspondence_address=None,
-        is_client_correspondence_recipient=False,
+        is_client_the_correspondence_addressee=False,
     )
     application = create_base_application(client=client)
 

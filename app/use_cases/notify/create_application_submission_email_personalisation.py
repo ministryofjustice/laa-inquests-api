@@ -44,7 +44,7 @@ def create_application_submission_email_personalisation(
     else:
         correspondence_address = "Same as home address"
 
-    if client.is_client_correspondence_recipient:
+    if not client.correspondence_recipient_name:
         correspondence_recipient = "Client"
     else:
         recipient_type = (

@@ -35,7 +35,6 @@ def _make_request(with_addresses: bool = True) -> ApplicationCreate:
             "townOrCity": "London",
             "postcode": "SW1A 1AA",
         },
-        "isClientCorrespondenceRecipient": False,
         "correspondenceRecipient": {
             "recipientType": "ORGANISATION",
             "recipientName": "Inquests Support Org",

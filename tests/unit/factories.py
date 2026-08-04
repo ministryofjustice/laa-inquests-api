@@ -63,7 +63,7 @@ def create_base_office_address(**overrides):
 def create_base_client(
     home_address=_NOT_PROVIDED,
     correspondence_address=_NOT_PROVIDED,
-    is_client_correspondence_recipient=_NOT_PROVIDED,
+    is_client_the_correspondence_addressee=_NOT_PROVIDED,
     **overrides,
 ):
     """Create a base client with optional field overrides."""
@@ -72,11 +72,10 @@ def create_base_client(
 
     if correspondence_address is _NOT_PROVIDED:
         correspondence_address = create_base_correspondence_address()
-    if is_client_correspondence_recipient is False:
+    if is_client_the_correspondence_addressee is False:
         correspondence_recipient_name = "John Smith"
         correspondence_recipient_type = CorrespondenceRecipientType.PERSON
     else:
-        is_client_correspondence_recipient = True
         correspondence_recipient_name = None
         correspondence_recipient_type = None
 
@@ -94,7 +93,6 @@ def create_base_client(
         "home_address": home_address,
         "correspondence_address_id": 2,
         "correspondence_address": correspondence_address,
-        "is_client_correspondence_recipient": is_client_correspondence_recipient,
         "correspondence_recipient_type": correspondence_recipient_type,
         "correspondence_recipient_name": correspondence_recipient_name,
     }

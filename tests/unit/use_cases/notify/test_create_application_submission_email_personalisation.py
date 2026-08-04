@@ -105,7 +105,7 @@ def test_create_application_submission_email_personalisation_handles_optional_fi
         prev_application_reference=None,
         correspondence_address_source=AddressSource.USE_CLIENT_HOME_ADDRESS,
         correspondence_address=None,
-        is_client_correspondence_recipient=True,
+        is_client_the_correspondence_addressee=True,
         correspondence_recipient_type=None,
         correspondence_recipient_name=None,
     )

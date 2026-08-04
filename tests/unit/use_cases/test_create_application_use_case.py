@@ -34,7 +34,6 @@ def _make_request(email_address: str = "provider@example.com") -> ApplicationCre
                     "townOrCity": "London",
                     "postcode": "SW1A 1AA",
                 },
-                "isClientCorrespondenceRecipient": True,
             },
             "publicBodies": [{"publicBodyId": "Department for Transport"}],
             "deceased": {
