@@ -59,6 +59,22 @@ def test_execute_calls_provider_details_port_with_firm_code():
     provider_port.get_firm_name.assert_called_once_with("0A123B")
 
 
+def test_execute_raises_provider_details_retrieval_error_when_get_firm_name_raises_exception():
+    application = _make_application(firm_code="0A123B")
+    search_port = MagicMock(spec=SearchApplicationPort)
+    search_port.search_applications.return_value = [application]
+    provider_port = MagicMock(spec=ProviderDetailsPort)
+    provider_port.get_firm_name.side_effect = ProviderDetailsRetrievalError(
+        "HTTP error occurred while retrieving provider details"
+    )
+    use_case = SearchApplicationUseCase(
+        search_application_port=search_port,
+        provider_details_port=provider_port,
+    )
+    with pytest.raises(ProviderDetailsRetrievalError):
+        use_case.execute("1")
+
+
 def test_execute_returns_response_with_all_required_fields():
     provider = create_base_provider(firm_code="0A123B")
     application = create_base_application(
