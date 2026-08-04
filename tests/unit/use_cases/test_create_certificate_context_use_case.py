@@ -83,6 +83,7 @@ def test_populate_certificate_context_uses_correspondence_address_and_care_of_re
         postcode="M1 2AB",
     )
     client = create_base_client(
+        correspondence_address_source="USE_SPECIFIED_ADDRESS",
         correspondence_address=correspondence_address,
         is_client_correspondence_recipient=False,
     )
@@ -97,7 +98,7 @@ def test_populate_certificate_context_uses_correspondence_address_and_care_of_re
     assert result.client_address.postcode == "M1 2AB"
 
 
-def test_populate_certificate_context_does_not_use_correspondence_recipient_name_when_client_is_recipient():
+def test_populate_certificate_context_does_not_use_care_of_recipient_name_when_client_is_correspondence_recipient():
     """Test that correspondence address is not used when client is the correspondence recipient."""
     mock_provider_port = MagicMock()
     mock_provider_port.get_firm_name.return_value = "Test Firm"
@@ -111,6 +112,7 @@ def test_populate_certificate_context_does_not_use_correspondence_recipient_name
         postcode="M1 2AB",
     )
     client = create_base_client(
+        correspondence_address_source="USE_SPECIFIED_ADDRESS",
         correspondence_address=correspondence_address,
         is_client_correspondence_recipient=True,
     )
@@ -472,3 +474,35 @@ def test_prepare_context_for_display_formats_fields_correctly():
     assert formatted_context.current_proceeding_status == "Live"
     assert formatted_context.level_of_service == "Full representation"
     assert formatted_context.scope_limitation_heading == "Final hearing"
+
+
+def test_populate_certificate_context_uses_office_address_when_correspondence_address_source_is_use_provider_address():
+    """Test that the provider's office address is used when correspondence address source is set to USE_PROVIDER_ADDRESS."""
+    mock_provider_port = MagicMock()
+    mock_provider_port.get_firm_name.return_value = "Test Firm"
+    office_address = create_base_office_address(
+        address_line_1="123 Provider St",
+        town_or_city="Provider City",
+        postcode="PC1 2AB",
+    )
+    mock_provider_port.get_office_address.return_value = office_address
+    usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
+
+    client = create_base_client(
+        correspondence_address=None,
+        home_address=create_base_home_address(
+            address_line_1="456 Home St",
+            town_or_city="Home City",
+            postcode="HC3 4DE",
+        ),
+        correspondence_recipient=None,
+        correspondence_address_source="USE_PROVIDER_ADDRESS",
+    )
+    application = create_base_application(client=client)
+    application_proceeding = application.proceedings[0]
+
+    result = usecase.populate_certificate_context(application, application_proceeding)
+
+    assert result.client_address.address_line_1 == "123 Provider St"
+    assert result.client_address.town_or_city == "Provider City"
+    assert result.client_address.postcode == "PC1 2AB"
