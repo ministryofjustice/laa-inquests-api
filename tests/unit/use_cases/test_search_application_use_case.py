@@ -89,7 +89,7 @@ def test_execute_raises_provider_details_retrieval_error_when_get_firm_name_rais
         provider_details_port=provider_port,
     )
     with pytest.raises(ProviderDetailsRetrievalError):
-        use_case.execute("1")
+        use_case.execute("1", "0A123B")
 
 
 def test_execute_returns_response_with_all_required_fields():
