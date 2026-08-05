@@ -1,12 +1,14 @@
 from unittest.mock import MagicMock
+
 import pytest
+
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.ports.search_application_port import SearchApplicationPort
+from app.use_cases.exceptions import ProviderDetailsRetrievalError
 from app.use_cases.search_application import SearchApplicationUseCase
 from tests.unit.factories import create_base_application, create_base_provider
-from app.use_cases.exceptions import ProviderDetailsRetrievalError
 
 
 def _make_use_case(
