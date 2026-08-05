@@ -90,7 +90,7 @@ def create_application_in_db(
     )
 
     app_defaults: dict = {
-        "proceedings": [proceeding],
+        "proceeding": proceeding,
         "public_bodies": [],
         "client_id": client.client_id,
         "deceased_id": deceased.deceased_id,

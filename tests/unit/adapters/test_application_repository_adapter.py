@@ -239,12 +239,12 @@ class TestGetPendingApplications:
         result = adapter.get_pending_applications()
 
         assert len(result) == 1
-        assert result[0].proceedings[0].merits_decision == "PENDING"
+        assert result[0].proceeding.merits_decision == "PENDING"
 
     def test_excludes_granted_applications(self, session):
         app = session.exec(select(Application)).first()
-        app.proceedings[0].merits_decision = MeritsDecision.GRANTED
-        session.add(app.proceedings[0])
+        app.proceeding.merits_decision = MeritsDecision.GRANTED
+        session.add(app.proceeding)
         session.flush()
 
         adapter = ApplicationRepositoryAdapter(session)
