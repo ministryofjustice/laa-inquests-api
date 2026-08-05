@@ -54,7 +54,7 @@ def _make_request(with_addresses: bool = True) -> ApplicationCreate:
     return ApplicationCreate.model_validate(
         {
             "coronersLetterId": str(uuid.uuid4()),
-            "proceedings": [{"proceedingId": "IQOT"}],
+            "proceeding": {"proceedingId": "IQOT"},
             "client": client,
             "publicBodies": [{"publicBodyId": "Department for Transport"}],
             "deceased": {
@@ -118,7 +118,7 @@ def test_create_application_persists_application_and_nested_data(session):
     )
     assert stored_application.client.home_address_id is not None
     assert stored_application.client.correspondence_address_id is not None
-    assert stored_application.proceedings[0].proceeding_id == ProceedingId.IQOT
+    assert stored_application.proceeding.proceeding_id == ProceedingId.IQOT
     assert (
         stored_application.public_bodies[0].public_body_id
         == PublicBodyId.DEPARTMENT_FOR_TRANSPORT

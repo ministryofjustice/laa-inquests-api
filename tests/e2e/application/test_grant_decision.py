@@ -29,9 +29,9 @@ def test_204_grant_decision_to_granted(session, client, auth_token):
     assert response.status_code == 204
 
     session.refresh(application)
-    assert application.proceedings[0].merits_decision == MeritsDecision.GRANTED
-    assert application.proceedings[0].certificate_start_date == date(2000, 1, 1)
-    assert application.proceedings[0].certificate_issue_date == datetime.now(UTC).date()
+    assert application.proceeding.merits_decision == MeritsDecision.GRANTED
+    assert application.proceeding.certificate_start_date == date(2000, 1, 1)
+    assert application.proceeding.certificate_issue_date == datetime.now(UTC).date()
 
 
 def test_404_grant_decision_application_not_found(client, auth_token):

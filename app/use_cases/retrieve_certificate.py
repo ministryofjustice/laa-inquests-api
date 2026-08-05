@@ -5,7 +5,6 @@ from app.use_cases.create_certificate_context import CreateCertificateContextUse
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
     ApplicationNotGrantedError,
-    ProceedingsNotFoundError,
 )
 
 
@@ -30,12 +29,7 @@ class RetrieveCertificateUseCase:
                 f"Application {laa_reference} is not granted"
             )
 
-        if not application.proceedings:
-            raise ProceedingsNotFoundError(
-                f"No proceedings found for application {laa_reference}"
-            )
-
-        proceeding = application.proceedings[0]
+        proceeding = application.proceeding
         return self.create_certificate_context_use_case.populate_certificate_context(
             application,
             proceeding,

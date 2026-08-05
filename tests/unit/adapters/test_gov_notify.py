@@ -20,15 +20,13 @@ def _create_test_application_and_proceeding():
     utc = ZoneInfo("UTC")
     application = create_base_application(
         created_at=datetime(2026, 6, 18, 14, 3, tzinfo=utc),
-        proceedings=[
-            create_base_application_proceeding(
-                merits_decision="REFUSED",
-                reason_for_refusal="NOT_IN_SCOPE",
-                justification="The matter does not meet scope requirements.",
-            )
-        ],
+        proceeding=create_base_application_proceeding(
+            merits_decision="REFUSED",
+            reason_for_refusal="NOT_IN_SCOPE",
+            justification="The matter does not meet scope requirements.",
+        ),
     )
-    return application, application.proceedings[0]
+    return application, application.proceeding
 
 
 def test_gov_notify_adapter_sends_refusal_email_successfully():
