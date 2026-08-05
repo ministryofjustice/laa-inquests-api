@@ -35,7 +35,7 @@ def _make_request_body(client_overrides=None):
         client.update(client_overrides)
     return {
         "coronersLetterId": str(uuid.uuid4()),
-        "proceedings": [{"proceedingId": "IQOT"}],
+        "proceeding": {"proceedingId": "IQOT"},
         "client": client,
         "publicBodies": [{"publicBodyId": "Department for Transport"}],
         "deceased": {
@@ -76,7 +76,7 @@ def test_201_create_application_response_contains_expected_base_properties(
     assert isinstance(new_application["applicationType"], str)
     assert isinstance(new_application["autoGrant"], bool)
     assert isinstance(new_application["overallDecision"], str)
-    assert len(new_application["proceedings"]) == 1
+    assert isinstance(new_application["proceeding"], dict)
 
 
 def test_201_create_application_response_contains_expected_proceeding_information(
@@ -91,7 +91,7 @@ def test_201_create_application_response_contains_expected_proceeding_informatio
         },
     )
     new_application = response.json()
-    proceeding = new_application["proceedings"][0]
+    proceeding = new_application["proceeding"]
     assert proceeding["proceedingId"] == "IQOT"
     assert proceeding["categoryOfLaw"] == "INQUESTS"
     assert proceeding["matterType"] == "INQUESTS"

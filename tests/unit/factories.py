@@ -173,6 +173,7 @@ def create_base_provider(**overrides):
         "provider_id": 1,
         "firm_code": "ABC123",
         "office_id": "001",
+        "email_address": "provider@example.com",
     }
     return Provider(**(defaults | overrides))
 
@@ -181,7 +182,7 @@ def create_base_application(
     client=_NOT_PROVIDED,
     deceased=_NOT_PROVIDED,
     provider=_NOT_PROVIDED,
-    proceedings=_NOT_PROVIDED,
+    proceeding=_NOT_PROVIDED,
     public_bodies=_NOT_PROVIDED,
     **overrides,
 ):
@@ -192,8 +193,8 @@ def create_base_application(
         deceased = create_base_deceased()
     if provider is _NOT_PROVIDED:
         provider = create_base_provider()
-    if proceedings is _NOT_PROVIDED:
-        proceedings = [create_base_application_proceeding()]
+    if proceeding is _NOT_PROVIDED:
+        proceeding = create_base_application_proceeding()
     if public_bodies is _NOT_PROVIDED:
         public_bodies = [create_base_application_public_body()]
 
@@ -205,7 +206,7 @@ def create_base_application(
         "deceased": deceased,
         "provider_id": 1,
         "provider": provider,
-        "proceedings": proceedings,
+        "proceeding": proceeding,
         "public_bodies": public_bodies,
     }
     return Application(**(defaults | overrides))

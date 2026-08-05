@@ -68,9 +68,7 @@ def session_fixture():
         )
         db_session.add(proceeding)
         db_session.commit()
-        application_proceedings_to_add = [
-            ApplicationProceeding(proceeding_id=ProceedingId.IQOT)
-        ]
+        application_proceeding = ApplicationProceeding(proceeding_id=ProceedingId.IQOT)
 
         new_public_body = PublicBody(
             public_body_id=PublicBodyId.DEPARTMENT_FOR_TRANSPORT,
@@ -129,7 +127,7 @@ def session_fixture():
         db_session.refresh(new_provider)
 
         new_application = Application(
-            proceedings=application_proceedings_to_add,
+            proceeding=application_proceeding,
             client_id=new_client.client_id,
             deceased_id=new_deceased.deceased_id,
             public_bodies=application_public_bodies,

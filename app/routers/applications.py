@@ -65,7 +65,6 @@ from app.use_cases.exceptions import (
     CoronersLetterVirusDetectedError,
     InvalidClaimError,
     InvalidCoronersLetterDocumentIdError,
-    ProceedingsNotFoundError,
     ProviderDetailsRetrievalError,
 )
 from app.use_cases.get_application import GetApplicationUseCase
@@ -343,10 +342,6 @@ def read_certificate(
             status_code=422,
             detail="Application is not granted",
         )
-    except ProceedingsNotFoundError:
-        raise HTTPException(
-            status_code=404, detail="No proceedings found for application"
-        )
     except ProviderDetailsRetrievalError:
         raise HTTPException(
             status_code=500,
@@ -399,7 +394,7 @@ def create_application(
     use_case: CreateApplicationUseCase = Depends(get_create_application_use_case),
     _: None = Depends(verify_entra_provider_token),
 ) -> Application:
-    """Creates a new application with proceedings and public bodies."""
+    """Creates a new application with proceeding and public bodies."""
     return use_case.execute(request)
 
 
@@ -457,10 +452,6 @@ def refuse_decision(
         use_case.execute(laa_reference, request)
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
-    except ProceedingsNotFoundError:
-        raise HTTPException(
-            status_code=404, detail="No proceedings found for application"
-        )
 
     return Response(status_code=204)
 
@@ -478,9 +469,5 @@ def grant_decision(
 
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
-    except ProceedingsNotFoundError:
-        raise HTTPException(
-            status_code=404, detail="No proceedings found for application"
-        )
 
     return Response(status_code=204)
