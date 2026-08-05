@@ -159,7 +159,9 @@ def client_fixture(session: Session):
     def get_provider_details_port_override():
         mock_port = MagicMock()
         mock_port.get_firm_name.return_value = "Test Firm Name"
-        mock_port.get_advocate_firms.return_value = {"0A123B": "Test Firm Name"}
+        mock_port.get_firms_by_ids.side_effect = lambda firm_ids: [
+            {"firmNumber": fid, "firmName": f"Firm {fid}"} for fid in firm_ids
+        ]
         mock_port.get_office_address.return_value = Address(
             address_line_1="Test Office Street",
             town_or_city="Test City",
@@ -221,7 +223,9 @@ def entra_auth_client_fixture(session: Session):
     def get_provider_details_port_override():
         mock_port = MagicMock()
         mock_port.get_firm_name.return_value = "Test Firm Name"
-        mock_port.get_advocate_firms.return_value = {"0A123B": "Test Firm Name"}
+        mock_port.get_firms_by_ids.side_effect = lambda firm_ids: [
+            {"firmNumber": fid, "firmName": f"Firm {fid}"} for fid in firm_ids
+        ]
         mock_port.get_office_address.return_value = Address(
             address_line_1="Test Office Street",
             town_or_city="Test City",

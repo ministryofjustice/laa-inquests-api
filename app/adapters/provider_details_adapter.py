@@ -56,6 +56,19 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
                 f"Unexpected provider-offices response for office {office_id}"
             ) from exc
 
-    def get_advocate_firms(self) -> dict[str, str]:
-        # TODO: Replace with real call to /api/v1/provider-firms/advocates when available
-        return {}
+    def get_firms_by_ids(self, firm_ids: list[str]) -> list[dict]:
+        if not firm_ids:
+            return []
+        try:
+            url = f"{self.base_url}/api/v1/provider-firms"
+            response = httpx.post(
+                url,
+                json={"firmIds": firm_ids},
+                headers={"X-Authorization": self.api_key},
+            )
+            response.raise_for_status()
+            return response.json()["firms"]
+        except httpx.HTTPError as exc:
+            raise ProviderDetailsRetrievalError(
+                f"Failed to retrieve firms from provider details API: #{exc}"
+            ) from exc
