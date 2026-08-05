@@ -11,7 +11,7 @@ from app.models.claim.index import ClaimEvidence
 def _create_application_payload():
     return {
         "coronersLetterId": str(uuid.uuid4()),
-        "proceedings": [{"proceedingId": "IQOT"}],
+        "proceeding": {"proceedingId": "IQOT"},
         "client": {
             "clientFirstName": "Test",
             "clientLastName": "Surname",

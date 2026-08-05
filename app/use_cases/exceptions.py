@@ -30,10 +30,6 @@ class ClaimEvidenceVirusDetectedError(Exception):
     pass
 
 
-class ProceedingsNotFoundError(Exception):
-    pass
-
-
 class CoronersLetterNotFoundError(Exception):
     pass
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
@@ -194,7 +194,7 @@ class Claim:
         if self.poa_type != POAType.PROFIT_COST:
             return None
 
-        certificate_start_date = self._get_certificate_start_date(application)
+        certificate_start_date = application.proceeding.certificate_start_date
         if certificate_start_date is None:
             return None
 
@@ -208,15 +208,8 @@ class Claim:
             else None
         )
 
-    def _get_certificate_start_date(self, application: Application) -> date | None:
-        if not application.proceedings:
-            return None
-        return application.proceedings[0].certificate_start_date
-
     def _get_substantive_cost_limit(self, application: Application) -> Decimal | None:
-        if not application.proceedings:
-            return None
-        raw_limit = application.proceedings[0].substantive_cost_limitation
+        raw_limit = application.proceeding.substantive_cost_limitation
         if raw_limit is None:
             return None
         return Decimal(str(raw_limit))

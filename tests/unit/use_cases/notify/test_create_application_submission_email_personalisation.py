@@ -41,7 +41,7 @@ def test_create_application_submission_email_personalisation_returns_all_require
     assert "456 Oak Ave" in result.correspondence_address
     assert "Manchester" in result.correspondence_address
     assert "M1 1AA" in result.correspondence_address
-    assert result.correspondence_recipient == "John Smith (PERSON)"
+    assert result.correspondence_recipient == "Client"
     assert result.client_relationship_to_deceased == "Son"
     assert result.proceeding_description == "Inquest into death"
     assert result.matter_type == "INQUESTS"

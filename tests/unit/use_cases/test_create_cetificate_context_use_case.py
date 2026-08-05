@@ -31,7 +31,7 @@ def test_populate_certificate_context_returns_ApplicationCertificate():
 
     # Use factory defaults - they already include all required fields
     application = create_base_application()
-    proceeding = application.proceedings[0]
+    proceeding = application.proceeding
 
     result = usecase.populate_certificate_context(application, proceeding)
 
@@ -58,7 +58,7 @@ def test_populate_certificate_context_populates_client_fields_correctly():
         correspondence_address=None,
     )
     application = create_base_application(client=client)
-    proceeding = application.proceedings[0]
+    proceeding = application.proceeding
 
     result = usecase.populate_certificate_context(application, proceeding)
 
@@ -69,7 +69,7 @@ def test_populate_certificate_context_populates_client_fields_correctly():
     assert result.client_address.postcode == "SW1A 2AA"
 
 
-def test_populate_certificate_context_uses_correspondence_address_when_available():
+def test_populate_certificate_context_uses_correspondence_address_and_care_of_recipient_when_available():
     """Test that correspondence address is used when available."""
     mock_provider_port = MagicMock()
     mock_provider_port.get_firm_name.return_value = "Test Firm"
@@ -82,9 +82,12 @@ def test_populate_certificate_context_uses_correspondence_address_when_available
         town_or_city="Manchester",
         postcode="M1 2AB",
     )
-    client = create_base_client(correspondence_address=correspondence_address)
+    client = create_base_client(
+        correspondence_address=correspondence_address,
+        is_client_correspondence_recipient=False,
+    )
     application = create_base_application(client=client)
-    application_proceeding = application.proceedings[0]
+    application_proceeding = application.proceeding
 
     result = usecase.populate_certificate_context(application, application_proceeding)
 
@@ -104,7 +107,7 @@ def test_populate_certificate_context_populates_provider_fields():
     application = create_base_application(
         provider=create_base_provider(firm_code="XYZ789")
     )
-    application_proceeding = application.proceedings[0]
+    application_proceeding = application.proceeding
 
     result = usecase.populate_certificate_context(application, application_proceeding)
 
@@ -121,7 +124,7 @@ def test_populate_certificate_context_raises_exception_on_firm_name_lookup_failu
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     application = create_base_application()
-    application_proceeding = application.proceedings[0]
+    application_proceeding = application.proceeding
 
     with pytest.raises(ProviderDetailsRetrievalError):
         usecase.populate_certificate_context(application, application_proceeding)
@@ -135,7 +138,7 @@ def test_populate_certificate_context_raises_exception_on_office_address_lookup_
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     application = create_base_application()
-    application_proceeding = application.proceedings[0]
+    application_proceeding = application.proceeding
 
     with pytest.raises(ProviderDetailsRetrievalError):
         usecase.populate_certificate_context(application, application_proceeding)
@@ -155,13 +158,13 @@ def test_populate_certificate_context_populates_proceeding_fields():
         scope_limitation_heading="FINAL_HEARING",
         scope_description="Limited to final hearing only",
         substantive_cost_limitation=15000,
-        proceeding_description="Inquest proceedings",
+        proceeding_description="Inquest proceeding",
     )
     application_proceeding = create_base_application_proceeding(
         proceeding=proceeding,
         certificate_start_date=date(2026, 7, 1),
     )
-    application = create_base_application(proceedings=[application_proceeding])
+    application = create_base_application(proceeding=application_proceeding)
 
     result = usecase.populate_certificate_context(application, application_proceeding)
 
@@ -171,7 +174,7 @@ def test_populate_certificate_context_populates_proceeding_fields():
     assert result.scope_limitation_heading == "FINAL_HEARING"
     assert result.scope_limitation_description == "Limited to final hearing only"
     assert result.cost_limitation == 15000
-    assert result.proceeding_description == "Inquest proceedings"
+    assert result.proceeding_description == "Inquest proceeding"
 
 
 def test_populate_certificate_context_populates_application_proceeding_date_fields():
@@ -183,11 +186,9 @@ def test_populate_certificate_context_populates_application_proceeding_date_fiel
 
     test_date = date(2026, 8, 15)
     application = create_base_application(
-        proceedings=[
-            create_base_application_proceeding(certificate_start_date=test_date)
-        ]
+        proceeding=create_base_application_proceeding(certificate_start_date=test_date)
     )
-    application_proceeding = application.proceedings[0]
+    application_proceeding = application.proceeding
 
     result = usecase.populate_certificate_context(application, application_proceeding)
 
@@ -204,7 +205,7 @@ def test_populate_certificate_context_populates_application_status_fields():
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     application = create_base_application(status="LIVE")
-    application_proceeding = application.proceedings[0]
+    application_proceeding = application.proceeding
 
     result = usecase.populate_certificate_context(application, application_proceeding)
 
@@ -222,11 +223,11 @@ def test_populate_certificate_context_populates_identifiers_and_dates():
     issue_date = date(2026, 7, 15)
     application = create_base_application(
         laa_reference=98765,
-        proceedings=[
-            create_base_application_proceeding(certificate_issue_date=issue_date)
-        ],
+        proceeding=create_base_application_proceeding(
+            certificate_issue_date=issue_date
+        ),
     )
-    application_proceeding = application.proceedings[0]
+    application_proceeding = application.proceeding
 
     result = usecase.populate_certificate_context(application, application_proceeding)
 
@@ -242,7 +243,7 @@ def test_populate_certificate_context_populates_default_static_fields():
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     application = create_base_application()
-    application_proceeding = application.proceedings[0]
+    application_proceeding = application.proceeding
 
     result = usecase.populate_certificate_context(application, application_proceeding)
 
@@ -264,9 +265,9 @@ def test_populate_certificate_context_handles_none_certificate_start_date():
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     application = create_base_application(
-        proceedings=[create_base_application_proceeding(certificate_start_date=None)]
+        proceeding=create_base_application_proceeding(certificate_start_date=None)
     )
-    application_proceeding = application.proceedings[0]
+    application_proceeding = application.proceeding
 
     # Should not raise an exception
     result = usecase.populate_certificate_context(application, application_proceeding)
@@ -296,7 +297,7 @@ def test_populate_certificate_context_handles_none_correspondence_address():
             home_address=home_address, correspondence_address=None
         )
     )
-    application_proceeding = application.proceedings[0]
+    application_proceeding = application.proceeding
 
     result = usecase.populate_certificate_context(application, application_proceeding)
 
@@ -322,7 +323,7 @@ def test_populate_certificate_context_adds_public_bodies_to_opponent_details():
             ),
         ]
     )
-    application_proceeding = application.proceedings[0]
+    application_proceeding = application.proceeding
 
     result = usecase.populate_certificate_context(application, application_proceeding)
 

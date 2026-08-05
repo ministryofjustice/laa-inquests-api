@@ -6,7 +6,6 @@ from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
-    ProceedingsNotFoundError,
     RefuseDecisionError,
 )
 
@@ -29,12 +28,7 @@ class RefuseDecisionUseCase:
         if application is None:
             raise ApplicationNotFoundError(f"Application {laa_reference} not found")
 
-        if not application.proceedings:
-            raise ProceedingsNotFoundError(
-                f"No proceedings found for application {laa_reference}"
-            )
-
-        proceeding = application.proceedings[0]
+        proceeding = application.proceeding
         proceeding.merits_decision = MeritsDecision.REFUSED
         proceeding.reason_for_refusal = request.reason_for_refusal.value
         proceeding.justification = request.justification

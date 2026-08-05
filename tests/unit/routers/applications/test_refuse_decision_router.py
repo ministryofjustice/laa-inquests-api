@@ -6,7 +6,7 @@ from starlette.responses import Response
 
 from app.models.application.index import RefuseApplicationUpdate
 from app.routers.applications import refuse_decision
-from app.use_cases.exceptions import ApplicationNotFoundError, ProceedingsNotFoundError
+from app.use_cases.exceptions import ApplicationNotFoundError
 
 
 def _make_request() -> RefuseApplicationUpdate:
@@ -45,14 +45,3 @@ def test_refuse_decision_raises_404_when_application_not_found():
 
     assert exception.value.status_code == 404
     assert exception.value.detail == "Application not found"
-
-
-def test_refuse_decision_raises_404_when_no_proceedings_found():
-    use_case = MagicMock()
-    use_case.execute.side_effect = ProceedingsNotFoundError()
-
-    with pytest.raises(HTTPException) as exception:
-        refuse_decision("1", _make_request(), use_case=use_case)
-
-    assert exception.value.status_code == 404
-    assert exception.value.detail == "No proceedings found for application"

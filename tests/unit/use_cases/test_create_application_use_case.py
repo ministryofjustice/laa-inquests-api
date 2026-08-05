@@ -3,17 +3,18 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.models.application.index import Application, ApplicationCreate
+from app.models.application.index import ApplicationCreate
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.use_cases.create_application import CreateApplicationUseCase
+from tests.unit.factories import create_base_application
 
 
 def _make_request(email_address: str = "provider@example.com") -> ApplicationCreate:
     return ApplicationCreate.model_validate(
         {
             "coronersLetterId": str(uuid.uuid4()),
-            "proceedings": [{"proceedingId": "IQOT"}],
+            "proceeding": {"proceedingId": "IQOT"},
             "client": {
                 "clientFirstName": "Test",
                 "clientLastName": "Surname",
@@ -49,13 +50,9 @@ def _make_request(email_address: str = "provider@example.com") -> ApplicationCre
     )
 
 
-def _make_application() -> Application:
-    return Application(laa_reference=12345, deceased_id=1, provider_id=1)
-
-
 def test_execute_creates_application_sends_confirmation_email_and_commits():
     request = _make_request()
-    application = _make_application()
+    application = create_base_application()
     create_application_port = MagicMock(spec=CreateApplicationPort)
     create_application_port.create_application.return_value = application
     gov_notify_port = MagicMock(spec=GovNotifyPort)
@@ -98,7 +95,7 @@ def test_execute_passes_authenticated_firm_code_to_create_application_port():
 def test_execute_rolls_back_and_reraises_when_notify_fails():
     request = _make_request()
     create_application_port = MagicMock(spec=CreateApplicationPort)
-    create_application_port.create_application.return_value = _make_application()
+    create_application_port.create_application.return_value = create_base_application()
     gov_notify_port = MagicMock(spec=GovNotifyPort)
     gov_notify_port.send_application_submit_confirmation_email.side_effect = (
         RuntimeError("notify failed")
@@ -118,7 +115,7 @@ def test_execute_rolls_back_and_reraises_when_notify_fails():
 
 def test_execute_rolls_back_and_reraises_when_commit_fails():
     request = _make_request()
-    application = _make_application()
+    application = create_base_application()
     create_application_port = MagicMock(spec=CreateApplicationPort)
     create_application_port.create_application.return_value = application
     create_application_port.commit.side_effect = RuntimeError("commit failed")

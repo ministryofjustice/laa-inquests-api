@@ -59,7 +59,10 @@ def create_base_office_address(**overrides):
 
 
 def create_base_client(
-    home_address=_NOT_PROVIDED, correspondence_address=_NOT_PROVIDED, **overrides
+    home_address=_NOT_PROVIDED,
+    correspondence_address=_NOT_PROVIDED,
+    is_client_correspondence_recipient=_NOT_PROVIDED,
+    **overrides,
 ):
     """Create a base client with optional field overrides."""
     if home_address is _NOT_PROVIDED:
@@ -67,12 +70,12 @@ def create_base_client(
 
     if correspondence_address is _NOT_PROVIDED:
         correspondence_address = create_base_correspondence_address()
-
-    if correspondence_address is not None:
-        correspondence_recipient = "John Smith"
+    if is_client_correspondence_recipient is False:
+        correspondence_recipient_name = "John Smith"
         correspondence_recipient_type = CorrespondenceRecipientType.PERSON
     else:
-        correspondence_recipient = None
+        is_client_correspondence_recipient = True
+        correspondence_recipient_name = None
         correspondence_recipient_type = None
 
     defaults = {
@@ -89,9 +92,9 @@ def create_base_client(
         "home_address": home_address,
         "correspondence_address_id": 2,
         "correspondence_address": correspondence_address,
-        "is_client_correspondence_recipient": False,
+        "is_client_correspondence_recipient": is_client_correspondence_recipient,
         "correspondence_recipient_type": correspondence_recipient_type,
-        "correspondence_recipient_name": correspondence_recipient,
+        "correspondence_recipient_name": correspondence_recipient_name,
     }
     return Client(**(defaults | overrides))
 
@@ -170,6 +173,7 @@ def create_base_provider(**overrides):
         "provider_id": 1,
         "firm_code": "ABC123",
         "office_id": "001",
+        "email_address": "provider@example.com",
     }
     return Provider(**(defaults | overrides))
 
@@ -178,7 +182,7 @@ def create_base_application(
     client=_NOT_PROVIDED,
     deceased=_NOT_PROVIDED,
     provider=_NOT_PROVIDED,
-    proceedings=_NOT_PROVIDED,
+    proceeding=_NOT_PROVIDED,
     public_bodies=_NOT_PROVIDED,
     **overrides,
 ):
@@ -189,8 +193,8 @@ def create_base_application(
         deceased = create_base_deceased()
     if provider is _NOT_PROVIDED:
         provider = create_base_provider()
-    if proceedings is _NOT_PROVIDED:
-        proceedings = [create_base_application_proceeding()]
+    if proceeding is _NOT_PROVIDED:
+        proceeding = create_base_application_proceeding()
     if public_bodies is _NOT_PROVIDED:
         public_bodies = [create_base_application_public_body()]
 
@@ -202,7 +206,7 @@ def create_base_application(
         "deceased": deceased,
         "provider_id": 1,
         "provider": provider,
-        "proceedings": proceedings,
+        "proceeding": proceeding,
         "public_bodies": public_bodies,
     }
     return Application(**(defaults | overrides))
