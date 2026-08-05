@@ -1,11 +1,12 @@
 from unittest.mock import MagicMock
-
+import pytest
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.ports.search_application_port import SearchApplicationPort
 from app.use_cases.search_application import SearchApplicationUseCase
 from tests.unit.factories import create_base_application, create_base_provider
+from app.use_cases.exceptions import ProviderDetailsRetrievalError
 
 
 def _make_use_case(
@@ -60,7 +61,7 @@ def test_execute_calls_provider_details_port_with_firm_code():
 
 
 def test_execute_raises_provider_details_retrieval_error_when_get_firm_name_raises_exception():
-    application = _make_application(firm_code="0A123B")
+    application = create_base_application()
     search_port = MagicMock(spec=SearchApplicationPort)
     search_port.search_applications.return_value = [application]
     provider_port = MagicMock(spec=ProviderDetailsPort)

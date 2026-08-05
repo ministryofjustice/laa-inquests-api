@@ -4,7 +4,6 @@ import pytest
 
 from app.models.application.enums import AddressSource
 from app.models.application.index import Address, AddressResponse
-from app.models.application.index import Application, Client, Deceased, Provider
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.exceptions import (
@@ -12,7 +11,11 @@ from app.use_cases.exceptions import (
     ProviderDetailsRetrievalError,
 )
 from app.use_cases.get_application import GetApplicationUseCase
-from tests.unit.factories import create_base_application, create_base_provider
+from tests.unit.factories import (
+    create_base_application,
+    create_base_client,
+    create_base_provider,
+)
 
 
 def test_execute_raises_application_not_found_error_when_application_not_found():
@@ -123,7 +126,12 @@ def test_execute_returns_provider_email_in_response():
 
 def test_execute_calls_provider_details_port_get_office_address_with_office_id():
     get_application_port = MagicMock(spec=GetApplicationPort)
-    get_application_port.get_application_by_laa_reference.return_value = create_base_application(correspondence_address_source=AddressSource.USE_PROVIDER_ADDRESS)
+    client = create_base_client(
+        correspondence_address_source=AddressSource.USE_PROVIDER_ADDRESS
+    )
+    get_application_port.get_application_by_laa_reference.return_value = (
+        create_base_application(client=client)
+    )
     office_address = Address(
         address_line_1="123 Main St",
         address_line_2="Suite 100",
@@ -147,7 +155,12 @@ def test_execute_calls_provider_details_port_get_office_address_with_office_id()
 
 def test_execute_returns_application_response_with_office_correspondence_address():
     get_application_port = MagicMock(spec=GetApplicationPort)
-    get_application_port.get_application_by_laa_reference.return_value = create_base_application(correspondence_address_source=AddressSource.USE_PROVIDER_ADDRESS)
+    client = create_base_client(
+        correspondence_address_source=AddressSource.USE_PROVIDER_ADDRESS
+    )
+    get_application_port.get_application_by_laa_reference.return_value = (
+        create_base_application(client=client)
+    )
     office_address = Address(
         address_line_1="123 Main St",
         address_line_2="Suite 100",
@@ -173,7 +186,12 @@ def test_execute_returns_application_response_with_office_correspondence_address
 
 def test_execute_returns_application_response_with_office_correspondence_address_when_no_fixed_abode():
     get_application_port = MagicMock(spec=GetApplicationPort)
-    get_application_port.get_application_by_laa_reference.return_value = create_base_application(correspondence_address_source=AddressSource.USE_PROVIDER_ADDRESS, has_no_fixed_abode=True)
+    client = create_base_client(
+        correspondence_address_source=AddressSource.USE_PROVIDER_ADDRESS
+    )
+    get_application_port.get_application_by_laa_reference.return_value = (
+        create_base_application(client=client)
+    )
     office_address = Address(
         address_line_1="123 Main St",
         address_line_2="Suite 100",
@@ -199,10 +217,11 @@ def test_execute_returns_application_response_with_office_correspondence_address
 
 def test_execute_raises_exception_when_provider_details_port_get_office_address_raises_exception():
     get_application_port = MagicMock(spec=GetApplicationPort)
+    client = create_base_client(
+        correspondence_address_source=AddressSource.USE_PROVIDER_ADDRESS
+    )
     get_application_port.get_application_by_laa_reference.return_value = (
-        _make_application(
-            correspondence_address_source=AddressSource.USE_PROVIDER_ADDRESS
-        )
+        create_base_application(client=client)
     )
     port = MagicMock(spec=ProviderDetailsPort)
     port.get_firm_name.return_value = "Test Firm"

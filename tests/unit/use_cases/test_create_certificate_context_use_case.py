@@ -31,9 +31,8 @@ def test_populate_certificate_context_returns_ApplicationCertificate():
 
     # Use factory defaults - they already include all required fields
     application = create_base_application()
-    proceeding = application.proceeding
 
-    result = usecase.populate_certificate_context(application, proceeding)
+    result = usecase.populate_certificate_context(application, application.proceeding)
 
     assert isinstance(result, ApplicationCertificate)
 
@@ -58,9 +57,8 @@ def test_populate_certificate_context_populates_client_fields_correctly():
         correspondence_address=None,
     )
     application = create_base_application(client=client)
-    proceeding = application.proceeding
 
-    result = usecase.populate_certificate_context(application, proceeding)
+    result = usecase.populate_certificate_context(application, application.proceeding)
 
     assert result.client_name == "John Smith"
     assert result.client_address is not None
@@ -88,9 +86,8 @@ def test_populate_certificate_context_uses_correspondence_address_and_care_of_re
         is_client_correspondence_recipient=False,
     )
     application = create_base_application(client=client)
-    application_proceeding = application.proceeding
 
-    result = usecase.populate_certificate_context(application, application_proceeding)
+    result = usecase.populate_certificate_context(application, application.proceeding)
 
     assert result.client_address is not None
     assert result.client_address.address_line_1 == "c/o John Smith 456 Oak Avenue"
@@ -117,9 +114,8 @@ def test_populate_certificate_context_does_not_use_care_of_recipient_name_when_c
         is_client_correspondence_recipient=True,
     )
     application = create_base_application(client=client)
-    application_proceeding = application.proceeding
 
-    result = usecase.populate_certificate_context(application, application_proceeding)
+    result = usecase.populate_certificate_context(application, application.proceeding)
 
     assert result.client_address is not None
     assert result.client_address.address_line_1 == "456 Oak Avenue"
@@ -146,9 +142,8 @@ def test_populate_certificate_context_uses_client_home_address_when_corresponden
         is_client_correspondence_recipient=False,
     )
     application = create_base_application(client=client)
-    application_proceeding = application.proceeding
 
-    result = usecase.populate_certificate_context(application, application_proceeding)
+    result = usecase.populate_certificate_context(application, application.proceeding)
 
     assert result.client_address is not None
     assert result.client_address.address_line_1 == "c/o John Smith 789 Pine Road"
@@ -166,9 +161,8 @@ def test_populate_certificate_context_populates_provider_fields():
     application = create_base_application(
         provider=create_base_provider(firm_code="XYZ789")
     )
-    application_proceeding = application.proceeding
 
-    result = usecase.populate_certificate_context(application, application_proceeding)
+    result = usecase.populate_certificate_context(application, application.proceeding)
 
     assert result.firm_name == "Jones Legal Services"
     mock_provider_port.get_firm_name.assert_called_once_with("XYZ789")
@@ -185,10 +179,9 @@ def test_populate_certificate_context_raises_exception_on_firm_name_lookup_failu
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     application = create_base_application()
-    application_proceeding = application.proceeding
 
     with pytest.raises(ProviderDetailsRetrievalError):
-        usecase.populate_certificate_context(application, application_proceeding)
+        usecase.populate_certificate_context(application, application.proceeding)
 
 
 def test_populate_certificate_context_raises_exception_on_office_address_lookup_failure():
@@ -201,10 +194,9 @@ def test_populate_certificate_context_raises_exception_on_office_address_lookup_
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     application = create_base_application()
-    application_proceeding = application.proceedings[0]
 
     with pytest.raises(ProviderDetailsRetrievalError):
-        usecase.populate_certificate_context(application, application_proceeding)
+        usecase.populate_certificate_context(application, application.proceeding)
 
 
 def test_populate_certificate_context_populates_proceeding_fields():
@@ -251,9 +243,8 @@ def test_populate_certificate_context_populates_application_proceeding_date_fiel
     application = create_base_application(
         proceeding=create_base_application_proceeding(certificate_start_date=test_date)
     )
-    application_proceeding = application.proceeding
 
-    result = usecase.populate_certificate_context(application, application_proceeding)
+    result = usecase.populate_certificate_context(application, application.proceeding)
 
     assert result.effective_date == test_date.date()
     assert result.date_work_can_commence == test_date.date()
@@ -268,9 +259,8 @@ def test_populate_certificate_context_populates_application_status_fields():
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     application = create_base_application(status="LIVE")
-    application_proceeding = application.proceeding
 
-    result = usecase.populate_certificate_context(application, application_proceeding)
+    result = usecase.populate_certificate_context(application, application.proceeding)
 
     assert result.status == "LIVE"
     assert result.current_proceeding_status == "LIVE"
@@ -290,9 +280,8 @@ def test_populate_certificate_context_populates_identifiers_and_dates():
             certificate_issue_date=issue_date
         ),
     )
-    application_proceeding = application.proceeding
 
-    result = usecase.populate_certificate_context(application, application_proceeding)
+    result = usecase.populate_certificate_context(application, application.proceeding)
 
     assert result.laa_reference == 98765
     assert result.date_created == issue_date.date()
@@ -306,9 +295,8 @@ def test_populate_certificate_context_populates_default_static_fields():
     usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
 
     application = create_base_application()
-    application_proceeding = application.proceeding
 
-    result = usecase.populate_certificate_context(application, application_proceeding)
+    result = usecase.populate_certificate_context(application, application.proceeding)
 
     assert result.guardian_name == "Not applicable"
     assert result.guardian_address == "Not applicable"
@@ -330,10 +318,9 @@ def test_populate_certificate_context_handles_none_certificate_start_date():
     application = create_base_application(
         proceeding=create_base_application_proceeding(certificate_start_date=None)
     )
-    application_proceeding = application.proceeding
 
     # Should not raise an exception
-    result = usecase.populate_certificate_context(application, application_proceeding)
+    result = usecase.populate_certificate_context(application, application.proceeding)
 
     assert isinstance(result, ApplicationCertificate)
 
@@ -362,9 +349,8 @@ def test_populate_certificate_context_formats_address_with_missing_fields():
             home_address=home_address, correspondence_address=None
         )
     )
-    application_proceeding = application.proceeding
 
-    result = usecase.populate_certificate_context(application, application_proceeding)
+    result = usecase.populate_certificate_context(application, application.proceeding)
 
     assert result.client_address is not None
     assert result.client_address.address_line_1 == "100 Simple Street"
@@ -390,9 +376,8 @@ def test_populate_certificate_context_handles_none_correspondence_address():
             home_address=home_address, correspondence_address=None
         )
     )
-    application_proceeding = application.proceeding
 
-    result = usecase.populate_certificate_context(application, application_proceeding)
+    result = usecase.populate_certificate_context(application, application.proceeding)
 
     # Should use home address
     assert "Home Street 1" == result.client_address.address_line_1
@@ -413,9 +398,8 @@ def test_populate_certificate_context_handles_single_public_body_correctly():
             )
         ]
     )
-    application_proceeding = application.proceeding
 
-    result = usecase.populate_certificate_context(application, application_proceeding)
+    result = usecase.populate_certificate_context(application, application.proceeding)
 
     assert result.opponent_details == ["Body A"]
     assert len(result.opponent_details) == 1
@@ -438,9 +422,8 @@ def test_populate_certificate_context_adds_public_bodies_to_opponent_details():
             ),
         ]
     )
-    application_proceeding = application.proceeding
 
-    result = usecase.populate_certificate_context(application, application_proceeding)
+    result = usecase.populate_certificate_context(application, application.proceeding)
 
     assert result.opponent_details == ["Body A", "Body B"]
     assert len(result.opponent_details) == 2
@@ -463,9 +446,8 @@ def test_prepare_context_for_display_formats_fields_correctly():
             scope_limitation_heading="FINAL_HEARING",
         )
     )
-    application_proceeding = application.proceeding
 
-    context = usecase.populate_certificate_context(application, application_proceeding)
+    context = usecase.populate_certificate_context(application, application.proceeding)
     formatted_context = usecase.prepare_context_for_display(context)
 
     assert formatted_context.certificate_type == "Substantive"
@@ -499,9 +481,8 @@ def test_populate_certificate_context_uses_office_address_when_correspondence_ad
         correspondence_address_source="USE_PROVIDER_ADDRESS",
     )
     application = create_base_application(client=client)
-    application_proceeding = application.proceedings[0]
 
-    result = usecase.populate_certificate_context(application, application_proceeding)
+    result = usecase.populate_certificate_context(application, application.proceeding)
 
     assert result.client_address.address_line_1 == "123 Provider St"
     assert result.client_address.town_or_city == "Provider City"
