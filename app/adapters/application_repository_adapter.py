@@ -69,7 +69,9 @@ class ApplicationRepositoryAdapter(
         )
         return list(self.session.exec(statement).all())
 
-    def create_application(self, request: ApplicationCreate) -> Application:
+    def create_application(
+        self, request: ApplicationCreate, firm_code: str
+    ) -> Application:
         application_proceeding = ApplicationProceeding(
             proceeding_id=ProceedingId(request.proceeding.proceeding_id)
         )

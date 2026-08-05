@@ -79,7 +79,7 @@ def test_execute_creates_application_sends_confirmation_email_and_commits():
 def test_execute_passes_authenticated_firm_code_to_create_application_port():
     request = _make_request()
     create_application_port = MagicMock(spec=CreateApplicationPort)
-    create_application_port.create_application.return_value = _make_application()
+    create_application_port.create_application.return_value = create_base_application()
     gov_notify_port = MagicMock(spec=GovNotifyPort)
 
     use_case = CreateApplicationUseCase(

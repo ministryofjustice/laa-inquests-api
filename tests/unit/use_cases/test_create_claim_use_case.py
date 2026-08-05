@@ -62,7 +62,7 @@ def _make_matching_application(firm_code: str = "0A123B") -> Application:
     proceeding = MagicMock()
     proceeding.substantive_cost_limitation = 1000
     proceeding.certificate_start_date = None
-    application.proceedings = [proceeding]
+    application.proceeding = proceeding
     application.provider.firm_code = firm_code
     application.provider.email_address = "provider@example.com"
     return application
