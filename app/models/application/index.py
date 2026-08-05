@@ -113,7 +113,6 @@ class Client(ClientBase, table=True):
     home_address: Optional["Address"] = Relationship(
         sa_relationship_kwargs={"foreign_keys": "[Client.home_address_id]"}
     )
-    # is_client_the_correspondence_addressee: bool = True
     correspondence_recipient_type: CorrespondenceRecipientType | None = Field(
         default=None,
         sa_column=Column(Enum(CorrespondenceRecipientType), nullable=True),
@@ -122,9 +121,6 @@ class Client(ClientBase, table=True):
 
     @property
     def correspondence_recipient(self) -> Optional["CorrespondenceRecipientResponse"]:
-        # if self.is_client_the_correspondence_addressee:
-        #     return None
-
         if (
             self.correspondence_recipient_type is not None
             and self.correspondence_recipient_name is not None
