@@ -43,7 +43,6 @@ def _make_request(email_address: str = "provider@example.com") -> ApplicationCre
                 "clientRelationshipToDeceased": "guardian",
             },
             "provider": {
-                "firmCode": "0A123B",
                 "officeId": "001",
                 "emailAddress": email_address,
             },
@@ -63,16 +62,34 @@ def test_execute_creates_application_sends_confirmation_email_and_commits():
         gov_notify_port=gov_notify_port,
     )
 
-    result = use_case.execute(request)
+    result = use_case.execute(request, "0A123B")
 
     assert result == application
-    create_application_port.create_application.assert_called_once_with(request)
+    create_application_port.create_application.assert_called_once_with(
+        request, "0A123B"
+    )
     gov_notify_port.send_application_submit_confirmation_email.assert_called_once_with(
         application,
         "provider@example.com",
     )
     create_application_port.commit.assert_called_once_with()
     create_application_port.rollback.assert_not_called()
+
+
+def test_execute_passes_authenticated_firm_code_to_create_application_port():
+    request = _make_request()
+    create_application_port = MagicMock(spec=CreateApplicationPort)
+    create_application_port.create_application.return_value = create_base_application()
+    gov_notify_port = MagicMock(spec=GovNotifyPort)
+
+    use_case = CreateApplicationUseCase(
+        create_application_port=create_application_port,
+        gov_notify_port=gov_notify_port,
+    )
+
+    use_case.execute(request, "1473")
+
+    create_application_port.create_application.assert_called_once_with(request, "1473")
 
 
 def test_execute_rolls_back_and_reraises_when_notify_fails():
@@ -90,7 +107,7 @@ def test_execute_rolls_back_and_reraises_when_notify_fails():
     )
 
     with pytest.raises(RuntimeError, match="notify failed"):
-        use_case.execute(request)
+        use_case.execute(request, "0A123B")
 
     create_application_port.commit.assert_not_called()
     create_application_port.rollback.assert_called_once_with()
@@ -110,7 +127,7 @@ def test_execute_rolls_back_and_reraises_when_commit_fails():
     )
 
     with pytest.raises(RuntimeError, match="commit failed"):
-        use_case.execute(request)
+        use_case.execute(request, "0A123B")
 
     gov_notify_port.send_application_submit_confirmation_email.assert_called_once_with(
         application,

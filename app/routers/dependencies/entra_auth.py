@@ -5,7 +5,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.adapters.entra_auth_adapter import EntraAuthAdapter
 from app.config import Config
-from app.ports.entra_auth_port import EntraAuthPort
+from app.ports.entra_auth_port import AuthenticatedUser, EntraAuthPort
 
 _http_bearer = HTTPBearer(auto_error=False)
 
@@ -43,7 +43,7 @@ def verify_entra_token(
 def verify_entra_provider_token(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_http_bearer)],
     entra_auth: Annotated[EntraAuthPort, Depends(get_entra_auth_port)],
-) -> None:
+) -> AuthenticatedUser:
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -51,13 +51,25 @@ def verify_entra_provider_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    entra_auth.verify_token(credentials.credentials, {"User.Provider"})
+    return entra_auth.verify_token(credentials.credentials, {"User.Provider"})
+
+
+def get_current_provider_firm_code(
+    user: Annotated[AuthenticatedUser, Depends(verify_entra_provider_token)],
+) -> str:
+    if not user.firm_code:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Provider firm code missing from token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user.firm_code
 
 
 def verify_entra_caseworker_token(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_http_bearer)],
     entra_auth: Annotated[EntraAuthPort, Depends(get_entra_auth_port)],
-) -> None:
+) -> AuthenticatedUser:
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -65,4 +77,4 @@ def verify_entra_caseworker_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    entra_auth.verify_token(credentials.credentials, {"User.Caseworker"})
+    return entra_auth.verify_token(credentials.credentials, {"User.Caseworker"})

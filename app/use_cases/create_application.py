@@ -12,8 +12,10 @@ class CreateApplicationUseCase:
         self.create_application_port = create_application_port
         self.gov_notify_port = gov_notify_port
 
-    def execute(self, request: ApplicationCreate) -> Application:
-        application = self.create_application_port.create_application(request)
+    def execute(self, request: ApplicationCreate, firm_code: str) -> Application:
+        application = self.create_application_port.create_application(
+            request, firm_code
+        )
 
         try:
             self.gov_notify_port.send_application_submit_confirmation_email(

@@ -2,6 +2,8 @@ import jwt
 from fastapi import HTTPException, status
 from jwt import PyJWKClient
 
+from app.ports.entra_auth_port import AuthenticatedUser
+
 ENTRA_JWKS_URL = "https://login.microsoftonline.com/{tenant_id}/discovery/v2.0/keys"
 
 
@@ -33,7 +35,9 @@ class EntraAuthAdapter:
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-    def verify_token(self, token: str, required_scopes: set[str] | None = None) -> None:
+    def verify_token(
+        self, token: str, required_scopes: set[str] | None = None
+    ) -> AuthenticatedUser:
         try:
             signing_key = self._jwks_client.get_signing_key_from_jwt(token)
             payload = jwt.decode(
@@ -48,6 +52,12 @@ class EntraAuthAdapter:
             )
             self._validate_scopes_or_roles(
                 payload, required_scopes or self.default_scopes
+            )
+            token_scopes = frozenset((payload.get("scp") or "").split())
+            token_roles = frozenset(payload.get("roles") or [])
+            return AuthenticatedUser(
+                firm_code=payload.get("FIRM_CODE"),
+                scopes=token_scopes | token_roles,
             )
         except HTTPException:
             raise

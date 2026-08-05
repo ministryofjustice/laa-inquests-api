@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 from mimetypes import guess_type
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from fastapi.encoders import jsonable_encoder
@@ -49,6 +50,7 @@ from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 from app.routers.dependencies import (
     get_claim_db_adapter,
+    get_current_provider_firm_code,
     get_sds_port,
     verify_entra_caseworker_token,
     verify_entra_provider_token,
@@ -247,11 +249,11 @@ def get_upload_coroners_letter_use_case(
 @router.get("/search", response_model=list[ApplicationSearchResponse])
 async def search_application(
     laa_reference: str,
+    firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
     use_case: SearchApplicationUseCase = Depends(get_search_application_use_case),
-    _: None = Depends(verify_entra_provider_token),
 ) -> list[ApplicationSearchResponse]:
     """Search for an application by exact LAA reference number."""
-    return use_case.execute(laa_reference)
+    return use_case.execute(laa_reference, firm_code)
 
 
 @router.get("/public-bodies", response_model=list[PublicBodyResponse])
@@ -391,11 +393,11 @@ async def upload_coroners_letter(
 @router.post("/", response_model=ApplicationResponse, status_code=201)
 def create_application(
     request: ApplicationCreate,
+    firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
     use_case: CreateApplicationUseCase = Depends(get_create_application_use_case),
-    _: None = Depends(verify_entra_provider_token),
 ) -> Application:
-    """Creates a new application with proceeding and public bodies."""
-    return use_case.execute(request)
+    """Creates a new application with proceedings and public bodies."""
+    return use_case.execute(request, firm_code)
 
 
 @router.post(
@@ -406,13 +408,14 @@ def create_application(
 def create_claim(
     laa_reference: str,
     request: ClaimCreate,
+    firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
     use_case: CreateClaimUseCase = Depends(get_create_claim_use_case),
-    _: None = Depends(verify_entra_provider_token),
 ) -> ClaimResponse:
     """Creates a new claim against an application."""
     try:
         command = CreateClaimCommand(
             laa_reference=laa_reference,
+            firm_code=firm_code,
             claim_type=request.claim_type,
             poa_type=request.poa_type_id,
             net=request.total_profit_cost_net,
@@ -434,6 +437,8 @@ def create_claim(
                 exclude={"rejection_reasons"},
             )
         return JSONResponse(content=jsonable_encoder(payload), status_code=201)
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
     except InvalidClaimError as e:
         raise HTTPException(
             status_code=422, detail={"errorCode": e.code, "message": e.message}

@@ -28,7 +28,7 @@ def _make_use_case(
 def test_execute_returns_empty_list_when_no_match():
     use_case = _make_use_case(application=None)
 
-    assert use_case.execute("1") == []
+    assert use_case.execute("1", "0A123B") == []
 
 
 def test_execute_normalises_reference_by_stripping_whitespace_before_lookup():
@@ -40,9 +40,23 @@ def test_execute_normalises_reference_by_stripping_whitespace_before_lookup():
         provider_details_port=provider_port,
     )
 
-    use_case.execute("  1  ")
+    use_case.execute("  1  ", "0A123B")
 
-    search_port.search_applications.assert_called_once_with("1")
+    search_port.search_applications.assert_called_once_with("1", "0A123B")
+
+
+def test_execute_passes_firm_code_to_search_port():
+    search_port = MagicMock(spec=SearchApplicationPort)
+    search_port.search_applications.return_value = []
+    provider_port = MagicMock(spec=ProviderDetailsPort)
+    use_case = SearchApplicationUseCase(
+        search_application_port=search_port,
+        provider_details_port=provider_port,
+    )
+
+    use_case.execute("1", "ZZ999Z")
+
+    search_port.search_applications.assert_called_once_with("1", "ZZ999Z")
 
 
 def test_execute_calls_provider_details_port_with_firm_code():
@@ -57,7 +71,7 @@ def test_execute_calls_provider_details_port_with_firm_code():
         provider_details_port=provider_port,
     )
 
-    use_case.execute("1")
+    use_case.execute("1", "0A123B")
 
     provider_port.get_firm_name.assert_called_once_with("0A123B")
 
@@ -85,7 +99,7 @@ def test_execute_returns_response_with_all_required_fields():
     )
     use_case = _make_use_case(application=application, firm_name="My Firm")
 
-    results = use_case.execute("1")
+    results = use_case.execute("1", "0A123B")
 
     assert len(results) == 1
     result = results[0]

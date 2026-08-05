@@ -392,8 +392,7 @@ class ProviderCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    firm_code: str = PydanticField(examples=["1473"])
-    office_id: str = PydanticField(examples=["0U651L"])
+    office_id: str = PydanticField(examples=["001"])
     email_address: str = PydanticField(examples=["provider@example.com"])
 
 

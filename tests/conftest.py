@@ -25,6 +25,7 @@ from app.models.application.index import (
     SDSUploadClaimEvidenceResponse,
     SDSUploadCoronersLetterResponse,
 )
+from app.ports.entra_auth_port import AuthenticatedUser
 from app.routers.applications import (
     get_gov_notify_port,
     get_pdf_generation_port,
@@ -189,7 +190,10 @@ def client_fixture(session: Session):
 
     def get_entra_auth_port_bypass():
         mock_auth = MagicMock()
-        mock_auth.verify_token.return_value = None
+        mock_auth.verify_token.return_value = AuthenticatedUser(
+            firm_code="0A123B",
+            scopes=frozenset({"User.Provider", "User.Caseworker"}),
+        )
         return mock_auth
 
     api.dependency_overrides[get_session] = get_session_override
@@ -277,6 +281,11 @@ def entra_auth_client_fixture(session: Session):
                     detail="Insufficient permissions",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
+
+            return AuthenticatedUser(
+                firm_code="0A123B",
+                scopes=frozenset(token_scopes[token]),
+            )
 
         mock_auth.verify_token.side_effect = verify_token
         return mock_auth

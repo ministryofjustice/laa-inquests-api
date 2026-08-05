@@ -24,7 +24,7 @@ from app.ports.claim.update_claim_status_port import (
     UpdateClaimStatusPort,
 )
 from app.ports.gov_notify_port import GovNotifyPort
-from app.use_cases.exceptions import InvalidClaimError
+from app.use_cases.exceptions import ApplicationNotFoundError, InvalidClaimError
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 @dataclass(frozen=True)
 class CreateClaimCommand:
     laa_reference: str
+    firm_code: str
     claim_type: ClaimType
     poa_type: POAType | None
     net: Decimal | None
@@ -88,6 +89,9 @@ class CreateClaimUseCase:
         application = self.application_lookup_port.get_application_by_laa_reference(
             command.laa_reference
         )
+        if application is None or application.provider.firm_code != command.firm_code:
+            raise ApplicationNotFoundError(command.laa_reference)
+
         existing_claims = (
             self.get_claims_for_application_port.get_claims_by_laa_reference(
                 command.laa_reference
