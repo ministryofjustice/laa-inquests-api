@@ -10,7 +10,7 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
         self.base_url = base_url
         self.api_key = api_key
 
-    def get_firm_name(self, firm_code: str) -> str | None:
+    def get_firm_name(self, firm_code: str) -> str:
         try:
             url = f"{self.base_url}/api/v1/provider-firms/{firm_code}"
             response = httpx.get(
@@ -21,14 +21,16 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
             response.raise_for_status()
             result = response.json()["firm"]["firmName"]
             return result
-        except httpx.HTTPError:
-            return None
+        except httpx.HTTPError as exc:
+            raise ProviderDetailsRetrievalError(
+                "HTTP error occurred while retrieving provider details"
+            ) from exc
         except (KeyError, ValueError) as exc:
             raise ProviderDetailsRetrievalError(
                 f"Unexpected provider-firms response for firm {firm_code}"
             ) from exc
 
-    def get_office_address(self, office_id: str) -> Address | None:
+    def get_office_address(self, office_id: str) -> Address:
         try:
             url = f"{self.base_url}/api/v1/provider-offices/{office_id}"
             response = httpx.get(
@@ -45,8 +47,10 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
                 county=response.json()["office"]["county"],
             )
             return address
-        except httpx.HTTPError:
-            return None
+        except httpx.HTTPError as exc:
+            raise ProviderDetailsRetrievalError(
+                "HTTP error occurred while retrieving provider details"
+            ) from exc
         except (KeyError, ValueError) as exc:
             raise ProviderDetailsRetrievalError(
                 f"Unexpected provider-offices response for office {office_id}"

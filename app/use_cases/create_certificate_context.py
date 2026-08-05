@@ -3,7 +3,6 @@ from datetime import UTC, datetime
 from app.models.application.certificate import ApplicationCertificate
 from app.models.application.index import Application, ApplicationProceeding
 from app.ports.provider_details_port import ProviderDetailsPort
-from app.use_cases.exceptions import ProviderDetailsRetrievalError
 
 
 class CreateCertificateContextUseCase:
@@ -33,30 +32,25 @@ class CreateCertificateContextUseCase:
             else None
         )
 
-        client_address = (
-            application.client.correspondence_address or application.client.home_address
-        )
-
-        if application.client.correspondence_recipient:
-            client_address.address_line_1 = f"c/o {application.client.correspondence_recipient.recipient_name} {client_address.address_line_1}"
-
         firm_name = self.provider_details_port.get_firm_name(
             application.provider.firm_code
         )
-
-        if firm_name is None:
-            raise ProviderDetailsRetrievalError(
-                "Failed to retrieve firm name from provider details service."
-            )
 
         office_address = self.provider_details_port.get_office_address(
             application.provider.office_id
         )
 
-        if office_address is None:
-            raise ProviderDetailsRetrievalError(
-                "Failed to retrieve office address from provider details service."
-            )
+        if application.client.correspondence_address_source == "USE_PROVIDER_ADDRESS":
+            client_address = office_address
+        elif (
+            application.client.correspondence_address_source == "USE_SPECIFIED_ADDRESS"
+        ):
+            client_address = application.client.correspondence_address
+        else:
+            client_address = application.client.home_address
+
+        if application.client.correspondence_recipient:
+            client_address.address_line_1 = f"c/o {application.client.correspondence_recipient.recipient_name} {client_address.address_line_1}"
 
         certificate_type = proceeding.certificate_type
         category_of_law = proceeding.category_of_law

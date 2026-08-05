@@ -1,9 +1,12 @@
 from unittest.mock import MagicMock
 
+import pytest
+
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.ports.search_application_port import SearchApplicationPort
+from app.use_cases.exceptions import ProviderDetailsRetrievalError
 from app.use_cases.search_application import SearchApplicationUseCase
 from tests.unit.factories import create_base_application, create_base_provider
 
@@ -57,6 +60,22 @@ def test_execute_calls_provider_details_port_with_firm_code():
     use_case.execute("1")
 
     provider_port.get_firm_name.assert_called_once_with("0A123B")
+
+
+def test_execute_raises_provider_details_retrieval_error_when_get_firm_name_raises_exception():
+    application = create_base_application()
+    search_port = MagicMock(spec=SearchApplicationPort)
+    search_port.search_applications.return_value = [application]
+    provider_port = MagicMock(spec=ProviderDetailsPort)
+    provider_port.get_firm_name.side_effect = ProviderDetailsRetrievalError(
+        "HTTP error occurred while retrieving provider details"
+    )
+    use_case = SearchApplicationUseCase(
+        search_application_port=search_port,
+        provider_details_port=provider_port,
+    )
+    with pytest.raises(ProviderDetailsRetrievalError):
+        use_case.execute("1")
 
 
 def test_execute_returns_response_with_all_required_fields():

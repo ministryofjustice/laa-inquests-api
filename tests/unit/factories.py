@@ -87,7 +87,7 @@ def create_base_client(
         "national_insurance_number": "AB123456C",
         "has_applied_previously": True,
         "prev_application_reference": "LAA-2024-001",
-        "correspondence_address_source": AddressSource.USE_SPECIFIED_ADDRESS,
+        "correspondence_address_source": AddressSource.USE_CLIENT_HOME_ADDRESS,
         "home_address_id": 1,
         "home_address": home_address,
         "correspondence_address_id": 2,

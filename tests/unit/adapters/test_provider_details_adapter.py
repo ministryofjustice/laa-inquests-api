@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.adapters.provider_details_adapter import ProviderDetailsAdapter
+from app.use_cases.exceptions import ProviderDetailsRetrievalError
 
 
 @pytest.fixture
@@ -33,7 +34,9 @@ def test_get_firm_name_calls_correct_url_with_api_key_header(adapter):
     )
 
 
-def test_get_firm_name_returns_none_when_api_returns_http_error(adapter):
+def test_get_firm_name_raises_provider_details_retrieval_error_when_api_returns_http_error(
+    adapter,
+):
     import httpx as _httpx
 
     mock_response = MagicMock()
@@ -41,19 +44,31 @@ def test_get_firm_name_returns_none_when_api_returns_http_error(adapter):
         "error", request=MagicMock(), response=MagicMock()
     )
 
-    with patch("httpx.get", return_value=mock_response):
-        result = adapter.get_firm_name("0A123B")
+    with (
+        patch("httpx.get", return_value=mock_response),
+        pytest.raises(ProviderDetailsRetrievalError) as exc_info,
+    ):
+        adapter.get_firm_name("0A123B")
 
-    assert result is None
+    assert (
+        str(exc_info.value) == "HTTP error occurred while retrieving provider details"
+    )
 
 
-def test_get_firm_name_returns_none_when_request_raises_exception(adapter):
+def test_get_firm_name_raises_provider_details_retrieval_error_when_request_raises_exception(
+    adapter,
+):
     import httpx as _httpx
 
-    with patch("httpx.get", side_effect=_httpx.RequestError("connection failed")):
-        result = adapter.get_firm_name("0A123B")
+    with (
+        patch("httpx.get", side_effect=_httpx.RequestError("connection failed")),
+        pytest.raises(ProviderDetailsRetrievalError) as exc_info,
+    ):
+        adapter.get_firm_name("0A123B")
 
-    assert result is None
+    assert (
+        str(exc_info.value) == "HTTP error occurred while retrieving provider details"
+    )
 
 
 def test_get_office_address_returns_full_address_from_successful_api_response(adapter):
@@ -79,16 +94,25 @@ def test_get_office_address_returns_full_address_from_successful_api_response(ad
     assert result.postcode == "AB12 3CD"
 
 
-def test_get_office_address_returns_none_when_request_raises_exception(adapter):
+def test_get_office_address_raises_provider_details_retrieval_error_when_request_raises_exception(
+    adapter,
+):
     import httpx as _httpx
 
-    with patch("httpx.get", side_effect=_httpx.RequestError("connection failed")):
-        result = adapter.get_office_address("OFFICE123")
+    with (
+        patch("httpx.get", side_effect=_httpx.RequestError("connection failed")),
+        pytest.raises(ProviderDetailsRetrievalError) as exc_info,
+    ):
+        adapter.get_office_address("OFFICE123")
 
-    assert result is None
+    assert (
+        str(exc_info.value) == "HTTP error occurred while retrieving provider details"
+    )
 
 
-def test_get_office_address_returns_none_when_api_returns_http_error(adapter):
+def test_get_office_address_raises_provider_details_retrieval_error_when_api_returns_http_error(
+    adapter,
+):
     import httpx as _httpx
 
     mock_response = MagicMock()
@@ -96,7 +120,12 @@ def test_get_office_address_returns_none_when_api_returns_http_error(adapter):
         "error", request=MagicMock(), response=MagicMock()
     )
 
-    with patch("httpx.get", return_value=mock_response):
-        result = adapter.get_office_address("0U651L")
+    with (
+        patch("httpx.get", return_value=mock_response),
+        pytest.raises(ProviderDetailsRetrievalError) as exc_info,
+    ):
+        adapter.get_office_address("0U651L")
 
-    assert result is None
+    assert (
+        str(exc_info.value) == "HTTP error occurred while retrieving provider details"
+    )
