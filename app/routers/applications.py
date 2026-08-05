@@ -253,7 +253,13 @@ async def search_application(
     use_case: SearchApplicationUseCase = Depends(get_search_application_use_case),
 ) -> list[ApplicationSearchResponse]:
     """Search for an application by exact LAA reference number."""
-    return use_case.execute(laa_reference, firm_code)
+    try:
+        return use_case.execute(laa_reference, firm_code)
+    except ProviderDetailsRetrievalError:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve firm name from provider details service",
+        )
 
 
 @router.get("/public-bodies", response_model=list[PublicBodyResponse])
