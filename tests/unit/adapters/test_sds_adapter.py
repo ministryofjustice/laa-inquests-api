@@ -527,7 +527,8 @@ def test_delete_claim_evidence_calls_sds_delete_with_file_key():
     adapter = _make_adapter()
 
     mock_response = MagicMock()
-    mock_response.status_code = 204
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"claim-evidence.pdf": {"status_code": 204}}
 
     with (
         patch("httpx.post", return_value=_mock_token_response()),
@@ -536,8 +537,8 @@ def test_delete_claim_evidence_calls_sds_delete_with_file_key():
         adapter.delete_claim_evidence("claim-evidence.pdf")
 
     mock_delete.assert_called_once_with(
-        "https://sds.example.com/delete_file",
-        params={"file_key": "claim-evidence.pdf"},
+        "https://sds.example.com/delete_files",
+        params={"file_keys": ["claim-evidence.pdf"]},
         headers={"Authorization": "Bearer test-token"},
     )
 
@@ -567,6 +568,42 @@ def test_delete_claim_evidence_raises_error_for_non_success_response():
         pytest.raises(
             ClaimEvidenceDeleteError,
             match="SDS returned 500 while deleting claim evidence for file key claim-evidence.pdf",
+        ),
+    ):
+        adapter.delete_claim_evidence("claim-evidence.pdf")
+
+
+def test_delete_claim_evidence_raises_error_for_file_level_failure_response():
+    adapter = _make_adapter()
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"claim-evidence.pdf": {"status_code": 404}}
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.delete", return_value=mock_response),
+        pytest.raises(
+            ClaimEvidenceDeleteError,
+            match="SDS returned 404 while deleting claim evidence for file key claim-evidence.pdf",
+        ),
+    ):
+        adapter.delete_claim_evidence("claim-evidence.pdf")
+
+
+def test_delete_claim_evidence_raises_error_for_unexpected_response_body():
+    adapter = _make_adapter()
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"unexpected": "shape"}
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.delete", return_value=mock_response),
+        pytest.raises(
+            ClaimEvidenceDeleteError,
+            match="Unexpected SDS delete response while deleting claim evidence for file key claim-evidence.pdf",
         ),
     ):
         adapter.delete_claim_evidence("claim-evidence.pdf")
