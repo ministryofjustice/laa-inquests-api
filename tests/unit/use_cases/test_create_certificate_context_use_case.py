@@ -144,7 +144,7 @@ def test_populate_certificate_context_uses_client_home_address_when_corresponden
         is_client_correspondence_recipient=False,
     )
     application = create_base_application(client=client)
-    application_proceeding = application.proceedings[0]
+    application_proceeding = application.proceeding
 
     result = usecase.populate_certificate_context(application, application_proceeding)
 
