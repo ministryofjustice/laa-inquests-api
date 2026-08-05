@@ -1,7 +1,11 @@
 import asyncio
 from unittest.mock import MagicMock
 
+import pytest
+from fastapi import HTTPException
+
 from app.routers.applications import search_application
+from app.use_cases.exceptions import ProviderDetailsRetrievalError
 
 
 def test_search_application_calls_use_case_with_the_laa_reference():
@@ -22,3 +26,17 @@ def test_search_application_returns_empty_list_when_use_case_returns_empty():
     )
 
     assert result == []
+
+
+def test_search_application_raises_500_when_provider_details_lookup_fails():
+    use_case = MagicMock()
+    use_case.execute.side_effect = ProviderDetailsRetrievalError()
+
+    with pytest.raises(HTTPException) as exception:
+        asyncio.run(search_application("1", firm_code="0A123B", use_case=use_case))
+
+    assert exception.value.status_code == 500
+    assert (
+        exception.value.detail
+        == "Failed to retrieve firm name from provider details service"
+    )
