@@ -8,6 +8,10 @@ from app.ports.application_backlog_port import ApplicationBacklogPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.routers.applications import get_provider_details_port
 from app.routers.dependencies import verify_entra_caseworker_token
+from app.use_cases.exceptions import (
+    ProviderDetailsRetrievalError,
+    ReportGenerationError,
+)
 from app.use_cases.generate_application_backlog_report import (
     GenerateApplicationBacklogReportUseCase,
 )
@@ -46,7 +50,7 @@ def get_application_backlog_report(
     """Generate a CSV report of all open application cases pending assessment or decision."""
     try:
         csv_content = use_case.execute()
-    except Exception:
+    except (ReportGenerationError, ProviderDetailsRetrievalError):
         raise HTTPException(
             status_code=500,
             detail="Failed to generate application backlog report",

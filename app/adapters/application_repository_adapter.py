@@ -20,6 +20,7 @@ from app.models.application.index import (
 from app.models.application.index import (
     CoronersLetter as CoronersLetterModel,
 )
+from app.ports.application_backlog_port import ApplicationBacklogPort
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.list_applications_port import ListApplicationsPort
@@ -27,7 +28,6 @@ from app.ports.list_public_bodies_port import ListPublicBodiesPort
 from app.ports.search_application_port import SearchApplicationPort
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
-from app.ports.application_backlog_port import ApplicationBacklogPort
 
 
 class ApplicationRepositoryAdapter(

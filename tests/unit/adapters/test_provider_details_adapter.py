@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch
 
-import pytest
 import httpx as _httpx
+import pytest
 
 from app.adapters.provider_details_adapter import ProviderDetailsAdapter
 from app.use_cases.exceptions import ProviderDetailsRetrievalError
@@ -171,11 +171,15 @@ class TestGetFirmsByIds:
             "error", request=MagicMock(), response=MagicMock()
         )
 
-        with patch("httpx.post", return_value=mock_response):
-            with pytest.raises(ProviderDetailsRetrievalError):
-                adapter.get_firms_by_ids(["0A123B"])
+        with (
+            patch("httpx.post", return_value=mock_response),
+            pytest.raises(ProviderDetailsRetrievalError),
+        ):
+            adapter.get_firms_by_ids(["0A123B"])
 
     def test_raises_provider_details_retrieval_error_on_request_error(self, adapter):
-        with patch("httpx.post", side_effect=_httpx.RequestError("connection failed")):
-            with pytest.raises(ProviderDetailsRetrievalError):
-                adapter.get_firms_by_ids(["0A123B"])
+        with (
+            patch("httpx.post", side_effect=_httpx.RequestError("connection failed")),
+            pytest.raises(ProviderDetailsRetrievalError),
+        ):
+            adapter.get_firms_by_ids(["0A123B"])
