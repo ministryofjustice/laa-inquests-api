@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from app.domain.constants.report_csv_headers import APPLICATION_BACKLOG_REPORT_HEADERS
 from app.models.application.enums import MeritsDecision
 from app.use_cases.exceptions import (
     ProviderDetailsRetrievalError,
@@ -17,16 +18,6 @@ from tests.unit.factories import (
     create_base_application_proceeding,
     create_base_provider,
 )
-
-EXPECTED_HEADERS = [
-    "Application Reference",
-    "Current Status",
-    "Application Received Date",
-    "Firm Name",
-    "Firm Account Number",
-    "Proceeding Code",
-    "Matter Type",
-]
 
 
 def _build_use_case(
@@ -59,7 +50,7 @@ class TestGenerateApplicationBacklogReportUseCase:
         headers = next(reader)
         rows = list(reader)
 
-        assert headers == EXPECTED_HEADERS
+        assert headers == APPLICATION_BACKLOG_REPORT_HEADERS
         assert len(rows) == 0
 
     def test_returns_csv_row_for_pending_application(self):
@@ -82,8 +73,8 @@ class TestGenerateApplicationBacklogReportUseCase:
         row = rows[0]
 
         assert len(rows) == 1
-        assert row["Application Reference"] == str(application.laa_reference)
-        assert row["Current Status"] == MeritsDecision.PENDING
+        assert row["Application Reference Number"] == str(application.laa_reference)
+        assert row["Current Application Status"] == MeritsDecision.PENDING
         assert row["Firm Account Number"] == "123"
         assert row["Firm Name"] == "Test Firm"
         assert row["Proceeding Code"] == "IQOT"
@@ -137,7 +128,7 @@ class TestGenerateApplicationBacklogReportUseCase:
         rows = _parse_csv(result)
 
         assert len(rows) == 2
-        refs = [row["Application Reference"] for row in rows]
+        refs = [row["Application Reference Number"] for row in rows]
         assert "100" in refs
         assert "200" in refs
 

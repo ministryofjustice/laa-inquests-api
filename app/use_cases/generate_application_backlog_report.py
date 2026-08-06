@@ -2,6 +2,7 @@ import csv
 import io
 from datetime import datetime
 
+from app.domain.constants.report_csv_headers import APPLICATION_BACKLOG_REPORT_HEADERS
 from app.models.application.index import Application
 from app.ports.application_backlog_port import ApplicationBacklogPort
 from app.ports.provider_details_port import ProviderDetailsPort
@@ -23,17 +24,7 @@ class GenerateApplicationBacklogReportUseCase:
 
         output = io.StringIO()
         writer = csv.writer(output)
-
-        headers = [
-            "Application Reference",
-            "Current Status",
-            "Application Received Date",
-            "Firm Name",
-            "Firm Account Number",
-            "Proceeding Code",
-            "Matter Type",
-        ]
-        writer.writerow(headers)
+        writer.writerow(APPLICATION_BACKLOG_REPORT_HEADERS)
 
         for application in applications:
             firm_code = application.provider.firm_code

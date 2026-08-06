@@ -2,19 +2,9 @@ import csv
 import io
 from datetime import UTC, datetime
 
+from app.domain.constants.report_csv_headers import APPLICATION_BACKLOG_REPORT_HEADERS
 from app.models.application.enums import MeritsDecision
 from tests.e2e.factories import create_application_in_db
-
-
-EXPECTED_CSV_HEADERS = [
-    "Application Reference",
-    "Current Status",
-    "Application Received Date",
-    "Firm Name",
-    "Firm Account Number",
-    "Proceeding Code",
-    "Matter Type",
-]
 
 
 def _parse_csv(content: str) -> list[dict[str, str]]:
@@ -44,7 +34,7 @@ class TestGetApplicationBacklogReport:
 
         rows = _parse_csv(response.text)
         assert len(rows) >= 1
-        assert list(rows[0].keys()) == EXPECTED_CSV_HEADERS
+        assert list(rows[0].keys()) == APPLICATION_BACKLOG_REPORT_HEADERS
 
     def test_200_csv_row_contains_expected_data_for_pending_application(
         self, client, auth_token
@@ -57,8 +47,8 @@ class TestGetApplicationBacklogReport:
         rows = _parse_csv(response.text)
 
         row = rows[0]
-        assert row["Current Status"] == MeritsDecision.PENDING
-        for header in EXPECTED_CSV_HEADERS:
+        assert row["Current Application Status"] == MeritsDecision.PENDING
+        for header in APPLICATION_BACKLOG_REPORT_HEADERS:
             assert row[header] != "", f"Expected '{header}' to be non-empty"
 
     def test_200_csv_excludes_non_pending_applications(
@@ -82,7 +72,7 @@ class TestGetApplicationBacklogReport:
         )
 
         rows = _parse_csv(response.text)
-        status = [row["Current Status"] for row in rows]
+        status = [row["Current Application Status"] for row in rows]
 
         assert MeritsDecision.GRANTED not in status
         assert MeritsDecision.REFUSED not in status
@@ -112,7 +102,7 @@ class TestGetApplicationBacklogReport:
 
         dates = [row["Application Received Date"] for row in rows]
         assert dates == sorted(dates)
-        assert rows[0]["Application Reference"] == str(older_app.laa_reference)
+        assert rows[0]["Application Reference Number"] == str(older_app.laa_reference)
 
 
 class TestGetApplicationBacklogReportAuth:
