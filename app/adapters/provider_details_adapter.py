@@ -49,7 +49,7 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
             return address
         except httpx.HTTPError as exc:
             raise ProviderDetailsRetrievalError(
-                "HTTP error occurred while retrieving provider details"
+                f"HTTP error occurred while retrieving provider details: {exc}"
             ) from exc
         except (KeyError, ValueError) as exc:
             raise ProviderDetailsRetrievalError(
