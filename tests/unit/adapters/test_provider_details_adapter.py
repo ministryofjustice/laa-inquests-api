@@ -51,7 +51,8 @@ def test_get_firm_name_raises_provider_details_retrieval_error_when_api_returns_
         adapter.get_firm_name("0A123B")
 
     assert (
-        str(exc_info.value) == "HTTP error occurred while retrieving provider details"
+        str(exc_info.value)
+        == "HTTP error occurred while retrieving provider details: error"
     )
 
 
@@ -67,7 +68,8 @@ def test_get_firm_name_raises_provider_details_retrieval_error_when_request_rais
         adapter.get_firm_name("0A123B")
 
     assert (
-        str(exc_info.value) == "HTTP error occurred while retrieving provider details"
+        str(exc_info.value)
+        == "HTTP error occurred while retrieving provider details: error"
     )
 
 
@@ -106,7 +108,8 @@ def test_get_office_address_raises_provider_details_retrieval_error_when_request
         adapter.get_office_address("OFFICE123")
 
     assert (
-        str(exc_info.value) == "HTTP error occurred while retrieving provider details"
+        str(exc_info.value)
+        == "HTTP error occurred while retrieving provider details: error"
     )
 
 
@@ -127,5 +130,6 @@ def test_get_office_address_raises_provider_details_retrieval_error_when_api_ret
         adapter.get_office_address("0U651L")
 
     assert (
-        str(exc_info.value) == "HTTP error occurred while retrieving provider details"
+        str(exc_info.value)
+        == "HTTP error occurred while retrieving provider details: error"
     )
