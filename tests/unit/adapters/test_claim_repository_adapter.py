@@ -184,6 +184,27 @@ def test_link_evidence_to_claim_ignores_unknown_evidence_ids(session):
     adapter.link_evidence_to_claim(claim.claim_id, [uuid.uuid4()])  # should not raise
 
 
+def test_delete_claim_evidence_by_id_deletes_existing_evidence(session):
+    adapter = ClaimRepositoryAdapter(session)
+    evidence = ClaimEvidence(sds_file_name="stored.pdf", file_name="original.pdf")
+    session.add(evidence)
+    session.commit()
+    session.refresh(evidence)
+
+    deleted = adapter.delete_claim_evidence_by_id(evidence.claim_evidence_id)
+
+    assert deleted is True
+    assert session.get(ClaimEvidence, evidence.claim_evidence_id) is None
+
+
+def test_delete_claim_evidence_by_id_returns_false_for_unknown_id(session):
+    adapter = ClaimRepositoryAdapter(session)
+
+    deleted = adapter.delete_claim_evidence_by_id(uuid.uuid4())
+
+    assert deleted is False
+
+
 def test_update_claim_status_sets_status_on_claim(session):
     laa_reference = session.exec(select(Application)).first().laa_reference
     adapter = ClaimRepositoryAdapter(session)

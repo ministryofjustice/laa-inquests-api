@@ -12,6 +12,7 @@ from app.models.application.index import (
 )
 from app.ports.sds_port import SdsPort
 from app.use_cases.exceptions import (
+    ClaimEvidenceDeleteError,
     ClaimEvidenceUploadError,
     CoronersLetterUploadError,
     InvalidClaimEvidenceDocumentIdError,
@@ -237,6 +238,28 @@ class SdsAdapter(SdsPort):
                 f"Failed to stream claim evidence: \n {exc}"
             )
 
+    def delete_claim_evidence(self, file_name: str) -> None:
+        if not file_name or not file_name.strip():
+            raise InvalidClaimEvidenceDocumentIdError(
+                "file_name must be a non-empty string"
+            )
+        token = self._get_token()
+        response = httpx.delete(
+            f"{self.base_url}/delete_files",
+            params={"file_keys": [file_name]},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        if response.status_code != 200:
+            raise ClaimEvidenceDeleteError(
+                f"SDS returned {response.status_code} while deleting claim evidence for file key {file_name}"
+            )
+
+        delete_status_code = _extract_delete_status_code(response.json(), file_name)
+        if delete_status_code != 204:
+            raise ClaimEvidenceDeleteError(
+                f"SDS returned {delete_status_code} while deleting claim evidence for file key {file_name}"
+            )
+
 
 def _raise_sds_retrieval_error(message_str):
     logger.error(message_str)
@@ -246,3 +269,33 @@ def _raise_sds_retrieval_error(message_str):
 def _raise_sds_claim_evidence_retrieval_error(message_str):
     logger.error(message_str)
     raise SDSClaimEvidenceRetrievalError(message_str)
+
+
+def _extract_delete_status_code(payload, file_name: str) -> int:
+    if isinstance(payload, dict):
+        direct_match = payload.get(file_name)
+        if isinstance(direct_match, int):
+            return direct_match
+        if isinstance(direct_match, dict):
+            status_code = direct_match.get("status_code")
+            if isinstance(status_code, int):
+                return status_code
+
+        payload_status_code = payload.get("status_code")
+        if isinstance(payload_status_code, int):
+            return payload_status_code
+
+    if isinstance(payload, list):
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+            item_file_name = (
+                item.get("file_key") or item.get("filename") or item.get("key")
+            )
+            status_code = item.get("status_code")
+            if item_file_name == file_name and isinstance(status_code, int):
+                return status_code
+
+    raise ClaimEvidenceDeleteError(
+        f"Unexpected SDS delete response while deleting claim evidence for file key {file_name}"
+    )
