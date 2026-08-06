@@ -69,7 +69,7 @@ def test_get_firm_name_raises_provider_details_retrieval_error_when_request_rais
 
     assert (
         str(exc_info.value)
-        == "HTTP error occurred while retrieving provider details: error"
+        == "HTTP error occurred while retrieving provider details: connection failed"
     )
 
 
@@ -109,7 +109,7 @@ def test_get_office_address_raises_provider_details_retrieval_error_when_request
 
     assert (
         str(exc_info.value)
-        == "HTTP error occurred while retrieving provider details: error"
+        == "HTTP error occurred while retrieving provider details: connection failed"
     )
 
 
