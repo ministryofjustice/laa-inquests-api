@@ -1,5 +1,7 @@
 """Shared factories for E2E tests that need DB-persisted records."""
 
+from datetime import UTC, datetime
+
 from sqlmodel import Session
 
 from app.models.application.enums import MeritsDecision
@@ -11,6 +13,8 @@ from app.models.application.index import (
     ProceedingId,
     Provider,
 )
+from app.models.claim.enums import ClaimStatus, ClaimType
+from app.models.claim.index import Claim
 
 
 def create_provider_in_db(session: Session, **overrides) -> Provider:
@@ -102,3 +106,30 @@ def create_application_in_db(
     session.commit()
     session.refresh(application)
     return application
+
+
+def create_claim_in_db(
+    session: Session,
+    *,
+    laa_reference: int,
+    status: ClaimStatus = ClaimStatus.SUBMITTED,
+    submission_date: datetime | None = None,
+    total_profit_cost_vat_zero: str = "0.00",
+    total_profit_cost_net: str = "100.00",
+    total_profit_cost_gross: str = "120.00",
+    claim_type: ClaimType = ClaimType.FINAL_BILL,
+) -> Claim:
+    """Persist a claim with optional field overrides."""
+    claim = Claim(
+        laa_reference=laa_reference,
+        claim_type_id=claim_type,
+        status_id=status,
+        submission_date=submission_date or datetime.now(UTC),
+        total_profit_cost_vat_zero=total_profit_cost_vat_zero,
+        total_profit_cost_net=total_profit_cost_net,
+        total_profit_cost_gross=total_profit_cost_gross,
+    )
+    session.add(claim)
+    session.commit()
+    session.refresh(claim)
+    return claim
