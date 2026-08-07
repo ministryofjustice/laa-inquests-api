@@ -5,6 +5,8 @@ from sqlmodel import select
 
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
+from app.models.history.enums import ActorType, EventReference
+from app.models.history.index import HistoryEvent
 
 pytestmark = pytest.mark.usefixtures("mock_gov_notify")
 
@@ -159,6 +161,34 @@ def test_201_create_application_stores_authenticated_users_firm_code(
         select(Application).where(Application.laa_reference == laa_reference)
     ).one()
     assert application.provider.firm_code == "0A123B"
+
+
+def test_201_create_application_creates_history_event(client, auth_token, session):
+    response = client.post(
+        "/applications",
+        json=_make_request_body(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    laa_reference = response.json()["laaReference"]
+
+    history_event = session.exec(
+        select(HistoryEvent).where(
+            (HistoryEvent.laa_reference == laa_reference)
+            & (HistoryEvent.event_reference == EventReference.APPLICATION_SUBMITTED)
+        )
+    ).one()
+
+    assert history_event.event_reference == EventReference.APPLICATION_SUBMITTED
+    assert history_event.actor == "provider@example.com"
+    assert history_event.actor_type == ActorType.PROVIDER
+    assert history_event.event_description == "Application received"
+    assert history_event.event_data is None
+    assert history_event.laa_reference == laa_reference
 
 
 def test_201_create_application_can_omit_correspondence_address(client, auth_token):

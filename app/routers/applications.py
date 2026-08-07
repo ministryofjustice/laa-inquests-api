@@ -9,6 +9,7 @@ from sqlmodel import Session
 
 from app.adapters.application_repository_adapter import ApplicationRepositoryAdapter
 from app.adapters.gov_notify import GovNotifyAdapter
+from app.adapters.history_event_repository_adapter import HistoryEventRepositoryAdapter
 from app.adapters.pdf_generator_adapter import PdfGeneratorAdapter
 from app.adapters.provider_details_adapter import ProviderDetailsAdapter
 from app.config import Config
@@ -43,6 +44,7 @@ from app.ports.claim.update_claim_status_port import (
     UpdateClaimStatusPort,
 )
 from app.ports.create_application_port import CreateApplicationPort
+from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.list_applications_port import ListApplicationsPort
@@ -116,6 +118,12 @@ def get_application_db_adapter(
     return ApplicationRepositoryAdapter(session=session)
 
 
+def get_history_event_adapter(
+    session: Session = Depends(get_session),
+) -> HistoryEventRepositoryAdapter:
+    return HistoryEventRepositoryAdapter(session=session)
+
+
 def get_get_application_use_case(
     get_application_port: GetApplicationPort = Depends(get_application_db_adapter),
     provider_details_port: ProviderDetailsPort = Depends(get_provider_details_port),
@@ -130,10 +138,14 @@ def get_create_application_use_case(
     create_application_port: CreateApplicationPort = Depends(
         get_application_db_adapter
     ),
+    create_history_event_port: CreateHistoryEventPort = Depends(
+        get_history_event_adapter
+    ),
     gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
 ) -> CreateApplicationUseCase:
     return CreateApplicationUseCase(
         create_application_port=create_application_port,
+        create_history_event_port=create_history_event_port,
         gov_notify_port=gov_notify_port,
     )
 
