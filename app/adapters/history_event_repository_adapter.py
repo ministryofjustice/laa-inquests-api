@@ -1,4 +1,4 @@
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.models.history.enums import ActorType, EventReference
 from app.models.history.index import HistoryEvent
@@ -73,3 +73,19 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
 
     def rollback(self) -> None:
         self.session.rollback()
+
+    def get_application_history(self, laa_reference: str) -> list[HistoryEvent]:
+        """
+        Retrieve the history events of an application.
+
+        Args:
+            laa_reference: The LAA reference of the application
+
+        Returns:
+            List of history events for the application
+        """
+        return self.session.exec(
+            select(HistoryEvent)
+            .where(HistoryEvent.laa_reference == int(laa_reference))
+            .order_by(HistoryEvent.timestamp.desc())
+        ).all()
