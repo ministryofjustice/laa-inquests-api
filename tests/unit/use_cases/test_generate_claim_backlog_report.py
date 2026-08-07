@@ -108,9 +108,9 @@ class TestGenerateClaimBacklogReportUseCase:
         assert row["Total 0% VAT claim value"] == "0.00"
         assert row["Net total claim value"] == "100.00"
         assert row["Gross total claim value"] == "120.00"
-        assert row["Claim type (POA or final bill)"] == "final bill"
+        assert row["Claim type (POA or final bill)"] == str(ClaimType.FINAL_BILL)
 
-    def test_formats_payment_on_account_claim_type_as_poa(self):
+    def test_uses_raw_payment_on_account_claim_type_value(self):
         claim = _build_claim(
             claim_id=11,
             laa_reference=12345,
@@ -121,7 +121,9 @@ class TestGenerateClaimBacklogReportUseCase:
         result = use_case.execute()
         rows = _parse_csv(result)
 
-        assert rows[0]["Claim type (POA or final bill)"] == "POA"
+        assert rows[0]["Claim type (POA or final bill)"] == str(
+            ClaimType.PAYMENT_ON_ACCOUNT
+        )
 
     def test_raises_error_when_application_not_found_for_claim(self):
         claim = _build_claim(claim_id=12, laa_reference=99999)

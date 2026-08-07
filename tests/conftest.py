@@ -162,6 +162,10 @@ def client_fixture(session: Session):
         mock_port.get_firms_by_ids.side_effect = lambda firm_ids: [
             {"firmNumber": fid, "firmName": f"Firm {fid}"} for fid in firm_ids
         ]
+        mock_port.get_offices_by_codes.side_effect = lambda office_codes: {
+            code: {"firmOfficeCode": code, "officeName": f"Office {code}"}
+            for code in office_codes
+        }
         mock_port.get_office_address.return_value = Address(
             address_line_1="Test Office Street",
             town_or_city="Test City",
@@ -226,6 +230,10 @@ def entra_auth_client_fixture(session: Session):
         mock_port.get_firms_by_ids.side_effect = lambda firm_ids: [
             {"firmNumber": fid, "firmName": f"Firm {fid}"} for fid in firm_ids
         ]
+        mock_port.get_offices_by_codes.side_effect = lambda office_codes: {
+            code: {"firmOfficeCode": code, "officeName": f"Office {code}"}
+            for code in office_codes
+        }
         mock_port.get_office_address.return_value = Address(
             address_line_1="Test Office Street",
             town_or_city="Test City",

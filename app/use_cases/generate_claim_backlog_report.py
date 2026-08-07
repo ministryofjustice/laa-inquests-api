@@ -23,8 +23,9 @@ class GenerateClaimBacklogReportUseCase:
     def execute(self) -> str:
         claims = self.claim_backlog_port.get_open_claims()
         office_code_lookup = self._build_office_code_lookup(claims)
+        unique_office_codes = sorted(set(office_code_lookup.values()))
         office_details_lookup = self.provider_details_port.get_offices_by_codes(
-            office_code_lookup.values()
+            unique_office_codes
         )
 
         output = io.StringIO()
