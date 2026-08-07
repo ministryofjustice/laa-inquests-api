@@ -73,7 +73,9 @@ class TestGenerateApplicationBacklogReportUseCase:
         row = rows[0]
 
         assert len(rows) == 1
-        assert row["Application Reference Number"] == str(application.laa_reference)
+        assert row["Application / Case Reference Number"] == str(
+            application.laa_reference
+        )
         assert row["Current Application Status"] == MeritsDecision.PENDING
         assert row["Firm Account Number"] == "123"
         assert row["Firm Name"] == "Test Firm"
@@ -128,7 +130,7 @@ class TestGenerateApplicationBacklogReportUseCase:
         rows = _parse_csv(result)
 
         assert len(rows) == 2
-        refs = [row["Application Reference Number"] for row in rows]
+        refs = [row["Application / Case Reference Number"] for row in rows]
         assert "100" in refs
         assert "200" in refs
 
