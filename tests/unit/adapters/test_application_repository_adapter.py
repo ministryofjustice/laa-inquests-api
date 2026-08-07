@@ -253,6 +253,18 @@ class TestGetPendingApplications:
 
         assert len(result) == 0
 
+    def test_excludes_refused_applications(self, session):
+        app = session.exec(select(Application)).first()
+        app.proceeding.merits_decision = MeritsDecision.REFUSED
+        session.add(app.proceeding)
+        session.flush()
+
+        adapter = ApplicationRepositoryAdapter(session)
+
+        result = adapter.get_pending_applications()
+
+        assert len(result) == 0
+
     def test_ordered_by_created_at_ascending(self, session):
         from tests.e2e.factories import create_application_in_db
 
