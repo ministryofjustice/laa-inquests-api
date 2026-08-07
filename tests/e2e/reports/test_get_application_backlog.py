@@ -102,7 +102,9 @@ class TestGetApplicationBacklogReport:
 
         dates = [row["Application Received Date"] for row in rows]
         assert dates == sorted(dates)
-        assert rows[0]["Application Reference Number"] == str(older_app.laa_reference)
+        assert rows[0]["Application / Case Reference Number"] == str(
+            older_app.laa_reference
+        )
 
 
 class TestGetApplicationBacklogReportAuth:
