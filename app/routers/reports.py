@@ -50,10 +50,10 @@ def get_application_backlog_report(
     """Generate a CSV report of all open application cases pending assessment or decision."""
     try:
         csv_content = use_case.execute()
-    except (ReportGenerationError, ProviderDetailsRetrievalError):
+    except (ReportGenerationError, ProviderDetailsRetrievalError) as exc:
         raise HTTPException(
             status_code=500,
-            detail="Failed to generate application backlog report",
+            detail=f"Failed to generate application backlog report: {exc}",
         )
 
     return StreamingResponse(
