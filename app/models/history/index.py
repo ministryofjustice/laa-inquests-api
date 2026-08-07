@@ -2,14 +2,14 @@ from datetime import UTC, datetime
 
 from sqlmodel import Field, SQLModel
 
-from app.models.history.enums import ActorType
+from app.models.history.enums import ActorType, EventReference
 
 
 class HistoryEvent(SQLModel, table=True):
     __tablename__ = "history_event"
 
     id: int | None = Field(default=None, primary_key=True)
-    event_reference: str = Field(nullable=False)
+    event_reference: EventReference = Field(nullable=False)
     timestamp: datetime = Field(
         nullable=False, default_factory=lambda: datetime.now(UTC)
     )

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from app.models.history.enums import ActorType
+from app.models.history.enums import ActorType, EventReference
 from app.models.history.index import HistoryEvent
 
 
@@ -8,7 +8,7 @@ class CreateHistoryEventPort(ABC):
     @abstractmethod
     def create_history_event(
         self,
-        event_reference: str,
+        event_reference: EventReference,
         actor: str,
         actor_type: ActorType,
         event_description: str,

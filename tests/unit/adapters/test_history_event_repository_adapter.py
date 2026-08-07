@@ -4,7 +4,7 @@ from sqlmodel import select
 
 from app.adapters.history_event_repository_adapter import HistoryEventRepositoryAdapter
 from app.models.application.index import Application
-from app.models.history.enums import ActorType
+from app.models.history.enums import ActorType, EventReference
 from app.models.history.index import HistoryEvent
 
 
@@ -13,7 +13,7 @@ def test_create_history_event_persists_event_with_expected_values(session):
     adapter = HistoryEventRepositoryAdapter(session)
 
     created = adapter.create_history_event(
-        event_reference="EVT-TST-APP-001",
+        event_reference=EventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="Application submitted",
@@ -25,7 +25,7 @@ def test_create_history_event_persists_event_with_expected_values(session):
 
     assert created.id is not None
     assert stored is not None
-    assert stored.event_reference == "EVT-TST-APP-001"
+    assert stored.event_reference == EventReference.APPLICATION_SUBMITTED
     assert stored.actor == "test_user@example.com"
     assert stored.event_description == "Application submitted"
     assert stored.laa_reference == laa_reference
@@ -38,7 +38,7 @@ def test_create_history_event_sets_timestamp_automatically(session):
 
     before_creation = datetime.now(UTC)
     created = adapter.create_history_event(
-        event_reference="EVT-TST-APP-002",
+        event_reference=EventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="Test event",
@@ -61,7 +61,7 @@ def test_create_history_event_handles_none_event_data(session):
     adapter = HistoryEventRepositoryAdapter(session)
 
     created = adapter.create_history_event(
-        event_reference="EVT-TST-APP-003",
+        event_reference=EventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="Event without data",
@@ -80,7 +80,7 @@ def test_commits_transaction(session):
     adapter = HistoryEventRepositoryAdapter(session)
 
     created = adapter.create_history_event(
-        event_reference="EVT-TST-APP-004",
+        event_reference=EventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="Event to commit",
@@ -91,7 +91,7 @@ def test_commits_transaction(session):
     # Verify event persists after commit
     stored = session.get(HistoryEvent, created.id)
     assert stored is not None
-    assert stored.event_reference == "EVT-TST-APP-004"
+    assert stored.event_reference == EventReference.APPLICATION_SUBMITTED
 
 
 def test_rollback_discards_uncommitted_event(session):
@@ -99,7 +99,7 @@ def test_rollback_discards_uncommitted_event(session):
     adapter = HistoryEventRepositoryAdapter(session)
 
     created = adapter.create_history_event(
-        event_reference="EVT-TST-APP-001",
+        event_reference=EventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="Event to rollback",
