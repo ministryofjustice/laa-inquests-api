@@ -120,6 +120,21 @@ class ClaimResponse(BaseModel):
     rejection_reasons: list[ReasonCode] | None = None
 
 
+class ClaimSummaryResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        from_attributes=True,
+        populate_by_name=True,
+    )
+    claim_id: int
+    claim_type_id: ClaimType
+    submission_date: datetime
+    total_profit_cost_net: Decimal | None = None
+    total_profit_cost_gross: Decimal | None = None
+    total_profit_cost_vat_zero: Decimal | None = None
+    poa_type_id: POAType | None = None
+
+
 class UploadClaimEvidenceResponse(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,

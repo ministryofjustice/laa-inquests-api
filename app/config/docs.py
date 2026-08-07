@@ -10,6 +10,7 @@ Authorised caseworkers can:
 * Read all applications by sending a get request to **/applications/**.
 * Read a given application by sending a get request to **/applications/{laa_reference}**.
 * Read the evidence associated with an application by sending a get request to **/applications/{laa_reference}coroners-letter**.
+* Read the claims associated with an application by sending a get request to **/applications/{laa_reference}/claims**. Filter by assessment status with the **assessed** query parameter (true returns claims that are not submitted, false returns submitted claims).
 * Update the merits decision for an application to refused by sending a patch request to **/applications/{laa_reference}/refuse-decision**.
 * Update the merits decision for an application to granted by sending a patch request to **/applications/{laa_reference}/grant-decision**.
 

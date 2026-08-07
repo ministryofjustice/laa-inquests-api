@@ -26,8 +26,10 @@ from app.models.application.index import (
     UploadCoronersLetterResponse,
 )
 from app.models.claim.index import (
+    Claim,
     ClaimCreate,
     ClaimResponse,
+    ClaimSummaryResponse,
 )
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
@@ -71,6 +73,7 @@ from app.use_cases.exceptions import (
 )
 from app.use_cases.get_application import GetApplicationUseCase
 from app.use_cases.grant_decision import GrantDecisionUseCase
+from app.use_cases.list_application_claims import ListApplicationClaimsUseCase
 from app.use_cases.list_applications import ListApplicationsUseCase
 from app.use_cases.list_public_bodies import ListPublicBodiesUseCase
 from app.use_cases.refuse_decision import RefuseDecisionUseCase
@@ -140,6 +143,20 @@ def get_list_public_bodies_use_case(
     list_public_bodies_port: ListPublicBodiesPort = Depends(get_application_db_adapter),
 ) -> ListPublicBodiesUseCase:
     return ListPublicBodiesUseCase(list_public_bodies_port=list_public_bodies_port)
+
+
+def get_list_application_claims_use_case(
+    get_claims_for_application_port: GetClaimsForApplicationPort = Depends(
+        get_claim_db_adapter
+    ),
+    application_lookup_port: ApplicationLookupPort = Depends(
+        get_application_db_adapter
+    ),
+) -> ListApplicationClaimsUseCase:
+    return ListApplicationClaimsUseCase(
+        get_claims_for_application_port=get_claims_for_application_port,
+        application_lookup_port=application_lookup_port,
+    )
 
 
 def get_create_claim_use_case(
@@ -315,6 +332,25 @@ def retrieve_coroners_letter(
         media_type=mime_type[0],
         headers={"Content-Disposition": f'inline; filename="{result.file_name}"'},
     )
+
+
+@router.get(
+    "/{laa_reference}/claims",
+    response_model=list[ClaimSummaryResponse],
+)
+def list_application_claims(
+    laa_reference: str,
+    assessed: bool,
+    use_case: ListApplicationClaimsUseCase = Depends(
+        get_list_application_claims_use_case
+    ),
+    _: None = Depends(verify_entra_caseworker_token),
+) -> Sequence[Claim]:
+    """List claims for an application, filtered by assessed status."""
+    try:
+        return use_case.execute(laa_reference, assessed)
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
 
 
 @router.get("/{laa_reference}", response_model=ApplicationResponse)
