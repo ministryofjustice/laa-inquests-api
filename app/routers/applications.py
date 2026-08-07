@@ -149,9 +149,13 @@ def get_list_application_claims_use_case(
     get_claims_for_application_port: GetClaimsForApplicationPort = Depends(
         get_claim_db_adapter
     ),
+    application_lookup_port: ApplicationLookupPort = Depends(
+        get_application_db_adapter
+    ),
 ) -> ListApplicationClaimsUseCase:
     return ListApplicationClaimsUseCase(
         get_claims_for_application_port=get_claims_for_application_port,
+        application_lookup_port=application_lookup_port,
     )
 
 
@@ -343,7 +347,10 @@ def list_application_claims(
     _: None = Depends(verify_entra_caseworker_token),
 ) -> Sequence[Claim]:
     """List claims for an application, filtered by assessed status."""
-    return use_case.execute(laa_reference, assessed)
+    try:
+        return use_case.execute(laa_reference, assessed)
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
 
 
 @router.get("/{laa_reference}", response_model=ApplicationResponse)

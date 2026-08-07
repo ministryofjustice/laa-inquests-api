@@ -95,6 +95,16 @@ def test_422_when_assessed_query_param_is_missing(session, client, auth_token):
     assert response.status_code == 422
 
 
+def test_404_when_application_does_not_exist(client, auth_token):
+    response = client.get(
+        "/applications/999999/claims?assessed=true",
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Application not found"
+
+
 def test_401_returns_unauthorized_when_no_auth_header(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
 
