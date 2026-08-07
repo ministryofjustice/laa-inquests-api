@@ -34,7 +34,7 @@ def _parse_csv_fieldnames(content: str) -> list[str]:
 class TestGetClaimBacklogReport:
     """E2E tests for GET /reports/claims/backlog."""
 
-    def test_200_returns_csv_with_submitted_claims(self, session, client, auth_token):
+    def test_200_returns_csv_with_open_claims(self, session, client, auth_token):
         application = session.exec(select(Application)).first()
         create_claim_in_db(
             session,
@@ -95,7 +95,7 @@ class TestGetClaimBacklogReport:
             for header in CLAIMS_BACKLOG_REPORT_HEADERS:
                 assert row[header] != "", f"Expected '{header}' to be non-empty"
 
-    def test_200_csv_excludes_non_submitted_claims(self, session, client, auth_token):
+    def test_200_csv_excludes_non_open_claims(self, session, client, auth_token):
         application = session.exec(select(Application)).first()
 
         create_claim_in_db(

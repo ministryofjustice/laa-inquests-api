@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from sqlmodel import select
@@ -111,6 +112,44 @@ def test_get_claims_by_laa_reference_returns_empty_list_when_no_claims(session):
     results = adapter.get_claims_by_laa_reference(str(laa_reference))
 
     assert results == []
+
+
+def test_get_open_claims_returns_only_open_claims(session):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    adapter = ClaimRepositoryAdapter(session)
+
+    open_claim = _create_claim(session, laa_reference)
+    rejected_claim = _create_claim(session, laa_reference)
+    rejected_claim.status_id = ClaimStatus.REJECTED
+    session.add(rejected_claim)
+    session.commit()
+
+    results = adapter.get_open_claims()
+
+    assert len(results) == 1
+    assert results[0].claim_id == open_claim.claim_id
+    assert all(claim.status_id == ClaimStatus.SUBMITTED for claim in results)
+
+
+def test_get_open_claims_orders_by_submission_date_ascending(session):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    adapter = ClaimRepositoryAdapter(session)
+
+    newer_claim = _create_claim(session, laa_reference)
+    older_claim = _create_claim(session, laa_reference)
+
+    newer_claim.submission_date = datetime(2026, 6, 1, tzinfo=UTC)
+    older_claim.submission_date = datetime(2026, 1, 1, tzinfo=UTC)
+
+    session.add(newer_claim)
+    session.add(older_claim)
+    session.commit()
+
+    results = adapter.get_open_claims()
+
+    assert len(results) == 2
+    assert results[0].claim_id == older_claim.claim_id
+    assert results[1].claim_id == newer_claim.claim_id
 
 
 def test_create_claim_decision_persists_decision_with_expected_values(session):

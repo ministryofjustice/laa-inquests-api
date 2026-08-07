@@ -21,6 +21,7 @@ from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.ports.claim.get_claim_decision_port import GetClaimDecisionPort
 from app.ports.claim.get_claim_evidence_port import GetClaimEvidencePort
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
+from app.ports.claim_backlog_port import ClaimBacklogPort
 from app.ports.claim.update_claim_status_port import (
     UpdateClaimStatusPort,
 )
@@ -29,6 +30,7 @@ from app.ports.claim.upload_claim_evidence_port import UploadClaimEvidencePort
 
 class ClaimRepositoryAdapter(
     CreateClaimPort,
+    ClaimBacklogPort,
     GetClaimsForApplicationPort,
     GetClaimByIdPort,
     GetClaimDecisionPort,
@@ -94,6 +96,13 @@ class ClaimRepositoryAdapter(
             .order_by(ClaimDecision.claim_decision_id.desc())
         )
         return self.session.exec(statement).first()
+    def get_open_claims(self) -> list[Claim]:
+        statement = (
+            select(Claim)
+            .where(Claim.status_id == ClaimStatus.SUBMITTED)
+            .order_by(Claim.submission_date.asc())
+        )
+        return list(self.session.exec(statement).all())
 
     def create_claim_decision(
         self,
