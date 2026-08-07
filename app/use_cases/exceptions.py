@@ -70,6 +70,10 @@ class ProviderDetailsRetrievalError(Exception):
     pass
 
 
+class ReportGenerationError(Exception):
+    pass
+
+
 class GrantDecisionError(Exception):
     pass
 

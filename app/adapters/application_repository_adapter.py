@@ -20,6 +20,7 @@ from app.models.application.index import (
 from app.models.application.index import (
     CoronersLetter as CoronersLetterModel,
 )
+from app.ports.application_backlog_port import ApplicationBacklogPort
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.list_applications_port import ListApplicationsPort
@@ -37,6 +38,7 @@ class ApplicationRepositoryAdapter(
     ListPublicBodiesPort,
     SearchApplicationPort,
     UploadCoronersLetterPort,
+    ApplicationBacklogPort,
 ):
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -198,3 +200,15 @@ class ApplicationRepositoryAdapter(
     ) -> None:
         self.session.add(proceeding)
         self.session.flush()
+
+    def get_pending_applications(self) -> list[Application]:
+        statement = (
+            select(Application)
+            .join(
+                ApplicationProceeding,
+                Application.laa_reference == ApplicationProceeding.laa_reference,
+            )
+            .where(ApplicationProceeding.merits_decision == "PENDING")
+            .order_by(Application.created_at.asc())
+        )
+        return list(self.session.exec(statement).unique().all())

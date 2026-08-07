@@ -9,3 +9,6 @@ class ProviderDetailsPort(ABC):
 
     @abstractmethod
     def get_office_address(self, office_id: str) -> Address: ...
+
+    @abstractmethod
+    def get_firms_by_ids(self, firm_ids: list[str]) -> list[dict]: ...
