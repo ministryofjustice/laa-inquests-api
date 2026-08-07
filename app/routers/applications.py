@@ -33,6 +33,7 @@ from app.models.claim.index import (
     ClaimResponse,
     ClaimSummaryResponse,
 )
+from app.models.history.index import HistoryEvent
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
@@ -79,6 +80,7 @@ from app.use_cases.exceptions import (
 )
 from app.use_cases.get_application import GetApplicationUseCase
 from app.use_cases.get_claim import GetClaimUseCase
+from app.use_cases.get_application_history import GetApplicationHistoryUseCase
 from app.use_cases.grant_decision import GrantDecisionUseCase
 from app.use_cases.list_application_claims import ListApplicationClaimsUseCase
 from app.use_cases.list_applications import ListApplicationsUseCase
@@ -148,6 +150,10 @@ def get_create_application_use_case(
         create_history_event_port=create_history_event_port,
         gov_notify_port=gov_notify_port,
     )
+
+
+def get_application_history_use_case() -> GetApplicationHistoryUseCase:
+    return GetApplicationHistoryUseCase()
 
 
 def get_list_applications_use_case(
@@ -441,6 +447,22 @@ def read_certificate(
             status_code=500,
             detail="Failed to retrieve firm name from provider details service",
         )
+
+
+@router.get(
+    "/{laa_reference}/history",
+    response_model=list[HistoryEvent],
+)
+def get_application_history(
+    laa_reference: str,
+    use_case: GetApplicationHistoryUseCase = Depends(get_application_history_use_case),
+    _: None = Depends(verify_entra_caseworker_token),
+) -> list[HistoryEvent]:
+    """Get the history of a given application."""
+    try:
+        return use_case.execute(laa_reference)
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
 
 
 @router.get("/")
