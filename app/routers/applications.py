@@ -46,6 +46,7 @@ from app.ports.claim.update_claim_status_port import (
 )
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
+from app.ports.get_application_history_port import GetApplicationHistoryPort
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.list_applications_port import ListApplicationsPort
@@ -152,8 +153,16 @@ def get_create_application_use_case(
     )
 
 
-def get_application_history_use_case() -> GetApplicationHistoryUseCase:
-    return GetApplicationHistoryUseCase()
+def get_application_history_use_case(
+    get_application_history_port: GetApplicationHistoryPort = Depends(
+        get_history_event_adapter
+    ),
+    get_application_port: GetApplicationPort = Depends(get_application_db_adapter),
+) -> GetApplicationHistoryUseCase:
+    return GetApplicationHistoryUseCase(
+        get_application_history_port=get_application_history_port,
+        get_application_port=get_application_port,
+    )
 
 
 def get_list_applications_use_case(
