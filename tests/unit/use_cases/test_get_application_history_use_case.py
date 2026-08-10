@@ -1,14 +1,15 @@
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
 
 from app.models.application.index import Application
-from app.models.history.index import HistoryEvent
+from app.models.history.enums import ActorType, EventReference
+from app.models.history.index import HistoryEvent, HistoryEventResponse
 from app.use_cases.exceptions import ApplicationNotFoundError
 from app.use_cases.get_application_history import GetApplicationHistoryUseCase
 
 
-# TODO: change for the history_events to be list[HistoryEventResponse], e.g. with provider email removed
 def _make_use_case(
     application: Application | None = None,
     history_events: list[HistoryEvent] | None = None,
@@ -41,12 +42,37 @@ def test_execute_raises_application_not_found_error_when_no_matching_application
 
 
 def test_execute_returns_history_events_from_port():
-    history_event_1 = MagicMock(spec=HistoryEvent)
-    history_event_2 = MagicMock(spec=HistoryEvent)
+    history_event_1 = HistoryEvent(
+        id=1,
+        event_reference=EventReference.APPLICATION_SUBMITTED,
+        timestamp=datetime.now(UTC),
+        actor="provider@example.com",
+        actor_type=ActorType.PROVIDER,
+        event_description="Application received",
+        event_data=None,
+        laa_reference=123456,
+    )
+    history_event_2 = HistoryEvent(
+        id=2,
+        event_reference=EventReference.APPLICATION_SUBMITTED,
+        timestamp=datetime.now(UTC),
+        actor="provider@example.com",
+        actor_type=ActorType.PROVIDER,
+        event_description="Test action",
+        event_data="Test data",
+        laa_reference=123456,
+    )
     use_case = _make_use_case(
         application=MagicMock(), history_events=[history_event_1, history_event_2]
     )
 
     result = use_case.execute("1")
 
-    assert result == [history_event_1, history_event_2]
+    assert len(result) == 2
+    assert all(isinstance(event, HistoryEventResponse) for event in result)
+    assert result[0].actor == "provider@example.com"
+    assert result[0].event_description == "Application received"
+    assert result[0].event_data is None
+    assert result[1].actor == "provider@example.com"
+    assert result[1].event_description == "Test action"
+    assert result[1].event_data == "Test data"

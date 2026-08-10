@@ -1,3 +1,4 @@
+from app.models.history.index import HistoryEventResponse
 from app.ports.get_application_history_port import GetApplicationHistoryPort
 from app.ports.get_application_port import GetApplicationPort
 from app.use_cases.exceptions import ApplicationNotFoundError
@@ -12,7 +13,7 @@ class GetApplicationHistoryUseCase:
         self.get_application_history_port = get_application_history_port
         self.get_application_port = get_application_port
 
-    def execute(self, laa_reference):
+    def execute(self, laa_reference) -> list[HistoryEventResponse]:
         application = self.get_application_port.get_application_by_laa_reference(
             laa_reference
         )
@@ -21,4 +22,7 @@ class GetApplicationHistoryUseCase:
                 f"No application found for laa_reference: {laa_reference}"
             )
 
-        return self.get_application_history_port.get_application_history(laa_reference)
+        history_events = self.get_application_history_port.get_application_history(
+            laa_reference
+        )
+        return [HistoryEventResponse.model_validate(event) for event in history_events]

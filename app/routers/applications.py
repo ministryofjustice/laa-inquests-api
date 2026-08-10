@@ -33,7 +33,7 @@ from app.models.claim.index import (
     ClaimResponse,
     ClaimSummaryResponse,
 )
-from app.models.history.index import HistoryEvent
+from app.models.history.index import HistoryEventResponse
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
@@ -460,13 +460,13 @@ def read_certificate(
 
 @router.get(
     "/{laa_reference}/history",
-    response_model=list[HistoryEvent],
+    response_model=list[HistoryEventResponse],
 )
 def get_application_history(
     laa_reference: str,
     use_case: GetApplicationHistoryUseCase = Depends(get_application_history_use_case),
     _: None = Depends(verify_entra_caseworker_token),
-) -> list[HistoryEvent]:
+) -> list[HistoryEventResponse]:
     """Get the history of a given application."""
     try:
         return use_case.execute(laa_reference)
