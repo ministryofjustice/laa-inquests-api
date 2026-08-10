@@ -72,3 +72,35 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
             raise ProviderDetailsRetrievalError(
                 f"Failed to retrieve firms from provider details API: #{exc}"
             ) from exc
+
+    def get_offices_by_codes(self, office_codes: list[str]) -> dict[str, dict]:
+        if not office_codes:
+            return {}
+        try:
+            url = f"{self.base_url}/api/v1/provider-offices"
+            response = httpx.post(
+                url,
+                json={"officeCodes": office_codes},
+                headers={"X-Authorization": self.api_key},
+            )
+            response.raise_for_status()
+
+            offices_lookup: dict[str, dict] = {}
+            payload = response.json()
+
+            for office_group in payload:
+                offices = office_group.get("offices") or []
+                for office in offices:
+                    office_code = office.get("firmOfficeCode")
+                    if office_code:
+                        offices_lookup[office_code] = office
+
+            return offices_lookup
+        except httpx.HTTPError as exc:
+            raise ProviderDetailsRetrievalError(
+                f"Failed to retrieve offices from provider details API: {exc}"
+            ) from exc
+        except (TypeError, AttributeError, ValueError) as exc:
+            raise ProviderDetailsRetrievalError(
+                "Unexpected provider-offices response for office code lookup"
+            ) from exc
