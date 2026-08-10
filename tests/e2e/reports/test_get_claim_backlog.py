@@ -12,13 +12,11 @@ from tests.e2e.factories import create_application_in_db, create_claim_in_db
 CLAIMS_BACKLOG_REPORT_HEADERS = [
     "Claims Reference Number",
     "Current Claims Status",
-    "Claim Submission Date",
-    "Office Name",
-    "Office Account Number (Firm Office Code)",
-    "Total 0% VAT claim value",
-    "Net total claim value",
-    "Gross total claim value",
-    "Claim type (POA or final bill)",
+    "Claim Received Date",
+    "Firm Name",
+    "Firm Account Number",
+    "Proceeding Code",
+    "Matter Type",
 ]
 
 
@@ -79,7 +77,7 @@ class TestGetClaimBacklogReport:
         )
 
         rows = _parse_csv_rows(response.text)
-        dates = [row["Claim Submission Date"] for row in rows]
+        dates = [row["Claim Received Date"] for row in rows]
 
         assert response.status_code == 200
         # Headers

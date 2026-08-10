@@ -2,6 +2,7 @@ import csv
 import io
 
 from app.domain.constants.report_csv_headers import CLAIMS_BACKLOG_REPORT_HEADERS
+from app.models.application.index import Application
 from app.models.claim.index import Claim
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim_backlog_port import ClaimBacklogPort
@@ -22,10 +23,9 @@ class GenerateClaimBacklogReportUseCase:
 
     def execute(self) -> str:
         claims = self.claim_backlog_port.get_open_claims()
-        office_code_lookup = self._build_office_code_lookup(claims)
-        unique_office_codes = sorted(set(office_code_lookup.values()))
-        office_details_lookup = self.provider_details_port.get_offices_by_codes(
-            unique_office_codes
+        application_lookup = self._build_application_lookup(claims)
+        firm_name_lookup = self._build_firm_name_lookup(
+            list(application_lookup.values())
         )
 
         output = io.StringIO()
@@ -33,50 +33,33 @@ class GenerateClaimBacklogReportUseCase:
         writer.writerow(CLAIMS_BACKLOG_REPORT_HEADERS)
 
         for claim in claims:
-            office_code = office_code_lookup.get(claim.claim_id)
-            office = office_details_lookup.get(office_code)
+            application = application_lookup[claim.claim_id]
+            firm_code = application.provider.firm_code
+            firm_name = firm_name_lookup.get(firm_code)
 
-            if office_code is None:
+            if firm_name is None:
                 raise ReportGenerationError(
-                    f"Office code not found for claim {claim.claim_id}"
-                )
-            if office is None:
-                raise ReportGenerationError(
-                    f"Office details not found for office code {office_code}"
+                    f"Firm name not found for firm code {firm_code}"
                 )
 
-            office_name = office.get("officeName")
-            if not office_name:
-                raise ReportGenerationError(
-                    f"Office name not found for office code {office_code}"
-                )
+            proceeding = application.proceeding
 
-            # TODO: Are these columns even right? Ticket is unclear
             writer.writerow(
                 [
                     str(claim.claim_id),
                     claim.status_id,
                     claim.submission_date.strftime("%Y-%m-%d %H:%M:%S"),
-                    office_name,
-                    office_code,
-                    str(claim.total_profit_cost_vat_zero)
-                    if claim.total_profit_cost_vat_zero is not None
-                    else "",
-                    str(claim.total_profit_cost_net)
-                    if claim.total_profit_cost_net is not None
-                    else "",
-                    str(claim.total_profit_cost_gross)
-                    if claim.total_profit_cost_gross is not None
-                    else "",
-                    str(claim.claim_type_id),
+                    firm_name,
+                    firm_code,
+                    proceeding.proceeding_id,
+                    proceeding.matter_type,
                 ]
             )
 
         return output.getvalue()
 
-    # TODO: Too complicated. Fix this later
-    def _build_office_code_lookup(self, claims: list[Claim]) -> dict[int, str]:
-        lookup: dict[int, str] = {}
+    def _build_application_lookup(self, claims: list[Claim]) -> dict[int, Application]:
+        lookup: dict[int, Application] = {}
 
         for claim in claims:
             application = self.application_lookup_port.get_application_by_laa_reference(
@@ -87,12 +70,13 @@ class GenerateClaimBacklogReportUseCase:
                     f"Application not found for claim {claim.claim_id}"
                 )
 
-            office_code = application.provider.office_id
-            if not office_code:
-                raise ReportGenerationError(
-                    f"Office code missing for claim {claim.claim_id}"
-                )
-
-            lookup[claim.claim_id] = office_code
+            lookup[claim.claim_id] = application
 
         return lookup
+
+    def _build_firm_name_lookup(
+        self, applications: list[Application]
+    ) -> dict[str, str]:
+        firm_codes = list({app.provider.firm_code for app in applications})
+        firms = self.provider_details_port.get_firms_by_ids(firm_codes)
+        return {firm["firmNumber"]: firm["firmName"] for firm in firms}
