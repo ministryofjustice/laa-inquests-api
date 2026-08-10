@@ -12,6 +12,3 @@ class ProviderDetailsPort(ABC):
 
     @abstractmethod
     def get_firms_by_ids(self, firm_ids: list[str]) -> list[dict]: ...
-
-    @abstractmethod
-    def get_offices_by_codes(self, office_codes: list[str]) -> dict[str, dict]: ...
