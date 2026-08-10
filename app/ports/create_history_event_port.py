@@ -14,6 +14,7 @@ class CreateHistoryEventPort(ABC):
         event_description: str,
         laa_reference: int,
         event_data: str | None = None,
+        related_link: str | None = None,
     ) -> HistoryEvent: ...
 
     @abstractmethod

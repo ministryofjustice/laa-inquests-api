@@ -29,6 +29,7 @@ class CreateApplicationUseCase:
                 event_description="Application received",
                 laa_reference=application.laa_reference,
                 event_data=None,
+                related_link=None,
             )
             self.gov_notify_port.send_application_submit_confirmation_email(
                 application,

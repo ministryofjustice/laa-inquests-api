@@ -51,7 +51,6 @@ def test_create_history_event_sets_timestamp_automatically(session):
     after_creation = datetime.now(UTC)
 
     assert created.timestamp is not None
-    # SQLite doesn't preserve timezone info, so we need to make it timezone-aware for comparison
     timestamp = (
         created.timestamp.replace(tzinfo=UTC)
         if created.timestamp.tzinfo is None
@@ -92,7 +91,6 @@ def test_commits_transaction(session):
     )
     adapter.commit()
 
-    # Verify event persists after commit
     stored = session.get(HistoryEvent, created.id)
     assert stored is not None
     assert stored.event_reference == HistoryEventReference.APPLICATION_SUBMITTED
@@ -112,7 +110,6 @@ def test_rollback_discards_uncommitted_event(session):
     event_id = created.id
     adapter.rollback()
 
-    # Verify event does not persist after rollback
     stored = session.get(HistoryEvent, event_id)
     assert stored is None
 
@@ -121,7 +118,6 @@ def test_get_application_history_returns_correct_events(session):
     laa_reference = session.exec(select(Application)).first().laa_reference
     adapter = HistoryEventRepositoryAdapter(session)
 
-    # Create multiple events for the same application
     event1 = adapter.create_history_event(
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
@@ -147,7 +143,6 @@ def test_get_application_history_does_not_return_events_for_other_applications(s
     application1 = session.exec(select(Application)).first()
     laa_reference1 = application1.laa_reference
 
-    # Seed an additional application only for this test, keeping global fixtures unchanged.
     application2 = Application(
         proceeding=ApplicationProceeding(
             proceeding_id=application1.proceeding.proceeding_id,
@@ -167,7 +162,6 @@ def test_get_application_history_does_not_return_events_for_other_applications(s
 
     adapter = HistoryEventRepositoryAdapter(session)
 
-    # Create an event for the first application
     event1 = adapter.create_history_event(
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
@@ -176,7 +170,6 @@ def test_get_application_history_does_not_return_events_for_other_applications(s
         laa_reference=laa_reference1,
     )
 
-    # Create an event for the second application
     event2 = adapter.create_history_event(
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
@@ -197,7 +190,6 @@ def test_get_application_history_returns_event_list_in_reverse_chronological_ord
     laa_reference = session.exec(select(Application)).first().laa_reference
     adapter = HistoryEventRepositoryAdapter(session)
 
-    # Create multiple events with different timestamps
     event1 = adapter.create_history_event(
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
