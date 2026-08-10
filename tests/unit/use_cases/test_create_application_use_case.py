@@ -77,7 +77,7 @@ def test_execute_creates_application_sends_confirmation_email_and_commits():
         actor="provider@example.com",
         actor_type=ActorType.PROVIDER,
         event_description="Application received",
-        laa_reference=str(application.laa_reference),
+        laa_reference=application.laa_reference,
         event_data=None,
     )
     gov_notify_port.send_application_submit_confirmation_email.assert_called_once_with(

@@ -16,18 +16,15 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
     Example usage:
         adapter = HistoryEventRepositoryAdapter(session)
         event = adapter.create_history_event(
-            event_reference="EVT-BUS-APP-001",
+            event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
             actor="user@example.com",
-            actor_type="Caseworker",
+            actor_type=ActorType.PROVIDER,
             event_description="Application created",
-            laa_reference="12345",
-            event_data="Optional context"
+            laa_reference=12345,
+            event_data="Optional context",
+            related_link="/application/12345"
         )
         adapter.commit()
-
-    Event reference format:
-        Follow the pattern: EVT-{CATEGORY}-{ENTITY}-{NUMBER}
-        Example: EVT-BUS-APP-001 (Business event, Application, sequence 001)
     """
 
     def __init__(self, session: Session) -> None:
@@ -39,8 +36,9 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
         actor: str,
         actor_type: ActorType,
         event_description: str,
-        laa_reference: str,
+        laa_reference: int,
         event_data: str | None = None,
+        related_link: str | None = None,
     ) -> HistoryEvent:
         """
         Create a new history event record.
@@ -49,8 +47,9 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
             event_reference: Event identifier (e.g., "EVT-BUS-APP-001")
             actor: User or system that triggered the event
             event_description: Human-readable description of the event
-            laa_reference: LAA reference number (as string, converted to int)
+            laa_reference: LAA reference number (as int)
             event_data: Optional plain text data associated with the event
+            related_link: Optional URL or reference related to the event
 
         Returns:
             The created HistoryEvent with auto-generated id and timestamp
@@ -60,8 +59,9 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
             actor=actor,
             actor_type=actor_type,
             event_description=event_description,
-            laa_reference=int(laa_reference),
+            laa_reference=laa_reference,
             event_data=event_data,
+            related_link=related_link,
         )
         self.session.add(new_event)
         self.session.flush()
@@ -74,7 +74,7 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
     def rollback(self) -> None:
         self.session.rollback()
 
-    def get_application_history(self, laa_reference: str) -> list[HistoryEvent]:
+    def get_application_history(self, laa_reference: int) -> list[HistoryEvent]:
         """
         Retrieve the history events of an application.
 
@@ -86,6 +86,6 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
         """
         return self.session.exec(
             select(HistoryEvent)
-            .where(HistoryEvent.laa_reference == int(laa_reference))
+            .where(HistoryEvent.laa_reference == laa_reference)
             .order_by(HistoryEvent.timestamp.desc())
         ).all()

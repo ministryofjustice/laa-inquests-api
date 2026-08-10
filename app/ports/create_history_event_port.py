@@ -12,7 +12,7 @@ class CreateHistoryEventPort(ABC):
         actor: str,
         actor_type: ActorType,
         event_description: str,
-        laa_reference: str,
+        laa_reference: int,
         event_data: str | None = None,
     ) -> HistoryEvent: ...
 

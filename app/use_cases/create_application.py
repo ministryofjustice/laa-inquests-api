@@ -27,7 +27,7 @@ class CreateApplicationUseCase:
                 actor=request.provider.email_address,
                 actor_type=ActorType.PROVIDER,
                 event_description="Application received",
-                laa_reference=str(application.laa_reference),
+                laa_reference=application.laa_reference,
                 event_data=None,
             )
             self.gov_notify_port.send_application_submit_confirmation_email(

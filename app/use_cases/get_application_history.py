@@ -14,7 +14,7 @@ class GetApplicationHistoryUseCase:
         self.get_application_history_port = get_application_history_port
         self.get_application_port = get_application_port
 
-    def execute(self, laa_reference) -> list[HistoryEventResponse]:
+    def execute(self, laa_reference: int) -> list[HistoryEventResponse]:
         application = self.get_application_port.get_application_by_laa_reference(
             laa_reference
         )

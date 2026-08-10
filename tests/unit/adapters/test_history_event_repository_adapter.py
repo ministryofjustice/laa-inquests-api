@@ -21,7 +21,7 @@ def test_create_history_event_persists_event_with_expected_values(session):
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="Application submitted",
-        laa_reference=str(laa_reference),
+        laa_reference=laa_reference,
         event_data="Additional context data",
     )
 
@@ -46,7 +46,7 @@ def test_create_history_event_sets_timestamp_automatically(session):
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="Test event",
-        laa_reference=str(laa_reference),
+        laa_reference=laa_reference,
     )
     after_creation = datetime.now(UTC)
 
@@ -69,7 +69,7 @@ def test_create_history_event_handles_none_event_data(session):
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="Event without data",
-        laa_reference=str(laa_reference),
+        laa_reference=laa_reference,
         event_data=None,
     )
 
@@ -88,7 +88,7 @@ def test_commits_transaction(session):
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="Event to commit",
-        laa_reference=str(laa_reference),
+        laa_reference=laa_reference,
     )
     adapter.commit()
 
@@ -107,7 +107,7 @@ def test_rollback_discards_uncommitted_event(session):
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="Event to rollback",
-        laa_reference=str(laa_reference),
+        laa_reference=laa_reference,
     )
     event_id = created.id
     adapter.rollback()
@@ -127,7 +127,7 @@ def test_get_application_history_returns_correct_events(session):
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="First event",
-        laa_reference=str(laa_reference),
+        laa_reference=laa_reference,
     )
 
     event2 = adapter.create_history_event(
@@ -135,10 +135,10 @@ def test_get_application_history_returns_correct_events(session):
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="Second event",
-        laa_reference=str(laa_reference),
+        laa_reference=laa_reference,
     )
 
-    history = adapter.get_application_history(str(laa_reference))
+    history = adapter.get_application_history(laa_reference)
     assert event1 in history
     assert event2 in history
 
@@ -173,7 +173,7 @@ def test_get_application_history_does_not_return_events_for_other_applications(s
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="Event for first application",
-        laa_reference=str(laa_reference1),
+        laa_reference=laa_reference1,
     )
 
     # Create an event for the second application
@@ -182,11 +182,11 @@ def test_get_application_history_does_not_return_events_for_other_applications(s
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="Event for second application",
-        laa_reference=str(laa_reference2),
+        laa_reference=laa_reference2,
     )
 
-    history1 = adapter.get_application_history(str(laa_reference1))
-    history2 = adapter.get_application_history(str(laa_reference2))
+    history1 = adapter.get_application_history(laa_reference1)
+    history2 = adapter.get_application_history(laa_reference2)
     assert history1 == [event1]
     assert history2 == [event2]
 
@@ -203,7 +203,7 @@ def test_get_application_history_returns_event_list_in_reverse_chronological_ord
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="First event",
-        laa_reference=str(laa_reference),
+        laa_reference=laa_reference,
     )
 
     event2 = adapter.create_history_event(
@@ -211,8 +211,8 @@ def test_get_application_history_returns_event_list_in_reverse_chronological_ord
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="Second event",
-        laa_reference=str(laa_reference),
+        laa_reference=laa_reference,
     )
 
-    history = adapter.get_application_history(str(laa_reference))
+    history = adapter.get_application_history(laa_reference)
     assert history == [event2, event1]

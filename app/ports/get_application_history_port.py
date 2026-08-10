@@ -5,7 +5,7 @@ from app.models.history.index import HistoryEvent
 
 class GetApplicationHistoryPort(ABC):
     @abstractmethod
-    def get_application_history(self, laa_reference) -> list[HistoryEvent]:
+    def get_application_history(self, laa_reference: int) -> list[HistoryEvent]:
         """Retrieve the history events of an application.
 
         Args:
