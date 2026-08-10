@@ -1,4 +1,5 @@
-from app.models.history.index import HistoryEventResponse
+from app.models.history.enums import ActorType
+from app.models.history.index import HistoryEvent, HistoryEventResponse
 from app.ports.get_application_history_port import GetApplicationHistoryPort
 from app.ports.get_application_port import GetApplicationPort
 from app.use_cases.exceptions import ApplicationNotFoundError
@@ -25,4 +26,11 @@ class GetApplicationHistoryUseCase:
         history_events = self.get_application_history_port.get_application_history(
             laa_reference
         )
-        return [HistoryEventResponse.model_validate(event) for event in history_events]
+
+        return [self._create_response(event) for event in history_events]
+
+    def _create_response(self, event: HistoryEvent) -> HistoryEventResponse:
+        response = HistoryEventResponse.model_validate(event)
+        if event.actor_type == ActorType.PROVIDER:
+            response.actor = "Provider"
+        return response

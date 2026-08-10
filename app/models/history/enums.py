@@ -9,3 +9,4 @@ class ActorType(StrEnum):
 
 class EventReference(StrEnum):
     APPLICATION_SUBMITTED = "EVT-BUS-APP-001"
+    APPLICAION_ASSESSMENT_COMPLETED = "EVT-BUS-APP-002"
