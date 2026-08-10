@@ -4,8 +4,8 @@ from decimal import Decimal
 from sqlmodel import select
 
 from app.models.application.index import Application
-from app.models.claim.enums import ClaimStatus, ClaimType, POAType
-from app.models.claim.index import Claim
+from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ClaimType, POAType
+from app.models.claim.index import Claim, ClaimDecision
 
 
 def _seed_claim(
@@ -28,6 +28,21 @@ def _seed_claim(
     session.commit()
     session.refresh(claim)
     return claim
+
+
+def _seed_decision(
+    session,
+    claim_id: int,
+    decision: ClaimDecisionStatus,
+) -> ClaimDecision:
+    claim_decision = ClaimDecision(
+        claim_id=claim_id,
+        decision=decision,
+    )
+    session.add(claim_decision)
+    session.commit()
+    session.refresh(claim_decision)
+    return claim_decision
 
 
 def test_200_returns_empty_list_when_application_has_no_claims(
@@ -67,7 +82,53 @@ def test_200_assessed_true_returns_only_non_submitted_claims(
         "totalProfitCostGross",
         "totalProfitCostVatZero",
         "poaTypeId",
+        "statusId",
+        "claimDecisionStatus",
     }
+
+
+def test_200_includes_claim_status_for_each_claim(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    _seed_claim(session, laa_reference, ClaimStatus.ACCEPTED)
+
+    response = client.get(
+        f"/applications/{laa_reference}/claims?assessed=true",
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()[0]["statusId"] == "ACCEPTED"
+
+
+def test_200_includes_claim_decision_status_when_a_decision_exists(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    claim = _seed_claim(session, laa_reference, ClaimStatus.REJECTED)
+    _seed_decision(session, claim.claim_id, ClaimDecisionStatus.REJECT)
+
+    response = client.get(
+        f"/applications/{laa_reference}/claims?assessed=true",
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()[0]["claimDecisionStatus"] == "REJECT"
+
+
+def test_200_claim_decision_status_is_null_when_no_decision_exists(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    _seed_claim(session, laa_reference, ClaimStatus.ACCEPTED)
+
+    response = client.get(
+        f"/applications/{laa_reference}/claims?assessed=true",
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()[0]["claimDecisionStatus"] is None
 
 
 def test_200_assessed_false_returns_only_submitted_claims(session, client, auth_token):
