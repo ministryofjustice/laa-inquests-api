@@ -59,7 +59,7 @@ def test_execute_returns_history_events_from_port():
         timestamp=datetime.now(UTC),
         actor="caseworker@justice.gov.uk",
         actor_type=ActorType.CASEWORKER,
-        event_description="Test action",
+        event_description="Application assessment completed",
         event_data="Test data",
         laa_reference=123456,
         related_link="/get-certificate/123456",
