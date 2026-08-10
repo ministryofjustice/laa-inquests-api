@@ -26,7 +26,6 @@ from app.models.application.index import (
     UploadCoronersLetterResponse,
 )
 from app.models.claim.index import (
-    Claim,
     ClaimByIdResponse,
     ClaimCreate,
     ClaimResponse,
@@ -154,12 +153,14 @@ def get_list_application_claims_use_case(
     get_claims_for_application_port: GetClaimsForApplicationPort = Depends(
         get_claim_db_adapter
     ),
+    get_claim_decision_port: GetClaimDecisionPort = Depends(get_claim_db_adapter),
     application_lookup_port: ApplicationLookupPort = Depends(
         get_application_db_adapter
     ),
 ) -> ListApplicationClaimsUseCase:
     return ListApplicationClaimsUseCase(
         get_claims_for_application_port=get_claims_for_application_port,
+        get_claim_decision_port=get_claim_decision_port,
         application_lookup_port=application_lookup_port,
     )
 
@@ -364,7 +365,7 @@ def list_application_claims(
         get_list_application_claims_use_case
     ),
     _: None = Depends(verify_entra_caseworker_token),
-) -> Sequence[Claim]:
+) -> list[ClaimSummaryResponse]:
     """List claims for an application, filtered by assessed status."""
     try:
         return use_case.execute(laa_reference, assessed)

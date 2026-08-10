@@ -120,7 +120,7 @@ class ClaimResponse(BaseModel):
     rejection_reasons: list[ReasonCode] | None = None
 
 
-class ClaimSummaryResponse(BaseModel):
+class ClaimSummaryBase(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
         from_attributes=True,
@@ -133,6 +133,11 @@ class ClaimSummaryResponse(BaseModel):
     total_profit_cost_gross: Decimal | None = None
     total_profit_cost_vat_zero: Decimal | None = None
     poa_type_id: POAType | None = None
+
+
+class ClaimSummaryResponse(ClaimSummaryBase):
+    status_id: ClaimStatus
+    claim_decision_status: ClaimDecisionStatus | None = None
 
 
 class ClaimEvidenceResponse(BaseModel):
@@ -166,7 +171,7 @@ class ClaimDecisionResponse(BaseModel):
     decision_reasons: list[DecisionReasonResponse] = []
 
 
-class ClaimByIdResponse(ClaimSummaryResponse):
+class ClaimByIdResponse(ClaimSummaryBase):
     substantive_cost_limitation: int | None = None
     claim_evidence: list[ClaimEvidenceResponse] = []
     claim_decision: ClaimDecisionResponse | None = None
