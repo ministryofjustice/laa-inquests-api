@@ -27,9 +27,9 @@ class GetApplicationHistoryUseCase:
             laa_reference
         )
 
-        return [self._create_response(event) for event in history_events]
+        return [self._create_history_response(event) for event in history_events]
 
-    def _create_response(self, event: HistoryEvent) -> HistoryEventResponse:
+    def _create_history_response(self, event: HistoryEvent) -> HistoryEventResponse:
         response = HistoryEventResponse.model_validate(event)
         if event.actor_type == ActorType.PROVIDER:
             response.actor = "Provider"

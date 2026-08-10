@@ -20,6 +20,7 @@ class HistoryEvent(SQLModel, table=True):
     event_description: str = Field(nullable=False)
     event_data: str | None = Field(default=None, nullable=True)
     laa_reference: int = Field(foreign_key="application.laa_reference", nullable=False)
+    related_link: str | None = Field(default=None, nullable=True)
 
 
 class HistoryEventResponse(BaseModel):
@@ -32,3 +33,4 @@ class HistoryEventResponse(BaseModel):
     actor: str
     event_description: str
     event_data: str | None
+    related_link: str | None

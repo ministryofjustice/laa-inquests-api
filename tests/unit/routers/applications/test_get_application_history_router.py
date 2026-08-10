@@ -16,6 +16,7 @@ def test_get_application_history_calls_use_case_with_the_laa_reference():
         actor="provider@example.com",
         event_description="Application received",
         event_data=None,
+        related_link=None,
     )
     use_case.execute.return_value = [mock_response]
 
