@@ -1,5 +1,3 @@
-import csv
-import io
 from datetime import UTC, datetime
 
 from sqlmodel import select
@@ -8,6 +6,7 @@ from app.models.application.index import Application
 from app.models.claim.enums import ClaimStatus
 from app.models.claim.index import Claim
 from tests.e2e.factories import create_claim_in_db
+from tests.helpers import parse_csv_fieldnames, parse_csv_rows
 
 CLAIMS_BACKLOG_REPORT_HEADERS = [
     "Claims Reference Number",
@@ -18,15 +17,6 @@ CLAIMS_BACKLOG_REPORT_HEADERS = [
     "Proceeding Code",
     "Matter Type",
 ]
-
-
-def _parse_csv_rows(content: str) -> list[dict[str, str]]:
-    return list(csv.DictReader(io.StringIO(content)))
-
-
-def _parse_csv_fieldnames(content: str) -> list[str]:
-    reader = csv.DictReader(io.StringIO(content))
-    return reader.fieldnames or []
 
 
 class TestGetClaimBacklogReport:
@@ -50,9 +40,9 @@ class TestGetClaimBacklogReport:
         assert "text/csv" in response.headers["content-type"]
         assert "attachment" in response.headers["content-disposition"]
         assert "claims_backlog_report.csv" in response.headers["content-disposition"]
-        assert _parse_csv_fieldnames(response.text) == CLAIMS_BACKLOG_REPORT_HEADERS
+        assert parse_csv_fieldnames(response.text) == CLAIMS_BACKLOG_REPORT_HEADERS
 
-        rows = _parse_csv_rows(response.text)
+        rows = parse_csv_rows(response.text)
         assert len(rows) == 1
         row = rows[0]
         assert row["Claims Reference Number"] == str(claim.claim_id)
@@ -90,7 +80,7 @@ class TestGetClaimBacklogReport:
             headers={"Authorization": f"Bearer {auth_token}"},
         )
 
-        rows = _parse_csv_rows(response.text)
+        rows = parse_csv_rows(response.text)
         statuses = [row["Current Claims Status"] for row in rows]
 
         assert ClaimStatus.SUBMITTED in statuses
@@ -111,8 +101,8 @@ class TestGetClaimBacklogReport:
         )
 
         assert response.status_code == 200
-        assert _parse_csv_fieldnames(response.text) == CLAIMS_BACKLOG_REPORT_HEADERS
-        assert _parse_csv_rows(response.text) == []
+        assert parse_csv_fieldnames(response.text) == CLAIMS_BACKLOG_REPORT_HEADERS
+        assert parse_csv_rows(response.text) == []
 
 
 class TestGetClaimBacklogReportAuth:

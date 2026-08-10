@@ -15,6 +15,8 @@ from app.models.application.index import (
     PublicBody,
     PublicBodyId,
 )
+from app.models.claim.enums import ClaimStatus
+from app.models.claim.index import Claim
 
 # Sentinel value to distinguish "not provided" from "explicitly None"
 _NOT_PROVIDED = object()
@@ -210,6 +212,16 @@ def create_base_application(
         "public_bodies": public_bodies,
     }
     return Application(**(defaults | overrides))
+
+
+def create_base_claim(**overrides) -> Claim:
+    """Create a base claim with optional field overrides."""
+    defaults = {
+        "claim_type_id": "FINAL_BILL",
+        "status_id": ClaimStatus.SUBMITTED,
+        "submission_date": datetime(2026, 1, 1, tzinfo=UTC),
+    }
+    return Claim(**(defaults | overrides))
 
 
 def create_base_certificate(

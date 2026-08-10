@@ -1,6 +1,5 @@
 import csv
 import io
-from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -15,23 +14,12 @@ from app.use_cases.exceptions import (
 from app.use_cases.generate_claim_backlog_report import (
     GenerateClaimBacklogReportUseCase,
 )
-from tests.unit.factories import create_base_application, create_base_provider
-
-
-def _build_claim(
-    *,
-    claim_id: int,
-    laa_reference: int,
-    status: ClaimStatus = ClaimStatus.SUBMITTED,
-    submission_date: datetime = datetime(2026, 1, 1, tzinfo=UTC),
-) -> Claim:
-    return Claim(
-        claim_id=claim_id,
-        laa_reference=laa_reference,
-        claim_type_id="FINAL_BILL",
-        status_id=status,
-        submission_date=submission_date,
-    )
+from tests.helpers import parse_csv_rows
+from tests.unit.factories import (
+    create_base_application,
+    create_base_claim,
+    create_base_provider,
+)
 
 
 def _build_use_case(
@@ -52,10 +40,6 @@ def _build_use_case(
     )
 
 
-def _parse_csv(csv_content: str) -> list[dict[str, str]]:
-    return list(csv.DictReader(io.StringIO(csv_content)))
-
-
 class TestGenerateClaimBacklogReportUseCase:
     def test_returns_empty_csv_with_headers_when_no_open_claims(self):
         use_case = _build_use_case(claims=[])
@@ -70,14 +54,14 @@ class TestGenerateClaimBacklogReportUseCase:
         assert rows == []
 
     def test_returns_csv_row_for_open_claim(self):
-        claim = _build_claim(claim_id=10, laa_reference=12345)
+        claim = create_base_claim(claim_id=10, laa_reference=12345)
         claim.application = create_base_application(
             provider=create_base_provider(firm_code="ABC123")
         )
         use_case = _build_use_case(claims=[claim])
 
         result = use_case.execute()
-        rows = _parse_csv(result)
+        rows = parse_csv_rows(result)
 
         assert len(rows) == 1
         row = rows[0]
@@ -90,7 +74,7 @@ class TestGenerateClaimBacklogReportUseCase:
         assert row["Matter Type"] == "INQUESTS"
 
     def test_raises_error_when_firm_name_missing_for_firm_code(self):
-        claim = _build_claim(claim_id=13, laa_reference=12345)
+        claim = create_base_claim(claim_id=13, laa_reference=12345)
         claim.application = create_base_application(
             provider=create_base_provider(firm_code="ABC123")
         )
@@ -100,7 +84,7 @@ class TestGenerateClaimBacklogReportUseCase:
             use_case.execute()
 
     def test_raises_error_when_firms_retrieval_fails(self):
-        claim = _build_claim(claim_id=14, laa_reference=12345)
+        claim = create_base_claim(claim_id=14, laa_reference=12345)
         claim.application = create_base_application(
             provider=create_base_provider(firm_code="ABC123")
         )
@@ -122,8 +106,8 @@ class TestGenerateClaimBacklogReportUseCase:
             use_case.execute()
 
     def test_deduplicates_firm_codes_before_calling_port(self):
-        claim_1 = _build_claim(claim_id=15, laa_reference=100)
-        claim_2 = _build_claim(claim_id=16, laa_reference=200)
+        claim_1 = create_base_claim(claim_id=15, laa_reference=100)
+        claim_2 = create_base_claim(claim_id=16, laa_reference=200)
         application = create_base_application(
             provider=create_base_provider(firm_code="ABC123")
         )
