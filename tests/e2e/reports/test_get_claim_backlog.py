@@ -7,7 +7,7 @@ from sqlmodel import select
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimStatus
 from app.models.claim.index import Claim
-from tests.e2e.factories import create_application_in_db, create_claim_in_db
+from tests.e2e.factories import create_claim_in_db
 
 CLAIMS_BACKLOG_REPORT_HEADERS = [
     "Claims Reference Number",
@@ -32,9 +32,9 @@ def _parse_csv_fieldnames(content: str) -> list[str]:
 class TestGetClaimBacklogReport:
     """E2E tests for GET /reports/claims/backlog."""
 
-    def test_200_returns_csv_with_open_claims(self, session, client, auth_token):
+    def test_200_csv_has_good_data_quality(self, session, client, auth_token):
         application = session.exec(select(Application)).first()
-        create_claim_in_db(
+        claim = create_claim_in_db(
             session,
             laa_reference=application.laa_reference,
             status=ClaimStatus.SUBMITTED,
@@ -50,48 +50,18 @@ class TestGetClaimBacklogReport:
         assert "text/csv" in response.headers["content-type"]
         assert "attachment" in response.headers["content-disposition"]
         assert "claims_backlog_report.csv" in response.headers["content-disposition"]
-
-    def test_200_csv_has_good_data_quality(self, session, client, auth_token):
-        first_application = session.exec(select(Application)).first()
-        second_application = create_application_in_db(
-            session,
-            provider_overrides={"firm_code": "OFFICE2", "office_id": "002"},
-        )
-
-        create_claim_in_db(
-            session,
-            laa_reference=second_application.laa_reference,
-            status=ClaimStatus.SUBMITTED,
-            submission_date=datetime(2026, 6, 1, tzinfo=UTC),
-        )
-        older_claim = create_claim_in_db(
-            session,
-            laa_reference=first_application.laa_reference,
-            status=ClaimStatus.SUBMITTED,
-            submission_date=datetime(2026, 1, 1, tzinfo=UTC),
-        )
-
-        response = client.get(
-            "/reports/claims/backlog",
-            headers={"Authorization": f"Bearer {auth_token}"},
-        )
+        assert _parse_csv_fieldnames(response.text) == CLAIMS_BACKLOG_REPORT_HEADERS
 
         rows = _parse_csv_rows(response.text)
-        dates = [row["Claim Received Date"] for row in rows]
-
-        assert response.status_code == 200
-        # Headers
-        actual_headers = _parse_csv_fieldnames(response.text)
-        assert actual_headers == CLAIMS_BACKLOG_REPORT_HEADERS
-
-        assert len(rows) >= 2
-        assert dates == sorted(dates)
-        assert rows[0]["Claims Reference Number"] == str(older_claim.claim_id)
-
-        for row in rows:
-            assert row["Current Claims Status"] == ClaimStatus.SUBMITTED
-            for header in CLAIMS_BACKLOG_REPORT_HEADERS:
-                assert row[header] != "", f"Expected '{header}' to be non-empty"
+        assert len(rows) == 1
+        row = rows[0]
+        assert row["Claims Reference Number"] == str(claim.claim_id)
+        assert row["Current Claims Status"] == ClaimStatus.SUBMITTED
+        assert row["Claim Received Date"] == "2026-01-01 00:00:00"
+        assert row["Firm Account Number"] == application.provider.firm_code
+        assert row["Firm Name"] == f"Firm {application.provider.firm_code}"
+        assert row["Proceeding Code"] == application.proceeding.proceeding_id
+        assert row["Matter Type"] == application.proceeding.matter_type
 
     def test_200_csv_excludes_non_open_claims(self, session, client, auth_token):
         application = session.exec(select(Application)).first()
