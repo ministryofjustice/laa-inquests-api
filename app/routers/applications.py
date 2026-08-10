@@ -27,6 +27,7 @@ from app.models.application.index import (
 )
 from app.models.claim.index import (
     Claim,
+    ClaimByIdResponse,
     ClaimCreate,
     ClaimResponse,
     ClaimSummaryResponse,
@@ -35,6 +36,8 @@ from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
+from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
+from app.ports.claim.get_claim_decision_port import GetClaimDecisionPort
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
 from app.ports.claim.update_claim_status_port import (
     UpdateClaimStatusPort,
@@ -63,6 +66,7 @@ from app.use_cases.create_claim import CreateClaimCommand, CreateClaimUseCase
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
     ApplicationNotGrantedError,
+    ClaimNotFoundError,
     CoronersLetterNotFoundError,
     CoronersLetterRetrievalError,
     CoronersLetterUploadError,
@@ -72,6 +76,7 @@ from app.use_cases.exceptions import (
     ProviderDetailsRetrievalError,
 )
 from app.use_cases.get_application import GetApplicationUseCase
+from app.use_cases.get_claim import GetClaimUseCase
 from app.use_cases.grant_decision import GrantDecisionUseCase
 from app.use_cases.list_application_claims import ListApplicationClaimsUseCase
 from app.use_cases.list_applications import ListApplicationsUseCase
@@ -155,6 +160,20 @@ def get_list_application_claims_use_case(
 ) -> ListApplicationClaimsUseCase:
     return ListApplicationClaimsUseCase(
         get_claims_for_application_port=get_claims_for_application_port,
+        application_lookup_port=application_lookup_port,
+    )
+
+
+def get_get_claim_use_case(
+    get_claim_by_id_port: GetClaimByIdPort = Depends(get_claim_db_adapter),
+    get_claim_decision_port: GetClaimDecisionPort = Depends(get_claim_db_adapter),
+    application_lookup_port: ApplicationLookupPort = Depends(
+        get_application_db_adapter
+    ),
+) -> GetClaimUseCase:
+    return GetClaimUseCase(
+        get_claim_by_id_port=get_claim_by_id_port,
+        get_claim_decision_port=get_claim_decision_port,
         application_lookup_port=application_lookup_port,
     )
 
@@ -351,6 +370,25 @@ def list_application_claims(
         return use_case.execute(laa_reference, assessed)
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
+
+
+@router.get(
+    "/{laa_reference}/claims/{claim_id}",
+    response_model=ClaimByIdResponse,
+)
+def read_claim(
+    laa_reference: str,
+    claim_id: int,
+    use_case: GetClaimUseCase = Depends(get_get_claim_use_case),
+    _: None = Depends(verify_entra_caseworker_token),
+) -> ClaimByIdResponse:
+    """Get a single claim by ID for a given application."""
+    try:
+        return use_case.execute(laa_reference, claim_id)
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
+    except ClaimNotFoundError:
+        raise HTTPException(status_code=404, detail="Claim not found")
 
 
 @router.get("/{laa_reference}", response_model=ApplicationResponse)

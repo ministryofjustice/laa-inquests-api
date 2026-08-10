@@ -17,6 +17,8 @@ from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
 from app.ports.claim.delete_claim_evidence_port import DeleteClaimEvidencePort
+from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
+from app.ports.claim.get_claim_decision_port import GetClaimDecisionPort
 from app.ports.claim.get_claim_evidence_port import GetClaimEvidencePort
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
 from app.ports.claim.update_claim_status_port import (
@@ -28,6 +30,8 @@ from app.ports.claim.upload_claim_evidence_port import UploadClaimEvidencePort
 class ClaimRepositoryAdapter(
     CreateClaimPort,
     GetClaimsForApplicationPort,
+    GetClaimByIdPort,
+    GetClaimDecisionPort,
     CreateClaimDecisionPort,
     CreateDecisionReasonPort,
     UpdateClaimStatusPort,
@@ -79,6 +83,17 @@ class ClaimRepositoryAdapter(
     def get_claims_by_laa_reference(self, laa_reference: str) -> list[Claim]:
         statement = select(Claim).where(Claim.laa_reference == int(laa_reference))
         return list(self.session.exec(statement).all())
+
+    def get_claim_by_id(self, claim_id: int) -> Claim | None:
+        return self.session.get(Claim, claim_id)
+
+    def get_claim_decision_by_claim_id(self, claim_id: int) -> ClaimDecision | None:
+        statement = (
+            select(ClaimDecision)
+            .where(ClaimDecision.claim_id == claim_id)
+            .order_by(ClaimDecision.claim_decision_id.desc())
+        )
+        return self.session.exec(statement).first()
 
     def create_claim_decision(
         self,
