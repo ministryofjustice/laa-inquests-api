@@ -4,6 +4,7 @@ from sqlmodel import Session, select
 
 from app.domain.claim import Claim as DomainClaim
 from app.domain.claim_evidence import ClaimEvidence as DomainClaimEvidence
+from app.models.application.index import Application
 from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ReasonCode
 from app.models.claim.index import (
     Claim,
@@ -99,6 +100,7 @@ class ClaimRepositoryAdapter(
     def get_open_claims(self) -> list[Claim]:
         statement = (
             select(Claim)
+            .join(Application, Claim.laa_reference == Application.laa_reference)
             .where(Claim.status_id == ClaimStatus.SUBMITTED)
             .order_by(Claim.submission_date.asc())
         )

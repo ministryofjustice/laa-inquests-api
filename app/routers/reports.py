@@ -5,7 +5,6 @@ from sqlmodel import Session
 from app.adapters.application_repository_adapter import ApplicationRepositoryAdapter
 from app.adapters.claim_repository_adapter import ClaimRepositoryAdapter
 from app.db import get_session
-from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.application_backlog_port import ApplicationBacklogPort
 from app.ports.claim_backlog_port import ClaimBacklogPort
 from app.ports.provider_details_port import ProviderDetailsPort
@@ -52,22 +51,12 @@ def get_claim_backlog_port(
     return ClaimRepositoryAdapter(session=session)
 
 
-def get_application_lookup_port(
-    session: Session = Depends(get_session),
-) -> ApplicationLookupPort:
-    return ApplicationRepositoryAdapter(session=session)
-
-
 def get_generate_claim_backlog_report_use_case(
     claim_backlog_port: ClaimBacklogPort = Depends(get_claim_backlog_port),
-    application_lookup_port: ApplicationLookupPort = Depends(
-        get_application_lookup_port
-    ),
     provider_details_port: ProviderDetailsPort = Depends(get_provider_details_port),
 ) -> GenerateClaimBacklogReportUseCase:
     return GenerateClaimBacklogReportUseCase(
         claim_backlog_port=claim_backlog_port,
-        application_lookup_port=application_lookup_port,
         provider_details_port=provider_details_port,
     )
 

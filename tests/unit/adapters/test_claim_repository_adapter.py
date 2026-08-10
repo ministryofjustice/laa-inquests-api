@@ -131,6 +131,17 @@ def test_get_open_claims_returns_only_open_claims(session):
     assert all(claim.status_id == ClaimStatus.SUBMITTED for claim in results)
 
 
+def test_get_open_claims_returned_claims_have_matching_application(session):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    _create_claim(session, laa_reference)
+
+    adapter = ClaimRepositoryAdapter(session)
+    results = adapter.get_open_claims()
+
+    for claim in results:
+        assert claim.application.laa_reference == claim.laa_reference
+
+
 def test_get_open_claims_orders_by_submission_date_ascending(session):
     laa_reference = session.exec(select(Application)).first().laa_reference
     adapter = ClaimRepositoryAdapter(session)

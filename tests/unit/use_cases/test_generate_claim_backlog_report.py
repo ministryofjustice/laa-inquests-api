@@ -37,23 +37,9 @@ def _build_claim(
 def _build_use_case(
     claims: list[Claim] | None = None,
     firms: list[dict] | None = None,
-    application_lookup_side_effect=None,
 ) -> GenerateClaimBacklogReportUseCase:
     claim_backlog_port = MagicMock()
     claim_backlog_port.get_open_claims.return_value = claims or []
-
-    application_lookup_port = MagicMock()
-    if application_lookup_side_effect is not None:
-        application_lookup_port.get_application_by_laa_reference.side_effect = (
-            application_lookup_side_effect
-        )
-    else:
-        application = create_base_application(
-            provider=create_base_provider(firm_code="ABC123")
-        )
-        application_lookup_port.get_application_by_laa_reference.return_value = (
-            application
-        )
 
     provider_details_port = MagicMock()
     provider_details_port.get_firms_by_ids.return_value = (
@@ -62,7 +48,6 @@ def _build_use_case(
 
     return GenerateClaimBacklogReportUseCase(
         claim_backlog_port=claim_backlog_port,
-        application_lookup_port=application_lookup_port,
         provider_details_port=provider_details_port,
     )
 
@@ -86,6 +71,9 @@ class TestGenerateClaimBacklogReportUseCase:
 
     def test_returns_csv_row_for_open_claim(self):
         claim = _build_claim(claim_id=10, laa_reference=12345)
+        claim.application = create_base_application(
+            provider=create_base_provider(firm_code="ABC123")
+        )
         use_case = _build_use_case(claims=[claim])
 
         result = use_case.execute()
@@ -101,37 +89,24 @@ class TestGenerateClaimBacklogReportUseCase:
         assert row["Proceeding Code"] == "IQOT"
         assert row["Matter Type"] == "INQUESTS"
 
-    def test_raises_error_when_application_not_found_for_claim(self):
-        claim = _build_claim(claim_id=12, laa_reference=99999)
-
-        use_case = _build_use_case(
-            claims=[claim],
-            application_lookup_side_effect=lambda _: None,
-        )
-
-        with pytest.raises(ReportGenerationError):
-            use_case.execute()
-
     def test_raises_error_when_firm_name_missing_for_firm_code(self):
         claim = _build_claim(claim_id=13, laa_reference=12345)
-        use_case = _build_use_case(
-            claims=[claim],
-            firms=[],
+        claim.application = create_base_application(
+            provider=create_base_provider(firm_code="ABC123")
         )
+        use_case = _build_use_case(claims=[claim], firms=[])
 
         with pytest.raises(ReportGenerationError):
             use_case.execute()
 
     def test_raises_exception_when_firms_retrieval_fails(self):
         claim = _build_claim(claim_id=14, laa_reference=12345)
+        claim.application = create_base_application(
+            provider=create_base_provider(firm_code="ABC123")
+        )
 
         claim_backlog_port = MagicMock()
         claim_backlog_port.get_open_claims.return_value = [claim]
-
-        application_lookup_port = MagicMock()
-        application_lookup_port.get_application_by_laa_reference.return_value = (
-            create_base_application(provider=create_base_provider(firm_code="ABC123"))
-        )
 
         provider_details_port = MagicMock()
         provider_details_port.get_firms_by_ids.side_effect = (
@@ -140,7 +115,6 @@ class TestGenerateClaimBacklogReportUseCase:
 
         use_case = GenerateClaimBacklogReportUseCase(
             claim_backlog_port=claim_backlog_port,
-            application_lookup_port=application_lookup_port,
             provider_details_port=provider_details_port,
         )
 
@@ -150,15 +124,14 @@ class TestGenerateClaimBacklogReportUseCase:
     def test_deduplicates_firm_codes_before_calling_port(self):
         claim_1 = _build_claim(claim_id=15, laa_reference=100)
         claim_2 = _build_claim(claim_id=16, laa_reference=200)
+        application = create_base_application(
+            provider=create_base_provider(firm_code="ABC123")
+        )
+        claim_1.application = application
+        claim_2.application = application
 
         claim_backlog_port = MagicMock()
         claim_backlog_port.get_open_claims.return_value = [claim_1, claim_2]
-
-        application_lookup_port = MagicMock()
-        application_lookup_port.get_application_by_laa_reference.side_effect = [
-            create_base_application(provider=create_base_provider(firm_code="ABC123")),
-            create_base_application(provider=create_base_provider(firm_code="ABC123")),
-        ]
 
         provider_details_port = MagicMock()
         provider_details_port.get_firms_by_ids.return_value = [
@@ -167,10 +140,10 @@ class TestGenerateClaimBacklogReportUseCase:
 
         use_case = GenerateClaimBacklogReportUseCase(
             claim_backlog_port=claim_backlog_port,
-            application_lookup_port=application_lookup_port,
             provider_details_port=provider_details_port,
         )
 
         use_case.execute()
 
+        provider_details_port.get_firms_by_ids.assert_called_once_with(["ABC123"])
         provider_details_port.get_firms_by_ids.assert_called_once_with(["ABC123"])
