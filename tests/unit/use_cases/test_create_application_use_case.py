@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.models.application.index import ApplicationCreate
-from app.models.history.enums import ActorType, EventReference
+from app.models.history.enums import ActorType, HistoryEventReference
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
@@ -73,7 +73,7 @@ def test_execute_creates_application_sends_confirmation_email_and_commits():
         request, "0A123B"
     )
     create_history_event_port.create_history_event.assert_called_once_with(
-        event_reference=EventReference.APPLICATION_SUBMITTED,
+        event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="provider@example.com",
         actor_type=ActorType.PROVIDER,
         event_description="Application received",

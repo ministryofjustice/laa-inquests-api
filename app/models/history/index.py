@@ -4,14 +4,14 @@ from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 from sqlmodel import Field, SQLModel
 
-from app.models.history.enums import ActorType, EventReference
+from app.models.history.enums import ActorType, HistoryEventReference
 
 
 class HistoryEvent(SQLModel, table=True):
     __tablename__ = "history_event"
 
     id: int | None = Field(default=None, primary_key=True)
-    event_reference: EventReference = Field(nullable=False)
+    event_reference: HistoryEventReference = Field(nullable=False)
     timestamp: datetime = Field(
         nullable=False, default_factory=lambda: datetime.now(UTC)
     )

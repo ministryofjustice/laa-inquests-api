@@ -1,6 +1,6 @@
 from sqlmodel import Session, select
 
-from app.models.history.enums import ActorType, EventReference
+from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.get_application_history_port import GetApplicationHistoryPort
@@ -35,7 +35,7 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
 
     def create_history_event(
         self,
-        event_reference: EventReference,
+        event_reference: HistoryEventReference,
         actor: str,
         actor_type: ActorType,
         event_description: str,

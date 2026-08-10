@@ -5,7 +5,7 @@ from sqlmodel import select
 
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
-from app.models.history.enums import ActorType, EventReference
+from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 
 pytestmark = pytest.mark.usefixtures("mock_gov_notify")
@@ -179,11 +179,14 @@ def test_201_create_application_creates_history_event(client, auth_token, sessio
     history_event = session.exec(
         select(HistoryEvent).where(
             (HistoryEvent.laa_reference == laa_reference)
-            & (HistoryEvent.event_reference == EventReference.APPLICATION_SUBMITTED)
+            & (
+                HistoryEvent.event_reference
+                == HistoryEventReference.APPLICATION_SUBMITTED
+            )
         )
     ).one()
 
-    assert history_event.event_reference == EventReference.APPLICATION_SUBMITTED
+    assert history_event.event_reference == HistoryEventReference.APPLICATION_SUBMITTED
     assert history_event.actor == "provider@example.com"
     assert history_event.actor_type == ActorType.PROVIDER
     assert history_event.event_description == "Application received"

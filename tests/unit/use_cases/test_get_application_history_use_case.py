@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.models.application.index import Application
-from app.models.history.enums import ActorType, EventReference
+from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent, HistoryEventResponse
 from app.use_cases.exceptions import ApplicationNotFoundError
 from app.use_cases.get_application_history import GetApplicationHistoryUseCase
@@ -44,7 +44,7 @@ def test_execute_raises_application_not_found_error_when_no_matching_application
 def test_execute_returns_history_events_from_port():
     history_event_1 = HistoryEvent(
         id=1,
-        event_reference=EventReference.APPLICATION_SUBMITTED,
+        event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         timestamp=datetime.now(UTC),
         actor="provider@example.com",
         actor_type=ActorType.PROVIDER,
@@ -55,7 +55,7 @@ def test_execute_returns_history_events_from_port():
     )
     history_event_2 = HistoryEvent(
         id=2,
-        event_reference=EventReference.APPLICAION_ASSESSMENT_COMPLETED,
+        event_reference=HistoryEventReference.APPLICATION_ASSESSMENT_COMPLETED,
         timestamp=datetime.now(UTC),
         actor="caseworker@justice.gov.uk",
         actor_type=ActorType.CASEWORKER,
@@ -85,7 +85,7 @@ def test_execute_returns_history_events_from_port():
 def test_execute_masks_provider_actor_as_provider():
     history_event = HistoryEvent(
         id=1,
-        event_reference=EventReference.APPLICATION_SUBMITTED,
+        event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         timestamp=datetime.now(UTC),
         actor="provider@example.com",
         actor_type=ActorType.PROVIDER,
@@ -104,7 +104,7 @@ def test_execute_masks_provider_actor_as_provider():
 def test_execute_preserves_non_provider_actor():
     history_event = HistoryEvent(
         id=1,
-        event_reference=EventReference.APPLICAION_ASSESSMENT_COMPLETED,
+        event_reference=HistoryEventReference.APPLICATION_ASSESSMENT_COMPLETED,
         timestamp=datetime.now(UTC),
         actor="caseworker@justice.gov.uk",
         actor_type=ActorType.CASEWORKER,

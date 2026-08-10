@@ -8,7 +8,7 @@ from app.models.application.index import (
     ApplicationProceeding,
     ApplicationPublicBody,
 )
-from app.models.history.enums import ActorType, EventReference
+from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 
 
@@ -17,7 +17,7 @@ def test_create_history_event_persists_event_with_expected_values(session):
     adapter = HistoryEventRepositoryAdapter(session)
 
     created = adapter.create_history_event(
-        event_reference=EventReference.APPLICATION_SUBMITTED,
+        event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="Application submitted",
@@ -29,7 +29,7 @@ def test_create_history_event_persists_event_with_expected_values(session):
 
     assert created.id is not None
     assert stored is not None
-    assert stored.event_reference == EventReference.APPLICATION_SUBMITTED
+    assert stored.event_reference == HistoryEventReference.APPLICATION_SUBMITTED
     assert stored.actor == "test_user@example.com"
     assert stored.event_description == "Application submitted"
     assert stored.laa_reference == laa_reference
@@ -42,7 +42,7 @@ def test_create_history_event_sets_timestamp_automatically(session):
 
     before_creation = datetime.now(UTC)
     created = adapter.create_history_event(
-        event_reference=EventReference.APPLICATION_SUBMITTED,
+        event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="Test event",
@@ -65,7 +65,7 @@ def test_create_history_event_handles_none_event_data(session):
     adapter = HistoryEventRepositoryAdapter(session)
 
     created = adapter.create_history_event(
-        event_reference=EventReference.APPLICATION_SUBMITTED,
+        event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="Event without data",
@@ -84,7 +84,7 @@ def test_commits_transaction(session):
     adapter = HistoryEventRepositoryAdapter(session)
 
     created = adapter.create_history_event(
-        event_reference=EventReference.APPLICATION_SUBMITTED,
+        event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="Event to commit",
@@ -95,7 +95,7 @@ def test_commits_transaction(session):
     # Verify event persists after commit
     stored = session.get(HistoryEvent, created.id)
     assert stored is not None
-    assert stored.event_reference == EventReference.APPLICATION_SUBMITTED
+    assert stored.event_reference == HistoryEventReference.APPLICATION_SUBMITTED
 
 
 def test_rollback_discards_uncommitted_event(session):
@@ -103,7 +103,7 @@ def test_rollback_discards_uncommitted_event(session):
     adapter = HistoryEventRepositoryAdapter(session)
 
     created = adapter.create_history_event(
-        event_reference=EventReference.APPLICATION_SUBMITTED,
+        event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="Event to rollback",
@@ -123,7 +123,7 @@ def test_get_application_history_returns_correct_events(session):
 
     # Create multiple events for the same application
     event1 = adapter.create_history_event(
-        event_reference=EventReference.APPLICATION_SUBMITTED,
+        event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="First event",
@@ -131,7 +131,7 @@ def test_get_application_history_returns_correct_events(session):
     )
 
     event2 = adapter.create_history_event(
-        event_reference=EventReference.APPLICATION_SUBMITTED,
+        event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="Second event",
@@ -169,7 +169,7 @@ def test_get_application_history_does_not_return_events_for_other_applications(s
 
     # Create an event for the first application
     event1 = adapter.create_history_event(
-        event_reference=EventReference.APPLICATION_SUBMITTED,
+        event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="Event for first application",
@@ -178,7 +178,7 @@ def test_get_application_history_does_not_return_events_for_other_applications(s
 
     # Create an event for the second application
     event2 = adapter.create_history_event(
-        event_reference=EventReference.APPLICATION_SUBMITTED,
+        event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="Event for second application",
@@ -199,7 +199,7 @@ def test_get_application_history_returns_event_list_in_reverse_chronological_ord
 
     # Create multiple events with different timestamps
     event1 = adapter.create_history_event(
-        event_reference=EventReference.APPLICATION_SUBMITTED,
+        event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="First event",
@@ -207,7 +207,7 @@ def test_get_application_history_returns_event_list_in_reverse_chronological_ord
     )
 
     event2 = adapter.create_history_event(
-        event_reference=EventReference.APPLICATION_SUBMITTED,
+        event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
         event_description="Second event",

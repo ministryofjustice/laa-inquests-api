@@ -1,5 +1,5 @@
 from app.models.application.index import Application, ApplicationCreate
-from app.models.history.enums import ActorType, EventReference
+from app.models.history.enums import ActorType, HistoryEventReference
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
@@ -23,7 +23,7 @@ class CreateApplicationUseCase:
 
         try:
             self.create_history_event_port.create_history_event(
-                event_reference=EventReference.APPLICATION_SUBMITTED,
+                event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
                 actor=request.provider.email_address,
                 actor_type=ActorType.PROVIDER,
                 event_description="Application received",
