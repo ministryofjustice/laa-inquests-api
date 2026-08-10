@@ -80,8 +80,8 @@ from app.use_cases.exceptions import (
     ProviderDetailsRetrievalError,
 )
 from app.use_cases.get_application import GetApplicationUseCase
-from app.use_cases.get_claim import GetClaimUseCase
 from app.use_cases.get_application_history import GetApplicationHistoryUseCase
+from app.use_cases.get_claim import GetClaimUseCase
 from app.use_cases.grant_decision import GrantDecisionUseCase
 from app.use_cases.list_application_claims import ListApplicationClaimsUseCase
 from app.use_cases.list_applications import ListApplicationsUseCase
