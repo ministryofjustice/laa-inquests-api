@@ -11,6 +11,7 @@ from pydantic.alias_generators import to_camel
 from sqlalchemy import Column, Numeric
 from sqlmodel import Enum, Field, Relationship, SQLModel
 
+from app.models.application.index import Application
 from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
@@ -18,7 +19,6 @@ from app.models.claim.enums import (
     POAType,
     ReasonCode,
 )
-from app.models.application.index import Application
 
 
 class ClaimBase(SQLModel):
