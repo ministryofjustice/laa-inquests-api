@@ -97,6 +97,7 @@ class ClaimRepositoryAdapter(
             .order_by(ClaimDecision.claim_decision_id.desc())
         )
         return self.session.exec(statement).first()
+
     def get_open_claims(self) -> list[Claim]:
         statement = (
             select(Claim)
