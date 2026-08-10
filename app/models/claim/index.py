@@ -135,6 +135,43 @@ class ClaimSummaryResponse(BaseModel):
     poa_type_id: POAType | None = None
 
 
+class ClaimEvidenceResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        from_attributes=True,
+        populate_by_name=True,
+    )
+    claim_evidence_id: uuid.UUID
+    file_name: str
+
+
+class DecisionReasonResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        from_attributes=True,
+        populate_by_name=True,
+    )
+    reason_code: ReasonCode
+    justification: str | None = None
+
+
+class ClaimDecisionResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        from_attributes=True,
+        populate_by_name=True,
+    )
+    claim_decision_id: int
+    decision: ClaimDecisionStatus
+    decision_reasons: list[DecisionReasonResponse] = []
+
+
+class ClaimByIdResponse(ClaimSummaryResponse):
+    substantive_cost_limitation: int | None = None
+    claim_evidence: list[ClaimEvidenceResponse] = []
+    claim_decision: ClaimDecisionResponse | None = None
+
+
 class UploadClaimEvidenceResponse(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,

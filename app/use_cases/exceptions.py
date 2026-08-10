@@ -50,6 +50,10 @@ class ClaimEvidenceNotFoundError(Exception):
     pass
 
 
+class ClaimNotFoundError(Exception):
+    pass
+
+
 class ClaimEvidenceRetrievalError(Exception):
     pass
 
