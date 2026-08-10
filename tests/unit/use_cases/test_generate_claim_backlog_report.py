@@ -99,7 +99,7 @@ class TestGenerateClaimBacklogReportUseCase:
         with pytest.raises(ReportGenerationError):
             use_case.execute()
 
-    def test_raises_exception_when_firms_retrieval_fails(self):
+    def test_raises_error_when_firms_retrieval_fails(self):
         claim = _build_claim(claim_id=14, laa_reference=12345)
         claim.application = create_base_application(
             provider=create_base_provider(firm_code="ABC123")
@@ -110,7 +110,7 @@ class TestGenerateClaimBacklogReportUseCase:
 
         provider_details_port = MagicMock()
         provider_details_port.get_firms_by_ids.side_effect = (
-            ProviderDetailsRetrievalError("Provider API unavailable")
+            ProviderDetailsRetrievalError()
         )
 
         use_case = GenerateClaimBacklogReportUseCase(
