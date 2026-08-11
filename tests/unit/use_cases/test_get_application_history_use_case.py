@@ -51,7 +51,6 @@ def test_execute_returns_history_events_from_port():
         event_description="Application received",
         event_data=None,
         laa_reference=123456,
-        related_link=None,
     )
     history_event_2 = HistoryEvent(
         id=2,
@@ -60,9 +59,8 @@ def test_execute_returns_history_events_from_port():
         actor="caseworker@justice.gov.uk",
         actor_type=ActorType.CASEWORKER,
         event_description="Application assessment completed",
-        event_data="Test data",
+        event_data={"context": "Test data", "related_link": "/get-certificate/123456"},
         laa_reference=123456,
-        related_link="/get-certificate/123456",
     )
     use_case = _make_use_case(
         application=MagicMock(), history_events=[history_event_1, history_event_2]
@@ -75,11 +73,10 @@ def test_execute_returns_history_events_from_port():
     assert result[0].actor == "Provider"
     assert result[0].event_description == "Application received"
     assert result[0].event_data is None
-    assert result[0].related_link is None
     assert result[1].actor == "caseworker@justice.gov.uk"
     assert result[1].event_description == "Application assessment completed"
-    assert result[1].event_data == "Test data"
-    assert result[1].related_link == "/get-certificate/123456"
+    assert result[1].event_data["context"] == "Test data"
+    assert result[1].event_data["related_link"] == "/get-certificate/123456"
 
 
 def test_execute_masks_provider_actor_as_provider():
@@ -92,7 +89,6 @@ def test_execute_masks_provider_actor_as_provider():
         event_description="Application received",
         event_data=None,
         laa_reference=123456,
-        related_link=None,
     )
     use_case = _make_use_case(application=MagicMock(), history_events=[history_event])
 
@@ -111,7 +107,6 @@ def test_execute_preserves_non_provider_actor():
         event_description="Decision made",
         event_data=None,
         laa_reference=123456,
-        related_link=None,
     )
     use_case = _make_use_case(application=MagicMock(), history_events=[history_event])
 

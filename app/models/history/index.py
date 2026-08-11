@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
+from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
 
 from app.models.history.enums import ActorType, HistoryEventReference
@@ -18,9 +19,8 @@ class HistoryEvent(SQLModel, table=True):
     actor: str = Field(nullable=False)
     actor_type: ActorType = Field(nullable=False)
     event_description: str = Field(nullable=False)
-    event_data: str | None = Field(default=None, nullable=True)
+    event_data: dict | None = Field(default=None, sa_column=Column(JSON, nullable=True))
     laa_reference: int = Field(foreign_key="application.laa_reference", nullable=False)
-    related_link: str | None = Field(default=None, nullable=True)
 
 
 class HistoryEventResponse(BaseModel):
@@ -32,5 +32,4 @@ class HistoryEventResponse(BaseModel):
     timestamp: datetime
     actor: str
     event_description: str
-    event_data: str | None
-    related_link: str | None
+    event_data: dict | None

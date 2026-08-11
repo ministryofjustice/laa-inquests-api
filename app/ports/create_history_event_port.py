@@ -13,8 +13,7 @@ class CreateHistoryEventPort(ABC):
         actor_type: ActorType,
         event_description: str,
         laa_reference: int,
-        event_data: str | None = None,
-        related_link: str | None = None,
+        event_data: dict | None = None,
     ) -> HistoryEvent: ...
 
     @abstractmethod

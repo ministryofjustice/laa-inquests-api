@@ -21,8 +21,7 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
             actor_type=ActorType.PROVIDER,
             event_description="Application created",
             laa_reference=12345,
-            event_data="Optional context",
-            related_link="/application/12345"
+            event_data={"related_link": "/application/12345", "context": "Optional context"}
         )
         adapter.commit()
     """
@@ -37,8 +36,7 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
         actor_type: ActorType,
         event_description: str,
         laa_reference: int,
-        event_data: str | None = None,
-        related_link: str | None = None,
+        event_data: dict | None = None,
     ) -> HistoryEvent:
         """
         Create a new history event record.
@@ -48,8 +46,8 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
             actor: User or system that triggered the event
             event_description: Human-readable description of the event
             laa_reference: LAA reference number (as int)
-            event_data: Optional plain text data associated with the event
-            related_link: Optional URL or reference related to the event
+            event_data: Optional JSON data associated with the event
+                       (e.g., {"related_link": "/path", "context": "text"})
 
         Returns:
             The created HistoryEvent with auto-generated id and timestamp
@@ -61,7 +59,6 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
             event_description=event_description,
             laa_reference=laa_reference,
             event_data=event_data,
-            related_link=related_link,
         )
         self.session.add(new_event)
         self.session.flush()

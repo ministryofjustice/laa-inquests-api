@@ -22,7 +22,7 @@ def test_create_history_event_persists_event_with_expected_values(session):
         actor_type=ActorType.CASEWORKER,
         event_description="Application submitted",
         laa_reference=laa_reference,
-        event_data="Additional context data",
+        event_data={"context": "Additional context data", "related_link": None},
     )
 
     stored = session.get(HistoryEvent, created.id)
@@ -33,7 +33,10 @@ def test_create_history_event_persists_event_with_expected_values(session):
     assert stored.actor == "test_user@example.com"
     assert stored.event_description == "Application submitted"
     assert stored.laa_reference == laa_reference
-    assert stored.event_data == "Additional context data"
+    assert stored.event_data == {
+        "context": "Additional context data",
+        "related_link": None,
+    }
 
 
 def test_create_history_event_sets_timestamp_automatically(session):

@@ -45,9 +45,8 @@ def upgrade() -> None:
     sa.Column('actor', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('actor_type', sa.Enum('SYSTEM', 'CASEWORKER', 'PROVIDER', name='actortype'), nullable=False),
     sa.Column('event_description', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.Column('event_data', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('event_data', sa.JSON(), nullable=True),
     sa.Column('laa_reference', sa.Integer(), nullable=False),
-    sa.Column('related_link', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.ForeignKeyConstraint(['laa_reference'], ['application.laa_reference'], ),
     sa.PrimaryKeyConstraint('id')
     )
