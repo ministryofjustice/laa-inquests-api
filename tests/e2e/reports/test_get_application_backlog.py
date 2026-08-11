@@ -2,8 +2,11 @@ import csv
 import io
 from datetime import UTC, datetime
 
+from sqlmodel import select
+
 from app.domain.constants.report_csv_headers import APPLICATION_BACKLOG_REPORT_HEADERS
 from app.models.application.enums import MeritsDecision
+from app.models.application.index import Application
 from tests.e2e.factories import create_application_in_db
 
 
@@ -26,7 +29,12 @@ class TestGetApplicationBacklogReport:
         assert "attachment" in response.headers["content-disposition"]
         assert ".csv" in response.headers["content-disposition"]
 
-    def test_200_csv_contains_expected_headers(self, client, auth_token):
+    def test_200_csv_contains_expected_headers(self, session, client, auth_token):
+        application = session.exec(select(Application)).first()
+        application.proceeding.merits_decision = MeritsDecision.PENDING
+        session.add(application.proceeding)
+        session.commit()
+
         response = client.get(
             "/reports/applications/backlog",
             headers={"Authorization": f"Bearer {auth_token}"},
@@ -37,8 +45,13 @@ class TestGetApplicationBacklogReport:
         assert list(rows[0].keys()) == APPLICATION_BACKLOG_REPORT_HEADERS
 
     def test_200_csv_row_contains_expected_data_for_pending_application(
-        self, client, auth_token
+        self, session, client, auth_token
     ):
+        application = session.exec(select(Application)).first()
+        application.proceeding.merits_decision = MeritsDecision.PENDING
+        session.add(application.proceeding)
+        session.commit()
+
         response = client.get(
             "/reports/applications/backlog",
             headers={"Authorization": f"Bearer {auth_token}"},
@@ -80,6 +93,11 @@ class TestGetApplicationBacklogReport:
     def test_200_csv_ordered_by_application_received_date_ascending(
         self, session, client, auth_token
     ):
+        application = session.exec(select(Application)).first()
+        application.proceeding.merits_decision = MeritsDecision.PENDING
+        session.add(application.proceeding)
+        session.commit()
+
         older_app = create_application_in_db(
             session,
             provider_overrides={"firm_code": "XOLD01"},

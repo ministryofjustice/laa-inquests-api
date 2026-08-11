@@ -265,6 +265,8 @@ class ApplicationProceeding(SQLModel, table=True):
 
     @property
     def substantive_cost_limitation(self):
+        if self.merits_decision != MeritsDecision.GRANTED:
+            return 0
         return self.proceeding.substantive_cost_limitation
 
 

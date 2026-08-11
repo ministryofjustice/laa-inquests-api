@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.models.application.certificate import ApplicationCertificate
+from app.models.application.enums import MeritsDecision
 from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
 from app.use_cases.exceptions import ProviderDetailsRetrievalError
 from tests.unit.factories import (
@@ -218,6 +219,7 @@ def test_populate_certificate_context_populates_proceeding_fields():
     application_proceeding = create_base_application_proceeding(
         proceeding=proceeding,
         certificate_start_date=datetime(2026, 7, 1, tzinfo=UTC),
+        merits_decision=MeritsDecision.GRANTED,
     )
     application = create_base_application(proceeding=application_proceeding)
 

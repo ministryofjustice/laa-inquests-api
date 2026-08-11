@@ -676,14 +676,13 @@ def test_201_create_claim_does_not_auto_approve_when_application_status_is_withd
     assert decision is None
 
 
-def test_201_create_claim_does_not_auto_approve_when_merits_decision_is_granted(
+def test_201_create_claim_auto_rejects_for_cost_when_application_not_granted(
     session, client, auth_token
 ):
     application = session.exec(select(Application)).first()
     application_proceeding = application.proceeding
-    application_proceeding.proceeding.substantive_cost_limitation = 999999
     application_proceeding.certificate_start_date = datetime(2000, 1, 1, tzinfo=UTC)
-    application.proceeding.merits_decision = MeritsDecision.GRANTED
+    application.proceeding.merits_decision = MeritsDecision.PENDING
     session.add(application_proceeding.proceeding)
     session.add(application.proceeding)
     session.commit()
@@ -692,8 +691,8 @@ def test_201_create_claim_does_not_auto_approve_when_merits_decision_is_granted(
         f"/applications/{application.laa_reference}/claim",
         json=_make_request_body(
             {
-                "totalProfitCostNet": 50000,
-                "totalProfitCostGross": 50000,
+                "totalProfitCostNet": 1000,
+                "totalProfitCostGross": 1200,
             }
         ),
         headers={
@@ -704,22 +703,28 @@ def test_201_create_claim_does_not_auto_approve_when_merits_decision_is_granted(
 
     assert response.status_code == 201
     claim = response.json()
-    assert set(claim.keys()) == {"claimId"}
+    assert set(claim.keys()) == {"claimId", "rejectionReasons"}
+    assert "CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT" in claim["rejectionReasons"]
 
     stored_claim = session.get(Claim, claim["claimId"])
     assert stored_claim is not None
-    assert stored_claim.status_id == "SUBMITTED"
+    assert stored_claim.status_id == "REJECTED"
 
     decision = session.exec(
         select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
     ).first()
-    assert decision is None
+    assert decision is not None
+    assert decision.decision == "REJECT"
 
 
 def test_201_create_claim_auto_reject_returns_multiple_reasons_for_rejection_when_applicable(
     session, client, auth_token
 ):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application = session.exec(select(Application)).first()
+    laa_reference = application.laa_reference
+    application.proceeding.merits_decision = MeritsDecision.GRANTED
+    session.add(application.proceeding)
+    session.commit()
 
     for _ in range(4):
         seed_response = client.post(
@@ -744,6 +749,7 @@ def test_201_create_claim_auto_reject_returns_multiple_reasons_for_rejection_whe
     application_proceeding = application.proceeding
     application_proceeding.proceeding.substantive_cost_limitation = 5
     application_proceeding.certificate_start_date = datetime.now(tz=UTC).date()
+    application_proceeding.merits_decision = MeritsDecision.GRANTED
     session.add(application_proceeding.proceeding)
     session.add(application_proceeding)
     session.commit()

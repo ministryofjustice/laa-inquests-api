@@ -10,6 +10,7 @@ from app import api
 from app.db import get_session
 from app.db.session import CustomSession
 from app.models import User
+from app.models.application.enums import MeritsDecision
 from app.models.application.index import (
     Address,
     Application,
@@ -69,7 +70,10 @@ def session_fixture():
         )
         db_session.add(proceeding)
         db_session.commit()
-        application_proceeding = ApplicationProceeding(proceeding_id=ProceedingId.IQOT)
+        application_proceeding = ApplicationProceeding(
+            proceeding_id=ProceedingId.IQOT,
+            merits_decision=MeritsDecision.GRANTED,
+        )
 
         new_public_body = PublicBody(
             public_body_id=PublicBodyId.DEPARTMENT_FOR_TRANSPORT,

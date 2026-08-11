@@ -84,7 +84,7 @@ class Claim:
         if application.status in ("WITHDRAWN", "GRANTED"):
             return False
 
-        return application.overall_decision != MeritsDecision.GRANTED
+        return application.overall_decision == MeritsDecision.GRANTED
 
     def should_auto_reject_for_max_poa_count(
         self,
