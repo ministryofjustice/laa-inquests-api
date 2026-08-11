@@ -26,6 +26,8 @@ from app.models.application.enums import (
     ReasonForRefusal,
 )
 
+UNGRANTED_SUBSTANTIVE_COST_LIMITATION = 0
+
 
 # RELATIONS
 class Proceeding(SQLModel, table=True):
@@ -266,7 +268,7 @@ class ApplicationProceeding(SQLModel, table=True):
     @property
     def substantive_cost_limitation(self):
         if self.merits_decision != MeritsDecision.GRANTED:
-            return 0
+            return UNGRANTED_SUBSTANTIVE_COST_LIMITATION
         return self.proceeding.substantive_cost_limitation
 
 
