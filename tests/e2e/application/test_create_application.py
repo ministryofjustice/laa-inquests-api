@@ -98,7 +98,7 @@ def test_201_create_application_response_contains_expected_proceeding_informatio
     assert proceeding["certificateType"] == "SUBSTANTIVE"
     assert proceeding["clientInvolvementType"] == "RESPONDENT"
     assert proceeding["meritsDecision"] == MeritsDecision.PENDING
-    assert isinstance(proceeding["substantiveCostLimitation"], int)
+    assert proceeding["substantiveCostLimitation"] == 0
     assert isinstance(proceeding["scopeDescription"], str)
     assert isinstance(proceeding["proceedingName"], str)
     assert isinstance(proceeding["proceedingDescription"], str)

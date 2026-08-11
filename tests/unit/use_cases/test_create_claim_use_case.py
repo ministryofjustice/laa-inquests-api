@@ -604,7 +604,7 @@ def test_execute_auto_approves_eligible_payment_on_account_claim():
 
     application = MagicMock(spec=Application)
     application.status = "LIVE"
-    application.overall_decision = "PENDING"
+    application.overall_decision = "GRANTED"
     application.proceeding = MagicMock()
     application.proceeding.substantive_cost_limitation = 999999
     application.proceeding.certificate_start_date = None
@@ -643,7 +643,7 @@ def test_execute_does_not_auto_approve_when_amount_exceeds_threshold():
 
     application = MagicMock(spec=Application)
     application.status = "LIVE"
-    application.overall_decision = "PENDING"
+    application.overall_decision = "GRANTED"
     application.proceeding = MagicMock()
     application.proceeding.substantive_cost_limitation = 999999
     application.proceeding.certificate_start_date = None
@@ -683,7 +683,7 @@ def test_execute_does_not_auto_approve_non_payment_on_account_claim():
 
     application = MagicMock(spec=Application)
     application.status = "LIVE"
-    application.overall_decision = "PENDING"
+    application.overall_decision = "GRANTED"
     application.proceeding = MagicMock()
     application.proceeding.substantive_cost_limitation = 999999
     application.proceeding.certificate_start_date = None

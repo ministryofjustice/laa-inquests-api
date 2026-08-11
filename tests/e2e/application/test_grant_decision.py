@@ -16,6 +16,11 @@ def _grant_decision_payload(overrides=None):
 def test_204_grant_decision_to_granted(session, client, auth_token):
     application = session.exec(select(Application)).first()
     laa_reference = application.laa_reference
+    application.proceeding.merits_decision = MeritsDecision.PENDING
+    session.add(application.proceeding)
+    session.commit()
+    session.refresh(application)
+    assert application.proceeding.substantive_cost_limitation == 0
 
     response = client.patch(
         f"/applications/{laa_reference}/grant-decision",
@@ -32,6 +37,7 @@ def test_204_grant_decision_to_granted(session, client, auth_token):
     assert application.proceeding.merits_decision == MeritsDecision.GRANTED
     assert application.proceeding.certificate_start_date == date(2000, 1, 1)
     assert application.proceeding.certificate_issue_date == datetime.now(UTC).date()
+    assert application.proceeding.substantive_cost_limitation == 10000
 
 
 def test_404_grant_decision_application_not_found(client, auth_token):

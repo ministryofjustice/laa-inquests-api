@@ -683,7 +683,7 @@ def test_is_eligible_for_auto_approval_when_payment_on_account_total_is_50000():
     )
     application = _make_application_with_certificate(start=None)
     application.status = "LIVE"
-    application.overall_decision = MeritsDecision.PENDING
+    application.overall_decision = MeritsDecision.GRANTED
 
     assert claim.is_eligible_for_auto_approval(application) is True
 
@@ -698,7 +698,7 @@ def test_is_not_eligible_for_auto_approval_when_total_exceeds_50000():
     )
     application = _make_application_with_certificate(start=None)
     application.status = "LIVE"
-    application.overall_decision = MeritsDecision.PENDING
+    application.overall_decision = MeritsDecision.GRANTED
 
     assert claim.is_eligible_for_auto_approval(application) is False
 
@@ -713,12 +713,12 @@ def test_is_not_eligible_for_auto_approval_when_application_status_withdrawn():
     )
     application = _make_application_with_certificate(start=None)
     application.status = "WITHDRAWN"
-    application.overall_decision = MeritsDecision.PENDING
+    application.overall_decision = MeritsDecision.GRANTED
 
     assert claim.is_eligible_for_auto_approval(application) is False
 
 
-def test_is_not_eligible_for_auto_approval_when_merits_decision_granted():
+def test_is_not_eligible_for_auto_approval_when_merits_decision_pending():
     claim = Claim(
         claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
         poa_type=POAType.PROFIT_COST,
@@ -728,7 +728,7 @@ def test_is_not_eligible_for_auto_approval_when_merits_decision_granted():
     )
     application = _make_application_with_certificate(start=None)
     application.status = "LIVE"
-    application.overall_decision = MeritsDecision.GRANTED
+    application.overall_decision = MeritsDecision.PENDING
 
     assert claim.is_eligible_for_auto_approval(application) is False
 
@@ -743,6 +743,6 @@ def test_is_not_eligible_for_auto_approval_when_claim_is_not_payment_on_account(
     )
     application = _make_application_with_certificate(start=None)
     application.status = "LIVE"
-    application.overall_decision = MeritsDecision.PENDING
+    application.overall_decision = MeritsDecision.GRANTED
 
     assert claim.is_eligible_for_auto_approval(application) is False

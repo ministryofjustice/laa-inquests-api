@@ -234,6 +234,11 @@ def test_search_applications_returns_empty_list_for_unknown_reference(session):
 
 class TestGetPendingApplications:
     def test_returns_applications_with_pending_decision(self, session):
+        app = session.exec(select(Application)).first()
+        app.proceeding.merits_decision = MeritsDecision.PENDING
+        session.add(app.proceeding)
+        session.flush()
+
         adapter = ApplicationRepositoryAdapter(session)
 
         result = adapter.get_pending_applications()
@@ -267,6 +272,11 @@ class TestGetPendingApplications:
 
     def test_ordered_by_created_at_ascending(self, session):
         from tests.e2e.factories import create_application_in_db
+
+        app = session.exec(select(Application)).first()
+        app.proceeding.merits_decision = MeritsDecision.PENDING
+        session.add(app.proceeding)
+        session.flush()
 
         older_app = create_application_in_db(
             session,
