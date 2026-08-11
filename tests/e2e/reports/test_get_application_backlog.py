@@ -1,15 +1,9 @@
-import csv
-import io
 from datetime import UTC, datetime
 
 from app.domain.constants.report_csv_headers import APPLICATION_BACKLOG_REPORT_HEADERS
 from app.models.application.enums import MeritsDecision
 from tests.e2e.factories import create_application_in_db
-
-
-def _parse_csv(content: str) -> list[dict[str, str]]:
-    reader = csv.DictReader(io.StringIO(content))
-    return list(reader)
+from tests.helpers import parse_csv_rows
 
 
 class TestGetApplicationBacklogReport:
@@ -32,7 +26,7 @@ class TestGetApplicationBacklogReport:
             headers={"Authorization": f"Bearer {auth_token}"},
         )
 
-        rows = _parse_csv(response.text)
+        rows = parse_csv_rows(response.text)
         assert len(rows) >= 1
         assert list(rows[0].keys()) == APPLICATION_BACKLOG_REPORT_HEADERS
 
@@ -44,7 +38,7 @@ class TestGetApplicationBacklogReport:
             headers={"Authorization": f"Bearer {auth_token}"},
         )
 
-        rows = _parse_csv(response.text)
+        rows = parse_csv_rows(response.text)
 
         row = rows[0]
         assert row["Current Application Status"] == MeritsDecision.PENDING
@@ -71,7 +65,7 @@ class TestGetApplicationBacklogReport:
             headers={"Authorization": f"Bearer {auth_token}"},
         )
 
-        rows = _parse_csv(response.text)
+        rows = parse_csv_rows(response.text)
         status = [row["Current Application Status"] for row in rows]
 
         assert MeritsDecision.GRANTED not in status
@@ -97,7 +91,7 @@ class TestGetApplicationBacklogReport:
             headers={"Authorization": f"Bearer {auth_token}"},
         )
 
-        rows = _parse_csv(response.text)
+        rows = parse_csv_rows(response.text)
         assert len(rows) >= 3
 
         dates = [row["Application Received Date"] for row in rows]

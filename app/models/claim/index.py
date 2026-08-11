@@ -11,6 +11,7 @@ from pydantic.alias_generators import to_camel
 from sqlalchemy import Column, Numeric
 from sqlmodel import Enum, Field, Relationship, SQLModel
 
+from app.models.application.index import Application
 from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
@@ -44,6 +45,9 @@ class ClaimBase(SQLModel):
 
 class Claim(ClaimBase, table=True):
     claim_id: int | None = Field(default=None, primary_key=True)
+    application: Application | None = Relationship(
+        sa_relationship_kwargs={"uselist": False}
+    )
     claim_evidence: list["ClaimEvidence"] = Relationship(back_populates="claim")
 
 

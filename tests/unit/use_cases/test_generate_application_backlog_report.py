@@ -13,6 +13,7 @@ from app.use_cases.exceptions import (
 from app.use_cases.generate_application_backlog_report import (
     GenerateApplicationBacklogReportUseCase,
 )
+from tests.helpers import parse_csv_rows
 from tests.unit.factories import (
     create_base_application,
     create_base_application_proceeding,
@@ -34,10 +35,6 @@ def _build_use_case(
         application_backlog_port=backlog_port,
         provider_details_port=provider_details_port,
     )
-
-
-def _parse_csv(csv_content: str) -> list[dict[str, str]]:
-    return list(csv.DictReader(io.StringIO(csv_content)))
 
 
 class TestGenerateApplicationBacklogReportUseCase:
@@ -69,7 +66,7 @@ class TestGenerateApplicationBacklogReportUseCase:
         )
 
         result = use_case.execute()
-        rows = _parse_csv(result)
+        rows = parse_csv_rows(result)
         row = rows[0]
 
         assert len(rows) == 1
@@ -92,7 +89,7 @@ class TestGenerateApplicationBacklogReportUseCase:
         )
 
         result = use_case.execute()
-        rows = _parse_csv(result)
+        rows = parse_csv_rows(result)
 
         assert rows[0]["Firm Name"] == "Acme Solicitors"
 
@@ -127,7 +124,7 @@ class TestGenerateApplicationBacklogReportUseCase:
         )
 
         result = use_case.execute()
-        rows = _parse_csv(result)
+        rows = parse_csv_rows(result)
 
         assert len(rows) == 2
         refs = [row["Application / Case Reference Number"] for row in rows]

@@ -4,6 +4,7 @@ from sqlmodel import Session, select
 
 from app.domain.claim import Claim as DomainClaim
 from app.domain.claim_evidence import ClaimEvidence as DomainClaimEvidence
+from app.models.application.index import Application
 from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ReasonCode
 from app.models.claim.index import (
     Claim,
@@ -25,10 +26,12 @@ from app.ports.claim.update_claim_status_port import (
     UpdateClaimStatusPort,
 )
 from app.ports.claim.upload_claim_evidence_port import UploadClaimEvidencePort
+from app.ports.claim_backlog_port import ClaimBacklogPort
 
 
 class ClaimRepositoryAdapter(
     CreateClaimPort,
+    ClaimBacklogPort,
     GetClaimsForApplicationPort,
     GetClaimByIdPort,
     GetClaimDecisionPort,
@@ -94,6 +97,15 @@ class ClaimRepositoryAdapter(
             .order_by(ClaimDecision.claim_decision_id.desc())
         )
         return self.session.exec(statement).first()
+
+    def get_open_claims(self) -> list[Claim]:
+        statement = (
+            select(Claim)
+            .join(Application, Claim.laa_reference == Application.laa_reference)
+            .where(Claim.status_id == ClaimStatus.SUBMITTED)
+            .order_by(Claim.submission_date.asc())
+        )
+        return list(self.session.exec(statement).all())
 
     def create_claim_decision(
         self,
