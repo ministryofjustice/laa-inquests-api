@@ -9,6 +9,7 @@ from sqlmodel import Session
 
 from app.adapters.application_repository_adapter import ApplicationRepositoryAdapter
 from app.adapters.gov_notify import GovNotifyAdapter
+from app.adapters.history_event_repository_adapter import HistoryEventRepositoryAdapter
 from app.adapters.pdf_generator_adapter import PdfGeneratorAdapter
 from app.adapters.provider_details_adapter import ProviderDetailsAdapter
 from app.config import Config
@@ -31,6 +32,7 @@ from app.models.claim.index import (
     ClaimResponse,
     ClaimSummaryResponse,
 )
+from app.models.history.index import HistoryEventResponse
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
@@ -42,6 +44,8 @@ from app.ports.claim.update_claim_status_port import (
     UpdateClaimStatusPort,
 )
 from app.ports.create_application_port import CreateApplicationPort
+from app.ports.create_history_event_port import CreateHistoryEventPort
+from app.ports.get_application_history_port import GetApplicationHistoryPort
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.list_applications_port import ListApplicationsPort
@@ -75,6 +79,7 @@ from app.use_cases.exceptions import (
     ProviderDetailsRetrievalError,
 )
 from app.use_cases.get_application import GetApplicationUseCase
+from app.use_cases.get_application_history import GetApplicationHistoryUseCase
 from app.use_cases.get_claim import GetClaimUseCase
 from app.use_cases.grant_decision import GrantDecisionUseCase
 from app.use_cases.list_application_claims import ListApplicationClaimsUseCase
@@ -115,6 +120,12 @@ def get_application_db_adapter(
     return ApplicationRepositoryAdapter(session=session)
 
 
+def get_history_event_adapter(
+    session: Session = Depends(get_session),
+) -> HistoryEventRepositoryAdapter:
+    return HistoryEventRepositoryAdapter(session=session)
+
+
 def get_get_application_use_case(
     get_application_port: GetApplicationPort = Depends(get_application_db_adapter),
     provider_details_port: ProviderDetailsPort = Depends(get_provider_details_port),
@@ -129,11 +140,27 @@ def get_create_application_use_case(
     create_application_port: CreateApplicationPort = Depends(
         get_application_db_adapter
     ),
+    create_history_event_port: CreateHistoryEventPort = Depends(
+        get_history_event_adapter
+    ),
     gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
 ) -> CreateApplicationUseCase:
     return CreateApplicationUseCase(
         create_application_port=create_application_port,
+        create_history_event_port=create_history_event_port,
         gov_notify_port=gov_notify_port,
+    )
+
+
+def get_application_history_use_case(
+    get_application_history_port: GetApplicationHistoryPort = Depends(
+        get_history_event_adapter
+    ),
+    get_application_port: GetApplicationPort = Depends(get_application_db_adapter),
+) -> GetApplicationHistoryUseCase:
+    return GetApplicationHistoryUseCase(
+        get_application_history_port=get_application_history_port,
+        get_application_port=get_application_port,
     )
 
 
@@ -430,6 +457,22 @@ def read_certificate(
             status_code=500,
             detail="Failed to retrieve firm name from provider details service",
         )
+
+
+@router.get(
+    "/{laa_reference}/history",
+    response_model=list[HistoryEventResponse],
+)
+def get_application_history(
+    laa_reference: str,
+    use_case: GetApplicationHistoryUseCase = Depends(get_application_history_use_case),
+    _: None = Depends(verify_entra_caseworker_token),
+) -> list[HistoryEventResponse]:
+    """Get the history of a given application."""
+    try:
+        return use_case.execute(laa_reference)
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
 
 
 @router.get("/")
