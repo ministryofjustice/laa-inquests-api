@@ -20,7 +20,6 @@ def test_create_history_event_persists_event_with_expected_values(session):
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        event_description="Application submitted",
         laa_reference=laa_reference,
         event_data={"context": "Additional context data", "related_link": None},
     )
@@ -31,7 +30,6 @@ def test_create_history_event_persists_event_with_expected_values(session):
     assert stored is not None
     assert stored.event_reference == HistoryEventReference.APPLICATION_SUBMITTED
     assert stored.actor == "test_user@example.com"
-    assert stored.event_description == "Application submitted"
     assert stored.laa_reference == laa_reference
     assert stored.event_data == {
         "context": "Additional context data",
@@ -48,7 +46,6 @@ def test_create_history_event_sets_timestamp_automatically(session):
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        event_description="Test event",
         laa_reference=laa_reference,
     )
     after_creation = datetime.now(UTC)
@@ -70,7 +67,6 @@ def test_create_history_event_handles_none_event_data(session):
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        event_description="Event without data",
         laa_reference=laa_reference,
         event_data=None,
     )
@@ -89,7 +85,6 @@ def test_commits_transaction(session):
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        event_description="Event to commit",
         laa_reference=laa_reference,
     )
     adapter.commit()
@@ -107,7 +102,6 @@ def test_rollback_discards_uncommitted_event(session):
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        event_description="Event to rollback",
         laa_reference=laa_reference,
     )
     event_id = created.id
@@ -125,7 +119,6 @@ def test_get_application_history_returns_correct_events(session):
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        event_description="First event",
         laa_reference=laa_reference,
     )
 
@@ -133,7 +126,6 @@ def test_get_application_history_returns_correct_events(session):
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        event_description="Second event",
         laa_reference=laa_reference,
     )
 
@@ -169,7 +161,6 @@ def test_get_application_history_does_not_return_events_for_other_applications(s
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        event_description="Event for first application",
         laa_reference=laa_reference1,
     )
 
@@ -177,7 +168,6 @@ def test_get_application_history_does_not_return_events_for_other_applications(s
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        event_description="Event for second application",
         laa_reference=laa_reference2,
     )
 
@@ -197,7 +187,6 @@ def test_get_application_history_returns_event_list_in_reverse_chronological_ord
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        event_description="First event",
         laa_reference=laa_reference,
     )
 
@@ -205,7 +194,6 @@ def test_get_application_history_returns_event_list_in_reverse_chronological_ord
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        event_description="Second event",
         laa_reference=laa_reference,
     )
 

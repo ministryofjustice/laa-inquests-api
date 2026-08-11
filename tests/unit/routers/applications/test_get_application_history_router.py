@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 import pytest
 from fastapi import HTTPException
 
+from app.models.history.enums import HistoryEventReference
 from app.models.history.index import HistoryEventResponse
 from app.routers.applications import get_application_history
 from app.use_cases.exceptions import ApplicationNotFoundError
@@ -14,7 +15,7 @@ def test_get_application_history_calls_use_case_with_the_laa_reference():
     mock_response = HistoryEventResponse(
         timestamp=datetime.now(UTC),
         actor="provider@example.com",
-        event_description="Application received",
+        event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         event_data=None,
     )
     use_case.execute.return_value = [mock_response]

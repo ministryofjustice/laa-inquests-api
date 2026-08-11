@@ -18,7 +18,6 @@ class HistoryEvent(SQLModel, table=True):
     )
     actor: str = Field(nullable=False)
     actor_type: ActorType = Field(nullable=False)
-    event_description: str = Field(nullable=False)
     event_data: dict | None = Field(default=None, sa_column=Column(JSON, nullable=True))
     laa_reference: int = Field(foreign_key="application.laa_reference", nullable=False)
 
@@ -31,5 +30,5 @@ class HistoryEventResponse(BaseModel):
     )
     timestamp: datetime
     actor: str
-    event_description: str
+    event_reference: HistoryEventReference
     event_data: dict | None

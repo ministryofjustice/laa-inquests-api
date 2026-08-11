@@ -11,7 +11,6 @@ class CreateHistoryEventPort(ABC):
         event_reference: HistoryEventReference,
         actor: str,
         actor_type: ActorType,
-        event_description: str,
         laa_reference: int,
         event_data: dict | None = None,
     ) -> HistoryEvent: ...

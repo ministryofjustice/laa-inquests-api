@@ -19,7 +19,6 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
             event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
             actor="user@example.com",
             actor_type=ActorType.PROVIDER,
-            event_description="Application created",
             laa_reference=12345,
             event_data={"related_link": "/application/12345", "context": "Optional context"}
         )
@@ -34,7 +33,6 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
         event_reference: HistoryEventReference,
         actor: str,
         actor_type: ActorType,
-        event_description: str,
         laa_reference: int,
         event_data: dict | None = None,
     ) -> HistoryEvent:
@@ -44,7 +42,6 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
         Args:
             event_reference: Event identifier (e.g., "EVT-BUS-APP-001")
             actor: User or system that triggered the event
-            event_description: Human-readable description of the event
             laa_reference: LAA reference number (as int)
             event_data: Optional JSON data associated with the event
                        (e.g., {"related_link": "/path", "context": "text"})
@@ -56,7 +53,6 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
             event_reference=event_reference,
             actor=actor,
             actor_type=actor_type,
-            event_description=event_description,
             laa_reference=laa_reference,
             event_data=event_data,
         )

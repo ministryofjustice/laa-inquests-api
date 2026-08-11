@@ -189,7 +189,6 @@ def test_201_create_application_creates_history_event(client, auth_token, sessio
     assert history_event.event_reference == HistoryEventReference.APPLICATION_SUBMITTED
     assert history_event.actor == "provider@example.com"
     assert history_event.actor_type == ActorType.PROVIDER
-    assert history_event.event_description == "Application received"
     assert history_event.event_data is None
     assert history_event.laa_reference == laa_reference
 

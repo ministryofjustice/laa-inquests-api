@@ -48,7 +48,6 @@ def test_execute_returns_history_events_from_port():
         timestamp=datetime.now(UTC),
         actor="provider@example.com",
         actor_type=ActorType.PROVIDER,
-        event_description="Application received",
         event_data=None,
         laa_reference=123456,
     )
@@ -58,7 +57,6 @@ def test_execute_returns_history_events_from_port():
         timestamp=datetime.now(UTC),
         actor="caseworker@justice.gov.uk",
         actor_type=ActorType.CASEWORKER,
-        event_description="Application assessment completed",
         event_data={"context": "Test data", "related_link": "/get-certificate/123456"},
         laa_reference=123456,
     )
@@ -71,10 +69,13 @@ def test_execute_returns_history_events_from_port():
     assert len(result) == 2
     assert all(isinstance(event, HistoryEventResponse) for event in result)
     assert result[0].actor == "Provider"
-    assert result[0].event_description == "Application received"
+    assert result[0].event_reference == HistoryEventReference.APPLICATION_SUBMITTED
     assert result[0].event_data is None
     assert result[1].actor == "caseworker@justice.gov.uk"
-    assert result[1].event_description == "Application assessment completed"
+    assert (
+        result[1].event_reference
+        == HistoryEventReference.APPLICATION_ASSESSMENT_COMPLETED
+    )
     assert result[1].event_data["context"] == "Test data"
     assert result[1].event_data["related_link"] == "/get-certificate/123456"
 
@@ -86,7 +87,6 @@ def test_execute_masks_provider_actor_as_provider():
         timestamp=datetime.now(UTC),
         actor="provider@example.com",
         actor_type=ActorType.PROVIDER,
-        event_description="Application received",
         event_data=None,
         laa_reference=123456,
     )
@@ -104,7 +104,6 @@ def test_execute_preserves_non_provider_actor():
         timestamp=datetime.now(UTC),
         actor="caseworker@justice.gov.uk",
         actor_type=ActorType.CASEWORKER,
-        event_description="Decision made",
         event_data=None,
         laa_reference=123456,
     )

@@ -76,7 +76,6 @@ def test_execute_creates_application_sends_confirmation_email_and_commits():
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="provider@example.com",
         actor_type=ActorType.PROVIDER,
-        event_description="Application received",
         laa_reference=application.laa_reference,
         event_data=None,
     )

@@ -44,7 +44,6 @@ def upgrade() -> None:
     sa.Column('timestamp', sa.DateTime(), nullable=False),
     sa.Column('actor', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('actor_type', sa.Enum('SYSTEM', 'CASEWORKER', 'PROVIDER', name='actortype'), nullable=False),
-    sa.Column('event_description', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('event_data', sa.JSON(), nullable=True),
     sa.Column('laa_reference', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['laa_reference'], ['application.laa_reference'], ),

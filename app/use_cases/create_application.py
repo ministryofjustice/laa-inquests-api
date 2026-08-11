@@ -26,7 +26,6 @@ class CreateApplicationUseCase:
                 event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
                 actor=request.provider.email_address,
                 actor_type=ActorType.PROVIDER,
-                event_description="Application received",
                 laa_reference=application.laa_reference,
                 event_data=None,
             )
