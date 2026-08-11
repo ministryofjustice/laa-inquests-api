@@ -81,7 +81,7 @@ class Claim:
         if total > AUTO_APPROVAL_MAX_TOTAL:
             return False
 
-        if application.status in ("WITHDRAWN", "GRANTED"):
+        if application.status == "WITHDRAWN":
             return False
 
         return application.overall_decision == MeritsDecision.GRANTED
