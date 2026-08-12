@@ -74,7 +74,7 @@ def test_200_search_application_returns_empty_list_for_unknown_reference(
     assert response.json() == []
 
 
-def test_200_search_application_excludes_pending_application(
+def test_200_search_application_includes_pending_application_when_no_merits_filter(
     session, client, auth_token
 ):
     app = session.exec(select(Application)).first()
@@ -85,6 +85,50 @@ def test_200_search_application_excludes_pending_application(
     response = client.get(
         "/applications/search",
         params={"laa_reference": str(app.laa_reference)},
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["laaReference"] == app.laa_reference
+
+
+def test_200_search_application_with_merits_filter_returns_only_granted(
+    session, client, auth_token
+):
+    app = session.exec(select(Application)).first()
+    app.proceeding.merits_decision = MeritsDecision.GRANTED
+    session.add(app.proceeding)
+    session.commit()
+
+    response = client.get(
+        "/applications/search",
+        params={
+            "laa_reference": str(app.laa_reference),
+            "merits_decision": MeritsDecision.GRANTED.value,
+        },
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["laaReference"] == app.laa_reference
+
+
+def test_200_search_application_with_granted_filter_excludes_pending_application(
+    session, client, auth_token
+):
+    app = session.exec(select(Application)).first()
+    app.proceeding.merits_decision = MeritsDecision.PENDING
+    session.add(app.proceeding)
+    session.commit()
+
+    response = client.get(
+        "/applications/search",
+        params={
+            "laa_reference": str(app.laa_reference),
+            "merits_decision": MeritsDecision.GRANTED.value,
+        },
         headers={"Authorization": f"Bearer {auth_token}"},
     )
 

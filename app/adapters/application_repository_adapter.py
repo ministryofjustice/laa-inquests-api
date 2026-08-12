@@ -56,7 +56,10 @@ class ApplicationRepositoryAdapter(
         return self.session.exec(select(PublicBody)).all()
 
     def search_applications(
-        self, laa_reference: str, firm_code: str
+        self,
+        laa_reference: str,
+        firm_code: str,
+        merits_decision: MeritsDecision | None = None,
     ) -> list[Application]:
         try:
             laa_reference_int = int(laa_reference)
@@ -73,8 +76,13 @@ class ApplicationRepositoryAdapter(
             )
             .where(Application.laa_reference == laa_reference_int)
             .where(Provider.firm_code == firm_code)
-            .where(ApplicationProceeding.merits_decision == MeritsDecision.GRANTED)
         )
+
+        if merits_decision is not None:
+            statement = statement.where(
+                ApplicationProceeding.merits_decision == merits_decision
+            )
+
         return list(self.session.exec(statement).all())
 
     def create_application(

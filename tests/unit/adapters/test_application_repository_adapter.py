@@ -215,7 +215,11 @@ def test_search_applications_returns_empty_list_when_application_is_pending(sess
 
     adapter = ApplicationRepositoryAdapter(session)
 
-    result = adapter.search_applications(str(app.laa_reference), "0A123B")
+    result = adapter.search_applications(
+        str(app.laa_reference),
+        "0A123B",
+        MeritsDecision.GRANTED,
+    )
 
     assert result == []
 
@@ -228,9 +232,27 @@ def test_search_applications_returns_empty_list_when_application_is_refused(sess
 
     adapter = ApplicationRepositoryAdapter(session)
 
-    result = adapter.search_applications(str(app.laa_reference), "0A123B")
+    result = adapter.search_applications(
+        str(app.laa_reference),
+        "0A123B",
+        MeritsDecision.GRANTED,
+    )
 
     assert result == []
+
+
+def test_search_applications_returns_pending_application_when_no_merits_filter(session):
+    app = session.exec(select(Application)).first()
+    app.proceeding.merits_decision = MeritsDecision.PENDING
+    session.add(app.proceeding)
+    session.flush()
+
+    adapter = ApplicationRepositoryAdapter(session)
+
+    result = adapter.search_applications(str(app.laa_reference), "0A123B")
+
+    assert len(result) == 1
+    assert result[0].laa_reference == app.laa_reference
 
 
 def test_search_applications_returns_empty_list_when_firm_code_does_not_match(session):

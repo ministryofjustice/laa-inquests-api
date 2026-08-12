@@ -42,7 +42,7 @@ def test_execute_normalises_reference_by_stripping_whitespace_before_lookup():
 
     use_case.execute("  1  ", "0A123B")
 
-    search_port.search_applications.assert_called_once_with("1", "0A123B")
+    search_port.search_applications.assert_called_once_with("1", "0A123B", None)
 
 
 def test_execute_passes_firm_code_to_search_port():
@@ -56,7 +56,23 @@ def test_execute_passes_firm_code_to_search_port():
 
     use_case.execute("1", "ZZ999Z")
 
-    search_port.search_applications.assert_called_once_with("1", "ZZ999Z")
+    search_port.search_applications.assert_called_once_with("1", "ZZ999Z", None)
+
+
+def test_execute_passes_merits_decision_to_search_port():
+    search_port = MagicMock(spec=SearchApplicationPort)
+    search_port.search_applications.return_value = []
+    provider_port = MagicMock(spec=ProviderDetailsPort)
+    use_case = SearchApplicationUseCase(
+        search_application_port=search_port,
+        provider_details_port=provider_port,
+    )
+
+    use_case.execute("1", "0A123B", MeritsDecision.GRANTED)
+
+    search_port.search_applications.assert_called_once_with(
+        "1", "0A123B", MeritsDecision.GRANTED
+    )
 
 
 def test_execute_calls_provider_details_port_with_firm_code():

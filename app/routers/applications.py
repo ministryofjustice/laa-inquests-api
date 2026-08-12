@@ -14,6 +14,7 @@ from app.adapters.pdf_generator_adapter import PdfGeneratorAdapter
 from app.adapters.provider_details_adapter import ProviderDetailsAdapter
 from app.config import Config
 from app.db import get_session
+from app.models.application.enums import MeritsDecision
 from app.models.application.certificate import ApplicationCertificateResponse
 from app.models.application.index import (
     Application,
@@ -314,11 +315,12 @@ def get_upload_coroners_letter_use_case(
 async def search_application(
     laa_reference: str,
     firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
+    merits_decision: MeritsDecision | None = None,
     use_case: SearchApplicationUseCase = Depends(get_search_application_use_case),
 ) -> list[ApplicationSearchResponse]:
     """Search for an application by exact LAA reference number."""
     try:
-        return use_case.execute(laa_reference, firm_code)
+        return use_case.execute(laa_reference, firm_code, merits_decision)
     except ProviderDetailsRetrievalError:
         raise HTTPException(
             status_code=500,
