@@ -278,6 +278,7 @@ def get_grant_decision_use_case(
     update_decision_port: ApplicationDecisionPort = Depends(get_application_db_adapter),
     gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
     pdf_generation_port: PdfGenerationPort = Depends(get_pdf_generation_port),
+    create_history_event_port: CreateHistoryEventPort = Depends(get_history_event_adapter),
     create_certificate_context_use_case=Depends(
         get_create_certificate_context_use_case
     ),
@@ -295,6 +296,7 @@ def get_grant_decision_use_case(
         create_certificate_context_use_case=create_certificate_context_use_case,
         send_grant_email_use_case=send_grant_email_use_case,
         send_grant_letter_use_case=send_grant_letter_use_case,
+        create_history_event_port=create_history_event_port
     )
 
 
