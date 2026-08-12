@@ -1,6 +1,9 @@
 """Central application-level domain constants."""
 
-# The default substantive certificate amount (cost limitation) granted for a
-# proceeding. Stored centrally so it can be updated in one place if the policy
-# figure changes.
+from decimal import Decimal
+
 SUBSTANTIVE_CERTIFICATE_AMOUNT = 10000
+
+MAX_PROFIT_COST_POA_CLAIM_COUNT = 4
+MIN_MONTHS_BEFORE_PROFIT_COST_POA = 3
+AUTO_APPROVAL_MAX_TOTAL = Decimal("50000.00")

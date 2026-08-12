@@ -16,6 +16,11 @@ from app.domain.constants.claim_messages import (
     NET_GT_GROSS_MESSAGE,
     POA_NOT_ALLOWED_MESSAGE,
 )
+from app.domain.constants.claims import (
+    MAX_PROFIT_COST_POA_CLAIM_COUNT,
+    MIN_MONTHS_BEFORE_PROFIT_COST_POA,
+    AUTO_APPROVAL_MAX_TOTAL,
+)
 from app.domain.date_utils import add_calendar_months
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
@@ -31,10 +36,6 @@ def _as_utc(dt: datetime) -> datetime:
     """Treat timezone-naive datetimes as UTC for safe comparison."""
     return dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
 
-
-MAX_PROFIT_COST_POA_CLAIM_COUNT = 4
-MIN_MONTHS_BEFORE_PROFIT_COST_POA = 3
-AUTO_APPROVAL_MAX_TOTAL = Decimal("50000.00")
 
 APPROVED_CLAIM_DECISIONS = frozenset(
     {ClaimDecisionStatus.GRANT, ClaimDecisionStatus.PAY_IN_FULL}
