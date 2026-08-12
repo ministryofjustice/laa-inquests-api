@@ -1,11 +1,12 @@
 import csv
 import io
+from decimal import Decimal
 from unittest.mock import MagicMock
 
 import pytest
 
 from app.domain.constants.report_csv_headers import CLAIMS_BACKLOG_REPORT_HEADERS
-from app.models.claim.enums import ClaimStatus
+from app.models.claim.enums import ClaimStatus, ClaimType
 from app.models.claim.index import Claim
 from app.use_cases.exceptions import (
     ProviderDetailsRetrievalError,
@@ -54,7 +55,14 @@ class TestGenerateClaimBacklogReportUseCase:
         assert rows == []
 
     def test_returns_csv_row_for_open_claim(self):
-        claim = create_base_claim(claim_id=10, laa_reference=12345)
+        claim = create_base_claim(
+            claim_id=10,
+            laa_reference=12345,
+            claim_type_id=ClaimType.FINAL_BILL,
+            total_profit_cost_vat_zero=Decimal("0.00"),
+            total_profit_cost_net=Decimal("100.00"),
+            total_profit_cost_gross=Decimal("120.00"),
+        )
         claim.application = create_base_application(
             provider=create_base_provider(firm_code="ABC123")
         )
@@ -65,13 +73,15 @@ class TestGenerateClaimBacklogReportUseCase:
 
         assert len(rows) == 1
         row = rows[0]
-        assert row["Claims Reference Number"] == "10"
-        assert row["Current Claims Status"] == ClaimStatus.SUBMITTED
-        assert row["Claim Received Date"] == "2026-01-01 00:00:00"
+        assert row["Case reference"] == "10"
         assert row["Firm Name"] == "Test Firm"
         assert row["Firm Account Number"] == "ABC123"
-        assert row["Proceeding Code"] == "IQOT"
-        assert row["Matter Type"] == "INQUESTS"
+        assert row["Submission date"] == "2026-01-01 00:00:00"
+        assert row["Claim status"] == ClaimStatus.SUBMITTED
+        assert row["Total 0% VAT claim value"] == "0.00"
+        assert row["Net total claim value"] == "100.00"
+        assert row["Gross total claim value"] == "120.00"
+        assert row["Claim type"] == "FINAL_BILL"
 
     def test_raises_error_when_firm_name_missing_for_firm_code(self):
         claim = create_base_claim(claim_id=13, laa_reference=12345)
@@ -106,8 +116,22 @@ class TestGenerateClaimBacklogReportUseCase:
             use_case.execute()
 
     def test_deduplicates_firm_codes_before_calling_port(self):
-        claim_1 = create_base_claim(claim_id=15, laa_reference=100)
-        claim_2 = create_base_claim(claim_id=16, laa_reference=200)
+        claim_1 = create_base_claim(
+            claim_id=15,
+            laa_reference=100,
+            claim_type_id=ClaimType.FINAL_BILL,
+            total_profit_cost_vat_zero=Decimal("0.00"),
+            total_profit_cost_net=Decimal("100.00"),
+            total_profit_cost_gross=Decimal("120.00"),
+        )
+        claim_2 = create_base_claim(
+            claim_id=16,
+            laa_reference=200,
+            claim_type_id=ClaimType.FINAL_BILL,
+            total_profit_cost_vat_zero=Decimal("0.00"),
+            total_profit_cost_net=Decimal("100.00"),
+            total_profit_cost_gross=Decimal("120.00"),
+        )
         application = create_base_application(
             provider=create_base_provider(firm_code="ABC123")
         )
