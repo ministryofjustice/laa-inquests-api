@@ -9,13 +9,15 @@ from tests.e2e.factories import create_claim_in_db
 from tests.helpers import parse_csv_fieldnames, parse_csv_rows
 
 CLAIMS_BACKLOG_REPORT_HEADERS = [
-    "Claims Reference Number",
-    "Current Claims Status",
-    "Claim Received Date",
+    "Case reference",
     "Firm Name",
     "Firm Account Number",
-    "Proceeding Code",
-    "Matter Type",
+    "Submission date",
+    "Claim status",
+    "Total 0% VAT claim value",
+    "Net total claim value",
+    "Gross total claim value",
+    "Claim type",
 ]
 
 
@@ -45,13 +47,15 @@ class TestGetClaimBacklogReport:
         rows = parse_csv_rows(response.text)
         assert len(rows) == 1
         row = rows[0]
-        assert row["Claims Reference Number"] == str(claim.claim_id)
-        assert row["Current Claims Status"] == ClaimStatus.SUBMITTED
-        assert row["Claim Received Date"] == "2026-01-01 00:00:00"
+        assert row["Case reference"] == str(claim.claim_id)
         assert row["Firm Account Number"] == application.provider.firm_code
         assert row["Firm Name"] == f"Firm {application.provider.firm_code}"
-        assert row["Proceeding Code"] == application.proceeding.proceeding_id
-        assert row["Matter Type"] == application.proceeding.matter_type
+        assert row["Submission date"] == "2026-01-01 00:00:00"
+        assert row["Claim status"] == ClaimStatus.SUBMITTED
+        assert row["Total 0% VAT claim value"] == "0.00"
+        assert row["Net total claim value"] == "100.00"
+        assert row["Gross total claim value"] == "120.00"
+        assert row["Claim type"] == "FINAL_BILL"
 
     def test_200_csv_excludes_non_open_claims(self, session, client, auth_token):
         application = session.exec(select(Application)).first()
@@ -60,7 +64,7 @@ class TestGetClaimBacklogReport:
             session,
             laa_reference=application.laa_reference,
             status=ClaimStatus.SUBMITTED,
-            submission_date=datetime(2026, 4, 1, tzinfo=UTC),
+            submission_date=datetime(2026, 4, 2, tzinfo=UTC),
         )
         create_claim_in_db(
             session,
@@ -71,8 +75,8 @@ class TestGetClaimBacklogReport:
         create_claim_in_db(
             session,
             laa_reference=application.laa_reference,
-            status=ClaimStatus.PAY_IN_FULL,
-            submission_date=datetime(2026, 4, 3, tzinfo=UTC),
+            status=ClaimStatus.SUBMITTED,
+            submission_date=datetime(2026, 4, 1, tzinfo=UTC),
         )
 
         response = client.get(
@@ -81,11 +85,12 @@ class TestGetClaimBacklogReport:
         )
 
         rows = parse_csv_rows(response.text)
-        statuses = [row["Current Claims Status"] for row in rows]
+        statuses = [row["Claim status"] for row in rows]
+        submission_dates = [row["Submission date"] for row in rows]
 
         assert ClaimStatus.SUBMITTED in statuses
         assert ClaimStatus.REJECTED not in statuses
-        assert ClaimStatus.PAY_IN_FULL not in statuses
+        assert submission_dates == sorted(submission_dates)
 
     def test_200_when_no_qualifying_claims_returns_headers_only(
         self, session, client, auth_token

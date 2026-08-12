@@ -37,17 +37,29 @@ class GenerateClaimBacklogReportUseCase:
                     f"Firm name not found for firm code {firm_code}"
                 )
 
-            proceeding = application.proceeding
-
             writer.writerow(
                 [
                     str(claim.claim_id),
-                    claim.status_id,
-                    claim.submission_date.strftime("%Y-%m-%d %H:%M:%S"),
                     firm_name,
                     firm_code,
-                    proceeding.proceeding_id,
-                    proceeding.matter_type,
+                    claim.submission_date.strftime("%Y-%m-%d %H:%M:%S"),
+                    claim.status_id.value,
+                    (
+                        f"{claim.total_profit_cost_vat_zero:.2f}"
+                        if claim.total_profit_cost_vat_zero is not None
+                        else ""
+                    ),
+                    (
+                        f"{claim.total_profit_cost_net:.2f}"
+                        if claim.total_profit_cost_net is not None
+                        else ""
+                    ),
+                    (
+                        f"{claim.total_profit_cost_gross:.2f}"
+                        if claim.total_profit_cost_gross is not None
+                        else ""
+                    ),
+                    claim.claim_type_id.value,
                 ]
             )
 
