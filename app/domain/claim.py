@@ -17,9 +17,9 @@ from app.domain.constants.claim_messages import (
     POA_NOT_ALLOWED_MESSAGE,
 )
 from app.domain.constants.claims import (
+    AUTO_APPROVAL_MAX_TOTAL,
     MAX_PROFIT_COST_POA_CLAIM_COUNT,
     MIN_MONTHS_BEFORE_PROFIT_COST_POA,
-    AUTO_APPROVAL_MAX_TOTAL,
 )
 from app.domain.date_utils import add_calendar_months
 from app.models.application.enums import MeritsDecision
