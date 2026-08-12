@@ -4,9 +4,11 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 
+from app.domain.application import ApplicationDomain
 from app.domain.claim import Claim as DomainClaim
 from app.domain.claim import ExistingClaimSummary
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
+from app.domain.constants.claim_messages import APPLICATION_NOT_GRANTED_MESSAGE
 from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
@@ -74,6 +76,21 @@ class CreateClaimUseCase:
                 message="Claim evidence is required",
             )
 
+        application = self.application_lookup_port.get_application_by_laa_reference(
+            command.laa_reference
+        )
+        if application is None or application.provider.firm_code != command.firm_code:
+            raise ApplicationNotFoundError(command.laa_reference)
+
+        domain_application = ApplicationDomain(
+            overall_decision=application.overall_decision
+        )
+        if not domain_application.is_granted:
+            raise InvalidClaimError(
+                code=ClaimErrorCode.APPLICATION_NOT_GRANTED,
+                message=APPLICATION_NOT_GRANTED_MESSAGE,
+            )
+
         try:
             validated_claim = DomainClaim(
                 claim_type=command.claim_type,
@@ -85,12 +102,6 @@ class CreateClaimUseCase:
             validated_claim.validate_total_claim_cost()
         except ClaimValidationError as e:
             raise InvalidClaimError(code=e.code, message=e.message) from e
-
-        application = self.application_lookup_port.get_application_by_laa_reference(
-            command.laa_reference
-        )
-        if application is None or application.provider.firm_code != command.firm_code:
-            raise ApplicationNotFoundError(command.laa_reference)
 
         existing_claims = (
             self.get_claims_for_application_port.get_claims_by_laa_reference(

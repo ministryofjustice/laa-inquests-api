@@ -676,14 +676,9 @@ def test_201_create_claim_does_not_auto_approve_when_application_status_is_withd
     assert decision is None
 
 
-def test_201_create_claim_auto_rejects_for_cost_when_application_not_granted(
-    session, client, auth_token
-):
+def test_422_create_claim_when_application_not_granted(session, client, auth_token):
     application = session.exec(select(Application)).first()
-    application_proceeding = application.proceeding
-    application_proceeding.certificate_start_date = datetime(2000, 1, 1, tzinfo=UTC)
     application.proceeding.merits_decision = MeritsDecision.PENDING
-    session.add(application_proceeding.proceeding)
     session.add(application.proceeding)
     session.commit()
 
@@ -701,20 +696,13 @@ def test_201_create_claim_auto_rejects_for_cost_when_application_not_granted(
         },
     )
 
-    assert response.status_code == 201
-    claim = response.json()
-    assert set(claim.keys()) == {"claimId", "rejectionReasons"}
-    assert "CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT" in claim["rejectionReasons"]
+    assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "APPLICATION_NOT_GRANTED"
 
-    stored_claim = session.get(Claim, claim["claimId"])
-    assert stored_claim is not None
-    assert stored_claim.status_id == "REJECTED"
-
-    decision = session.exec(
-        select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
-    ).first()
-    assert decision is not None
-    assert decision.decision == "REJECT"
+    stored_claims = session.exec(
+        select(Claim).where(Claim.laa_reference == application.laa_reference)
+    ).all()
+    assert stored_claims == []
 
 
 def test_201_create_claim_auto_reject_returns_multiple_reasons_for_rejection_when_applicable(
