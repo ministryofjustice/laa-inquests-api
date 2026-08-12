@@ -21,7 +21,7 @@ def create_provider_in_db(session: Session, **overrides) -> Provider:
     """Persist a provider with optional field overrides."""
     defaults = {
         "firm_code": "TEST01",
-        "office_id": "001",
+        "office_id": "0U651L",
         "email_address": "test@example.com",
     }
     provider = Provider(**(defaults | overrides))

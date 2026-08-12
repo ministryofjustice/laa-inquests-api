@@ -139,7 +139,7 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
                 "clientRelationshipToDeceased": "guardian",
             },
             "provider": {
-                "officeId": "001",
+                "officeId": "0U651L",
                 "emailAddress": "provider@example.com",
             },
         },
