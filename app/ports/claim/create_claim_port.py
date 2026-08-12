@@ -14,7 +14,9 @@ class CreateClaimPort(ABC):
         laa_reference: str,
         claim: DomainClaim,
         claimant_id: str | None,
-        total_funds_remaining: Decimal = Decimal(SUBSTANTIVE_CERTIFICATE_AMOUNT),
+        total_funds_remaining_after_claim: Decimal = Decimal(
+            SUBSTANTIVE_CERTIFICATE_AMOUNT
+        ),
     ) -> Claim: ...
 
     @abstractmethod

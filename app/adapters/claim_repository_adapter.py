@@ -52,7 +52,9 @@ class ClaimRepositoryAdapter(
         laa_reference: str,
         claim: DomainClaim,
         claimant_id: str | None,
-        total_funds_remaining: Decimal = Decimal(SUBSTANTIVE_CERTIFICATE_AMOUNT),
+        total_funds_remaining_after_claim: Decimal = Decimal(
+            SUBSTANTIVE_CERTIFICATE_AMOUNT
+        ),
     ) -> Claim:
         new_claim = Claim(
             laa_reference=int(laa_reference),
@@ -60,7 +62,7 @@ class ClaimRepositoryAdapter(
             total_profit_cost_net=claim.net,
             total_profit_cost_gross=claim.gross,
             total_profit_cost_vat_zero=claim.vat_zero_total,
-            total_funds_remaining=total_funds_remaining,
+            total_funds_remaining_after_claim=total_funds_remaining_after_claim,
             poa_type_id=claim.poa_type,
             claimant_id=claimant_id,
         )

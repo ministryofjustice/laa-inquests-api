@@ -38,7 +38,7 @@ def _seed_approved_claim(
         submission_date=datetime.now(UTC),
         total_profit_cost_gross=gross,
         total_profit_cost_vat_zero=vat_zero,
-        total_funds_remaining=Decimal(0),
+        total_funds_remaining_after_claim=Decimal(0),
         poa_type_id=None,
     )
     session.add(claim)
@@ -178,7 +178,7 @@ def test_201_create_claim_stores_provisional_total_funds_remaining_for_approved_
 
     stored_claim = session.get(Claim, claim_id)
     assert stored_claim.status_id == "PAY_IN_FULL"
-    assert stored_claim.total_funds_remaining == Decimal("8800.00")
+    assert stored_claim.total_funds_remaining_after_claim == Decimal("8800.00")
 
 
 def test_201_create_claim_deducts_new_claim_amount_from_total_funds_available_when_not_approved(
@@ -203,7 +203,7 @@ def test_201_create_claim_deducts_new_claim_amount_from_total_funds_available_wh
     stored_claim = session.get(Claim, claim_id)
     assert stored_claim.status_id != "PAY_IN_FULL"
     # 10000 limit - 1200 new claim requested gross = 8800
-    assert stored_claim.total_funds_remaining == Decimal("8800.00")
+    assert stored_claim.total_funds_remaining_after_claim == Decimal("8800.00")
 
 
 def test_201_create_claim_deducts_cumulative_approved_and_new_claim_amount(
@@ -239,7 +239,7 @@ def test_201_create_claim_deducts_cumulative_approved_and_new_claim_amount(
 
     # 10000 limit - (2000 + 1500 approved) - 1000 new claim requested = 5500
     stored_claim = session.get(Claim, claim_id)
-    assert stored_claim.total_funds_remaining == Decimal("5500.00")
+    assert stored_claim.total_funds_remaining_after_claim == Decimal("5500.00")
 
     get_response = client.get(
         f"/applications/{laa_reference}/claims/{claim_id}",

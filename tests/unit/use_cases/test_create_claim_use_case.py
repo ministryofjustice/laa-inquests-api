@@ -775,7 +775,9 @@ def test_execute_sets_funds_from_cumulative_approved_claims_and_new_amount():
     use_case.execute(command)
 
     # 10000 limit - (2000 + 1500 approved) - 1000 new claim requested = 5500
-    funds_arg = create_claim_port.create_claim.call_args.kwargs["total_funds_remaining"]
+    funds_arg = create_claim_port.create_claim.call_args.kwargs[
+        "total_funds_remaining_after_claim"
+    ]
     assert funds_arg == Decimal("5500.00")
 
 
@@ -807,7 +809,9 @@ def test_execute_sets_funds_deducting_new_amount_even_when_auto_approved():
     use_case.execute(command)
 
     # No existing claims, so 10000 - 2000 (this claim's requested amount) = 8000
-    funds_arg = create_claim_port.create_claim.call_args.kwargs["total_funds_remaining"]
+    funds_arg = create_claim_port.create_claim.call_args.kwargs[
+        "total_funds_remaining_after_claim"
+    ]
     assert funds_arg == Decimal("8000.00")
 
 
@@ -845,5 +849,7 @@ def test_execute_sets_funds_without_decision_port_treats_existing_as_unapproved(
 
     # Without a decision port the existing claim is not treated as approved:
     # 10000 - 500 (new claim requested amount) = 9500
-    funds_arg = create_claim_port.create_claim.call_args.kwargs["total_funds_remaining"]
+    funds_arg = create_claim_port.create_claim.call_args.kwargs[
+        "total_funds_remaining_after_claim"
+    ]
     assert funds_arg == Decimal("9500.00")

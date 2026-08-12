@@ -105,7 +105,7 @@ class CreateClaimUseCase:
             )
         )
 
-        total_funds_remaining = self._calculate_total_funds_remaining(
+        total_funds_remaining_after_claim = self._calculate_total_funds_remaining(
             application, existing_claims, validated_claim
         )
 
@@ -113,7 +113,7 @@ class CreateClaimUseCase:
             laa_reference=command.laa_reference,
             claim=validated_claim,
             claimant_id=command.claimant_id,
-            total_funds_remaining=total_funds_remaining,
+            total_funds_remaining_after_claim=total_funds_remaining_after_claim,
         )
         self.create_claim_port.link_evidence_to_claim(
             claim.claim_id, command.claim_evidence_ids

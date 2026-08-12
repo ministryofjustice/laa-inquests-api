@@ -38,7 +38,7 @@ class ClaimBase(SQLModel):
     total_profit_cost_vat_zero: Decimal | None = Field(
         default=None, sa_column=Column(Numeric(10, 2), nullable=True)
     )
-    total_funds_remaining: Decimal = Field(
+    total_funds_remaining_after_claim: Decimal = Field(
         default=Decimal(SUBSTANTIVE_CERTIFICATE_AMOUNT),
         sa_column=Column(
             Numeric(10, 2),
@@ -186,7 +186,7 @@ class ClaimDecisionResponse(BaseModel):
 
 class ClaimByIdResponse(ClaimSummaryBase):
     substantive_cost_limitation: int | None = None
-    total_funds_remaining: Decimal
+    total_funds_remaining_after_claim: Decimal
     claim_evidence: list[ClaimEvidenceResponse] = []
     claim_decision: ClaimDecisionResponse | None = None
 

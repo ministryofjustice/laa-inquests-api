@@ -24,7 +24,9 @@ def _seed_claim(
     session,
     laa_reference: int,
     claim_type: ClaimType = ClaimType.PAYMENT_ON_ACCOUNT,
-    total_funds_remaining: Decimal = Decimal(SUBSTANTIVE_CERTIFICATE_AMOUNT),
+    total_funds_remaining_after_claim: Decimal = Decimal(
+        SUBSTANTIVE_CERTIFICATE_AMOUNT
+    ),
 ) -> Claim:
     claim = Claim(
         laa_reference=laa_reference,
@@ -34,7 +36,7 @@ def _seed_claim(
         total_profit_cost_net=Decimal("1000.00"),
         total_profit_cost_gross=Decimal("1200.00"),
         total_profit_cost_vat_zero=Decimal("500.00"),
-        total_funds_remaining=total_funds_remaining,
+        total_funds_remaining_after_claim=total_funds_remaining_after_claim,
         poa_type_id=POAType.PROFIT_COST,
     )
     session.add(claim)
@@ -129,7 +131,7 @@ def test_200_get_claim_by_id_returns_stored_total_funds_remaining(
 ):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(
-        session, laa_reference, total_funds_remaining=Decimal("8800.00")
+        session, laa_reference, total_funds_remaining_after_claim=Decimal("8800.00")
     )
 
     response = client.get(
