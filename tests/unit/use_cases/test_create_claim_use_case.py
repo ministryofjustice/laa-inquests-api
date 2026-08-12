@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.domain.claim_error import ClaimErrorCode
+from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 from app.models.claim.enums import (
     ClaimDecisionStatus,
@@ -66,6 +67,7 @@ def _make_matching_application(firm_code: str = "0A123B") -> Application:
     application.proceeding = proceeding
     application.provider.firm_code = firm_code
     application.provider.email_address = "provider@example.com"
+    application.overall_decision = MeritsDecision.GRANTED
     return application
 
 
@@ -157,6 +159,24 @@ def test_execute_raises_application_not_found_when_application_missing():
     create_claim_port.create_claim.assert_not_called()
 
 
+def test_execute_raises_invalid_claim_error_when_application_not_granted():
+    command = _make_command()
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    application = _make_matching_application()
+    application.overall_decision = MeritsDecision.PENDING
+
+    use_case = CreateClaimUseCase(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(application),
+        get_claims_for_application_port=_make_get_claims_port(),
+    )
+
+    with pytest.raises(InvalidClaimError) as exc_info:
+        use_case.execute(command)
+    assert exc_info.value.code == ClaimErrorCode.APPLICATION_NOT_GRANTED
+    create_claim_port.create_claim.assert_not_called()
+
+
 def test_execute_creates_claim_and_commits():
     command = _make_command()
     claim = _make_claim()
@@ -226,6 +246,7 @@ def test_execute_sends_claim_submission_email_when_application_exists():
     application.proceeding = proceeding
     application.provider.firm_code = "0A123B"
     application.provider.email_address = "provider@example.com"
+    application.overall_decision = MeritsDecision.GRANTED
     gov_notify_port = MagicMock()
 
     use_case = CreateClaimUseCase(
@@ -488,6 +509,7 @@ def test_execute_does_not_raise_when_application_total_exceeds_limit():
     application.proceeding = MagicMock()
     application.proceeding.substantive_cost_limitation = 1000
     application.proceeding.certificate_start_date = None
+    application.overall_decision = MeritsDecision.GRANTED
 
     use_case = CreateClaimUseCase(
         create_claim_port=create_claim_port,
@@ -512,6 +534,7 @@ def test_execute_persists_auto_reject_and_returns_rejection_reasons():
     application.proceeding = MagicMock()
     application.proceeding.substantive_cost_limitation = 999999
     application.proceeding.certificate_start_date = None
+    application.overall_decision = MeritsDecision.GRANTED
 
     existing_claims = [
         Claim(
@@ -571,6 +594,7 @@ def test_execute_returns_submitted_claim_when_auto_reject_persistence_fails():
     application.proceeding = MagicMock()
     application.proceeding.substantive_cost_limitation = 999999
     application.proceeding.certificate_start_date = None
+    application.overall_decision = MeritsDecision.GRANTED
 
     existing_claims = [
         Claim(

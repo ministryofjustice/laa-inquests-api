@@ -9,11 +9,13 @@ APPLICATION_BACKLOG_REPORT_HEADERS = [
 ]
 
 CLAIMS_BACKLOG_REPORT_HEADERS = [
-    "Claims Reference Number",
-    "Current Claims Status",
-    "Claim Received Date",
+    "Case reference",
     "Firm Name",
     "Firm Account Number",
-    "Proceeding Code",
-    "Matter Type",
+    "Submission date",
+    "Claim status",
+    "Total 0% VAT claim value",
+    "Net total claim value",
+    "Gross total claim value",
+    "Claim type",
 ]
