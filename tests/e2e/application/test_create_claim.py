@@ -935,3 +935,86 @@ def test_201_create_claim_auto_reject_returns_multiple_reasons_for_rejection_whe
     ).all()
     assert len(decision_reasons) == 4
     assert {r.reason_code for r in decision_reasons} == expected_reasons
+
+
+def test_201_create_claim_auto_approves_subsequent_claim_after_one_is_rejected(
+    session, client, auth_token
+):
+    application = session.exec(select(Application)).first()
+    laa_reference = application.laa_reference
+    application.proceeding.merits_decision = MeritsDecision.GRANTED
+    session.add(application.proceeding)
+    session.commit()
+
+    rejected_response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {"totalProfitCostNet": 12000, "totalProfitCostGross": 12000}
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+    assert rejected_response.status_code == 201
+    rejected_claim = rejected_response.json()
+    assert "CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT" in rejected_claim["rejectionReasons"]
+    rejected_stored = session.get(Claim, rejected_claim["claimId"])
+    assert rejected_stored.status_id == "REJECTED"
+
+    approved_response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {"totalProfitCostNet": 5000, "totalProfitCostGross": 5000}
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert approved_response.status_code == 201
+    approved_claim = approved_response.json()
+    assert set(approved_claim.keys()) == {"claimId"}
+
+    approved_stored = session.get(Claim, approved_claim["claimId"])
+    assert approved_stored.status_id == "PAY_IN_FULL"
+
+
+def test_201_create_claim_rejects_when_cumulative_approved_claims_exceed_limit(
+    session, client, auth_token
+):
+    application = session.exec(select(Application)).first()
+    laa_reference = application.laa_reference
+    application.proceeding.merits_decision = MeritsDecision.GRANTED
+    session.add(application.proceeding)
+    session.commit()
+
+    for gross in (7000, 2000):
+        approved = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {"totalProfitCostNet": gross, "totalProfitCostGross": gross}
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+        assert approved.status_code == 201
+        assert set(approved.json().keys()) == {"claimId"}
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {"totalProfitCostNet": 2000, "totalProfitCostGross": 2000}
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    claim = response.json()
+    assert "APPLICATION_CLAIMS_EXCEED_COST_LIMIT" in claim["rejectionReasons"]

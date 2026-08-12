@@ -117,6 +117,9 @@ class Claim:
     def total_claim_cost_for_limit_check(self) -> Decimal | None:
         return self.net if self.net is not None else self.vat_zero_total
 
+    def gross_or_vat_zero_cost(self) -> Decimal | None:
+        return self.gross if self.gross is not None else self.vat_zero_total
+
     def is_eligible_for_auto_approval(self, application: Application) -> bool:
         if self.claim_type != ClaimType.PAYMENT_ON_ACCOUNT:
             return False
@@ -156,7 +159,7 @@ class Claim:
     def should_auto_reject_for_limit(
         self, application: Application
     ) -> ClaimRejectionReason | None:
-        total = self.total_claim_cost_for_limit_check()
+        total = self.gross_or_vat_zero_cost()
         if total is None:
             return None
 
@@ -176,7 +179,7 @@ class Claim:
         application: Application,
         existing_claims: list[ExistingClaimSummary],
     ) -> ClaimRejectionReason | None:
-        new_claim_cost = self.total_claim_cost_for_limit_check()
+        new_claim_cost = self.gross_or_vat_zero_cost()
         if new_claim_cost is None:
             return None
 
@@ -184,14 +187,12 @@ class Claim:
         if limit is None:
             return None
 
-        application_claims = [
-            c
-            for c in existing_claims
-            if c.status in (ClaimStatus.SUBMITTED, ClaimStatus.ACCEPTED)
+        approved_claims = [
+            c for c in existing_claims if c.status == ClaimStatus.PAY_IN_FULL
         ]
         existing_total = sum(
-            (c.net if c.net is not None else c.vat_zero_total or Decimal(0))
-            for c in application_claims
+            ((c.gross if c.gross is not None else c.vat_zero_total) or Decimal(0))
+            for c in approved_claims
         )
         total = existing_total + new_claim_cost
         exceeds_limit = total > limit
