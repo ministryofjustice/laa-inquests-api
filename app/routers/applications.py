@@ -14,8 +14,8 @@ from app.adapters.pdf_generator_adapter import PdfGeneratorAdapter
 from app.adapters.provider_details_adapter import ProviderDetailsAdapter
 from app.config import Config
 from app.db import get_session
-from app.models.application.enums import MeritsDecision
 from app.models.application.certificate import ApplicationCertificateResponse
+from app.models.application.enums import MeritsDecision
 from app.models.application.index import (
     Application,
     ApplicationCreate,
