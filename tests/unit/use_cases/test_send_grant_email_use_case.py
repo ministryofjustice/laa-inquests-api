@@ -26,7 +26,7 @@ def gov_notify_port() -> MagicMock:
 @pytest.fixture
 def application() -> Application:
     provider = create_base_provider(
-        firm_code="0A123B", office_id="001", email_address="test@example.com"
+        firm_code="0A123B", office_id="0U651L", email_address="test@example.com"
     )
     return create_base_application(provider=provider)
 

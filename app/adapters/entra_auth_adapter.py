@@ -1,3 +1,5 @@
+import re
+
 import jwt
 from fastapi import HTTPException, status
 from jwt import PyJWKClient
@@ -35,6 +37,14 @@ class EntraAuthAdapter:
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
+    def _format_name(self, name: str | None) -> str | None:
+        if name is None:
+            return ""
+        cleaned = re.sub(r"\[.*?\]", "", name)
+        cleaned = re.sub(r"\s*-\s*(?=\s|$)", " ", cleaned)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        return cleaned or ""
+
     def verify_token(
         self, token: str, required_scopes: set[str] | None = None
     ) -> AuthenticatedUser:
@@ -58,6 +68,7 @@ class EntraAuthAdapter:
             return AuthenticatedUser(
                 firm_code=payload.get("FIRM_CODE"),
                 scopes=token_scopes | token_roles,
+                name=self._format_name(payload.get("name")),
             )
         except HTTPException:
             raise

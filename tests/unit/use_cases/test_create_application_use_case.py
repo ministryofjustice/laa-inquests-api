@@ -45,7 +45,7 @@ def _make_request(email_address: str = "provider@example.com") -> ApplicationCre
                 "clientRelationshipToDeceased": "guardian",
             },
             "provider": {
-                "officeId": "001",
+                "officeId": "0U651L",
                 "emailAddress": email_address,
             },
         }

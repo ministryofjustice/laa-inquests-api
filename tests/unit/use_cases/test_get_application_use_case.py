@@ -34,7 +34,7 @@ def test_execute_raises_application_not_found_error_when_application_not_found()
 
 def test_execute_calls_provider_details_port_get_firm_name_with_firm_code():
     get_application_port = MagicMock(spec=GetApplicationPort)
-    provider = create_base_provider(firm_code="0A123B", office_id="001")
+    provider = create_base_provider(firm_code="0A123B", office_id="0U651L")
     get_application_port.get_application_by_laa_reference.return_value = (
         create_base_application(provider=provider)
     )
@@ -150,7 +150,7 @@ def test_execute_calls_provider_details_port_get_office_address_with_office_id()
     )
     use_case.execute("1")
 
-    port.get_office_address.assert_called_once_with("001")
+    port.get_office_address.assert_called_once_with("0U651L")
 
 
 def test_execute_returns_application_response_with_office_correspondence_address():
