@@ -19,7 +19,12 @@ from app.domain.constants.claim_messages import (
 from app.domain.date_utils import add_calendar_months
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
-from app.models.claim.enums import ClaimStatus, ClaimType, POAType
+from app.models.claim.enums import (
+    ClaimDecisionStatus,
+    ClaimStatus,
+    ClaimType,
+    POAType,
+)
 
 
 def _as_utc(dt: datetime) -> datetime:
@@ -30,6 +35,47 @@ def _as_utc(dt: datetime) -> datetime:
 MAX_PROFIT_COST_POA_CLAIM_COUNT = 4
 MIN_MONTHS_BEFORE_PROFIT_COST_POA = 3
 AUTO_APPROVAL_MAX_TOTAL = Decimal("50000.00")
+
+APPROVED_CLAIM_DECISIONS = frozenset(
+    {ClaimDecisionStatus.GRANT, ClaimDecisionStatus.PAY_IN_FULL}
+)
+
+
+@dataclass(frozen=True)
+class ApprovedClaimAmount:
+    """A claim's latest decision and cost figures, for available-funds accounting."""
+
+    decision: ClaimDecisionStatus | None
+    gross: Decimal | None
+    vat_zero_total: Decimal | None
+
+    @property
+    def is_approved(self) -> bool:
+        return self.decision in APPROVED_CLAIM_DECISIONS
+
+    @property
+    def payment_amount(self) -> Decimal:
+        if self.gross is not None:
+            return self.gross
+        if self.vat_zero_total is not None:
+            return self.vat_zero_total
+        return Decimal(0)
+
+
+def calculate_available_funds(
+    substantive_cost_limitation: Decimal | int | None,
+    claim_amounts: list[ApprovedClaimAmount],
+) -> Decimal:
+    """Available funds remaining = substantive cost limitation minus the total
+    payment amount of claims that have been successfully approved (GRANT or
+    PAY_IN_FULL). Each approved claim's payment amount is its gross figure, or
+    its VAT-zero figure when no gross is present."""
+    limit = Decimal(str(substantive_cost_limitation or 0))
+    total_approved = sum(
+        (amount.payment_amount for amount in claim_amounts if amount.is_approved),
+        Decimal(0),
+    )
+    return limit - total_approved
 
 
 @dataclass(frozen=True)

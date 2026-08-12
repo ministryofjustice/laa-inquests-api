@@ -17,6 +17,7 @@ from pydantic.alias_generators import to_camel
 from sqlalchemy import Column
 from sqlmodel import Enum, Field, Relationship, SQLModel
 
+from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
 from app.models.application.enums import (
     AddressSource,
     CorrespondenceRecipientType,
@@ -44,7 +45,7 @@ class Proceeding(SQLModel, table=True):
     matter_type: str | None = "INQUESTS"
     scope_limitation_heading: str | None = "FINAL_HEARING"
     scope_description: str | None = "This is the scope description"
-    substantive_cost_limitation: int | None = 10000
+    substantive_cost_limitation: int | None = SUBSTANTIVE_CERTIFICATE_AMOUNT
     application_proceeding: "ApplicationProceeding" = Relationship(
         back_populates="proceeding"
     )

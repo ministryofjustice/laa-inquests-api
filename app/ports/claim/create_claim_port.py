@@ -1,7 +1,9 @@
 import uuid
 from abc import ABC, abstractmethod
+from decimal import Decimal
 
 from app.domain.claim import Claim as DomainClaim
+from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
 from app.models.claim.index import Claim
 
 
@@ -12,6 +14,7 @@ class CreateClaimPort(ABC):
         laa_reference: str,
         claim: DomainClaim,
         claimant_id: str | None,
+        total_funds_remaining: Decimal = Decimal(SUBSTANTIVE_CERTIFICATE_AMOUNT),
     ) -> Claim: ...
 
     @abstractmethod

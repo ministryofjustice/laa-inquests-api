@@ -219,6 +219,7 @@ def get_create_claim_use_case(
     get_claims_for_application_port: GetClaimsForApplicationPort = Depends(
         get_claim_db_adapter
     ),
+    get_claim_decision_port: GetClaimDecisionPort = Depends(get_claim_db_adapter),
     gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
 ) -> CreateClaimUseCase:
     return CreateClaimUseCase(
@@ -229,6 +230,7 @@ def get_create_claim_use_case(
         create_claim_decision_port=create_claim_decision_port,
         create_decision_reason_port=create_decision_reason_port,
         update_claim_status_port=update_claim_status_port,
+        get_claim_decision_port=get_claim_decision_port,
     )
 
 
