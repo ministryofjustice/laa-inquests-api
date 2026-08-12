@@ -32,7 +32,9 @@ class GrantDecisionUseCase:
         self.send_grant_letter_use_case = send_grant_letter_use_case
         self.create_history_event_port = create_history_event_port
 
-    def execute(self, laa_reference: str, request: GrantApplicationUpdate) -> None:
+    def execute(
+        self, laa_reference: str, request: GrantApplicationUpdate, caseworker_name: str
+    ) -> None:
         application = self.application_decision_port.get_application_by_laa_reference(
             laa_reference
         )
@@ -49,7 +51,7 @@ class GrantDecisionUseCase:
         self.application_decision_port.update_decision(proceeding)
         self.create_history_event_port.create_history_event(
             event_reference=HistoryEventReference.APPLICATION_ASSESSMENT_COMPLETED,
-            actor="fail",
+            actor=caseworker_name,
             actor_type=ActorType.CASEWORKER,
             laa_reference=application.laa_reference,
             event_data={"merits_decision": "Granted"},
