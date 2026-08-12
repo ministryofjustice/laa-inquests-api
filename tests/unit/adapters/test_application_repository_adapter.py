@@ -207,6 +207,32 @@ def test_search_applications_returns_matching_application(session):
     assert result[0].laa_reference == test_app_reference
 
 
+def test_search_applications_returns_empty_list_when_application_is_pending(session):
+    app = session.exec(select(Application)).first()
+    app.proceeding.merits_decision = MeritsDecision.PENDING
+    session.add(app.proceeding)
+    session.flush()
+
+    adapter = ApplicationRepositoryAdapter(session)
+
+    result = adapter.search_applications(str(app.laa_reference), "0A123B")
+
+    assert result == []
+
+
+def test_search_applications_returns_empty_list_when_application_is_refused(session):
+    app = session.exec(select(Application)).first()
+    app.proceeding.merits_decision = MeritsDecision.REFUSED
+    session.add(app.proceeding)
+    session.flush()
+
+    adapter = ApplicationRepositoryAdapter(session)
+
+    result = adapter.search_applications(str(app.laa_reference), "0A123B")
+
+    assert result == []
+
+
 def test_search_applications_returns_empty_list_when_firm_code_does_not_match(session):
     test_app_reference = session.exec(select(Application)).first().laa_reference
     adapter = ApplicationRepositoryAdapter(session)

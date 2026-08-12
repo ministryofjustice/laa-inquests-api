@@ -74,6 +74,24 @@ def test_200_search_application_returns_empty_list_for_unknown_reference(
     assert response.json() == []
 
 
+def test_200_search_application_excludes_pending_application(
+    session, client, auth_token
+):
+    app = session.exec(select(Application)).first()
+    app.proceeding.merits_decision = MeritsDecision.PENDING
+    session.add(app.proceeding)
+    session.commit()
+
+    response = client.get(
+        "/applications/search",
+        params={"laa_reference": str(app.laa_reference)},
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
 def test_422_search_application_returns_unprocessable_when_laa_reference_missing(
     client, auth_token
 ):

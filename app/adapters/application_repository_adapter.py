@@ -3,6 +3,7 @@ import uuid
 from sqlmodel import Session, select
 
 from app.domain.coroners_letter import CoronersLetter
+from app.models.application.enums import MeritsDecision
 from app.models.application.index import (
     Address,
     AddressSource,
@@ -66,8 +67,13 @@ class ApplicationRepositoryAdapter(
             select(Application)
             .join(Deceased, Application.deceased_id == Deceased.deceased_id)
             .join(Provider, Application.provider_id == Provider.provider_id)
+            .join(
+                ApplicationProceeding,
+                Application.laa_reference == ApplicationProceeding.laa_reference,
+            )
             .where(Application.laa_reference == laa_reference_int)
             .where(Provider.firm_code == firm_code)
+            .where(ApplicationProceeding.merits_decision == MeritsDecision.GRANTED)
         )
         return list(self.session.exec(statement).all())
 
