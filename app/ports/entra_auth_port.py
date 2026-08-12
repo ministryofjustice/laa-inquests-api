@@ -6,6 +6,7 @@ from typing import Protocol
 class AuthenticatedUser:
     firm_code: str | None
     scopes: frozenset[str]
+    name: str
 
 
 class EntraAuthPort(Protocol):

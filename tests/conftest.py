@@ -200,6 +200,7 @@ def client_fixture(session: Session):
         mock_auth.verify_token.return_value = AuthenticatedUser(
             firm_code="0A123B",
             scopes=frozenset({"User.Provider", "User.Caseworker"}),
+            name="Test Name",
         )
         return mock_auth
 
@@ -295,6 +296,7 @@ def entra_auth_client_fixture(session: Session):
             return AuthenticatedUser(
                 firm_code="0A123B",
                 scopes=frozenset(token_scopes[token]),
+                name="Test Name",
             )
 
         mock_auth.verify_token.side_effect = verify_token

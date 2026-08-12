@@ -20,7 +20,7 @@ def adapter():
         yield EntraAuthAdapter(tenant_id="test-tenant", client_id="test-client-id")
 
 
-def test_verify_token_returns_user_with_firm_code_when_token_is_valid(adapter):
+def test_verify_token_returns_user_with_firm_code_and_name_when_token_is_valid(adapter):
     mock_signing_key = MagicMock()
     adapter._jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
 
@@ -30,11 +30,13 @@ def test_verify_token_returns_user_with_firm_code_when_token_is_valid(adapter):
             "sub": "user",
             "scp": "User.Provider",
             "FIRM_CODE": "0A123B",
+            "name": "Test Name",
         },
     ):
         user = adapter.verify_token("valid.jwt.token")
 
     assert user.firm_code == "0A123B"
+    assert user.name == "Test Name"
     assert "User.Provider" in user.scopes
 
 
@@ -95,3 +97,33 @@ def test_verify_token_raises_401_for_invalid_token(adapter, side_effect):
         adapter.verify_token("bad.jwt.token")
 
     assert exc_info.value.status_code == 401
+
+
+class TestFormatName:
+    def test_returns_none_when_name_is_none(self, adapter):
+        assert adapter._format_name(None) == ""
+
+    def test_returns_plain_name_unchanged(self, adapter):
+        assert adapter._format_name("John Doe") == "John Doe"
+
+    def test_strips_trailing_bracketed_tag(self, adapter):
+        assert adapter._format_name("John Doe [LAA]") == "John Doe"
+
+    def test_strips_leading_bracketed_tags_with_dash_separator(self, adapter):
+        assert adapter._format_name("[MOJUSER] - [INTSILAS] John Doe") == "John Doe"
+
+    def test_strips_leading_and_trailing_bracketed_tags(self, adapter):
+        assert (
+            adapter._format_name("[MOJUSER] - [INTSILAS] John Doe [Test]") == "John Doe"
+        )
+
+    def test_preserves_hyphenated_surnames(self, adapter):
+        assert (
+            adapter._format_name("[MOJUSER] - [INTSILAS] Smith-Jones") == "Smith-Jones"
+        )
+
+    def test_returns_none_for_name_with_only_tags(self, adapter):
+        assert adapter._format_name("[TAG1] - [TAG2]") == ""
+
+    def test_returns_none_for_empty_string(self, adapter):
+        assert adapter._format_name("") == ""
