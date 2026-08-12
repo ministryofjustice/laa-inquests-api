@@ -109,7 +109,8 @@ class ClaimCreate(BaseModel):
         default=None, examples=["claimant-123@provider.co.uk"]
     )
     claim_evidence_ids: list[uuid.UUID] = PydanticField(
-        examples=[["3fa85f64-5717-4562-b3fc-2c963f66afa6"]]
+        default_factory=list,
+        examples=[["3fa85f64-5717-4562-b3fc-2c963f66afa6"]],
     )
 
 
