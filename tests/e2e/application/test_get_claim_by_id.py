@@ -105,7 +105,7 @@ def test_200_get_claim_by_id_returns_expected_base_properties(
         "totalProfitCostVatZero",
         "poaTypeId",
         "substantiveCostLimitation",
-        "totalFundsRemaining",
+        "totalFundsRemainingAfterClaim",
         "claimEvidence",
         "claimDecision",
     }
@@ -140,7 +140,7 @@ def test_200_get_claim_by_id_returns_stored_total_funds_remaining(
     )
 
     assert response.status_code == 200
-    assert response.json()["totalFundsRemaining"] == "8800.00"
+    assert response.json()["totalFundsRemainingAfterClaim"] == "8800.00"
 
 
 def test_200_get_claim_by_id_total_funds_remaining_defaults_to_certificate_amount(
@@ -155,7 +155,7 @@ def test_200_get_claim_by_id_total_funds_remaining_defaults_to_certificate_amoun
     )
 
     assert response.status_code == 200
-    assert Decimal(response.json()["totalFundsRemaining"]) == Decimal(
+    assert Decimal(response.json()["totalFundsRemainingAfterClaim"]) == Decimal(
         SUBSTANTIVE_CERTIFICATE_AMOUNT
     )
 

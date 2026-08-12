@@ -246,7 +246,7 @@ def test_201_create_claim_deducts_cumulative_approved_and_new_claim_amount(
         headers={"Authorization": f"Bearer {auth_token}"},
     )
     assert get_response.status_code == 200
-    assert get_response.json()["totalFundsRemaining"] == "5500.00"
+    assert get_response.json()["totalFundsRemainingAfterClaim"] == "5500.00"
 
 
 def test_201_created_claim_returns_total_funds_remaining_on_get_by_id(
@@ -270,7 +270,7 @@ def test_201_created_claim_returns_total_funds_remaining_on_get_by_id(
     )
 
     assert get_response.status_code == 200
-    assert get_response.json()["totalFundsRemaining"] == "8800.00"
+    assert get_response.json()["totalFundsRemainingAfterClaim"] == "8800.00"
 
 
 def test_201_create_claim_without_optional_fields(session, client, auth_token):
