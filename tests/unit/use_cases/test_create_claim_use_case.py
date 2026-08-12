@@ -746,7 +746,7 @@ def test_execute_sets_funds_from_cumulative_approved_claims_and_new_amount():
 
     application = MagicMock(spec=Application)
     application.status = "LIVE"
-    application.overall_decision = "PENDING"
+    application.overall_decision = "GRANTED"
     application.proceeding = MagicMock()
     application.proceeding.substantive_cost_limitation = 10000
     application.proceeding.certificate_start_date = None
@@ -848,7 +848,7 @@ def test_execute_sets_funds_without_decision_port_treats_existing_as_unapproved(
 
     application = MagicMock(spec=Application)
     application.status = "LIVE"
-    application.overall_decision = "PENDING"
+    application.overall_decision = "GRANTED"
     application.proceeding = MagicMock()
     application.proceeding.substantive_cost_limitation = 10000
     application.proceeding.certificate_start_date = None
