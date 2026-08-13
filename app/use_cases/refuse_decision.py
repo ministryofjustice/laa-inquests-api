@@ -3,9 +3,9 @@ import logging
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import RefuseApplicationUpdate
 from app.models.history.enums import ActorType, HistoryEventReference
+from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.update_decision_port import ApplicationDecisionPort
-from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
     RefuseDecisionError,
