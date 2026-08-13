@@ -3,6 +3,8 @@ from datetime import UTC, datetime
 
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import GrantApplicationUpdate
+from app.models.history.enums import ActorType, HistoryEventReference
+from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
 from app.use_cases.exceptions import (
@@ -22,13 +24,17 @@ class GrantDecisionUseCase:
         create_certificate_context_use_case: CreateCertificateContextUseCase,
         send_grant_email_use_case: SendGrantEmailUseCase,
         send_grant_letter_use_case: SendGrantLetterUseCase,
+        create_history_event_port: CreateHistoryEventPort,
     ) -> None:
         self.application_decision_port = application_decision_port
         self.create_certificate_context_use_case = create_certificate_context_use_case
         self.send_grant_email_use_case = send_grant_email_use_case
         self.send_grant_letter_use_case = send_grant_letter_use_case
+        self.create_history_event_port = create_history_event_port
 
-    def execute(self, laa_reference: str, request: GrantApplicationUpdate) -> None:
+    def execute(
+        self, laa_reference: str, request: GrantApplicationUpdate, caseworker_name: str
+    ) -> None:
         application = self.application_decision_port.get_application_by_laa_reference(
             laa_reference
         )
@@ -43,6 +49,13 @@ class GrantDecisionUseCase:
         proceeding.certificate_issue_date = datetime.now(UTC).date()
 
         self.application_decision_port.update_decision(proceeding)
+        self.create_history_event_port.create_history_event(
+            event_reference=HistoryEventReference.APPLICATION_ASSESSMENT_COMPLETED,
+            actor=caseworker_name,
+            actor_type=ActorType.CASEWORKER,
+            laa_reference=application.laa_reference,
+            event_data={"merits_decision": "Granted"},
+        )
 
         try:
             certificate_context = (
@@ -63,6 +76,7 @@ class GrantDecisionUseCase:
             self.send_grant_letter_use_case.execute(certificate_context)
 
             self.application_decision_port.commit()
+            self.create_history_event_port.commit()
         except Exception as exception:
             logger.warning(
                 "Failed to send grant email for application %s",
@@ -70,4 +84,5 @@ class GrantDecisionUseCase:
                 exc_info=True,
             )
             self.application_decision_port.rollback()
+            self.create_history_event_port.rollback()
             raise GrantDecisionError("Failed to grant application.") from exception

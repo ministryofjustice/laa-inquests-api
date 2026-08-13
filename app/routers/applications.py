@@ -46,6 +46,7 @@ from app.ports.claim.update_claim_status_port import (
 )
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
+from app.ports.entra_auth_port import AuthenticatedUser
 from app.ports.get_application_history_port import GetApplicationHistoryPort
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.gov_notify_port import GovNotifyPort
@@ -279,6 +280,9 @@ def get_grant_decision_use_case(
     update_decision_port: ApplicationDecisionPort = Depends(get_application_db_adapter),
     gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
     pdf_generation_port: PdfGenerationPort = Depends(get_pdf_generation_port),
+    create_history_event_port: CreateHistoryEventPort = Depends(
+        get_history_event_adapter
+    ),
     create_certificate_context_use_case=Depends(
         get_create_certificate_context_use_case
     ),
@@ -296,6 +300,7 @@ def get_grant_decision_use_case(
         create_certificate_context_use_case=create_certificate_context_use_case,
         send_grant_email_use_case=send_grant_email_use_case,
         send_grant_letter_use_case=send_grant_letter_use_case,
+        create_history_event_port=create_history_event_port,
     )
 
 
@@ -592,11 +597,11 @@ def grant_decision(
     laa_reference: str,
     request: GrantApplicationUpdate,
     use_case: GrantDecisionUseCase = Depends(get_grant_decision_use_case),
-    _: None = Depends(verify_entra_caseworker_token),
+    user: AuthenticatedUser = Depends(verify_entra_caseworker_token),
 ) -> Response:
     """Grant the merits decision on the single proceeding for a given application."""
     try:
-        use_case.execute(laa_reference, request)
+        use_case.execute(laa_reference, request, user.name)
 
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
