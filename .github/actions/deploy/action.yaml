@@ -89,8 +89,10 @@ runs:
 
     - name: Deploy infrastructure to dev
       shell: bash
+      env:
+        APP_ENVIRONMENT: ${{ inputs.app-environment }}
       run: |
-        if [ ${{ inputs.app-environment }} == 'dev' ]
+        if [ "$APP_ENVIRONMENT" == 'dev' ]
         then
           echo "DEPLOYING"
           kubectl apply --record=false -f ./deploy/infrastructure/grafana/
@@ -106,19 +108,25 @@ runs:
 
     - name: Set environment variables
       shell: bash
+      env:
+        RATELIMIT_MAX_INPUT: ${{ inputs.ratelimit_max || '10000' }}
+        RATEWINDOW_MS_INPUT: ${{ inputs.ratewindow_ms || '900000' }}
+        SERVICE_NAME_INPUT: ${{ inputs.service_name || 'Inquests' }}
+        SESSION_NAME_INPUT: ${{ inputs.session_name || 'sessionId' }}
+        SESSION_SECRET_INPUT: ${{ inputs.session_secret || 'default-session-secret' }}
       run: |
         echo "NODE_ENV=production" >> $GITHUB_ENV
-        echo "RATE_LIMIT_MAX=${{ inputs.ratelimit_max || '10000' }}" >> $GITHUB_ENV
-        echo "RATE_WINDOW_MS=${{ inputs.ratewindow_ms || '900000' }}" >> $GITHUB_ENV
-        echo "SERVICE_NAME=${{ inputs.service_name || 'Inquests' }}" >> $GITHUB_ENV
-        echo "SESSION_NAME=${{ inputs.session_name || 'sessionId' }}" >> $GITHUB_ENV
-        echo "SESSION_SECRET=${{ inputs.session_secret || 'default-session-secret' }}" >> $GITHUB_ENV
+        echo "RATE_LIMIT_MAX=$RATELIMIT_MAX_INPUT" >> $GITHUB_ENV
+        echo "RATE_WINDOW_MS=$RATEWINDOW_MS_INPUT" >> $GITHUB_ENV
+        echo "SERVICE_NAME=$SERVICE_NAME_INPUT" >> $GITHUB_ENV
+        echo "SESSION_NAME=$SESSION_NAME_INPUT" >> $GITHUB_ENV
+        echo "SESSION_SECRET=$SESSION_SECRET_INPUT" >> $GITHUB_ENV
 
     - name: Deploy using Helm
       shell: bash
-      run: ./deploy/scripts/deploy.sh ${{ inputs.app-environment }}
       env:
         ALLOW_LIST: ${{ inputs.allow-list }}
+        APP_ENVIRONMENT: ${{ inputs.app-environment }}
         DB_HOST: ${{ inputs.db-host }}
         DB_NAME: ${{ inputs.db-name }}
         DB_PASSWORD: ${{ inputs.db-password }}
@@ -133,3 +141,4 @@ runs:
         K8S_NAMESPACE: ${{ inputs.kube-namespace }}
         REGISTRY: ${{ inputs.ecr-registry_url }}
         REPOSITORY: ${{ inputs.ecr-repository }}
+      run: ./deploy/scripts/deploy.sh "$APP_ENVIRONMENT"
