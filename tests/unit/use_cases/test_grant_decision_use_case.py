@@ -94,7 +94,7 @@ def test_grant_decision_calls_required_ports_and_commit(
         actor_type=ActorType.CASEWORKER,
         laa_reference=application.laa_reference,
         event_data={
-            "meritsDecision": "Granted",
+            "merits_decision": "Granted",
         },
     )
 
