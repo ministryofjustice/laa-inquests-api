@@ -11,8 +11,7 @@ def test_model_dump_json_camel_cases_event_data_keys():
         event_reference=HistoryEventReference.CLAIM_SUBMITTED,
         event_data={
             "claim_type": "PAYMENT_ON_ACCOUNT",
-            "related_link": "/certificate/123",
-            "nested_data": {"submitted_by_user": "provider@example.com"},
+            "test_key": {"test_nested_key": "test"},
         },
     )
 
@@ -20,8 +19,7 @@ def test_model_dump_json_camel_cases_event_data_keys():
 
     assert result["eventData"] == {
         "claimType": "PAYMENT_ON_ACCOUNT",
-        "relatedLink": "/certificate/123",
-        "nestedData": {"submittedByUser": "provider@example.com"},
+        "testKey": {"testNestedKey": "test"},
     }
 
 
