@@ -187,7 +187,7 @@ class ClaimDecisionResponse(BaseModel):
 
 
 class ClaimByIdResponse(ClaimSummaryBase):
-    substantive_cost_limitation: int | None = None    
+    substantive_cost_limitation: int | None = None
     claim_evidence: list[ClaimEvidenceResponse] = []
     claim_decision: ClaimDecisionResponse | None = None
 
