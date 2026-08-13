@@ -146,6 +146,7 @@ class ClaimSummaryBase(BaseModel):
     total_profit_cost_net: Decimal | None = None
     total_profit_cost_gross: Decimal | None = None
     total_profit_cost_vat_zero: Decimal | None = None
+    total_funds_remaining_after_claim: Decimal
     poa_type_id: POAType | None = None
 
 
@@ -186,8 +187,7 @@ class ClaimDecisionResponse(BaseModel):
 
 
 class ClaimByIdResponse(ClaimSummaryBase):
-    substantive_cost_limitation: int | None = None
-    total_funds_remaining_after_claim: Decimal
+    substantive_cost_limitation: int | None = None    
     claim_evidence: list[ClaimEvidenceResponse] = []
     claim_decision: ClaimDecisionResponse | None = None
 

@@ -22,6 +22,7 @@ def _seed_claim(
         total_profit_cost_net=Decimal("1000.00"),
         total_profit_cost_gross=Decimal("1200.00"),
         total_profit_cost_vat_zero=Decimal("500.00"),
+        total_funds_remaining_after_claim=Decimal("8800.00"),
         poa_type_id=POAType.PROFIT_COST,
     )
     session.add(claim)
@@ -81,6 +82,7 @@ def test_200_assessed_true_returns_only_non_submitted_claims(
         "totalProfitCostNet",
         "totalProfitCostGross",
         "totalProfitCostVatZero",
+        "totalFundsRemainingAfterClaim",
         "poaTypeId",
         "statusId",
         "claimDecisionStatus",
