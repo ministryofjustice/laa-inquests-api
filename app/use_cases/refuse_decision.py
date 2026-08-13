@@ -46,7 +46,11 @@ class RefuseDecisionUseCase:
             actor=caseworker_name,
             actor_type=ActorType.CASEWORKER,
             laa_reference=application.laa_reference,
-            event_data={"meritsDecision": "Refused"},
+            event_data={
+                "merits_decision": "Refused",
+                "refusal_reason": request.reason_for_refusal.value,
+                "refusal_justification": request.justification,
+            },
         )
 
         try:

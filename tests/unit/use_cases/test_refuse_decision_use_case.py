@@ -97,7 +97,11 @@ def test_refuse_decision_calls_required_ports_and_commit(
         actor="Caseworker",
         actor_type=ActorType.CASEWORKER,
         laa_reference=application.laa_reference,
-        event_data={"meritsDecision": "Refused"},
+        event_data={
+            "merits_decision": "Refused",
+            "refusal_reason": "NOT_IN_SCOPE",
+            "refusal_justification": "The matter is not in scope.",
+        },
     )
     create_history_event_port.commit.assert_called_once()
     create_history_event_port.rollback.assert_not_called()
