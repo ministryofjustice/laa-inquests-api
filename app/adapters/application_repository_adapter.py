@@ -3,6 +3,7 @@ import uuid
 from sqlmodel import Session, select
 
 from app.domain.coroners_letter import CoronersLetter
+from app.models.application.enums import MeritsDecision
 from app.models.application.index import (
     Address,
     AddressSource,
@@ -55,7 +56,10 @@ class ApplicationRepositoryAdapter(
         return self.session.exec(select(PublicBody)).all()
 
     def search_applications(
-        self, laa_reference: str, firm_code: str
+        self,
+        laa_reference: str,
+        firm_code: str,
+        merits_decision: MeritsDecision | None = None,
     ) -> list[Application]:
         try:
             laa_reference_int = int(laa_reference)
@@ -66,9 +70,19 @@ class ApplicationRepositoryAdapter(
             select(Application)
             .join(Deceased, Application.deceased_id == Deceased.deceased_id)
             .join(Provider, Application.provider_id == Provider.provider_id)
+            .join(
+                ApplicationProceeding,
+                Application.laa_reference == ApplicationProceeding.laa_reference,
+            )
             .where(Application.laa_reference == laa_reference_int)
             .where(Provider.firm_code == firm_code)
         )
+
+        if merits_decision is not None:
+            statement = statement.where(
+                ApplicationProceeding.merits_decision == merits_decision
+            )
+
         return list(self.session.exec(statement).all())
 
     def create_application(

@@ -1,5 +1,6 @@
 import logging
 
+from app.models.application.enums import MeritsDecision
 from app.models.application.index import ApplicationSearchResponse
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.ports.search_application_port import SearchApplicationPort
@@ -17,12 +18,15 @@ class SearchApplicationUseCase:
         self.provider_details_port = provider_details_port
 
     def execute(
-        self, laa_reference: str, firm_code: str
+        self,
+        laa_reference: str,
+        firm_code: str,
+        merits_decision: MeritsDecision | None = None,
     ) -> list[ApplicationSearchResponse]:
         try:
             normalised_reference = laa_reference.strip()
             matching_applications = self.search_application_port.search_applications(
-                normalised_reference, firm_code
+                normalised_reference, firm_code, merits_decision
             )
             if not matching_applications:
                 return []
