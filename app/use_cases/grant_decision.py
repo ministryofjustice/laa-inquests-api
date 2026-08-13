@@ -54,7 +54,7 @@ class GrantDecisionUseCase:
             actor=caseworker_name,
             actor_type=ActorType.CASEWORKER,
             laa_reference=application.laa_reference,
-            event_data={"merits_decision": "Granted"},
+            event_data={"meritsDecision": "Granted"},
         )
 
         try:

@@ -249,10 +249,14 @@ def get_search_application_use_case(
 def get_make_merits_decision_use_case(
     update_decision_port: ApplicationDecisionPort = Depends(get_application_db_adapter),
     gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
+    create_history_event_port: CreateHistoryEventPort = Depends(
+        get_history_event_adapter
+    ),
 ) -> RefuseDecisionUseCase:
     return RefuseDecisionUseCase(
         application_decision_port=update_decision_port,
         gov_notify_port=gov_notify_port,
+        create_history_event_port=create_history_event_port,
     )
 
 
@@ -581,11 +585,11 @@ def refuse_decision(
     laa_reference: str,
     request: RefuseApplicationUpdate,
     use_case: RefuseDecisionUseCase = Depends(get_make_merits_decision_use_case),
-    _: None = Depends(verify_entra_caseworker_token),
+    user: AuthenticatedUser = Depends(verify_entra_caseworker_token),
 ) -> Response:
     """Set the merits decision on the single proceeding for a given application."""
     try:
-        use_case.execute(laa_reference, request)
+        use_case.execute(laa_reference, request, user.name)
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
 
