@@ -25,6 +25,10 @@ Authorised providers can:
 
 ## Claims
 
+### Caseworkers
+Authorised caseworkers can:
+* Retrieve a piece of claim evidence from SDS by sending a get request to **/claims/{claim_evidence_id}**.
+
 ### Providers
 Authorised providers can:
 * Upload claim evidence to SDS by posting to **/claims/evidence**.

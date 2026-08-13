@@ -13,6 +13,7 @@ from app.ports.sds_port import SdsPort
 from app.routers.dependencies import (
     get_claim_db_adapter,
     get_sds_port,
+    verify_entra_provider_or_caseworker_token,
     verify_entra_provider_token,
 )
 from app.use_cases.delete_claim_evidence import DeleteClaimEvidenceUseCase
@@ -103,7 +104,7 @@ def retrieve_claim_evidence(
     claim_evidence_id: uuid.UUID,
     disposition: Literal["inline", "attachment"] = "inline",
     use_case: RetrieveClaimEvidenceUseCase = Depends(get_claim_evidence_use_case),
-    _: None = Depends(verify_entra_provider_token),
+    _: None = Depends(verify_entra_provider_or_caseworker_token),
 ) -> StreamingResponse:
     """Stream a piece of claim evidence, independent of whether it is linked to a claim yet."""
     try:

@@ -385,15 +385,23 @@ def test_403_list_public_bodies_returns_403_when_caseworker_token(entra_auth_cli
     assert response.status_code == 403
 
 
-def test_403_retrieve_claim_evidence_returns_403_when_caseworker_token(
-    entra_auth_client,
+def test_200_retrieve_claim_evidence_returns_200_when_caseworker_token(
+    session, entra_auth_client
 ):
+    claim_evidence = ClaimEvidence(
+        sds_file_name="stored-claim-evidence_abc123.pdf",
+        file_name="claim_evidence.pdf",
+    )
+    session.add(claim_evidence)
+    session.commit()
+    session.refresh(claim_evidence)
+
     response = entra_auth_client.get(
-        f"/claims/{uuid.uuid4()}",
+        f"/claims/{claim_evidence.claim_evidence_id}",
         headers={"Authorization": "Bearer valid-caseworker-entra-token"},
     )
 
-    assert response.status_code == 403
+    assert response.status_code == 200
 
 
 def test_200_retrieve_claim_evidence_returns_200_when_provider_token(
