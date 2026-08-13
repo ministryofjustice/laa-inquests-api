@@ -7,6 +7,8 @@ from sqlmodel import select
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application, Provider
 from app.models.claim.index import Claim, ClaimDecision, ClaimEvidence, DecisionReason
+from app.models.history.enums import ActorType, HistoryEventReference
+from app.models.history.index import HistoryEvent
 
 
 def _make_request_body(overrides=None):
@@ -102,6 +104,38 @@ def test_201_create_claim_sends_submission_confirmation_email_to_provider(
     assert claim.laa_reference == laa_reference
     assert application.laa_reference == laa_reference
     assert recipient_email == application.provider.email_address
+
+
+def test_201_create_claim_creates_claim_submitted_history_event(
+    session, client, auth_token
+):
+    application = session.exec(select(Application)).first()
+    laa_reference = application.laa_reference
+    request_body = _make_request_body()
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=request_body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+
+    history_event = session.exec(
+        select(HistoryEvent).where(
+            (HistoryEvent.laa_reference == laa_reference)
+            & (HistoryEvent.event_reference == HistoryEventReference.CLAIM_SUBMITTED)
+        )
+    ).one()
+
+    assert history_event.event_reference == HistoryEventReference.CLAIM_SUBMITTED
+    assert history_event.actor == application.provider.email_address
+    assert history_event.actor_type == ActorType.PROVIDER
+    assert history_event.event_data == {"claim_type": request_body["claimType"]}
+    assert history_event.laa_reference == laa_reference
 
 
 def test_201_create_claim_auto_approves_payment_on_account_when_eligible(

@@ -16,6 +16,7 @@ from app.models.claim.enums import (
     ReasonCode,
 )
 from app.models.claim.index import Claim, ClaimDecision
+from app.models.history.enums import ActorType, HistoryEventReference
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
@@ -24,6 +25,7 @@ from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicat
 from app.ports.claim.update_claim_status_port import (
     UpdateClaimStatusPort,
 )
+from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.use_cases.create_claim import CreateClaimCommand, CreateClaimUseCase
 from app.use_cases.exceptions import ApplicationNotFoundError, InvalidClaimError
 
@@ -252,6 +254,32 @@ def test_execute_sends_claim_submission_email_when_application_exists():
         claim=claim,
         application=application,
         recipient_email="provider@example.com",
+    )
+
+
+def test_execute_creates_claim_submitted_history_event_when_submission_succeeds():
+    command = _make_command()
+    claim = _make_claim()
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+    application = _make_matching_application()
+    create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
+
+    use_case = CreateClaimUseCase(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(application),
+        get_claims_for_application_port=_make_get_claims_port(),
+        create_history_event_port=create_history_event_port,
+    )
+
+    use_case.execute(command)
+
+    create_history_event_port.create_history_event.assert_called_once_with(
+        event_reference=HistoryEventReference.CLAIM_SUBMITTED,
+        actor="provider@example.com",
+        actor_type=ActorType.PROVIDER,
+        laa_reference=command.laa_reference,
+        event_data={"claim_type": command.claim_type.value},
     )
 
 
