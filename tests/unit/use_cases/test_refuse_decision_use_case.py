@@ -12,11 +12,35 @@ from app.use_cases.refuse_decision import RefuseDecisionUseCase
 from tests.unit.factories import create_base_application
 
 
-def _make_request():
+@pytest.fixture
+def refuse_request() -> RefuseApplicationUpdate:
     return RefuseApplicationUpdate(
         reason_for_refusal="NOT_IN_SCOPE",
         justification="The matter is not in scope.",
     )
+
+
+@pytest.fixture
+def application():
+    return create_base_application()
+
+
+@pytest.fixture
+def update_decision_port(application) -> MagicMock:
+    port = MagicMock(spec=ApplicationDecisionPort)
+    port.get_application_by_laa_reference.return_value = application
+    port.update_decision.return_value = None
+    return port
+
+
+@pytest.fixture
+def gov_notify_port() -> MagicMock:
+    return MagicMock()
+
+
+@pytest.fixture
+def use_case(update_decision_port, gov_notify_port) -> RefuseDecisionUseCase:
+    return RefuseDecisionUseCase(update_decision_port, gov_notify_port)
 
 
 def test_refusal_update_rejects_missing_reason_for_refusal():
@@ -47,70 +71,48 @@ def test_refusal_update_rejects_invalid_reason_for_refusal():
         )
 
 
-def test_refuse_decision_calls_session_add_and_commit():
-    application = create_base_application()
-    proceeding = application.proceeding
+def test_refuse_decision_calls_session_add_and_commit(
+    use_case, update_decision_port, application, refuse_request
+):
+    use_case.execute("1", refuse_request)
 
-    update_decision_port = MagicMock(spec=ApplicationDecisionPort)
-    update_decision_port.get_application_by_laa_reference.return_value = application
-    update_decision_port.update_decision.return_value = None
-    gov_notify_port = MagicMock()
-    use_case = RefuseDecisionUseCase(update_decision_port, gov_notify_port)
-
-    use_case.execute("1", _make_request())
-
-    update_decision_port.update_decision.assert_called_once_with(proceeding)
+    update_decision_port.update_decision.assert_called_once_with(application.proceeding)
     update_decision_port.commit.assert_called_once()
 
 
-def test_refuse_decision_sets_merits_decision_to_refused():
-    application = create_base_application()
-    proceeding = application.proceeding
+def test_refuse_decision_sets_merits_decision_to_refused(
+    use_case, application, refuse_request
+):
+    use_case.execute("1", refuse_request)
 
-    update_decision_port = MagicMock(spec=ApplicationDecisionPort)
-    update_decision_port.get_application_by_laa_reference.return_value = application
-    gov_notify_port = MagicMock()
-    use_case = RefuseDecisionUseCase(update_decision_port, gov_notify_port)
-
-    use_case.execute("1", _make_request())
-
-    assert proceeding.merits_decision == "REFUSED"
+    assert application.proceeding.merits_decision == "REFUSED"
 
 
-def test_refuse_decision_raises_404_when_application_not_found():
-    update_decision_port = MagicMock(spec=ApplicationDecisionPort)
+def test_refuse_decision_raises_404_when_application_not_found(
+    use_case, update_decision_port, refuse_request
+):
     update_decision_port.get_application_by_laa_reference.return_value = None
-    use_case = RefuseDecisionUseCase(update_decision_port, MagicMock())
 
     with pytest.raises(ApplicationNotFoundError):
-        use_case.execute("99999", _make_request())
+        use_case.execute("99999", refuse_request)
 
 
-def test_refuse_decision_sets_overall_decision_on_application():
-    application = create_base_application()
-
-    update_decision_port = MagicMock(spec=ApplicationDecisionPort)
-    update_decision_port.get_application_by_laa_reference.return_value = application
-    gov_notify_port = MagicMock()
-    use_case = RefuseDecisionUseCase(update_decision_port, gov_notify_port)
-
-    use_case.execute("1", _make_request())
+def test_refuse_decision_sets_overall_decision_on_application(
+    use_case, application, refuse_request
+):
+    use_case.execute("1", refuse_request)
 
     assert application.overall_decision == "REFUSED"
 
 
-def test_refuse_decision_raises_exception_and_rolls_back_if_gov_notify_fails():
-    application = create_base_application()
-
-    update_decision_port = MagicMock(spec=ApplicationDecisionPort)
-    update_decision_port.get_application_by_laa_reference.return_value = application
-    gov_notify_port = MagicMock()
+def test_refuse_decision_raises_exception_and_rolls_back_if_gov_notify_fails(
+    use_case, update_decision_port, gov_notify_port, refuse_request
+):
     gov_notify_port.send_application_refused_decision_email.side_effect = Exception(
         "Gov Notify is unavailable"
     )
-    use_case = RefuseDecisionUseCase(update_decision_port, gov_notify_port)
 
     with pytest.raises(Exception, match="Failed to refuse application."):
-        use_case.execute("1", _make_request())
+        use_case.execute("1", refuse_request)
 
     update_decision_port.rollback.assert_called_once()
