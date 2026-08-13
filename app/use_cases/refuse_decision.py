@@ -2,6 +2,8 @@ import logging
 
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import RefuseApplicationUpdate
+from app.models.history.enums import ActorType, HistoryEventReference
+from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.use_cases.exceptions import (
@@ -17,11 +19,15 @@ class RefuseDecisionUseCase:
         self,
         application_decision_port: ApplicationDecisionPort,
         gov_notify_port: GovNotifyPort,
+        create_history_event_port: CreateHistoryEventPort,
     ) -> None:
         self.application_decision_port = application_decision_port
         self.gov_notify_port = gov_notify_port
+        self.create_history_event_port = create_history_event_port
 
-    def execute(self, laa_reference: str, request: RefuseApplicationUpdate) -> None:
+    def execute(
+        self, laa_reference: str, request: RefuseApplicationUpdate, caseworker_name: str
+    ) -> None:
         application = self.application_decision_port.get_application_by_laa_reference(
             laa_reference
         )
@@ -35,6 +41,14 @@ class RefuseDecisionUseCase:
 
         self.application_decision_port.update_decision(proceeding)
 
+        self.create_history_event_port.create_history_event(
+            event_reference=HistoryEventReference.APPLICATION_ASSESSMENT_COMPLETED,
+            actor=caseworker_name,
+            actor_type=ActorType.CASEWORKER,
+            laa_reference=application.laa_reference,
+            event_data={"meritsDecision": "Refused"},
+        )
+
         try:
             self.gov_notify_port.send_application_refused_decision_email(
                 application,
@@ -42,6 +56,7 @@ class RefuseDecisionUseCase:
                 application.provider.email_address,
             )
             self.application_decision_port.commit()
+            self.create_history_event_port.commit()
         except Exception as exception:
             logger.warning(
                 "Failed to send refusal email for application %s",
@@ -49,4 +64,5 @@ class RefuseDecisionUseCase:
                 exc_info=True,
             )
             self.application_decision_port.rollback()
+            self.create_history_event_port.rollback()
             raise RefuseDecisionError("Failed to refuse application.") from exception
