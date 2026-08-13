@@ -286,7 +286,7 @@ def test_execute_creates_claim_submitted_history_event_when_submission_succeeds(
 
     create_history_event_port.create_history_event.assert_called_once_with(
         event_reference=HistoryEventReference.CLAIM_SUBMITTED,
-        actor="provider@example.com",
+        actor=command.claimant_id,
         actor_type=ActorType.PROVIDER,
         laa_reference=command.laa_reference,
         event_data={"claim_type": command.claim_type.value},
