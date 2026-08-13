@@ -79,7 +79,7 @@ runs:
         kube-namespace: ${{ inputs.kube-namespace }}
 
     - name: Set up AWS credentials for ECR and Kubernetes
-      uses: aws-actions/configure-aws-credentials@v6.0.0
+      uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c
       with:
         role-to-assume: ${{ inputs.ecr-role-to-assume }}
         aws-region: ${{ inputs.ecr-region }}
