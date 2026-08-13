@@ -24,6 +24,7 @@ from app.models.claim.enums import (
 )
 from app.models.claim.index import Claim
 from app.models.history.enums import ActorType, HistoryEventReference
+from app.models.notifications.enums import NotificationType
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
@@ -159,6 +160,18 @@ class CreateClaimUseCase:
                     application=application,
                     recipient_email=application.provider.email_address,
                 )
+                if self.create_history_event_port is not None:
+                    self.create_history_event_port.create_history_event(
+                        event_reference=HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION,
+                        actor=ActorType.SYSTEM.value,
+                        actor_type=ActorType.SYSTEM,
+                        laa_reference=command.laa_reference,
+                        event_data={
+                            "recipient": application.provider.email_address,
+                            "channel": NotificationType.EMAIL.value.capitalize(),
+                        },
+                    )
+                    self.create_history_event_port.commit()
             except Exception:
                 logger.warning(
                     "Failed to send claim submission email for claim %s",

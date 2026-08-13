@@ -132,6 +132,46 @@ def test_201_create_claim_sends_submission_confirmation_email_to_provider(
     assert recipient_email == application.provider.email_address
 
 
+def test_201_create_claim_creates_submission_confirmation_comms_history_event(
+    session, client, auth_token
+):
+    application = session.exec(select(Application)).first()
+    laa_reference = application.laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+
+    history_event = session.exec(
+        select(HistoryEvent).where(
+            (HistoryEvent.laa_reference == laa_reference)
+            & (
+                HistoryEvent.event_reference
+                == HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION
+            )
+        )
+    ).one()
+
+    assert (
+        history_event.event_reference
+        == HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION
+    )
+    assert history_event.actor == ActorType.SYSTEM.value
+    assert history_event.actor_type == ActorType.SYSTEM
+    assert history_event.event_data == {
+        "recipient": application.provider.email_address,
+        "channel": "Email",
+    }
+    assert history_event.laa_reference == laa_reference
+
+
 def test_201_create_claim_creates_claim_submitted_history_event(
     session, client, auth_token
 ):
