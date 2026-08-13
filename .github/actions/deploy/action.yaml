@@ -98,8 +98,8 @@ runs:
           kubectl apply --record=false -f ./deploy/infrastructure/grafana/
         fi
     - run: |
-        docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
-        docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+        docker build -t "$REGISTRY/$REPOSITORY:$IMAGE_TAG" .
+        docker push "$REGISTRY/$REPOSITORY:$IMAGE_TAG"
       shell: bash
       env:
         REGISTRY: ${{ inputs.ecr-registry_url }}
@@ -115,12 +115,12 @@ runs:
         SESSION_NAME_INPUT: ${{ inputs.session_name || 'sessionId' }}
         SESSION_SECRET_INPUT: ${{ inputs.session_secret || 'default-session-secret' }}
       run: |
-        echo "NODE_ENV=production" >> $GITHUB_ENV
-        echo "RATE_LIMIT_MAX=$RATELIMIT_MAX_INPUT" >> $GITHUB_ENV
-        echo "RATE_WINDOW_MS=$RATEWINDOW_MS_INPUT" >> $GITHUB_ENV
-        echo "SERVICE_NAME=$SERVICE_NAME_INPUT" >> $GITHUB_ENV
-        echo "SESSION_NAME=$SESSION_NAME_INPUT" >> $GITHUB_ENV
-        echo "SESSION_SECRET=$SESSION_SECRET_INPUT" >> $GITHUB_ENV
+        echo "NODE_ENV=production" >> "$GITHUB_ENV"
+        echo "RATE_LIMIT_MAX=$RATELIMIT_MAX_INPUT" >> "$GITHUB_ENV"
+        echo "RATE_WINDOW_MS=$RATEWINDOW_MS_INPUT" >> "$GITHUB_ENV"
+        echo "SERVICE_NAME=$SERVICE_NAME_INPUT" >> "$GITHUB_ENV"
+        echo "SESSION_NAME=$SESSION_NAME_INPUT" >> "$GITHUB_ENV"
+        echo "SESSION_SECRET=$SESSION_SECRET_INPUT" >> "$GITHUB_ENV"
 
     - name: Deploy using Helm
       shell: bash
