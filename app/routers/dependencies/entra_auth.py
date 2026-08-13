@@ -78,3 +78,19 @@ def verify_entra_caseworker_token(
         )
 
     return entra_auth.verify_token(credentials.credentials, {"User.Caseworker"})
+
+
+def verify_entra_provider_or_caseworker_token(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_http_bearer)],
+    entra_auth: Annotated[EntraAuthPort, Depends(get_entra_auth_port)],
+) -> AuthenticatedUser:
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return entra_auth.verify_token(
+        credentials.credentials, {"User.Provider", "User.Caseworker"}
+    )

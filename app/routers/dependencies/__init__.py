@@ -2,6 +2,7 @@ from .entra_auth import (
     get_current_provider_firm_code,
     get_entra_auth_port,
     verify_entra_caseworker_token,
+    verify_entra_provider_or_caseworker_token,
     verify_entra_provider_token,
     verify_entra_token,
 )
@@ -13,6 +14,7 @@ __all__ = [
     "get_entra_auth_port",
     "get_sds_port",
     "verify_entra_caseworker_token",
+    "verify_entra_provider_or_caseworker_token",
     "verify_entra_provider_token",
     "verify_entra_token",
 ]
