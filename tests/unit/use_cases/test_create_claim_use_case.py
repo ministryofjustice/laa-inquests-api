@@ -20,6 +20,7 @@ from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
+from app.ports.claim.get_claim_decision_port import GetClaimDecisionPort
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
 from app.ports.claim.update_claim_status_port import (
     UpdateClaimStatusPort,
@@ -102,6 +103,15 @@ def _make_create_decision_reason_port():
 
 def _make_update_claim_status_port():
     return MagicMock(spec=UpdateClaimStatusPort)
+
+
+def _make_get_claim_decision_port(decisions_by_claim_id=None):
+    port = MagicMock(spec=GetClaimDecisionPort)
+    mapping = decisions_by_claim_id or {}
+    port.get_claim_decision_by_claim_id.side_effect = lambda claim_id: mapping.get(
+        claim_id
+    )
+    return port
 
 
 def test_execute_raises_invalid_claim_error_when_no_evidence_ids_provided():
@@ -725,3 +735,145 @@ def test_execute_does_not_auto_approve_non_payment_on_account_claim():
     assert result.claim.status_id != ClaimStatus.PAY_IN_FULL
     create_claim_decision_port.create_claim_decision.assert_not_called()
     update_claim_status_port.update_claim_status.assert_not_called()
+
+
+def test_execute_sets_funds_from_cumulative_approved_claims_and_new_amount():
+    command = _make_command({"net": Decimal("800.00"), "gross": Decimal("1000.00")})
+    claim = _make_claim()
+
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+
+    application = MagicMock(spec=Application)
+    application.status = "LIVE"
+    application.overall_decision = "GRANTED"
+    application.proceeding = MagicMock()
+    application.proceeding.substantive_cost_limitation = 10000
+    application.proceeding.certificate_start_date = None
+
+    def _existing_claim(claim_id, gross=None, vat_zero=None):
+        return Claim(
+            claim_id=claim_id,
+            laa_reference=12345,
+            claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
+            status_id=ClaimStatus.PAY_IN_FULL,
+            poa_type_id=POAType.PROFIT_COST,
+            submission_date=datetime.now(UTC),
+            total_profit_cost_gross=gross,
+            total_profit_cost_vat_zero=vat_zero,
+        )
+
+    granted = _existing_claim(2, gross=Decimal("2000.00"))
+    paid_in_full = _existing_claim(3, vat_zero=Decimal("1500.00"))
+    rejected = _existing_claim(4, gross=Decimal("5000.00"))
+    pending = _existing_claim(5, gross=Decimal("3000.00"))
+
+    get_claim_decision_port = _make_get_claim_decision_port(
+        {
+            2: ClaimDecision(
+                claim_decision_id=2, claim_id=2, decision=ClaimDecisionStatus.GRANT
+            ),
+            3: ClaimDecision(
+                claim_decision_id=3,
+                claim_id=3,
+                decision=ClaimDecisionStatus.PAY_IN_FULL,
+            ),
+            4: ClaimDecision(
+                claim_decision_id=4, claim_id=4, decision=ClaimDecisionStatus.REJECT
+            ),
+            5: ClaimDecision(
+                claim_decision_id=5, claim_id=5, decision=ClaimDecisionStatus.PENDING
+            ),
+        }
+    )
+
+    use_case = CreateClaimUseCase(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(application),
+        get_claims_for_application_port=_make_get_claims_port(
+            [granted, paid_in_full, rejected, pending]
+        ),
+        get_claim_decision_port=get_claim_decision_port,
+    )
+
+    use_case.execute(command)
+
+    # 10000 limit - (2000 + 1500 approved) - 1000 new claim requested = 5500
+    funds_arg = create_claim_port.create_claim.call_args.kwargs[
+        "total_funds_remaining_after_claim"
+    ]
+    assert funds_arg == Decimal("5500.00")
+
+
+def test_execute_sets_funds_deducting_new_amount_even_when_auto_approved():
+    command = _make_command({"net": Decimal("2000.00"), "gross": Decimal("2000.00")})
+    claim = _make_claim()
+
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+    create_claim_decision_port = _make_create_claim_decision_port()
+    update_claim_status_port = _make_update_claim_status_port()
+
+    application = MagicMock(spec=Application)
+    application.status = "LIVE"
+    application.overall_decision = "GRANTED"
+    application.proceeding = MagicMock()
+    application.proceeding.substantive_cost_limitation = 10000
+    application.proceeding.certificate_start_date = None
+
+    use_case = CreateClaimUseCase(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(application),
+        get_claims_for_application_port=_make_get_claims_port([]),
+        create_claim_decision_port=create_claim_decision_port,
+        update_claim_status_port=update_claim_status_port,
+        get_claim_decision_port=_make_get_claim_decision_port(),
+    )
+
+    use_case.execute(command)
+
+    # No existing claims, so 10000 - 2000 (this claim's requested amount) = 8000
+    funds_arg = create_claim_port.create_claim.call_args.kwargs[
+        "total_funds_remaining_after_claim"
+    ]
+    assert funds_arg == Decimal("8000.00")
+
+
+def test_execute_sets_funds_without_decision_port_treats_existing_as_unapproved():
+    command = _make_command({"net": Decimal("500.00"), "gross": Decimal("500.00")})
+    claim = _make_claim()
+
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+
+    application = MagicMock(spec=Application)
+    application.status = "LIVE"
+    application.overall_decision = "GRANTED"
+    application.proceeding = MagicMock()
+    application.proceeding.substantive_cost_limitation = 10000
+    application.proceeding.certificate_start_date = None
+
+    existing_claim = Claim(
+        claim_id=2,
+        laa_reference=12345,
+        claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
+        status_id=ClaimStatus.PAY_IN_FULL,
+        poa_type_id=POAType.PROFIT_COST,
+        submission_date=datetime.now(UTC),
+        total_profit_cost_gross=Decimal("2000.00"),
+    )
+
+    use_case = CreateClaimUseCase(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(application),
+        get_claims_for_application_port=_make_get_claims_port([existing_claim]),
+    )
+
+    use_case.execute(command)
+
+    # Without a decision port the existing claim is not treated as approved:
+    # 10000 - 500 (new claim requested amount) = 9500
+    funds_arg = create_claim_port.create_claim.call_args.kwargs[
+        "total_funds_remaining_after_claim"
+    ]
+    assert funds_arg == Decimal("9500.00")

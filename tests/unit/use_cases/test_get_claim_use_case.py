@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
 from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
@@ -19,7 +20,13 @@ from app.use_cases.exceptions import ApplicationNotFoundError, ClaimNotFoundErro
 from app.use_cases.get_claim import GetClaimUseCase
 
 
-def _claim(claim_id: int = 1, laa_reference: int = 1) -> Claim:
+def _claim(
+    claim_id: int = 1,
+    laa_reference: int = 1,
+    total_funds_remaining_after_claim: Decimal = Decimal(
+        SUBSTANTIVE_CERTIFICATE_AMOUNT
+    ),
+) -> Claim:
     return Claim(
         claim_id=claim_id,
         laa_reference=laa_reference,
@@ -29,6 +36,7 @@ def _claim(claim_id: int = 1, laa_reference: int = 1) -> Claim:
         total_profit_cost_net=Decimal("1000.00"),
         total_profit_cost_gross=Decimal("1200.00"),
         total_profit_cost_vat_zero=Decimal("500.00"),
+        total_funds_remaining_after_claim=total_funds_remaining_after_claim,
         poa_type_id=POAType.PROFIT_COST,
     )
 
@@ -143,3 +151,27 @@ def test_claim_decision_is_none_when_absent():
     result = use_case.execute("1", 1)
 
     assert result.claim_decision is None
+
+
+def test_returns_stored_total_funds_remaining_from_claim():
+    use_case = _build_use_case(
+        claim=_claim(total_funds_remaining_after_claim=Decimal("8800.00")),
+        application=_application(),
+    )
+
+    result = use_case.execute("1", 1)
+
+    assert result.total_funds_remaining_after_claim == Decimal("8800.00")
+
+
+def test_total_funds_remaining_defaults_to_certificate_amount_when_not_set():
+    use_case = _build_use_case(
+        claim=_claim(),
+        application=_application(),
+    )
+
+    result = use_case.execute("1", 1)
+
+    assert result.total_funds_remaining_after_claim == Decimal(
+        SUBSTANTIVE_CERTIFICATE_AMOUNT
+    )

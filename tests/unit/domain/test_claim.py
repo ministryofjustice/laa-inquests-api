@@ -228,7 +228,7 @@ def test_should_not_auto_reject_for_limit_when_total_not_exceeding_limit():
         claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
         poa_type=POAType.PROFIT_COST,
         net=Decimal("800.00"),
-        gross=Decimal("1200.00"),
+        gross=Decimal("900.00"),
         vat_zero_total=None,
     )
     claim.validate_total_claim_cost()
@@ -239,6 +239,24 @@ def test_should_not_auto_reject_for_limit_when_total_not_exceeding_limit():
     reason = claim.should_auto_reject_for_limit(application)
 
     assert reason is None
+
+
+def test_should_auto_reject_for_limit_uses_gross_not_net():
+    claim = Claim(
+        claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+        poa_type=POAType.PROFIT_COST,
+        net=Decimal("800.00"),
+        gross=Decimal("1200.00"),
+        vat_zero_total=None,
+    )
+    claim.validate_total_claim_cost()
+
+    application = MagicMock(spec=Application)
+    application.proceeding = MagicMock()
+    application.proceeding.substantive_cost_limitation = 1000
+    reason = claim.should_auto_reject_for_limit(application)
+
+    assert reason is ClaimRejectionReason.CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT
 
 
 def test_should_auto_reject_for_limit_when_vat_zero_total_exceeds_limit():
@@ -311,8 +329,13 @@ def _make_existing_claim(
 
 def test_should_auto_reject_for_application_total_limit_when_sum_exceeds_limit():
     claim = _make_domain_claim(gross=Decimal("600.00"))  # net defaults to 400.00
-    existing = [_make_existing_claim(net=Decimal("700.00"), gross=Decimal("800.00"))]
-    # net (400) + existing net (700) = 1100 > 1000
+    existing = [
+        _make_existing_claim(
+            net=Decimal("700.00"),
+            gross=Decimal("800.00"),
+            status=ClaimStatus.PAY_IN_FULL,
+        )
+    ]
     reason = claim.should_auto_reject_for_application_total_limit(
         _make_application(limit=1000), existing
     )
@@ -322,7 +345,13 @@ def test_should_auto_reject_for_application_total_limit_when_sum_exceeds_limit()
 
 def test_should_not_auto_reject_for_application_total_limit_when_sum_within_limit():
     claim = _make_domain_claim(gross=Decimal("400.00"))
-    existing = [_make_existing_claim(net=Decimal("500.00"), gross=Decimal("600.00"))]
+    existing = [
+        _make_existing_claim(
+            net=Decimal("500.00"),
+            gross=Decimal("500.00"),
+            status=ClaimStatus.PAY_IN_FULL,
+        )
+    ]
     reason = claim.should_auto_reject_for_application_total_limit(
         _make_application(limit=1000), existing
     )
@@ -398,7 +427,7 @@ def test_should_auto_reject_for_application_total_limit_when_new_claim_has_only_
     )
     existing = [
         ExistingClaimSummary(
-            status=ClaimStatus.SUBMITTED,
+            status=ClaimStatus.PAY_IN_FULL,
             poa_type=None,
             submission_date=datetime.now(UTC),
             net=None,
@@ -406,7 +435,55 @@ def test_should_auto_reject_for_application_total_limit_when_new_claim_has_only_
             vat_zero_total=Decimal("500.00"),
         )
     ]
-    # vat_zero (600) + existing vat_zero (500) = 1100 > 1000
+    # new vat_zero (600) + approved vat_zero (500) = 1100 > 1000
+    reason = claim.should_auto_reject_for_application_total_limit(
+        _make_application(limit=1000), existing
+    )
+
+    assert reason is ClaimRejectionReason.APPLICATION_CLAIMS_EXCEED_COST_LIMIT
+
+
+def test_should_not_auto_reject_for_application_total_limit_when_prior_claim_not_yet_approved():
+    claim = _make_domain_claim(gross=Decimal("600.00"))
+    existing = [
+        _make_existing_claim(
+            net=Decimal("800.00"),
+            gross=Decimal("900.00"),
+            status=ClaimStatus.SUBMITTED,
+        )
+    ]
+    reason = claim.should_auto_reject_for_application_total_limit(
+        _make_application(limit=1000), existing
+    )
+
+    assert reason is None
+
+
+def test_should_not_auto_reject_for_application_total_limit_when_prior_claim_rejected_for_exceeding():
+    claim = _make_domain_claim(gross=Decimal("600.00"))
+    existing = [
+        _make_existing_claim(
+            net=Decimal("1100.00"),
+            gross=Decimal("1200.00"),
+            status=ClaimStatus.REJECTED,
+        )
+    ]
+    reason = claim.should_auto_reject_for_application_total_limit(
+        _make_application(limit=1000), existing
+    )
+
+    assert reason is None
+
+
+def test_should_auto_reject_for_application_total_limit_uses_gross_of_approved_claims():
+    claim = _make_domain_claim(gross=Decimal("300.00"))
+    existing = [
+        _make_existing_claim(
+            net=Decimal("500.00"),
+            gross=Decimal("800.00"),
+            status=ClaimStatus.PAY_IN_FULL,
+        )
+    ]
     reason = claim.should_auto_reject_for_application_total_limit(
         _make_application(limit=1000), existing
     )
@@ -426,8 +503,13 @@ def test_should_auto_reject_returns_per_claim_rejection_when_single_claim_exceed
 
 def test_should_auto_reject_returns_application_total_rejection_when_total_exceeds_but_single_claim_does_not():
     claim = _make_domain_claim(gross=Decimal("600.00"))  # net defaults to 400.00
-    existing = [_make_existing_claim(net=Decimal("700.00"), gross=Decimal("800.00"))]
-    # net (400) <= 1000 so single-claim check passes; net (400) + existing net (700) = 1100 > 1000
+    existing = [
+        _make_existing_claim(
+            net=Decimal("700.00"),
+            gross=Decimal("800.00"),
+            status=ClaimStatus.PAY_IN_FULL,
+        )
+    ]
     rejection = claim.should_auto_reject(_make_application(limit=1000), existing)
 
     assert rejection.is_rejected is True

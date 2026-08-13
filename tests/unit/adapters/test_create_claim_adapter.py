@@ -35,6 +35,7 @@ def test_create_claim_persists_claim_with_expected_values(session):
             }
         ),
         "claimant-123@provider.co.uk",
+        Decimal("8000.00"),
     )
     stored_claim = session.get(Claim, created_claim.claim_id)
 
@@ -45,6 +46,7 @@ def test_create_claim_persists_claim_with_expected_values(session):
     assert stored_claim.total_profit_cost_net == Decimal("1000.00")
     assert stored_claim.total_profit_cost_gross == Decimal("1200.00")
     assert stored_claim.total_profit_cost_vat_zero == Decimal("150.00")
+    assert stored_claim.total_funds_remaining_after_claim == Decimal("8000.00")
 
 
 def test_create_claim_defaults_status_to_submitted(session):

@@ -5,8 +5,14 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 from app.domain.application import ApplicationDomain
-from app.domain.claim import Claim as DomainClaim
-from app.domain.claim import ExistingClaimSummary
+from app.domain.claim import (
+    ApprovedClaimAmount,
+    ExistingClaimSummary,
+    calculate_available_funds,
+)
+from app.domain.claim import (
+    Claim as DomainClaim,
+)
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
 from app.domain.constants.claim_messages import APPLICATION_NOT_GRANTED_MESSAGE
 from app.models.claim.enums import (
@@ -21,6 +27,7 @@ from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
+from app.ports.claim.get_claim_decision_port import GetClaimDecisionPort
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
 from app.ports.claim.update_claim_status_port import (
     UpdateClaimStatusPort,
@@ -60,6 +67,7 @@ class CreateClaimUseCase:
         create_claim_decision_port: CreateClaimDecisionPort | None = None,
         create_decision_reason_port: CreateDecisionReasonPort | None = None,
         update_claim_status_port: UpdateClaimStatusPort | None = None,
+        get_claim_decision_port: GetClaimDecisionPort | None = None,
     ) -> None:
         self.create_claim_port = create_claim_port
         self.application_lookup_port = application_lookup_port
@@ -68,6 +76,7 @@ class CreateClaimUseCase:
         self.create_claim_decision_port = create_claim_decision_port
         self.create_decision_reason_port = create_decision_reason_port
         self.update_claim_status_port = update_claim_status_port
+        self.get_claim_decision_port = get_claim_decision_port
 
     def execute(self, command: CreateClaimCommand) -> CreateClaimResult:
         if not command.claim_evidence_ids:
@@ -109,10 +118,15 @@ class CreateClaimUseCase:
             )
         )
 
+        total_funds_remaining_after_claim = self._calculate_total_funds_remaining(
+            application, existing_claims, validated_claim
+        )
+
         claim = self.create_claim_port.create_claim(
             laa_reference=command.laa_reference,
             claim=validated_claim,
             claimant_id=command.claimant_id,
+            total_funds_remaining_after_claim=total_funds_remaining_after_claim,
         )
         self.create_claim_port.link_evidence_to_claim(
             claim.claim_id, command.claim_evidence_ids
@@ -217,3 +231,31 @@ class CreateClaimUseCase:
                     )
 
         return CreateClaimResult(claim=claim, rejection_reasons=rejection_reasons)
+
+    def _calculate_total_funds_remaining(
+        self, application, existing_claims, validated_claim
+    ) -> Decimal:
+        existing_claim_amounts = [
+            ApprovedClaimAmount(
+                decision=self._latest_decision(existing_claim.claim_id),
+                gross=existing_claim.total_profit_cost_gross,
+                vat_zero_total=existing_claim.total_profit_cost_vat_zero,
+            )
+            for existing_claim in existing_claims
+        ]
+        funds_before_new_claim = calculate_available_funds(
+            application.proceeding.substantive_cost_limitation,
+            existing_claim_amounts,
+        )
+        new_claim_amount = ApprovedClaimAmount(
+            decision=None,
+            gross=validated_claim.gross,
+            vat_zero_total=validated_claim.vat_zero_total,
+        ).payment_amount
+        return (funds_before_new_claim - new_claim_amount).quantize(Decimal("0.01"))
+
+    def _latest_decision(self, claim_id):
+        if self.get_claim_decision_port is None:
+            return None
+        decision = self.get_claim_decision_port.get_claim_decision_by_claim_id(claim_id)
+        return decision.decision if decision is not None else None

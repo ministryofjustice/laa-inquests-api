@@ -1,9 +1,11 @@
 import uuid
+from decimal import Decimal
 
 from sqlmodel import Session, select
 
 from app.domain.claim import Claim as DomainClaim
 from app.domain.claim_evidence import ClaimEvidence as DomainClaimEvidence
+from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ReasonCode
 from app.models.claim.index import (
@@ -50,6 +52,9 @@ class ClaimRepositoryAdapter(
         laa_reference: str,
         claim: DomainClaim,
         claimant_id: str | None,
+        total_funds_remaining_after_claim: Decimal = Decimal(
+            SUBSTANTIVE_CERTIFICATE_AMOUNT
+        ),
     ) -> Claim:
         new_claim = Claim(
             laa_reference=int(laa_reference),
@@ -57,6 +62,7 @@ class ClaimRepositoryAdapter(
             total_profit_cost_net=claim.net,
             total_profit_cost_gross=claim.gross,
             total_profit_cost_vat_zero=claim.vat_zero_total,
+            total_funds_remaining_after_claim=total_funds_remaining_after_claim,
             poa_type_id=claim.poa_type,
             claimant_id=claimant_id,
         )

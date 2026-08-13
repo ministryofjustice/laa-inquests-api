@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from sqlmodel import select
 
+from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
 from app.models.application.index import Application
 from app.models.claim.enums import (
     ClaimDecisionStatus,
@@ -23,6 +24,9 @@ def _seed_claim(
     session,
     laa_reference: int,
     claim_type: ClaimType = ClaimType.PAYMENT_ON_ACCOUNT,
+    total_funds_remaining_after_claim: Decimal = Decimal(
+        SUBSTANTIVE_CERTIFICATE_AMOUNT
+    ),
 ) -> Claim:
     claim = Claim(
         laa_reference=laa_reference,
@@ -32,6 +36,7 @@ def _seed_claim(
         total_profit_cost_net=Decimal("1000.00"),
         total_profit_cost_gross=Decimal("1200.00"),
         total_profit_cost_vat_zero=Decimal("500.00"),
+        total_funds_remaining_after_claim=total_funds_remaining_after_claim,
         poa_type_id=POAType.PROFIT_COST,
     )
     session.add(claim)
@@ -100,6 +105,7 @@ def test_200_get_claim_by_id_returns_expected_base_properties(
         "totalProfitCostVatZero",
         "poaTypeId",
         "substantiveCostLimitation",
+        "totalFundsRemainingAfterClaim",
         "claimEvidence",
         "claimDecision",
     }
@@ -118,6 +124,40 @@ def test_200_get_claim_by_id_includes_substantive_cost_limitation(
 
     assert response.status_code == 200
     assert response.json()["substantiveCostLimitation"] == 10000
+
+
+def test_200_get_claim_by_id_returns_stored_total_funds_remaining(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    claim = _seed_claim(
+        session, laa_reference, total_funds_remaining_after_claim=Decimal("8800.00")
+    )
+
+    response = client.get(
+        f"/applications/{laa_reference}/claims/{claim.claim_id}",
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["totalFundsRemainingAfterClaim"] == "8800.00"
+
+
+def test_200_get_claim_by_id_total_funds_remaining_defaults_to_certificate_amount(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    claim = _seed_claim(session, laa_reference)
+
+    response = client.get(
+        f"/applications/{laa_reference}/claims/{claim.claim_id}",
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+
+    assert response.status_code == 200
+    assert Decimal(response.json()["totalFundsRemainingAfterClaim"]) == Decimal(
+        SUBSTANTIVE_CERTIFICATE_AMOUNT
+    )
 
 
 def test_200_get_claim_by_id_includes_claim_evidence(session, client, auth_token):

@@ -11,6 +11,7 @@ from pydantic.alias_generators import to_camel
 from sqlalchemy import Column, Numeric
 from sqlmodel import Enum, Field, Relationship, SQLModel
 
+from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
 from app.models.application.index import Application
 from app.models.claim.enums import (
     ClaimDecisionStatus,
@@ -36,6 +37,14 @@ class ClaimBase(SQLModel):
     )
     total_profit_cost_vat_zero: Decimal | None = Field(
         default=None, sa_column=Column(Numeric(10, 2), nullable=True)
+    )
+    total_funds_remaining_after_claim: Decimal = Field(
+        default=Decimal(SUBSTANTIVE_CERTIFICATE_AMOUNT),
+        sa_column=Column(
+            Numeric(10, 2),
+            nullable=False,
+            server_default=str(SUBSTANTIVE_CERTIFICATE_AMOUNT),
+        ),
     )
     claimant_id: str | None = None
     poa_type_id: POAType | None = Field(
@@ -178,6 +187,7 @@ class ClaimDecisionResponse(BaseModel):
 
 class ClaimByIdResponse(ClaimSummaryBase):
     substantive_cost_limitation: int | None = None
+    total_funds_remaining_after_claim: Decimal
     claim_evidence: list[ClaimEvidenceResponse] = []
     claim_decision: ClaimDecisionResponse | None = None
 
