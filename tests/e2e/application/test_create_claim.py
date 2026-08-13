@@ -132,7 +132,7 @@ def test_201_create_claim_creates_claim_submitted_history_event(
     ).one()
 
     assert history_event.event_reference == HistoryEventReference.CLAIM_SUBMITTED
-    assert history_event.actor == application.provider.email_address
+    assert history_event.actor == request_body["claimantId"]
     assert history_event.actor_type == ActorType.PROVIDER
     assert history_event.event_data == {"claim_type": request_body["claimType"]}
     assert history_event.laa_reference == laa_reference
