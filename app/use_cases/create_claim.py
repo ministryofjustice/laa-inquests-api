@@ -65,7 +65,7 @@ class CreateClaimUseCase:
         create_claim_port: CreateClaimPort,
         application_lookup_port: ApplicationLookupPort,
         get_claims_for_application_port: GetClaimsForApplicationPort,
-        create_history_event_port: CreateHistoryEventPort | None = None,
+        create_history_event_port: CreateHistoryEventPort,
         gov_notify_port: GovNotifyPort | None = None,
         create_claim_decision_port: CreateClaimDecisionPort | None = None,
         create_decision_reason_port: CreateDecisionReasonPort | None = None,
@@ -126,18 +126,17 @@ class CreateClaimUseCase:
             application, existing_claims, validated_claim
         )
 
-        claim = self.create_claim_port.create_claim(
-            laa_reference=command.laa_reference,
-            claim=validated_claim,
-            claimant_id=command.claimant_id,
-            total_funds_remaining_after_claim=total_funds_remaining_after_claim,
-        )
-        self.create_claim_port.link_evidence_to_claim(
-            claim.claim_id, command.claim_evidence_ids
-        )
-        self.create_claim_port.commit()
+        try:
+            claim = self.create_claim_port.create_claim(
+                laa_reference=command.laa_reference,
+                claim=validated_claim,
+                claimant_id=command.claimant_id,
+                total_funds_remaining_after_claim=total_funds_remaining_after_claim,
+            )
+            self.create_claim_port.link_evidence_to_claim(
+                claim.claim_id, command.claim_evidence_ids
+            )
 
-        if self.create_history_event_port is not None:
             self.create_history_event_port.create_history_event(
                 event_reference=HistoryEventReference.CLAIM_SUBMITTED,
                 actor=command.claimant_id or application.provider.email_address,
@@ -145,7 +144,13 @@ class CreateClaimUseCase:
                 laa_reference=command.laa_reference,
                 event_data={"claim_type": command.claim_type.value},
             )
+
+            self.create_claim_port.commit()
             self.create_history_event_port.commit()
+        except Exception:
+            self.create_claim_port.rollback()
+            self.create_history_event_port.rollback()
+            raise
 
         if application is not None and self.gov_notify_port is not None:
             try:
