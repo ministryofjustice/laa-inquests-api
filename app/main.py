@@ -38,7 +38,7 @@ def create_app():
             response = await call_next(request)
             response.headers["x-request-id"] = request.state.request_id
             response.headers["x-correlation-id"] = request.state.correlation_id
-            logger.debug(
+            logger.info(
                 "Request completed",
                 extra=build_log_extra(
                     event="http_request_completed",

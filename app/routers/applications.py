@@ -354,19 +354,6 @@ async def search_application(
     """Search for an application by exact LAA reference number."""
     try:
         results = use_case.execute(laa_reference, firm_code, merits_decision)
-        logger.info(
-            "Application search completed",
-            extra=build_log_extra(
-                event="application_search_completed",
-                route=_route(request),
-                method=_method(request),
-                status_code=200,
-                laa_reference=laa_reference,
-                firm_code=firm_code,
-                merits_decision=merits_decision.value if merits_decision else None,
-                result_count=len(results),
-            ),
-        )
         return results
     except ProviderDetailsRetrievalError:
         logger.warning(
@@ -389,20 +376,9 @@ async def search_application(
 @router.get("/public-bodies", response_model=list[PublicBodyResponse])
 def list_public_bodies(
     use_case: ListPublicBodiesUseCase = Depends(get_list_public_bodies_use_case),
-    request: Request = None,
     _: None = Depends(verify_entra_provider_token),
 ) -> list[PublicBody]:
     public_bodies = use_case.execute()
-    logger.info(
-        "Listed public bodies",
-        extra=build_log_extra(
-            event="list_public_bodies_completed",
-            route=_route(request),
-            method=_method(request),
-            status_code=200,
-            result_count=len(public_bodies),
-        ),
-    )
     return public_bodies
 
 
@@ -421,7 +397,6 @@ def get_coroners_letter_use_case(
 def retrieve_coroners_letter(
     laa_reference: str,
     use_case: RetrieveCoronersLetterUseCase = Depends(get_coroners_letter_use_case),
-    request: Request = None,
     _: None = Depends(verify_entra_caseworker_token),
 ) -> StreamingResponse:
     """Stream the coroner's letter for a given application."""
@@ -447,18 +422,6 @@ def retrieve_coroners_letter(
             detail="Returned file type is not supported for streaming. Supported file types are: .png, .jpg, .jpeg, .bmp, .pdf",
         )
 
-    logger.info(
-        "Coroners letter retrieved",
-        extra=build_log_extra(
-            event="coroners_letter_retrieved",
-            route=_route(request),
-            method=_method(request),
-            status_code=200,
-            laa_reference=laa_reference,
-            file_name=result.file_name,
-        ),
-    )
-
     return StreamingResponse(
         result.content,
         media_type=mime_type[0],
@@ -476,24 +439,11 @@ def list_application_claims(
     use_case: ListApplicationClaimsUseCase = Depends(
         get_list_application_claims_use_case
     ),
-    request: Request = None,
     _: None = Depends(verify_entra_caseworker_token),
 ) -> list[ClaimSummaryResponse]:
     """List claims for an application, filtered by assessed status."""
     try:
         claims = use_case.execute(laa_reference, assessed)
-        logger.info(
-            "Application claims listed",
-            extra=build_log_extra(
-                event="application_claims_listed",
-                route=_route(request),
-                method=_method(request),
-                status_code=200,
-                laa_reference=laa_reference,
-                assessed=assessed,
-                result_count=len(claims),
-            ),
-        )
         return claims
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
@@ -507,23 +457,11 @@ def read_claim(
     laa_reference: str,
     claim_id: int,
     use_case: GetClaimUseCase = Depends(get_get_claim_use_case),
-    request: Request = None,
     _: None = Depends(verify_entra_caseworker_token),
 ) -> ClaimByIdResponse:
     """Get a single claim by ID for a given application."""
     try:
         claim = use_case.execute(laa_reference, claim_id)
-        logger.info(
-            "Claim retrieved",
-            extra=build_log_extra(
-                event="claim_retrieved",
-                route=_route(request),
-                method=_method(request),
-                status_code=200,
-                laa_reference=laa_reference,
-                claim_id=claim_id,
-            ),
-        )
         return claim
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
@@ -535,22 +473,11 @@ def read_claim(
 async def read_application(
     laa_reference: str,
     use_case: GetApplicationUseCase = Depends(get_get_application_use_case),
-    request: Request = None,
     _: None = Depends(verify_entra_caseworker_token),
 ) -> ApplicationResponse:
     """Get information about a given application."""
     try:
         application = use_case.execute(laa_reference)
-        logger.info(
-            "Application retrieved",
-            extra=build_log_extra(
-                event="application_retrieved",
-                route=_route(request),
-                method=_method(request),
-                status_code=200,
-                laa_reference=laa_reference,
-            ),
-        )
         return application
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
@@ -563,22 +490,11 @@ async def read_application(
 def read_certificate(
     laa_reference: str,
     use_case: RetrieveCertificateUseCase = Depends(get_retrieve_certificate_use_case),
-    request: Request = None,
     _: None = Depends(verify_entra_caseworker_token),
 ) -> ApplicationCertificateResponse:
     """Get the populated certificate context for a given application."""
     try:
         certificate = use_case.execute(laa_reference)
-        logger.info(
-            "Certificate context retrieved",
-            extra=build_log_extra(
-                event="certificate_context_retrieved",
-                route=_route(request),
-                method=_method(request),
-                status_code=200,
-                laa_reference=laa_reference,
-            ),
-        )
         return ApplicationCertificateResponse.model_validate(certificate)
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
@@ -601,23 +517,11 @@ def read_certificate(
 def get_application_history(
     laa_reference: str,
     use_case: GetApplicationHistoryUseCase = Depends(get_application_history_use_case),
-    request: Request = None,
     _: None = Depends(verify_entra_caseworker_token),
 ) -> list[HistoryEventResponse]:
     """Get the history of a given application."""
     try:
         history = use_case.execute(laa_reference)
-        logger.info(
-            "Application history retrieved",
-            extra=build_log_extra(
-                event="application_history_retrieved",
-                route=_route(request),
-                method=_method(request),
-                status_code=200,
-                laa_reference=laa_reference,
-                result_count=len(history),
-            ),
-        )
         return history
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
@@ -626,21 +530,10 @@ def get_application_history(
 @router.get("/")
 async def read_all_applications(
     use_case: ListApplicationsUseCase = Depends(get_list_applications_use_case),
-    request: Request = None,
     _: None = Depends(verify_entra_caseworker_token),
 ) -> Sequence[Application]:
     """Read all the applications currently in the database."""
     applications = use_case.execute()
-    logger.info(
-        "All applications listed",
-        extra=build_log_extra(
-            event="all_applications_listed",
-            route=_route(request),
-            method=_method(request),
-            status_code=200,
-            result_count=len(applications),
-        ),
-    )
     return applications
 
 
@@ -690,18 +583,6 @@ async def upload_coroners_letter(
         )
         raise HTTPException(status_code=500, detail="Failed to upload coroners letter")
 
-    logger.info(
-        "Coroners letter uploaded",
-        extra=build_log_extra(
-            event="coroners_letter_uploaded_success",
-            route=_route(request),
-            method=_method(request),
-            status_code=201,
-            coroners_letter_id=str(coroners_letter_id),
-            file_name=file_name,
-        ),
-    )
-
     return UploadCoronersLetterResponse(
         coroners_letter_id=coroners_letter_id, coroners_letter_file_name=file_name
     )
@@ -712,21 +593,9 @@ def create_application(
     request: ApplicationCreate,
     firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
     use_case: CreateApplicationUseCase = Depends(get_create_application_use_case),
-    http_request: Request = None,
 ) -> Application:
     """Creates a new application with proceedings and public bodies."""
     application = use_case.execute(request, firm_code)
-    logger.info(
-        "Application created",
-        extra=build_log_extra(
-            event="application_created_success",
-            route=_route(http_request),
-            method=_method(http_request),
-            status_code=201,
-            laa_reference=application.laa_reference,
-            firm_code=firm_code,
-        ),
-    )
     return application
 
 
@@ -740,7 +609,6 @@ def create_claim(
     request: ClaimCreate,
     firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
     use_case: CreateClaimUseCase = Depends(get_create_claim_use_case),
-    http_request: Request = None,
 ) -> ClaimResponse:
     """Creates a new claim against an application."""
     try:
@@ -767,18 +635,6 @@ def create_claim(
                 by_alias=True,
                 exclude={"rejection_reasons"},
             )
-        logger.info(
-            "Claim created",
-            extra=build_log_extra(
-                event="claim_created_success",
-                route=_route(http_request),
-                method=_method(http_request),
-                status_code=201,
-                laa_reference=laa_reference,
-                claim_id=result.claim.claim_id,
-                has_rejection_reasons=result.rejection_reasons is not None,
-            ),
-        )
         return JSONResponse(content=jsonable_encoder(payload), status_code=201)
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
@@ -794,24 +650,12 @@ def refuse_decision(
     request: RefuseApplicationUpdate,
     use_case: RefuseDecisionUseCase = Depends(get_make_merits_decision_use_case),
     user: AuthenticatedUser = Depends(verify_entra_caseworker_token),
-    http_request: Request = None,
 ) -> Response:
     """Set the merits decision on the single proceeding for a given application."""
     try:
         use_case.execute(laa_reference, request, user.name)
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
-
-    logger.info(
-        "Application refusal decision recorded",
-        extra=build_log_extra(
-            event="application_refused_decision_recorded",
-            route=_route(http_request),
-            method=_method(http_request),
-            status_code=204,
-            laa_reference=laa_reference,
-        ),
-    )
 
     return Response(status_code=204)
 
@@ -822,7 +666,6 @@ def grant_decision(
     request: GrantApplicationUpdate,
     use_case: GrantDecisionUseCase = Depends(get_grant_decision_use_case),
     user: AuthenticatedUser = Depends(verify_entra_caseworker_token),
-    http_request: Request = None,
 ) -> Response:
     """Grant the merits decision on the single proceeding for a given application."""
     try:
@@ -830,16 +673,5 @@ def grant_decision(
 
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
-
-    logger.info(
-        "Application grant decision recorded",
-        extra=build_log_extra(
-            event="application_granted_decision_recorded",
-            route=_route(http_request),
-            method=_method(http_request),
-            status_code=204,
-            laa_reference=laa_reference,
-        ),
-    )
 
     return Response(status_code=204)

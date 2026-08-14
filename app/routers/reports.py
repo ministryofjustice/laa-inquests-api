@@ -102,16 +102,6 @@ def get_application_backlog_report(
             detail=f"Failed to generate application backlog report: {exc}",
         )
 
-    logger.info(
-        "Application backlog report generated",
-        extra=build_log_extra(
-            event="application_backlog_report_generated",
-            route=_route(request),
-            method=_method(request),
-            status_code=200,
-        ),
-    )
-
     return StreamingResponse(
         iter([csv_content]),
         media_type="text/csv",
@@ -147,16 +137,6 @@ def get_claim_backlog_report(
             status_code=500,
             detail=f"Failed to generate claim backlog report: {exc}",
         )
-
-    logger.info(
-        "Claim backlog report generated",
-        extra=build_log_extra(
-            event="claim_backlog_report_generated",
-            route=_route(request),
-            method=_method(request),
-            status_code=200,
-        ),
-    )
 
     return StreamingResponse(
         iter([csv_content]),

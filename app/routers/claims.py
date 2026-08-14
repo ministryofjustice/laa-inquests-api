@@ -131,18 +131,6 @@ async def upload_claim_evidence(
         )
         raise HTTPException(status_code=500, detail="Failed to upload claim evidence")
 
-    logger.info(
-        "Claim evidence uploaded",
-        extra=build_log_extra(
-            event="claim_evidence_uploaded_success",
-            route=_route(request),
-            method=_method(request),
-            status_code=201,
-            claim_evidence_id=str(claim_evidence_id),
-            file_name=file_name,
-        ),
-    )
-
     return UploadClaimEvidenceResponse(
         claim_evidence_id=claim_evidence_id,
         claim_evidence_file_name=file_name,
@@ -197,18 +185,6 @@ def retrieve_claim_evidence(
             detail="Returned file type is not supported for streaming. Supported file types are: .png, .jpg, .jpeg, .bmp, .pdf",
         )
 
-    logger.info(
-        "Claim evidence retrieved",
-        extra=build_log_extra(
-            event="claim_evidence_retrieved_success",
-            route=_route(request),
-            method=_method(request),
-            status_code=200,
-            claim_evidence_id=str(claim_evidence_id),
-            file_name=result.file_name,
-        ),
-    )
-
     return StreamingResponse(
         result.content,
         media_type=mime_type[0],
@@ -251,16 +227,5 @@ def delete_claim_evidence(
             ),
         )
         raise HTTPException(status_code=500, detail="Failed to delete claim evidence")
-
-    logger.info(
-        "Claim evidence deleted",
-        extra=build_log_extra(
-            event="claim_evidence_deleted_success",
-            route=_route(request),
-            method=_method(request),
-            status_code=204,
-            claim_evidence_id=str(claim_evidence_id),
-        ),
-    )
 
     return Response(status_code=204)
