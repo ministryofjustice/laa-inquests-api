@@ -307,7 +307,9 @@ def test_execute_rolls_back_claim_and_history_when_history_event_creation_fails(
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
-    create_history_event_port.create_history_event.side_effect = Exception("boom")
+    create_history_event_port.create_history_event.side_effect = Exception(
+        "Unable to create event"
+    )
 
     use_case = _make_use_case(
         create_claim_port=create_claim_port,
@@ -316,7 +318,7 @@ def test_execute_rolls_back_claim_and_history_when_history_event_creation_fails(
         create_history_event_port=create_history_event_port,
     )
 
-    with pytest.raises(Exception, match="boom"):
+    with pytest.raises(Exception, match="Unable to create event"):
         use_case.execute(command)
 
     create_claim_port.commit.assert_not_called()
@@ -645,7 +647,9 @@ def test_execute_returns_submitted_claim_when_auto_reject_persistence_fails():
     create_claim_port.create_claim.return_value = claim
     create_claim_decision_port = _make_create_claim_decision_port()
     create_decision_reason_port = _make_create_decision_reason_port()
-    create_decision_reason_port.create_decision_reason.side_effect = Exception("boom")
+    create_decision_reason_port.create_decision_reason.side_effect = Exception(
+        "Unable to create decision reason"
+    )
     update_claim_status_port = _make_update_claim_status_port()
 
     application = MagicMock(spec=Application)
