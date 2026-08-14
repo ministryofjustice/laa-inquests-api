@@ -12,10 +12,6 @@ class ReasonForRefusal(str, enum.Enum):
     INSUFFICIENT_INFORMATION = "INSUFFICIENT_INFORMATION"
     DUPLICATE_CASE = "DUPLICATE_CASE"
 
-    @property
-    def history_label(self) -> str:
-        return self.value.replace("_", " ").lower().capitalize()
-
 
 class AddressSource(str, enum.Enum):
     USE_CLIENT_HOME_ADDRESS = "USE_CLIENT_HOME_ADDRESS"
