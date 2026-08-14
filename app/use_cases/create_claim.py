@@ -145,11 +145,11 @@ class CreateClaimUseCase:
                 event_data={"claim_type": command.claim_type.value},
             )
 
+            # This commits both the claim and the history event in a single transaction
+            # because they share a session
             self.create_claim_port.commit()
-            self.create_history_event_port.commit()
         except Exception:
             self.create_claim_port.rollback()
-            self.create_history_event_port.rollback()
             raise
 
         if application is not None and self.gov_notify_port is not None:

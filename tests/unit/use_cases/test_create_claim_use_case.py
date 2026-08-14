@@ -299,7 +299,6 @@ def test_execute_creates_claim_submitted_history_event_when_submission_succeeds(
         event_data={"claim_type": command.claim_type.value},
     )
     create_claim_port.commit.assert_called_once_with()
-    create_history_event_port.commit.assert_called_once_with()
 
 
 def test_execute_rolls_back_claim_and_history_when_history_event_creation_fails():
@@ -321,9 +320,7 @@ def test_execute_rolls_back_claim_and_history_when_history_event_creation_fails(
         use_case.execute(command)
 
     create_claim_port.commit.assert_not_called()
-    create_history_event_port.commit.assert_not_called()
     create_claim_port.rollback.assert_called_once_with()
-    create_history_event_port.rollback.assert_called_once_with()
 
 
 def test_execute_raises_invalid_claim_error_when_payment_on_account_without_poa_type():
