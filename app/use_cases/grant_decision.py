@@ -81,7 +81,7 @@ class GrantDecisionUseCase:
                 actor_type=ActorType.CASEWORKER,
                 laa_reference=application.laa_reference,
                 event_data={
-                    "certificate_link": f"/applications/{application.laa_reference}/certificate",
+                    "laa_reference": application.laa_reference,
                 },
             )
 
