@@ -1,5 +1,5 @@
 from datetime import UTC, date, datetime
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 
@@ -73,14 +73,13 @@ def use_case(
     )
 
 
-def test_grant_decision_calls_required_ports_and_commit(
+def test_grant_decision_calls_decision_port_and_commits(
     use_case,
     create_certificate_context_use_case,
     application,
     update_decision_port,
     send_grant_email_use_case,
     grant_request,
-    create_history_event_port,
 ):
     use_case.execute("1", grant_request, "Caseworker")
 
@@ -88,24 +87,49 @@ def test_grant_decision_calls_required_ports_and_commit(
         application, application.proceeding
     )
     update_decision_port.update_decision.assert_called_once_with(application.proceeding)
-    create_history_event_port.create_history_event.assert_called_once_with(
-        event_reference=HistoryEventReference.APPLICATION_ASSESSMENT_COMPLETED,
-        actor="Caseworker",
-        actor_type=ActorType.CASEWORKER,
-        laa_reference=application.laa_reference,
-        event_data={
-            "merits_decision": "Granted",
-        },
-    )
 
     update_decision_port.commit.assert_called_once()
-    create_history_event_port.commit.assert_called_once()
     send_grant_email_use_case.execute.assert_called_once_with(
         application,
         application.proceeding,
         create_certificate_context_use_case.prepare_context_for_display.return_value,
     )
     update_decision_port.rollback.assert_not_called()
+
+
+def test_grant_decision_creates_required_history_events(
+    use_case,
+    application,
+    grant_request,
+    create_history_event_port,
+):
+    use_case.execute("1", grant_request, "Caseworker")
+
+    create_history_event_port.create_history_event.assert_has_calls(
+        [
+            call(
+                event_reference=HistoryEventReference.APPLICATION_ASSESSMENT_COMPLETED,
+                actor="Caseworker",
+                actor_type=ActorType.CASEWORKER,
+                laa_reference=application.laa_reference,
+                event_data={
+                    "merits_decision": "Granted",
+                },
+            ),
+            call(
+                event_reference=HistoryEventReference.CERTIFICATE_CREATED,
+                actor="Caseworker",
+                actor_type=ActorType.CASEWORKER,
+                laa_reference=application.laa_reference,
+                event_data={
+                    "certificate_link": f"/applications/{application.laa_reference}/certificate",
+                },
+            ),
+        ]
+    )
+
+    assert create_history_event_port.create_history_event.call_count == 2
+    create_history_event_port.commit.assert_called_once()
     create_history_event_port.rollback.assert_not_called()
 
 
