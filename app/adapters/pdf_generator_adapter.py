@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from weasyprint import HTML
 
 from app.domain.constants.laa_contact import (
@@ -21,7 +21,10 @@ class PdfGeneratorAdapter(PdfGenerationPort):
 
     def __init__(self) -> None:
         self._template_dir = Path(__file__).parent.parent / "templates"
-        self.jinja_env = Environment(loader=FileSystemLoader(str(self._template_dir)))
+        self.jinja_env = Environment(
+            loader=FileSystemLoader(str(self._template_dir)),
+            autoescape=select_autoescape(enabled_extensions=("html", "xml")),
+        )
 
     def _build_print_template_context(self, context: ApplicationCertificate) -> dict:
         """Build template context from model data and LAA contact constants."""

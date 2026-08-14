@@ -53,7 +53,7 @@ def add_users(users_list_dict: list[dict]):
 
 
 users_to_add = [
-    {"username": "test_user", "password": "test_password", "disabled": False},
+    {"username": "test_user", "password": "test_password", "disabled": False},  # nosec: This script file is no longer in use
 ]
 
 add_users(users_to_add)
