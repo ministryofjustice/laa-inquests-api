@@ -48,7 +48,7 @@ class RefuseDecisionUseCase:
             laa_reference=application.laa_reference,
             event_data={
                 "merits_decision": "Refused",
-                "refusal_reason": request.reason_for_refusal.value,
+                "refusal_reason": request.reason_for_refusal.history_label,
                 "refusal_justification": request.justification,
             },
         )
