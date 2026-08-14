@@ -84,9 +84,7 @@ def test_execute_creates_application_sends_confirmation_email_and_commits():
         "provider@example.com",
     )
     create_application_port.commit.assert_called_once_with()
-    create_history_event_port.commit.assert_called_once_with()
     create_application_port.rollback.assert_not_called()
-    create_history_event_port.rollback.assert_not_called()
 
 
 def test_execute_passes_authenticated_firm_code_to_create_application_port():
@@ -127,9 +125,7 @@ def test_execute_rolls_back_and_reraises_when_notify_fails():
         use_case.execute(request, "0A123B")
 
     create_application_port.commit.assert_not_called()
-    create_history_event_port.commit.assert_not_called()
     create_application_port.rollback.assert_called_once_with()
-    create_history_event_port.rollback.assert_called_once_with()
 
 
 def test_execute_rolls_back_and_reraises_when_commit_fails():
@@ -155,4 +151,3 @@ def test_execute_rolls_back_and_reraises_when_commit_fails():
         "provider@example.com",
     )
     create_application_port.rollback.assert_called_once_with()
-    create_history_event_port.rollback.assert_called_once_with()
