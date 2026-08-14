@@ -97,6 +97,24 @@ def test_execute_masks_provider_actor_as_provider():
     assert result[0].actor == "Provider"
 
 
+def test_execute_masks_recipient_in_event_data():
+    history_event = HistoryEvent(
+        id=1,
+        event_reference=HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION,
+        timestamp=datetime.now(UTC),
+        actor=ActorType.SYSTEM.value,
+        actor_type=ActorType.SYSTEM,
+        event_data={"recipient": "recipient@example.com", "channel": "email"},
+        laa_reference=123456,
+    )
+    use_case = _make_use_case(application=MagicMock(), history_events=[history_event])
+
+    result = use_case.execute("1")
+
+    assert "recipient" not in result[0].event_data
+    assert result[0].event_data["channel"] == "email"
+
+
 def test_execute_preserves_non_provider_actor():
     history_event = HistoryEvent(
         id=1,
