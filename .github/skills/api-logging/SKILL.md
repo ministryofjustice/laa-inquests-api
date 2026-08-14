@@ -20,9 +20,20 @@ Required shared keys for request and outbound events:
 ## Layer behavior
 
 - Middleware creates request context and response headers (`x-request-id`, `x-correlation-id`).
+- Middleware logs request completion (`http_request_completed`) at `info` with `route`, `method`, `status_code`, and `duration_ms`.
 - Domain stays log-free.
-- Routers, use cases, and adapters emit structured outcome events.
+- Routers should avoid duplicate success logs for normal HTTP completion; keep router logs for failure paths and business-specific context only.
+- Use cases and adapters emit structured outcome events.
 - Error boundary logs once for unhandled request failures.
+
+## Router policy
+
+- Do not add router-level `info` logs that only restate HTTP success status for endpoints.
+- Prefer middleware request-completion logs for success observability.
+- Keep router logs where they add diagnostic value not present in middleware, such as:
+  - mapped exception outcomes (for example 404/422/500 from domain/use-case errors)
+  - operation-specific identifiers needed to diagnose failures
+  - business milestones that are not equivalent to simple request completion
 
 ## Levels
 
@@ -68,6 +79,20 @@ Good:
 logger.error(
     "GovNotify send failed",
     extra={"event": "govnotify_send_failed", "status_code": 502},
+)
+```
+
+Good (router):
+
+```python
+logger.warning(
+    "Claim evidence upload failed virus check",
+    extra=build_log_extra(
+        event="claim_evidence_uploaded_failed",
+        route=request.url.path,
+        method=request.method,
+        status_code=422,
+    ),
 )
 ```
 
