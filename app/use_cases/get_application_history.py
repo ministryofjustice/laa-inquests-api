@@ -33,4 +33,8 @@ class GetApplicationHistoryUseCase:
         response = HistoryEventResponse.model_validate(event)
         if event.actor_type == ActorType.PROVIDER:
             response.actor = "Provider"
+        # Avoid returning recipient details in the history response
+        if response.event_data is not None:
+            response.event_data.pop("recipient", None)
+
         return response

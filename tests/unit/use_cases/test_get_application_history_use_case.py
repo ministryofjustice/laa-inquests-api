@@ -6,6 +6,7 @@ import pytest
 from app.models.application.index import Application
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent, HistoryEventResponse
+from app.models.notifications.enums import NotificationType
 from app.use_cases.exceptions import ApplicationNotFoundError
 from app.use_cases.get_application_history import GetApplicationHistoryUseCase
 
@@ -95,6 +96,27 @@ def test_execute_masks_provider_actor_as_provider():
     result = use_case.execute("1")
 
     assert result[0].actor == "Provider"
+
+
+def test_execute_masks_recipient_in_event_data():
+    history_event = HistoryEvent(
+        id=1,
+        event_reference=HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION,
+        timestamp=datetime.now(UTC),
+        actor=ActorType.SYSTEM,
+        actor_type=ActorType.SYSTEM,
+        event_data={
+            "recipient": "recipient@example.com",
+            "channel": NotificationType.EMAIL,
+        },
+        laa_reference=123456,
+    )
+    use_case = _make_use_case(application=MagicMock(), history_events=[history_event])
+
+    result = use_case.execute("1")
+
+    assert "recipient" not in result[0].event_data
+    assert result[0].event_data["channel"] == NotificationType.EMAIL
 
 
 def test_execute_preserves_non_provider_actor():

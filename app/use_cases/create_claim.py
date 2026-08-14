@@ -24,6 +24,7 @@ from app.models.claim.enums import (
 )
 from app.models.claim.index import Claim
 from app.models.history.enums import ActorType, HistoryEventReference
+from app.models.notifications.enums import NotificationType
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
@@ -142,7 +143,7 @@ class CreateClaimUseCase:
                 actor=command.claimant_id or application.provider.email_address,
                 actor_type=ActorType.PROVIDER,
                 laa_reference=command.laa_reference,
-                event_data={"claim_type": command.claim_type.value},
+                event_data={"claim_type": command.claim_type},
             )
 
             # This commits both the claim and the history event in a single transaction
@@ -154,17 +155,29 @@ class CreateClaimUseCase:
 
         if application is not None and self.gov_notify_port is not None:
             try:
+                self.create_history_event_port.create_history_event(
+                    event_reference=HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION,
+                    actor=ActorType.SYSTEM,
+                    actor_type=ActorType.SYSTEM,
+                    laa_reference=command.laa_reference,
+                    event_data={
+                        "recipient": application.provider.email_address,
+                        "channel": NotificationType.EMAIL,
+                    },
+                )
                 self.gov_notify_port.send_claim_submit_confirmation_email(
                     claim=claim,
                     application=application,
                     recipient_email=application.provider.email_address,
                 )
+                self.create_history_event_port.commit()
             except Exception:
                 logger.warning(
                     "Failed to send claim submission email for claim %s",
                     claim.claim_id,
                     exc_info=True,
                 )
+                self.create_history_event_port.rollback()
 
         rejection_reasons: list[ReasonCode] | None = None
 
