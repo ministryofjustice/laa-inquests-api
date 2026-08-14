@@ -62,8 +62,6 @@ class RetrieveClaimEvidenceUseCase:
             extra=build_log_extra(
                 event="claim_evidence_retrieval_completed",
                 claim_evidence_id=str(claim_evidence_id),
-                # COPILOT TODO: We shouldn't log the file name here or anywhere else
-                file_name=claim_evidence.file_name,
             ),
         )
         return result

@@ -40,15 +40,12 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
             )
             return result
         except httpx.HTTPError as exc:
-            # COPILOT TODO: I don't like this defaulting to 502, should be clear we don't have a status code
-            status_code = getattr(getattr(exc, "response", None), "status_code", 502)
             logger.error(
                 "Provider firm name lookup failed",
                 extra=build_log_extra(
                     event="provider_details_firm_name_lookup_failed",
                     route="provider-details:provider-firms",
                     method="GET",
-                    status_code=status_code,
                     duration_ms=duration_ms(started_at),
                     firm_code=firm_code,
                 ),
@@ -63,7 +60,6 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
                     event="provider_details_firm_name_lookup_failed",
                     route="provider-details:provider-firms",
                     method="GET",
-                    status_code=502,
                     duration_ms=duration_ms(started_at),
                     firm_code=firm_code,
                 ),
@@ -102,15 +98,12 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
             )
             return address
         except httpx.HTTPError as exc:
-            # COPILOT TODO: I don't like this defaulting to 502, should be clear we don't have a status code
-            status_code = getattr(getattr(exc, "response", None), "status_code", 502)
             logger.error(
                 "Provider office address lookup failed",
                 extra=build_log_extra(
                     event="provider_details_office_address_lookup_failed",
                     route="provider-details:provider-offices",
                     method="GET",
-                    status_code=status_code,
                     duration_ms=duration_ms(started_at),
                     office_id=office_id,
                 ),
@@ -119,14 +112,12 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
                 f"HTTP error occurred while retrieving provider details: {exc}"
             ) from exc
         except (KeyError, ValueError) as exc:
-            # COPILOT TODO: I don't like this defaulting to 502, should be clear we don't have a status code
             logger.error(
                 "Provider office address lookup failed",
                 extra=build_log_extra(
                     event="provider_details_office_address_lookup_failed",
                     route="provider-details:provider-offices",
                     method="GET",
-                    status_code=502,
                     duration_ms=duration_ms(started_at),
                     office_id=office_id,
                 ),
@@ -162,15 +153,12 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
             )
             return firms
         except httpx.HTTPError as exc:
-            # COPILOT TODO: I don't like this defaulting to 502, should be clear we don't have a status code
-            status_code = getattr(getattr(exc, "response", None), "status_code", 502)
             logger.error(
                 "Provider firms batch lookup failed",
                 extra=build_log_extra(
                     event="provider_details_firms_batch_lookup_failed",
                     route="provider-details:provider-firms",
                     method="POST",
-                    status_code=status_code,
                     duration_ms=duration_ms(started_at),
                     requested_count=len(firm_ids),
                 ),

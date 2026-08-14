@@ -73,8 +73,6 @@ class EntraAuthAdapter:
                 "Entra token validated",
                 extra=build_log_extra(
                     event="entra_token_validated_success",
-                    # COPILOT TODO: Too many things are reporting status codes. If it's behind the scenes then there shouldn't be a status code, only things to do with our API should have them.
-                    status_code=200,
                 ),
             )
             return AuthenticatedUser(
@@ -87,7 +85,6 @@ class EntraAuthAdapter:
                 "Entra token validation failed",
                 extra=build_log_extra(
                     event="entra_token_validation_failed",
-                    status_code=401,
                 ),
             )
             raise
@@ -96,7 +93,6 @@ class EntraAuthAdapter:
                 "Entra token validation failed",
                 extra=build_log_extra(
                     event="entra_token_validation_failed",
-                    status_code=401,
                 ),
             )
             raise HTTPException(
