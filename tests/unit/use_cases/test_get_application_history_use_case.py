@@ -103,7 +103,7 @@ def test_execute_masks_recipient_in_event_data():
         id=1,
         event_reference=HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION,
         timestamp=datetime.now(UTC),
-        actor=ActorType.SYSTEM.value,
+        actor=ActorType.SYSTEM,
         actor_type=ActorType.SYSTEM,
         event_data={
             "recipient": "recipient@example.com",
