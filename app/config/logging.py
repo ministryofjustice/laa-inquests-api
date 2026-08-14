@@ -5,33 +5,6 @@ from datetime import UTC, datetime
 from app.config import Config
 from app.logging_utils import log_level_from_name
 
-# COPILOT TODO: Remove this and the check
-_RESERVED_LOG_RECORD_KEYS = {
-    "args",
-    "asctime",
-    "created",
-    "exc_info",
-    "exc_text",
-    "filename",
-    "funcName",
-    "levelname",
-    "levelno",
-    "lineno",
-    "module",
-    "msecs",
-    "message",
-    "msg",
-    "name",
-    "pathname",
-    "process",
-    "processName",
-    "relativeCreated",
-    "stack_info",
-    "thread",
-    "threadName",
-    "taskName",
-}
-
 
 class JsonLogFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
@@ -54,21 +27,18 @@ class JsonLogFormatter(logging.Formatter):
             payload["exception_type"] = record.exc_info[0].__name__
 
         for key, value in record.__dict__.items():
-            if key in _RESERVED_LOG_RECORD_KEYS or key in payload:
-                continue
             payload[key] = value
 
         return json.dumps(payload, default=str)
 
 
-# COPILOT TODO: This is a big departure from how we were logging before, can we make fewer changes here (e.g. I think StreamHandler is new)
 def configure_logging() -> None:
     root_logger = logging.getLogger()
-    level = log_level_from_name(Config.LOG_LEVEL, Config.ENVIRONMENT)
+    level = log_level_from_name(Config.LOG_LEVEL)
     root_logger.setLevel(level)
 
     if not root_logger.handlers:
-        root_logger.addHandler(logging.StreamHandler())
+        logging.basicConfig(level=level)
 
     is_local = Config.ENVIRONMENT.strip().lower() == "local"
     formatter: logging.Formatter

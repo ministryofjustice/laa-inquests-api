@@ -3,16 +3,19 @@ import logging
 from app.logging_utils import log_level_from_name, mask_recipient
 
 
-# COPILOT TODO: This should be removed, we never want to do that
-def test_log_level_from_name_uses_environment_defaults_when_unset():
-    assert log_level_from_name(None, "local") == logging.DEBUG
-    assert log_level_from_name(None, "dev") == logging.INFO
-    assert log_level_from_name(None, "staging") == logging.INFO
-    assert log_level_from_name(None, "prod") == logging.WARNING
+def test_log_level_from_name_falls_back_to_info_when_unset():
+    assert log_level_from_name(None) == logging.INFO
+    assert log_level_from_name("") == logging.INFO
 
 
 def test_log_level_from_name_falls_back_to_info_for_invalid_value():
-    assert log_level_from_name("banana", "prod") == logging.INFO
+    assert log_level_from_name("banana") == logging.INFO
+
+
+def test_log_level_from_name_accepts_valid_values():
+    assert log_level_from_name("debug") == logging.DEBUG
+    assert log_level_from_name("warn") == logging.WARNING
+    assert log_level_from_name("fatal") == logging.CRITICAL
 
 
 def test_mask_recipient_masks_email_local_part():

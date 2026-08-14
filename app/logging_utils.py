@@ -9,7 +9,6 @@ _REQUEST_ID: ContextVar[str | None] = ContextVar("request_id", default=None)
 _CORRELATION_ID: ContextVar[str | None] = ContextVar("correlation_id", default=None)
 
 
-# COPILOT TODO: I'm fairly sure this will lead to a logging issue when multiple API requests are made.
 def set_request_context(request_id: str, correlation_id: str) -> tuple[Token, Token]:
     return (_REQUEST_ID.set(request_id), _CORRELATION_ID.set(correlation_id))
 
@@ -50,8 +49,7 @@ def mask_recipient(recipient: str) -> str:
     return f"{local[0]}***@{domain}"
 
 
-# COPILOT TODO: This shouldn't be expecting an environment
-def log_level_from_name(log_level_name: str | None, environment: str) -> int:
+def log_level_from_name(log_level_name: str | None) -> int:
     levels = {
         "debug": logging.DEBUG,
         "info": logging.INFO,
@@ -66,11 +64,4 @@ def log_level_from_name(log_level_name: str | None, environment: str) -> int:
             return configured_level
         return logging.INFO
 
-    # COPILOT TODO: This shouldn't be here, this should be set in helm and env files
-    env_defaults = {
-        "local": logging.DEBUG,
-        "dev": logging.INFO,
-        "staging": logging.INFO,
-        "prod": logging.WARNING,
-    }
-    return env_defaults.get(environment.strip().lower(), logging.INFO)
+    return logging.INFO
