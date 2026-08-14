@@ -1,5 +1,7 @@
 """WeasyPrint adapter for PDF generation."""
 
+import logging
+import time
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -12,8 +14,11 @@ from app.domain.constants.laa_contact import (
     LAA_TEAM_NAME,
     LLA_WEBSITE,
 )
+from app.logging_utils import build_log_extra, duration_ms
 from app.models.application.certificate import ApplicationCertificate
 from app.ports.pdf_generation_port import PdfGenerationPort
+
+logger = logging.getLogger(__name__)
 
 
 class PdfGeneratorAdapter(PdfGenerationPort):
@@ -49,34 +54,75 @@ class PdfGeneratorAdapter(PdfGenerationPort):
         Returns:
             PDF content as bytes
         """
-        template = self.jinja_env.get_template(template_name)
-        html_content = template.render(**context.model_dump())
+        started_at = time.perf_counter()
+        try:
+            template = self.jinja_env.get_template(template_name)
+            html_content = template.render(**context.model_dump())
 
-        template_path = self._template_dir / template_name
-        pdf_bytes = HTML(string=html_content, base_url=str(template_path)).write_pdf()
-
-        return pdf_bytes
+            template_path = self._template_dir / template_name
+            pdf_bytes = HTML(
+                string=html_content, base_url=str(template_path)
+            ).write_pdf()
+            logger.info(
+                "PDF generated",
+                extra=build_log_extra(
+                    event="pdf_generated",
+                    status_code=200,
+                    duration_ms=duration_ms(started_at),
+                    template_name=template_name,
+                ),
+            )
+            return pdf_bytes
+        except Exception:
+            logger.error(
+                "PDF generation failed",
+                extra=build_log_extra(
+                    event="pdf_generation_failed",
+                    status_code=500,
+                    duration_ms=duration_ms(started_at),
+                    template_name=template_name,
+                ),
+            )
+            raise
 
     def generate_print_letter_pdf(self, context: ApplicationCertificate) -> bytes:
         """Generate a combined print-ready PDF with cover letter, certificate, and FAQ."""
+        started_at = time.perf_counter()
+        try:
+            template_names = ["cover_letter.html", "certificate.html", "faq.html"]
+            context_data = self._build_print_template_context(context)
 
-        template_names = ["cover_letter.html", "certificate.html", "faq.html"]
-        context_data = self._build_print_template_context(context)
+            html_sections = []
+            for template_name in template_names:
+                template = self.jinja_env.get_template(template_name)
+                html_sections.append(template.render(**context_data))
 
-        html_sections = []
-        for template_name in template_names:
-            template = self.jinja_env.get_template(template_name)
-            html_sections.append(template.render(**context_data))
+            # Build combined HTML with page breaks between sections
+            parts = []
+            for i, section in enumerate(html_sections):
+                if i > 0:
+                    parts.append('<div style="page-break-before: always;"></div>')
+                parts.append(section)
+            combined_html = "\n".join(parts)
 
-        # Build combined HTML with page breaks between sections
-        parts = []
-        for i, section in enumerate(html_sections):
-            if i > 0:
-                parts.append('<div style="page-break-before: always;"></div>')
-            parts.append(section)
-        combined_html = "\n".join(parts)
-
-        base_url = str(self._template_dir / "cover_letter.html")
-        pdf_bytes = HTML(string=combined_html, base_url=base_url).write_pdf()
-
-        return pdf_bytes
+            base_url = str(self._template_dir / "cover_letter.html")
+            pdf_bytes = HTML(string=combined_html, base_url=base_url).write_pdf()
+            logger.info(
+                "Print letter PDF generated",
+                extra=build_log_extra(
+                    event="print_letter_pdf_generated",
+                    status_code=200,
+                    duration_ms=duration_ms(started_at),
+                ),
+            )
+            return pdf_bytes
+        except Exception:
+            logger.error(
+                "Print letter PDF generation failed",
+                extra=build_log_extra(
+                    event="print_letter_pdf_generation_failed",
+                    status_code=500,
+                    duration_ms=duration_ms(started_at),
+                ),
+            )
+            raise

@@ -1,7 +1,12 @@
+import logging
+
+from app.logging_utils import build_log_extra
 from app.models.application.index import ApplicationResponse, ProviderResponse
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.exceptions import ApplicationNotFoundError
+
+logger = logging.getLogger(__name__)
 
 
 class GetApplicationUseCase:
@@ -18,6 +23,13 @@ class GetApplicationUseCase:
             laa_reference
         )
         if application is None:
+            logger.warning(
+                "Application retrieval failed",
+                extra=build_log_extra(
+                    event="application_retrieved_failed",
+                    laa_reference=laa_reference,
+                ),
+            )
             raise ApplicationNotFoundError(f"Application {laa_reference} not found")
 
         firm_name = self.provider_details_port.get_firm_name(
@@ -37,4 +49,11 @@ class GetApplicationUseCase:
 
         response = ApplicationResponse.model_validate(application)
         response.provider = provider_response
+        logger.info(
+            "Application retrieved",
+            extra=build_log_extra(
+                event="application_retrieved_success",
+                laa_reference=laa_reference,
+            ),
+        )
         return response

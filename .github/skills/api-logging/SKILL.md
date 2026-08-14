@@ -41,6 +41,7 @@ If `LOG_LEVEL` is invalid, fallback to `info`.
 - PII
 - Tokens, cookies, authorization headers
 - Raw request or response payloads
+- File names, they are likely to have sensitive data in the names
 
 ## Template
 

@@ -1,3 +1,4 @@
+import logging
 import uuid
 from decimal import Decimal
 
@@ -6,6 +7,7 @@ from sqlmodel import Session, select
 from app.domain.claim import Claim as DomainClaim
 from app.domain.claim_evidence import ClaimEvidence as DomainClaimEvidence
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
+from app.logging_utils import build_log_extra
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ReasonCode
 from app.models.claim.index import (
@@ -29,6 +31,8 @@ from app.ports.claim.update_claim_status_port import (
 )
 from app.ports.claim.upload_claim_evidence_port import UploadClaimEvidencePort
 from app.ports.claim_backlog_port import ClaimBacklogPort
+
+logger = logging.getLogger(__name__)
 
 
 class ClaimRepositoryAdapter(
@@ -69,6 +73,14 @@ class ClaimRepositoryAdapter(
         self.session.add(new_claim)
         self.session.flush()
         self.session.refresh(new_claim)
+        logger.info(
+            "Claim created in repository",
+            extra=build_log_extra(
+                event="claim_repository_create_completed",
+                laa_reference=laa_reference,
+                claim_id=new_claim.claim_id,
+            ),
+        )
         return new_claim
 
     def link_evidence_to_claim(
@@ -82,6 +94,14 @@ class ClaimRepositoryAdapter(
                 evidence.claim_id = claim_id
                 self.session.add(evidence)
         self.session.flush()
+        logger.info(
+            "Claim evidence linked in repository",
+            extra=build_log_extra(
+                event="claim_repository_evidence_link_completed",
+                claim_id=claim_id,
+                evidence_count=len(evidence_ids),
+            ),
+        )
 
     def commit(self) -> None:
         self.session.commit()
@@ -125,6 +145,14 @@ class ClaimRepositoryAdapter(
         self.session.add(decision)
         self.session.flush()
         self.session.refresh(decision)
+        logger.info(
+            "Claim decision created in repository",
+            extra=build_log_extra(
+                event="claim_repository_decision_create_completed",
+                claim_id=claim_id,
+                decision_status=decision_status,
+            ),
+        )
         return decision
 
     def create_decision_reason(
@@ -141,6 +169,14 @@ class ClaimRepositoryAdapter(
         self.session.add(reason)
         self.session.flush()
         self.session.refresh(reason)
+        logger.info(
+            "Claim decision reason created in repository",
+            extra=build_log_extra(
+                event="claim_repository_decision_reason_create_completed",
+                claim_decision_id=claim_decision_id,
+                reason_code=reason_code,
+            ),
+        )
         return reason
 
     # --- UpdateClaimStatusPort ---
@@ -154,6 +190,14 @@ class ClaimRepositoryAdapter(
         claim.status_id = status
         self.session.add(claim)
         self.session.flush()
+        logger.info(
+            "Claim status updated in repository",
+            extra=build_log_extra(
+                event="claim_repository_status_update_completed",
+                claim_id=claim_id,
+                status=status,
+            ),
+        )
 
     def save_uploaded_claim_evidence(
         self,
@@ -167,6 +211,13 @@ class ClaimRepositoryAdapter(
         self.session.flush()
         claim_evidence_id = claim_evidence_model.claim_evidence_id
         self.session.commit()
+        logger.info(
+            "Claim evidence persisted",
+            extra=build_log_extra(
+                event="claim_repository_evidence_create_completed",
+                claim_evidence_id=str(claim_evidence_id),
+            ),
+        )
         return claim_evidence_id
 
     def get_claim_evidence_by_id(
@@ -187,8 +238,22 @@ class ClaimRepositoryAdapter(
     ) -> bool:
         claim_evidence_model = self.session.get(ClaimEvidenceModel, claim_evidence_id)
         if claim_evidence_model is None:
+            logger.info(
+                "Claim evidence delete requested for missing id",
+                extra=build_log_extra(
+                    event="claim_repository_evidence_delete_not_found",
+                    claim_evidence_id=str(claim_evidence_id),
+                ),
+            )
             return False
         self.session.delete(claim_evidence_model)
         self.session.flush()
         self.session.commit()
+        logger.info(
+            "Claim evidence deleted in repository",
+            extra=build_log_extra(
+                event="claim_repository_evidence_delete_completed",
+                claim_evidence_id=str(claim_evidence_id),
+            ),
+        )
         return True

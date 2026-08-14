@@ -129,10 +129,20 @@ class CreateClaimUseCase:
             claimant_id=command.claimant_id,
             total_funds_remaining_after_claim=total_funds_remaining_after_claim,
         )
+
         self.create_claim_port.link_evidence_to_claim(
             claim.claim_id, command.claim_evidence_ids
         )
         self.create_claim_port.commit()
+        logger.info(
+            "Claim created and evidence linked",
+            extra=build_log_extra(
+                event="claim_created",
+                laa_reference=command.laa_reference,
+                claim_id=claim.claim_id,
+                evidence_count=len(command.claim_evidence_ids),
+            ),
+        )
 
         if application is not None and self.gov_notify_port is not None:
             try:

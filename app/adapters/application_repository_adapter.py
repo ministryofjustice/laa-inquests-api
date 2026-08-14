@@ -1,8 +1,10 @@
+import logging
 import uuid
 
 from sqlmodel import Session, select
 
 from app.domain.coroners_letter import CoronersLetter
+from app.logging_utils import build_log_extra
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import (
     Address,
@@ -30,6 +32,8 @@ from app.ports.search_application_port import SearchApplicationPort
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 
+logger = logging.getLogger(__name__)
+
 
 class ApplicationRepositoryAdapter(
     GetApplicationPort,
@@ -47,7 +51,16 @@ class ApplicationRepositoryAdapter(
     def get_application_by_laa_reference(
         self, laa_reference: str
     ) -> Application | None:
-        return self.session.get(Application, int(laa_reference))
+        application = self.session.get(Application, int(laa_reference))
+        logger.info(
+            "Application lookup completed",
+            extra=build_log_extra(
+                event="application_repository_get_completed",
+                laa_reference=laa_reference,
+                found=application is not None,
+            ),
+        )
+        return application
 
     def list_applications(self) -> list[Application]:
         return self.session.exec(select(Application)).all()
@@ -185,6 +198,14 @@ class ApplicationRepositoryAdapter(
         self.session.add(new_application)
         self.session.flush()
         self.session.refresh(new_application)
+        logger.info(
+            "Application created in repository",
+            extra=build_log_extra(
+                event="application_repository_create_completed",
+                laa_reference=new_application.laa_reference,
+                firm_code=firm_code,
+            ),
+        )
         return new_application
 
     def commit(self) -> None:
@@ -206,6 +227,14 @@ class ApplicationRepositoryAdapter(
         coroners_letter_id = coroners_letter_model.coroners_letter_id
         self.session.commit()
 
+        logger.info(
+            "Coroners letter persisted",
+            extra=build_log_extra(
+                event="application_repository_coroners_letter_saved",
+                coroners_letter_id=str(coroners_letter_id),
+            ),
+        )
+
         return coroners_letter_id
 
     def update_decision(
@@ -214,6 +243,14 @@ class ApplicationRepositoryAdapter(
     ) -> None:
         self.session.add(proceeding)
         self.session.flush()
+        logger.info(
+            "Application decision updated",
+            extra=build_log_extra(
+                event="application_repository_update_decision_completed",
+                laa_reference=proceeding.laa_reference,
+                merits_decision=proceeding.merits_decision,
+            ),
+        )
 
     def get_pending_applications(self) -> list[Application]:
         statement = (

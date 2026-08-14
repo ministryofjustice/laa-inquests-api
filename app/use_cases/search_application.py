@@ -30,13 +30,22 @@ class SearchApplicationUseCase:
                 normalised_reference, firm_code, merits_decision
             )
             if not matching_applications:
+                logger.info(
+                    "Application search completed",
+                    extra=build_log_extra(
+                        event="application_search_completed",
+                        laa_reference=normalised_reference,
+                        firm_code=firm_code,
+                        result_count=0,
+                    ),
+                )
                 return []
 
             firm_name = self.provider_details_port.get_firm_name(
                 matching_applications[0].provider.firm_code
             )
 
-            return [
+            response = [
                 ApplicationSearchResponse(
                     laa_reference=application.laa_reference,
                     client_first_name=application.client.client_first_name,
@@ -49,6 +58,16 @@ class SearchApplicationUseCase:
                 )
                 for application in matching_applications
             ]
+            logger.info(
+                "Application search completed",
+                extra=build_log_extra(
+                    event="application_search_completed",
+                    laa_reference=normalised_reference,
+                    firm_code=firm_code,
+                    result_count=len(response),
+                ),
+            )
+            return response
         except Exception:
             logger.exception(
                 "Search application failed",

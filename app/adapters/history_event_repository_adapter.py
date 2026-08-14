@@ -1,9 +1,14 @@
+import logging
+
 from sqlmodel import Session, select
 
+from app.logging_utils import build_log_extra
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.get_application_history_port import GetApplicationHistoryPort
+
+logger = logging.getLogger(__name__)
 
 
 class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistoryPort):
@@ -59,6 +64,15 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
         self.session.add(new_event)
         self.session.flush()
         self.session.refresh(new_event)
+        logger.debug(
+            "History event created",
+            extra=build_log_extra(
+                event="history_event_created",
+                laa_reference=laa_reference,
+                history_event_id=new_event.id,
+                event_reference=event_reference,
+            ),
+        )
         return new_event
 
     def commit(self) -> None:
