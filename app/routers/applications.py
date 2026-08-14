@@ -604,7 +604,7 @@ def create_claim(
         )
 
 
-@router.post("/{laa_reference}/claims/{claim_id}/reject", status_code=204)
+@router.patch("/{laa_reference}/claims/{claim_id}/reject", status_code=204)
 def reject_claim(
     laa_reference: str,
     claim_id: int,

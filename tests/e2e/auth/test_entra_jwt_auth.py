@@ -445,7 +445,7 @@ def test_401_retrieve_claim_evidence_returns_401_when_bearer_token_is_invalid(
 def test_401_reject_claim_returns_401_when_no_authorization_header(
     entra_auth_client,
 ):
-    response = entra_auth_client.post(
+    response = entra_auth_client.patch(
         "/applications/1/claims/1/reject",
         json={"justification": "Claim rejected following manual assessment."},
     )
@@ -456,7 +456,7 @@ def test_401_reject_claim_returns_401_when_no_authorization_header(
 def test_403_reject_claim_returns_403_when_provider_token(
     entra_auth_client,
 ):
-    response = entra_auth_client.post(
+    response = entra_auth_client.patch(
         "/applications/1/claims/1/reject",
         json={"justification": "Claim rejected following manual assessment."},
         headers={"Authorization": "Bearer valid-provider-entra-token"},

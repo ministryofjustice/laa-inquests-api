@@ -42,7 +42,7 @@ def test_204_reject_claim_creates_decision_reason_and_updates_status(
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference)
 
-    response = client.post(
+    response = client.patch(
         f"/applications/{laa_reference}/claims/{claim.claim_id}/reject",
         json=_reject_payload(),
         headers={
@@ -77,7 +77,7 @@ def test_204_reject_claim_allows_re_rejecting_and_creates_new_decision(
     claim = _seed_claim(session, laa_reference)
 
     for _ in range(2):
-        response = client.post(
+        response = client.patch(
             f"/applications/{laa_reference}/claims/{claim.claim_id}/reject",
             json=_reject_payload(),
             headers={
@@ -94,7 +94,7 @@ def test_204_reject_claim_allows_re_rejecting_and_creates_new_decision(
 
 
 def test_404_reject_claim_when_application_does_not_exist(client, auth_token):
-    response = client.post(
+    response = client.patch(
         "/applications/999999/claims/1/reject",
         json=_reject_payload(),
         headers={
@@ -110,7 +110,7 @@ def test_404_reject_claim_when_application_does_not_exist(client, auth_token):
 def test_404_reject_claim_when_claim_does_not_exist(session, client, auth_token):
     laa_reference = session.exec(select(Application)).first().laa_reference
 
-    response = client.post(
+    response = client.patch(
         f"/applications/{laa_reference}/claims/999999/reject",
         json=_reject_payload(),
         headers={
@@ -138,7 +138,7 @@ def test_404_reject_claim_when_claim_belongs_to_another_application(
 
     claim = _seed_claim(session, existing.laa_reference)
 
-    response = client.post(
+    response = client.patch(
         f"/applications/{other_application.laa_reference}/claims/{claim.claim_id}/reject",
         json=_reject_payload(),
         headers={
@@ -155,7 +155,7 @@ def test_422_reject_claim_when_justification_missing(session, client, auth_token
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference)
 
-    response = client.post(
+    response = client.patch(
         f"/applications/{laa_reference}/claims/{claim.claim_id}/reject",
         json={},
         headers={
