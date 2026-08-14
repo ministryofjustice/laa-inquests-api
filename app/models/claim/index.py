@@ -123,6 +123,16 @@ class ClaimCreate(BaseModel):
     )
 
 
+# REQUEST BODY -- Reject
+class RejectClaimRequest(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+    justification: str = PydanticField(examples=["Rejected following manual review."])
+
+
 # RESPONSE BODY
 class ClaimResponse(BaseModel):
     model_config = ConfigDict(
