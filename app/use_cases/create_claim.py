@@ -155,29 +155,29 @@ class CreateClaimUseCase:
 
         if application is not None and self.gov_notify_port is not None:
             try:
+                self.create_history_event_port.create_history_event(
+                    event_reference=HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION,
+                    actor=ActorType.SYSTEM.value,
+                    actor_type=ActorType.SYSTEM,
+                    laa_reference=command.laa_reference,
+                    event_data={
+                        "recipient": application.provider.email_address,
+                        "channel": NotificationType.EMAIL.value.capitalize(),
+                    },
+                )
                 self.gov_notify_port.send_claim_submit_confirmation_email(
                     claim=claim,
                     application=application,
                     recipient_email=application.provider.email_address,
                 )
-                if self.create_history_event_port is not None:
-                    self.create_history_event_port.create_history_event(
-                        event_reference=HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION,
-                        actor=ActorType.SYSTEM.value,
-                        actor_type=ActorType.SYSTEM,
-                        laa_reference=command.laa_reference,
-                        event_data={
-                            "recipient": application.provider.email_address,
-                            "channel": NotificationType.EMAIL.value.capitalize(),
-                        },
-                    )
-                    self.create_history_event_port.commit()
+                self.create_history_event_port.commit()
             except Exception:
                 logger.warning(
                     "Failed to send claim submission email for claim %s",
                     claim.claim_id,
                     exc_info=True,
                 )
+                self.create_history_event_port.rollback()
 
         rejection_reasons: list[ReasonCode] | None = None
 

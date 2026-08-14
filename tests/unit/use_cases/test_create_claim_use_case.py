@@ -303,6 +303,8 @@ def test_execute_creates_submission_confirmation_history_event_when_notify_succe
             "channel": "Email",
         },
     )
+    create_history_event_port.commit.assert_called_once()
+    create_history_event_port.rollback.assert_not_called()
 
 
 def test_execute_does_not_create_submission_confirmation_history_event_when_notify_fails():
@@ -327,11 +329,35 @@ def test_execute_does_not_create_submission_confirmation_history_event_when_noti
 
     use_case.execute(command)
 
-    event_references = [
-        call.kwargs["event_reference"]
-        for call in create_history_event_port.create_history_event.call_args_list
+    create_history_event_port.commit.assert_not_called()
+    create_history_event_port.rollback.assert_called_once()
+
+
+def test_execute_does_not_notify_when_create_history_event_fails():
+    command = _make_command()
+    claim = _make_claim()
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+    application = _make_matching_application()
+    create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
+    create_history_event_port.create_history_event.side_effect = [
+        None,
+        Exception("Unable to create event"),
     ]
-    assert HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION not in event_references
+    gov_notify_port = MagicMock()
+
+    use_case = CreateClaimUseCase(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(application),
+        get_claims_for_application_port=_make_get_claims_port(),
+        create_history_event_port=create_history_event_port,
+        gov_notify_port=gov_notify_port,
+    )
+
+    use_case.execute(command)
+
+    gov_notify_port.send_claim_submit_confirmation_email.assert_not_called()
+    create_history_event_port.commit.assert_not_called()
 
 
 def test_execute_creates_claim_submitted_history_event_when_submission_succeeds():
