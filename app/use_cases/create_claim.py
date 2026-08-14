@@ -23,6 +23,7 @@ from app.models.claim.enums import (
     ReasonCode,
 )
 from app.models.claim.index import Claim
+from app.models.history.enums import ActorType, HistoryEventReference
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
@@ -32,6 +33,7 @@ from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicat
 from app.ports.claim.update_claim_status_port import (
     UpdateClaimStatusPort,
 )
+from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.use_cases.exceptions import ApplicationNotFoundError, InvalidClaimError
 
@@ -63,6 +65,7 @@ class CreateClaimUseCase:
         create_claim_port: CreateClaimPort,
         application_lookup_port: ApplicationLookupPort,
         get_claims_for_application_port: GetClaimsForApplicationPort,
+        create_history_event_port: CreateHistoryEventPort,
         gov_notify_port: GovNotifyPort | None = None,
         create_claim_decision_port: CreateClaimDecisionPort | None = None,
         create_decision_reason_port: CreateDecisionReasonPort | None = None,
@@ -72,6 +75,7 @@ class CreateClaimUseCase:
         self.create_claim_port = create_claim_port
         self.application_lookup_port = application_lookup_port
         self.get_claims_for_application_port = get_claims_for_application_port
+        self.create_history_event_port = create_history_event_port
         self.gov_notify_port = gov_notify_port
         self.create_claim_decision_port = create_claim_decision_port
         self.create_decision_reason_port = create_decision_reason_port
@@ -122,16 +126,31 @@ class CreateClaimUseCase:
             application, existing_claims, validated_claim
         )
 
-        claim = self.create_claim_port.create_claim(
-            laa_reference=command.laa_reference,
-            claim=validated_claim,
-            claimant_id=command.claimant_id,
-            total_funds_remaining_after_claim=total_funds_remaining_after_claim,
-        )
-        self.create_claim_port.link_evidence_to_claim(
-            claim.claim_id, command.claim_evidence_ids
-        )
-        self.create_claim_port.commit()
+        try:
+            claim = self.create_claim_port.create_claim(
+                laa_reference=command.laa_reference,
+                claim=validated_claim,
+                claimant_id=command.claimant_id,
+                total_funds_remaining_after_claim=total_funds_remaining_after_claim,
+            )
+            self.create_claim_port.link_evidence_to_claim(
+                claim.claim_id, command.claim_evidence_ids
+            )
+
+            self.create_history_event_port.create_history_event(
+                event_reference=HistoryEventReference.CLAIM_SUBMITTED,
+                actor=command.claimant_id or application.provider.email_address,
+                actor_type=ActorType.PROVIDER,
+                laa_reference=command.laa_reference,
+                event_data={"claim_type": command.claim_type.value},
+            )
+
+            # This commits both the claim and the history event in a single transaction
+            # because they share a session
+            self.create_claim_port.commit()
+        except Exception:
+            self.create_claim_port.rollback()
+            raise
 
         if application is not None and self.gov_notify_port is not None:
             try:

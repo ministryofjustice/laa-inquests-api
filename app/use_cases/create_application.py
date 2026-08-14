@@ -33,11 +33,12 @@ class CreateApplicationUseCase:
                 application,
                 request.provider.email_address,
             )
+            # This commits both the application and the history event in a single transaction
+            # because they share a session
             self.create_application_port.commit()
-            self.create_history_event_port.commit()
         except Exception:
+            # This rolls back both the application and the history event in case of any failure
             self.create_application_port.rollback()
-            self.create_history_event_port.rollback()
             raise
 
         return application
