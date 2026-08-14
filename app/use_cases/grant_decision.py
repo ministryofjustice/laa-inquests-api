@@ -76,6 +76,16 @@ class GrantDecisionUseCase:
 
             self.send_grant_letter_use_case.execute(certificate_context)
 
+            self.create_history_event_port.create_history_event(
+                event_reference=HistoryEventReference.CERTIFICATE_CREATED,
+                actor=caseworker_name,
+                actor_type=ActorType.CASEWORKER,
+                laa_reference=application.laa_reference,
+                event_data={
+                    "laa_reference": application.laa_reference,
+                },
+            )
+
             self.application_decision_port.commit()
             self.create_history_event_port.commit()
         except Exception as exception:

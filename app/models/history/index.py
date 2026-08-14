@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_serializer
 from pydantic.alias_generators import to_camel
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
@@ -32,3 +33,19 @@ class HistoryEventResponse(BaseModel):
     actor: str
     event_reference: HistoryEventReference
     event_data: dict | None
+
+    @field_serializer("event_data", when_used="json")
+    def serialize_event_data(self, event_data: dict | None) -> dict | None:
+        if event_data is None:
+            return None
+        return _camelize_json_keys(event_data)
+
+
+def _camelize_json_keys(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {
+            to_camel(str(key)): _camelize_json_keys(item) for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [_camelize_json_keys(item) for item in value]
+    return value

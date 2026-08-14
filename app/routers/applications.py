@@ -42,6 +42,7 @@ from app.models.claim.index import (
     ClaimCreate,
     ClaimResponse,
     ClaimSummaryResponse,
+    RejectClaimRequest,
 )
 from app.models.history.index import HistoryEventResponse
 from app.ports.application_lookup_port import ApplicationLookupPort
@@ -98,6 +99,7 @@ from app.use_cases.list_application_claims import ListApplicationClaimsUseCase
 from app.use_cases.list_applications import ListApplicationsUseCase
 from app.use_cases.list_public_bodies import ListPublicBodiesUseCase
 from app.use_cases.refuse_decision import RefuseDecisionUseCase
+from app.use_cases.reject_claim import RejectClaimCommand, RejectClaimUseCase
 from app.use_cases.retrieve_certificate import RetrieveCertificateUseCase
 from app.use_cases.retrieve_coroners_letter import RetrieveCoronersLetterUseCase
 from app.use_cases.search_application import SearchApplicationUseCase
@@ -236,6 +238,9 @@ def get_create_claim_use_case(
         get_claim_db_adapter
     ),
     update_claim_status_port: UpdateClaimStatusPort = Depends(get_claim_db_adapter),
+    create_history_event_port: CreateHistoryEventPort = Depends(
+        get_history_event_adapter
+    ),
     application_lookup_port: ApplicationLookupPort = Depends(
         get_application_db_adapter
     ),
@@ -249,11 +254,32 @@ def get_create_claim_use_case(
         create_claim_port=create_claim_port,
         application_lookup_port=application_lookup_port,
         get_claims_for_application_port=get_claims_for_application_port,
+        create_history_event_port=create_history_event_port,
         gov_notify_port=gov_notify_port,
         create_claim_decision_port=create_claim_decision_port,
         create_decision_reason_port=create_decision_reason_port,
         update_claim_status_port=update_claim_status_port,
         get_claim_decision_port=get_claim_decision_port,
+    )
+
+
+def get_reject_claim_use_case(
+    application_lookup_port: ApplicationLookupPort = Depends(
+        get_application_db_adapter
+    ),
+    get_claim_by_id_port: GetClaimByIdPort = Depends(get_claim_db_adapter),
+    create_claim_decision_port: CreateClaimDecisionPort = Depends(get_claim_db_adapter),
+    create_decision_reason_port: CreateDecisionReasonPort = Depends(
+        get_claim_db_adapter
+    ),
+    update_claim_status_port: UpdateClaimStatusPort = Depends(get_claim_db_adapter),
+) -> RejectClaimUseCase:
+    return RejectClaimUseCase(
+        application_lookup_port=application_lookup_port,
+        get_claim_by_id_port=get_claim_by_id_port,
+        create_claim_decision_port=create_claim_decision_port,
+        create_decision_reason_port=create_decision_reason_port,
+        update_claim_status_port=update_claim_status_port,
     )
 
 
@@ -642,6 +668,31 @@ def create_claim(
         raise HTTPException(
             status_code=422, detail={"errorCode": e.code, "message": e.message}
         )
+
+
+@router.patch("/{laa_reference}/claims/{claim_id}/reject", status_code=204)
+def reject_claim(
+    laa_reference: str,
+    claim_id: int,
+    request: RejectClaimRequest,
+    use_case: RejectClaimUseCase = Depends(get_reject_claim_use_case),
+    _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
+) -> Response:
+    """Reject a claim, recording a manual rejection decision against it."""
+    try:
+        use_case.execute(
+            RejectClaimCommand(
+                laa_reference=laa_reference,
+                claim_id=claim_id,
+                justification=request.justification,
+            )
+        )
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
+    except ClaimNotFoundError:
+        raise HTTPException(status_code=404, detail="Claim not found")
+
+    return Response(status_code=204)
 
 
 @router.patch("/{laa_reference}/refuse-decision", status_code=204)

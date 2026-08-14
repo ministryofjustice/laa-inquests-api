@@ -113,7 +113,7 @@ def test_200_get_application_history_returns_events_in_reverse_chronological_ord
         timestamp=datetime.now(UTC),
         actor="caseworker@example.com",
         actor_type=ActorType.CASEWORKER,
-        event_data={"decision": "granted"},
+        event_data={"decision": "granted", "related_link": "/certificate/123"},
         laa_reference=laa_reference,
     )
     session.add(event2)
@@ -143,5 +143,7 @@ def test_200_get_application_history_returns_events_in_reverse_chronological_ord
         events[1]["eventReference"]
         == HistoryEventReference.APPLICATION_ASSESSMENT_COMPLETED
     )
+    assert events[1]["eventData"]["relatedLink"] == "/certificate/123"
+    assert "related_link" not in events[1]["eventData"]
     assert events[2]["eventReference"] == HistoryEventReference.APPLICATION_SUBMITTED
     assert events[0]["timestamp"] > events[1]["timestamp"] > events[2]["timestamp"]
