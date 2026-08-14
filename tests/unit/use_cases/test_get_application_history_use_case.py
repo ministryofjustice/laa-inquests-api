@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
+from app.models.notifications.enums import NotificationType
 import pytest
 
 from app.models.application.index import Application
@@ -104,7 +105,10 @@ def test_execute_masks_recipient_in_event_data():
         timestamp=datetime.now(UTC),
         actor=ActorType.SYSTEM.value,
         actor_type=ActorType.SYSTEM,
-        event_data={"recipient": "recipient@example.com", "channel": "email"},
+        event_data={
+            "recipient": "recipient@example.com",
+            "channel": NotificationType.EMAIL,
+        },
         laa_reference=123456,
     )
     use_case = _make_use_case(application=MagicMock(), history_events=[history_event])
@@ -112,7 +116,7 @@ def test_execute_masks_recipient_in_event_data():
     result = use_case.execute("1")
 
     assert "recipient" not in result[0].event_data
-    assert result[0].event_data["channel"] == "email"
+    assert result[0].event_data["channel"] == NotificationType.EMAIL
 
 
 def test_execute_preserves_non_provider_actor():

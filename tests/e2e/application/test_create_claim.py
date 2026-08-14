@@ -2,6 +2,7 @@ import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 
+from app.models.notifications.enums import NotificationType
 from sqlmodel import select
 
 from app.models.application.enums import MeritsDecision
@@ -163,11 +164,11 @@ def test_201_create_claim_creates_submission_confirmation_comms_history_event(
         history_event.event_reference
         == HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION
     )
-    assert history_event.actor == ActorType.SYSTEM.value
+    assert history_event.actor == ActorType.SYSTEM
     assert history_event.actor_type == ActorType.SYSTEM
     assert history_event.event_data == {
         "recipient": application.provider.email_address,
-        "channel": "Email",
+        "channel": NotificationType.EMAIL,
     }
     assert history_event.laa_reference == laa_reference
 

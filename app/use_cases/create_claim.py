@@ -143,7 +143,7 @@ class CreateClaimUseCase:
                 actor=command.claimant_id or application.provider.email_address,
                 actor_type=ActorType.PROVIDER,
                 laa_reference=command.laa_reference,
-                event_data={"claim_type": command.claim_type.value},
+                event_data={"claim_type": command.claim_type},
             )
 
             # This commits both the claim and the history event in a single transaction
@@ -157,12 +157,12 @@ class CreateClaimUseCase:
             try:
                 self.create_history_event_port.create_history_event(
                     event_reference=HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION,
-                    actor=ActorType.SYSTEM.value,
+                    actor=ActorType.SYSTEM,
                     actor_type=ActorType.SYSTEM,
                     laa_reference=command.laa_reference,
                     event_data={
                         "recipient": application.provider.email_address,
-                        "channel": NotificationType.EMAIL.value.capitalize(),
+                        "channel": NotificationType.EMAIL,
                     },
                 )
                 self.gov_notify_port.send_claim_submit_confirmation_email(

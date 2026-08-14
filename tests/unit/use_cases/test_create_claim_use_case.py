@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from unittest.mock import MagicMock
 
+from app.models.notifications.enums import NotificationType
 import pytest
 
 from app.domain.claim_error import ClaimErrorCode
@@ -295,12 +296,12 @@ def test_execute_creates_submission_confirmation_history_event_when_notify_succe
 
     create_history_event_port.create_history_event.assert_any_call(
         event_reference=HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION,
-        actor=ActorType.SYSTEM.value,
+        actor=ActorType.SYSTEM,
         actor_type=ActorType.SYSTEM,
         laa_reference=command.laa_reference,
         event_data={
             "recipient": application.provider.email_address,
-            "channel": "Email",
+            "channel": NotificationType.EMAIL,
         },
     )
     create_history_event_port.commit.assert_called_once()
@@ -382,7 +383,7 @@ def test_execute_creates_claim_submitted_history_event_when_submission_succeeds(
         actor=command.claimant_id,
         actor_type=ActorType.PROVIDER,
         laa_reference=command.laa_reference,
-        event_data={"claim_type": command.claim_type.value},
+        event_data={"claim_type": command.claim_type},
     )
     create_claim_port.commit.assert_called_once_with()
 
