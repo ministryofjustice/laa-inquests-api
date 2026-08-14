@@ -2,7 +2,6 @@ import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from app.models.notifications.enums import NotificationType
 from sqlmodel import select
 
 from app.models.application.enums import MeritsDecision
@@ -11,6 +10,7 @@ from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ClaimType
 from app.models.claim.index import Claim, ClaimDecision, ClaimEvidence, DecisionReason
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
+from app.models.notifications.enums import NotificationType
 
 
 def _make_request_body(overrides=None):

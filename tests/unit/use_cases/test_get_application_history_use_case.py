@@ -1,12 +1,12 @@
 from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
-from app.models.notifications.enums import NotificationType
 import pytest
 
 from app.models.application.index import Application
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent, HistoryEventResponse
+from app.models.notifications.enums import NotificationType
 from app.use_cases.exceptions import ApplicationNotFoundError
 from app.use_cases.get_application_history import GetApplicationHistoryUseCase
 

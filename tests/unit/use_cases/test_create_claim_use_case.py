@@ -3,7 +3,6 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from unittest.mock import MagicMock
 
-from app.models.notifications.enums import NotificationType
 import pytest
 
 from app.domain.claim_error import ClaimErrorCode
@@ -18,6 +17,7 @@ from app.models.claim.enums import (
 )
 from app.models.claim.index import Claim, ClaimDecision
 from app.models.history.enums import ActorType, HistoryEventReference
+from app.models.notifications.enums import NotificationType
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
