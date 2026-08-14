@@ -99,7 +99,7 @@ def test_refuse_decision_calls_required_ports_and_commit(
         laa_reference=application.laa_reference,
         event_data={
             "merits_decision": "Refused",
-            "refusal_reason": "Not in scope",
+            "refusal_reason": "NOT_IN_SCOPE",
             "refusal_justification": "The matter is not in scope.",
         },
     )
