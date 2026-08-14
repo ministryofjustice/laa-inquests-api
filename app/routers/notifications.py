@@ -1,11 +1,13 @@
 """Router for notification-related endpoints."""
 
 import logging
+import time
 from typing import Annotated
 
-from fastapi import APIRouter, Header, HTTPException, Response, status
+from fastapi import APIRouter, Header, HTTPException, Request, Response, status
 
 from app.config import Config
+from app.logging_utils import build_log_extra, mask_recipient
 from app.models.notifications import GovNotifyCallbackPayload
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
@@ -48,6 +50,7 @@ def verify_bearer_token(authorization: str) -> None:
 
 @router.post("/callback", status_code=status.HTTP_200_OK)
 async def gov_notify_callback(
+    request: Request,
     payload: GovNotifyCallbackPayload,
     authorization: Annotated[str | None, Header()] = None,
 ) -> Response:
@@ -79,17 +82,28 @@ async def gov_notify_callback(
             environment = parts[0]
             laa_reference = parts[1]
 
+    started_at = getattr(request.state, "started_at", None)
+    duration_ms = (
+        int((time.perf_counter() - started_at) * 1000)
+        if started_at is not None
+        else None
+    )
+
     logger.info(
-        f"GovNotify callback received: "
-        f"notification_id={payload.id}, "
-        f"status={payload.status.value}, "
-        f"type={payload.notification_type.value}, "
-        f"environment={environment}, "
-        f"laa_reference={laa_reference}, "
-        f"to={payload.to}, "
-        f"created_at={payload.created_at}, "
-        f"sent_at={payload.sent_at}, "
-        f"completed_at={payload.completed_at}"
+        "GovNotify callback received",
+        extra=build_log_extra(
+            event="govnotify_callback_received",
+            route=request.url.path,
+            method=request.method,
+            status_code=200,
+            duration_ms=duration_ms,
+            notification_id=str(payload.id),
+            status=payload.status.value,
+            notification_type=payload.notification_type.value,
+            environment_from_reference=environment,
+            laa_reference=laa_reference,
+            recipient_masked=mask_recipient(payload.to),
+        ),
     )
 
     return Response(status_code=200)

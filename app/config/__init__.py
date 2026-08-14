@@ -3,6 +3,9 @@ import os
 
 class Config:
     ENVIRONMENT = os.environ.get("ENV", "unknown")
+    SERVICE_NAME = os.environ.get("SERVICE_NAME", "laa-inquests-api")
+    # COPILOT TODO: Let's default this to empty string like is our pattern
+    LOG_LEVEL = os.environ.get("LOG_LEVEL")
 
     # The default DB parameters are set to allow you to connect to the Docker DB
     DB_USER = os.environ.get("DB_USER", "postgres")

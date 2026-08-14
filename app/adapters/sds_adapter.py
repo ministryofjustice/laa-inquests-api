@@ -6,6 +6,7 @@ from pathlib import Path
 
 import httpx
 
+from app.logging_utils import build_log_extra
 from app.models.application.index import (
     SDSUploadClaimEvidenceResponse,
     SDSUploadCoronersLetterResponse,
@@ -195,18 +196,20 @@ class SdsAdapter(SdsPort):
         )
         if response.status_code != 200:
             message = f"SDS returned {response.status_code} while retrieving coroner's letter for file key {file_name}"
-            _raise_sds_retrieval_error(message)
+            _raise_sds_retrieval_error(message, response.status_code)
 
         try:
             file_url = response.json()["fileURL"]
         except (KeyError, TypeError, ValueError):
-            _raise_sds_retrieval_error("Failed to retrieve coroners letter")
+            _raise_sds_retrieval_error("Failed to retrieve coroners letter", 502)
 
         try:
             with httpx.stream("GET", file_url) as stream:
                 yield from stream.iter_bytes()
         except (httpx.HTTPError, httpx.StreamError) as exc:
-            _raise_sds_retrieval_error(f"Failed to stream coroners letter: \n {exc}")
+            _raise_sds_retrieval_error(
+                f"Failed to stream coroners letter: \n {exc}", 502
+            )
 
     def retrieve_claim_evidence(self, file_name: str) -> Iterator[bytes]:
         if not file_name or not file_name.strip():
@@ -221,13 +224,14 @@ class SdsAdapter(SdsPort):
         )
         if response.status_code != 200:
             message = f"SDS returned {response.status_code} while retrieving claim evidence for file key {file_name}"
-            _raise_sds_claim_evidence_retrieval_error(message)
+            _raise_sds_claim_evidence_retrieval_error(message, response.status_code)
 
         try:
             file_url = response.json()["fileURL"]
         except (KeyError, TypeError, ValueError):
             _raise_sds_claim_evidence_retrieval_error(
-                "Failed to retrieve claim evidence"
+                "Failed to retrieve claim evidence",
+                502,
             )
 
         try:
@@ -235,7 +239,8 @@ class SdsAdapter(SdsPort):
                 yield from stream.iter_bytes()
         except (httpx.HTTPError, httpx.StreamError) as exc:
             _raise_sds_claim_evidence_retrieval_error(
-                f"Failed to stream claim evidence: \n {exc}"
+                f"Failed to stream claim evidence: \n {exc}",
+                502,
             )
 
     def delete_claim_evidence(self, file_name: str) -> None:
@@ -261,13 +266,33 @@ class SdsAdapter(SdsPort):
             )
 
 
-def _raise_sds_retrieval_error(message_str):
-    logger.error(message_str)
+def _raise_sds_retrieval_error(message_str: str, status_code: int | None) -> None:
+    logger.error(
+        message_str,
+        extra=build_log_extra(
+            event="sds_coroners_letter_retrieval_failed",
+            route="sds:get_file",
+            method="GET",
+            status_code=status_code,
+            error_message=message_str,
+        ),
+    )
     raise SDSLetterRetrievalError(message_str)
 
 
-def _raise_sds_claim_evidence_retrieval_error(message_str):
-    logger.error(message_str)
+def _raise_sds_claim_evidence_retrieval_error(
+    message_str: str, status_code: int | None
+) -> None:
+    logger.error(
+        message_str,
+        extra=build_log_extra(
+            event="sds_claim_evidence_retrieval_failed",
+            route="sds:get_file",
+            method="GET",
+            status_code=status_code,
+            error_message=message_str,
+        ),
+    )
     raise SDSClaimEvidenceRetrievalError(message_str)
 
 

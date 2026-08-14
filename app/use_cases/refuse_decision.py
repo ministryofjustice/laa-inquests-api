@@ -1,5 +1,6 @@
 import logging
 
+from app.logging_utils import build_log_extra
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import RefuseApplicationUpdate
 from app.models.history.enums import ActorType, HistoryEventReference
@@ -63,8 +64,11 @@ class RefuseDecisionUseCase:
             self.create_history_event_port.commit()
         except Exception as exception:
             logger.warning(
-                "Failed to send refusal email for application %s",
-                application.laa_reference,
+                "Failed to refuse application",
+                extra=build_log_extra(
+                    event="refuse_decision_failed",
+                    laa_reference=application.laa_reference,
+                ),
                 exc_info=True,
             )
             self.application_decision_port.rollback()

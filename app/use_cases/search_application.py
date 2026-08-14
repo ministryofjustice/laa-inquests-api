@@ -1,5 +1,6 @@
 import logging
 
+from app.logging_utils import build_log_extra
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import ApplicationSearchResponse
 from app.ports.provider_details_port import ProviderDetailsPort
@@ -48,6 +49,13 @@ class SearchApplicationUseCase:
                 )
                 for application in matching_applications
             ]
-        except Exception as e:
-            logger.critical(e)
+        except Exception:
+            logger.exception(
+                "Search application failed",
+                extra=build_log_extra(
+                    event="search_application_failed",
+                    laa_reference=laa_reference,
+                    firm_code=firm_code,
+                ),
+            )
             raise
