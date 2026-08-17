@@ -27,7 +27,7 @@ def _make_request(with_addresses: bool = True) -> ApplicationCreate:
     client = {
         "clientFirstName": "Test",
         "clientLastName": "Surname",
-        "dateOfBirth": "01-01-1990",
+        "dateOfBirth": "1990-01-01",
         "correspondenceAddressSource": "USE_SPECIFIED_ADDRESS",
         "hasNoFixedAbode": False,
         "homeAddress": {
@@ -62,8 +62,8 @@ def _make_request(with_addresses: bool = True) -> ApplicationCreate:
             "deceased": {
                 "deceasedFirstName": "Test",
                 "deceasedLastName": "Surname",
-                "deceasedDateOfBirth": "01-01-2000",
-                "deceasedDateOfDeath": "01-01-2025",
+                "deceasedDateOfBirth": "2000-01-01",
+                "deceasedDateOfDeath": "2025-01-01",
                 "coronersReference": "COR-2025-001",
                 "clientRelationshipToDeceased": "guardian",
             },

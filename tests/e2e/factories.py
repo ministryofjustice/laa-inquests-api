@@ -36,7 +36,7 @@ def create_client_in_db(session: Session, **overrides) -> Client:
     defaults = {
         "client_first_name": "Test",
         "client_last_name": "Client",
-        "date_of_birth": "01-01-1990",
+        "date_of_birth": "1990-01-01",
         "correspondence_address_source": "USE_CLIENT_HOME_ADDRESS",
     }
     client = Client(**(defaults | overrides))
@@ -52,8 +52,8 @@ def create_deceased_in_db(session: Session, *, client_id: int, **overrides) -> D
         "client_id": client_id,
         "deceased_first_name": "Dec",
         "deceased_last_name": "Eased",
-        "deceased_date_of_birth": "01-01-1960",
-        "deceased_date_of_death": "01-01-2026",
+        "deceased_date_of_birth": "1960-01-01",
+        "deceased_date_of_death": "2026-01-01",
         "coroners_reference": "COR-TEST-001",
         "further_information": None,
         "client_relationship_to_deceased": "spouse",
