@@ -10,6 +10,7 @@ from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
 from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.ports.claim.update_claim_status_port import UpdateClaimStatusPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
+from app.ports.gov_notify_port import GovNotifyPort
 from app.use_cases.exceptions import ApplicationNotFoundError, ClaimNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,7 @@ class RejectClaimUseCase:
         create_decision_reason_port: CreateDecisionReasonPort,
         update_claim_status_port: UpdateClaimStatusPort,
         create_history_event_port: CreateHistoryEventPort,
+        gov_notify_port: GovNotifyPort | None = None,
     ) -> None:
         self.application_lookup_port = application_lookup_port
         self.get_claim_by_id_port = get_claim_by_id_port
@@ -38,6 +40,7 @@ class RejectClaimUseCase:
         self.create_decision_reason_port = create_decision_reason_port
         self.update_claim_status_port = update_claim_status_port
         self.create_history_event_port = create_history_event_port
+        self.gov_notify_port = gov_notify_port
 
     def execute(self, command: RejectClaimCommand, caseworker_name: str) -> None:
         application = self.application_lookup_port.get_application_by_laa_reference(
@@ -94,3 +97,18 @@ class RejectClaimUseCase:
         except Exception:
             self.update_claim_status_port.rollback()
             raise
+
+        if self.gov_notify_port is not None:
+            try:
+                self.gov_notify_port.send_claim_rejected_decision_email(
+                    claim=claim,
+                    application=application,
+                    reject_reason=command.justification,
+                    recipient_email=claim.claimant_id,
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to send claim rejection email for claim %s",
+                    command.claim_id,
+                    exc_info=True,
+                )

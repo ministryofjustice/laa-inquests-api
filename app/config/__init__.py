@@ -33,6 +33,9 @@ class Config:
         "GOV_NOTIFY_CLAIM_SUBMIT_TEMPLATE_ID",
         "",
     )
+    GOV_NOTIFY_CLAIM_REJECT_TEMPLATE_ID = os.environ.get(
+        "GOV_NOTIFY_CLAIM_REJECT_TEMPLATE_ID"
+    )
     GOV_NOTIFY_CALLBACK_BEARER_TOKEN = os.environ.get(
         "GOV_NOTIFY_CALLBACK_BEARER_TOKEN", ""
     )

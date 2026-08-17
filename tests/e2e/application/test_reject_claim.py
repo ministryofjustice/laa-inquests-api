@@ -22,6 +22,7 @@ def _seed_claim(
     session,
     laa_reference: int,
     status: ClaimStatus = ClaimStatus.SUBMITTED,
+    claimant_id: str | None = "claimant-123@provider.co.uk",
 ) -> Claim:
     claim = Claim(
         laa_reference=laa_reference,
@@ -32,6 +33,7 @@ def _seed_claim(
         total_profit_cost_gross=Decimal("1200.00"),
         total_profit_cost_vat_zero=Decimal("500.00"),
         poa_type_id=POAType.PROFIT_COST,
+        claimant_id=claimant_id,
     )
     session.add(claim)
     session.commit()
@@ -71,6 +73,31 @@ def test_204_reject_claim_creates_decision_reason_and_updates_status(
 
     session.refresh(claim)
     assert claim.status_id == ClaimStatus.REJECTED
+
+
+def test_204_reject_claim_sends_rejection_email_to_claimant(
+    session, client, auth_token, mock_gov_notify
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    claim = _seed_claim(session, laa_reference)
+
+    response = client.patch(
+        f"/applications/{laa_reference}/claims/{claim.claim_id}/reject",
+        json=_reject_payload(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 204
+    mock_gov_notify.send_claim_rejected_decision_email.assert_called_once()
+
+    call_kwargs = mock_gov_notify.send_claim_rejected_decision_email.call_args.kwargs
+    assert call_kwargs["claim"].claim_id == claim.claim_id
+    assert call_kwargs["application"].laa_reference == laa_reference
+    assert call_kwargs["reject_reason"] == _reject_payload()["justification"]
+    assert call_kwargs["recipient_email"] == claim.claimant_id
 
 
 def test_204_reject_claim_allows_re_rejecting_and_creates_new_decision(

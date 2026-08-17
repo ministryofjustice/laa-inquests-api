@@ -142,6 +142,57 @@ def test_gov_notify_adapter_sends_claim_submit_confirmation_email_successfully()
         assert call_kwargs["personalisation"]["submission_date"] == "18 June 2026"
 
 
+def test_gov_notify_adapter_sends_claim_rejected_decision_email_successfully():
+    application, _ = _create_test_application_and_proceeding()
+    claim = Claim(
+        claim_id=7,
+        laa_reference=12345,
+        claim_type_id="PAYMENT_ON_ACCOUNT",
+        submission_date=datetime(2026, 6, 18, 14, 3, tzinfo=ZoneInfo("UTC")),
+        total_profit_cost_net=1000,
+        total_profit_cost_gross=1200,
+        poa_type_id="PROFIT_COST",
+    )
+    mock_notifications_client = Mock()
+    mock_notifications_client.send_email_notification.return_value = {
+        "id": "test-notification-id"
+    }
+
+    with (
+        patch("app.adapters.gov_notify.NotificationsAPIClient") as mock_api_client,
+        patch.object(
+            Config,
+            "GOV_NOTIFY_CLAIM_REJECT_TEMPLATE_ID",
+            "test-claim-reject-template-id",
+        ),
+    ):
+        mock_api_client.return_value = mock_notifications_client
+
+        adapter = GovNotifyAdapter()
+        adapter.send_claim_rejected_decision_email(
+            claim,
+            application,
+            "Rejected following manual review.",
+            "claimant-123@provider.co.uk",
+        )
+
+        mock_api_client.assert_called_once_with(Config.GOV_NOTIFY_API_KEY)
+        call_kwargs = mock_notifications_client.send_email_notification.call_args.kwargs
+        assert call_kwargs["email_address"] == "claimant-123@provider.co.uk"
+        assert call_kwargs["template_id"] == "test-claim-reject-template-id"
+        assert isinstance(call_kwargs["personalisation"], dict)
+        assert call_kwargs["personalisation"]["laa_reference"] == "12345"
+        assert call_kwargs["personalisation"]["claim_reference"] == "7"
+        assert (
+            call_kwargs["personalisation"]["claim_submitted_at"]
+            == "18 June 2026 14:03 UTC"
+        )
+        assert (
+            call_kwargs["personalisation"]["reject_reason"]
+            == "Rejected following manual review."
+        )
+
+
 def test_gov_notify_adapter_raises_exception_on_api_error():
     application, proceeding = _create_test_application_and_proceeding()
     mock_notifications_client = Mock()
