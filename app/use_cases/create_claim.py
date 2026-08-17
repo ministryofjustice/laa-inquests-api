@@ -140,7 +140,7 @@ class CreateClaimUseCase:
 
             self.create_history_event_port.create_history_event(
                 event_reference=HistoryEventReference.CLAIM_SUBMITTED,
-                actor=command.claimant_id or application.provider.email_address,
+                actor=command.claimant_id,
                 actor_type=ActorType.PROVIDER,
                 laa_reference=command.laa_reference,
                 event_data={"claim_type": command.claim_type},
