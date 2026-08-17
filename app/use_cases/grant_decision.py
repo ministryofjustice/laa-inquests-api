@@ -73,8 +73,6 @@ class GrantDecisionUseCase:
                 application, proceeding, certificate_context
             )
 
-            self.send_grant_letter_use_case.execute(certificate_context)
-
             self.create_history_event_port.create_history_event(
                 event_reference=HistoryEventReference.CERTIFICATE_CREATED,
                 actor=caseworker_name,
@@ -84,6 +82,19 @@ class GrantDecisionUseCase:
                     "laa_reference": application.laa_reference,
                 },
             )
+
+            self.create_history_event_port.create_history_event(
+                event_reference=HistoryEventReference.APPLICATION_GRANTED_EMAIL,
+                actor="System",
+                actor_type=ActorType.SYSTEM,
+                laa_reference=application.laa_reference,
+                event_data={
+                    "recipient": application.provider.email_address,
+                    "channel": "email",
+                },
+            )
+
+            self.send_grant_letter_use_case.execute(certificate_context)
 
             self.application_decision_port.commit()
             self.create_history_event_port.commit()

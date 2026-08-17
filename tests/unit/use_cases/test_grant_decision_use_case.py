@@ -105,6 +105,7 @@ def test_grant_decision_creates_required_history_events(
 ):
     use_case.execute("1", grant_request, "Caseworker")
 
+    assert create_history_event_port.create_history_event.call_count == 3
     create_history_event_port.create_history_event.assert_has_calls(
         [
             call(
@@ -125,10 +126,19 @@ def test_grant_decision_creates_required_history_events(
                     "laa_reference": application.laa_reference,
                 },
             ),
+            call(
+                event_reference=HistoryEventReference.APPLICATION_GRANTED_EMAIL,
+                actor="System",
+                actor_type=ActorType.SYSTEM,
+                laa_reference=application.laa_reference,
+                event_data={
+                    "recipient": "provider@example.com",
+                    "channel": "email",
+                },
+            ),
         ]
     )
 
-    assert create_history_event_port.create_history_event.call_count == 2
     create_history_event_port.commit.assert_called_once()
     create_history_event_port.rollback.assert_not_called()
 
