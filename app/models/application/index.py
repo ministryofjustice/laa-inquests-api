@@ -331,6 +331,7 @@ class ClientCreate(BaseModel):
         except ValueError:
             raise ValueError("date_of_birth must be in YYYY-MM-DD format")
         return v
+
     has_applied_previously: bool = PydanticField(default=False, examples=[False])
     prev_application_reference: str | None = PydanticField(
         default=None, examples=["TBD"]
@@ -393,6 +394,7 @@ class DeceasedCreate(BaseModel):
         except ValueError:
             raise ValueError("date must be in YYYY-MM-DD format")
         return v
+
     further_information: str | None = PydanticField(
         default=None, examples=["Further information."]
     )
