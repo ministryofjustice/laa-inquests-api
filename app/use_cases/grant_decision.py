@@ -90,11 +90,22 @@ class GrantDecisionUseCase:
                 laa_reference=application.laa_reference,
                 event_data={
                     "recipient": application.provider.email_address,
-                    "channel": "email",
+                    "channel": "Email",
                 },
             )
 
             self.send_grant_letter_use_case.execute(certificate_context)
+
+            self.create_history_event_port.create_history_event(
+                event_reference=HistoryEventReference.APPLICATION_GRANTED_LETTER,
+                actor="System",
+                actor_type=ActorType.SYSTEM,
+                laa_reference=application.laa_reference,
+                event_data={
+                    "recipient": "Client",
+                    "channel": "Letter",
+                },
+            )
 
             self.application_decision_port.commit()
             self.create_history_event_port.commit()
