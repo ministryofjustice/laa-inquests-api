@@ -15,7 +15,7 @@ def _make_request_body(client_overrides=None):
     client = {
         "clientFirstName": "Test",
         "clientLastName": "Surname",
-        "dateOfBirth": "01-01-1990",
+        "dateOfBirth": "1990-01-01",
         "nationalInsuranceNumber": "AB12345A",
         "correspondenceAddressSource": "USE_SPECIFIED_ADDRESS",
         "correspondenceAddress": {
@@ -43,8 +43,8 @@ def _make_request_body(client_overrides=None):
         "deceased": {
             "deceasedFirstName": "Test",
             "deceasedLastName": "Surname",
-            "deceasedDateOfBirth": "01-01-2000",
-            "deceasedDateOfDeath": "01-01-2025",
+            "deceasedDateOfBirth": "2000-01-01",
+            "deceasedDateOfDeath": "2025-01-01",
             "coronersReference": "COR-2025-001",
             "furtherInformation": "Further details to be confirmed",
             "clientRelationshipToDeceased": "guardian",
@@ -121,7 +121,7 @@ def test_201_responds_with_expected_client_details(client, auth_token):
     assert client["clientFirstName"] == "Test"
     assert client["clientLastName"] == "Surname"
     assert client["clientLastNameAtBirth"] is None
-    assert client["dateOfBirth"] == "01-01-1990"
+    assert client["dateOfBirth"] == "1990-01-01"
     assert client["nationalInsuranceNumber"] == "AB12345A"
     assert client["correspondenceAddressSource"] == "USE_SPECIFIED_ADDRESS"
     assert client["correspondenceAddress"] == {
@@ -245,8 +245,8 @@ def test_201_create_application_response_includes_deceased_details(client, auth_
     assert isinstance(deceased["deceasedId"], int)
     assert deceased["deceasedFirstName"] == "Test"
     assert deceased["deceasedLastName"] == "Surname"
-    assert deceased["deceasedDateOfBirth"] == "01-01-2000"
-    assert deceased["deceasedDateOfDeath"] == "01-01-2025"
+    assert deceased["deceasedDateOfBirth"] == "2000-01-01"
+    assert deceased["deceasedDateOfDeath"] == "2025-01-01"
     assert deceased["coronersReference"] == "COR-2025-001"
     assert deceased["furtherInformation"] == "Further details to be confirmed"
     assert deceased["clientRelationshipToDeceased"] == "guardian"

@@ -20,7 +20,7 @@ def _make_request(email_address: str = "provider@example.com") -> ApplicationCre
             "client": {
                 "clientFirstName": "Test",
                 "clientLastName": "Surname",
-                "dateOfBirth": "01-01-1990",
+                "dateOfBirth": "1990-01-01",
                 "correspondenceAddressSource": "USE_SPECIFIED_ADDRESS",
                 "correspondenceAddress": {
                     "addressLine1": "2 Example Lane",
@@ -39,8 +39,8 @@ def _make_request(email_address: str = "provider@example.com") -> ApplicationCre
             "deceased": {
                 "deceasedFirstName": "Test",
                 "deceasedLastName": "Surname",
-                "deceasedDateOfBirth": "01-01-2000",
-                "deceasedDateOfDeath": "01-01-2025",
+                "deceasedDateOfBirth": "2000-01-01",
+                "deceasedDateOfDeath": "2025-01-01",
                 "coronersReference": "COR-2025-001",
                 "clientRelationshipToDeceased": "guardian",
             },

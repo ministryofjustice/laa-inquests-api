@@ -106,7 +106,7 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
             "client": {
                 "clientFirstName": "Test",
                 "clientLastName": "Surname",
-                "dateOfBirth": "01-01-1990",
+                "dateOfBirth": "1990-01-01",
                 "nationalInsuranceNumber": "AB12345A",
                 "correspondenceAddressSource": "USE_SPECIFIED_ADDRESS",
                 "correspondenceAddress": {
@@ -132,8 +132,8 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
             "deceased": {
                 "deceasedFirstName": "Test",
                 "deceasedLastName": "Surname",
-                "deceasedDateOfBirth": "01-01-2000",
-                "deceasedDateOfDeath": "01-01-2025",
+                "deceasedDateOfBirth": "2000-01-01",
+                "deceasedDateOfDeath": "2025-01-01",
                 "coronersReference": "COR-2025-001",
                 "furtherInformation": "Further details to be confirmed",
                 "clientRelationshipToDeceased": "guardian",
