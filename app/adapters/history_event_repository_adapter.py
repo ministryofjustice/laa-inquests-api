@@ -49,6 +49,19 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
         Returns:
             The created HistoryEvent with auto-generated id and timestamp
         """
+        if event_reference is None:
+            raise ValueError(
+                "Event reference must be provided for history event creation."
+            )
+        if actor is None:
+            raise ValueError("Actor must be provided for history event creation.")
+        if actor_type is None:
+            raise ValueError("Actor type must be provided for history event creation.")
+        if laa_reference is None:
+            raise ValueError(
+                "LAA reference must be provided for history event creation."
+            )
+
         new_event = HistoryEvent(
             event_reference=event_reference,
             actor=actor,

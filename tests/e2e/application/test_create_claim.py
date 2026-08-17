@@ -264,7 +264,11 @@ def test_201_create_claim_deducts_new_claim_amount_from_total_funds_available_wh
     response = client.post(
         f"/applications/{laa_reference}/claim",
         json=_make_request_body(
-            {"claimType": "FINAL_BILL", "poaTypeId": None, "claimantId": None}
+            {
+                "claimType": "FINAL_BILL",
+                "poaTypeId": None,
+                "claimantId": "claimant@provider.com",
+            }
         ),
         headers={
             "Content-Type": "application/json",
@@ -354,7 +358,11 @@ def test_201_create_claim_without_optional_fields(session, client, auth_token):
     response = client.post(
         f"/applications/{laa_reference}/claim",
         json=_make_request_body(
-            {"claimType": "FINAL_BILL", "poaTypeId": None, "claimantId": None}
+            {
+                "claimType": "FINAL_BILL",
+                "poaTypeId": None,
+                "claimantId": "claimant@provider.com",
+            }
         ),
         headers={
             "Content-Type": "application/json",
@@ -1081,3 +1089,25 @@ def test_201_create_claim_rejects_when_cumulative_approved_claims_exceed_limit(
     assert response.status_code == 201
     claim = response.json()
     assert "APPLICATION_CLAIMS_EXCEED_COST_LIMIT" in claim["rejectionReasons"]
+
+
+def test_create_claim_with_missing_claimant_id_returns_500(
+    session, client, auth_token, mock_gov_notify
+):
+    application = session.exec(select(Application)).first()
+    laa_reference = application.laa_reference
+
+    request_body = _make_request_body()
+    request_body["claimantId"] = None
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=request_body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 500
+    mock_gov_notify.send_claim_submit_confirmation_email.assert_not_called()

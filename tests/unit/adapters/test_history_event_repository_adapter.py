@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 
+import pytest
 from sqlmodel import select
 
 from app.adapters.history_event_repository_adapter import HistoryEventRepositoryAdapter
@@ -75,6 +76,57 @@ def test_create_history_event_handles_none_event_data(session):
 
     assert stored is not None
     assert stored.event_data is None
+
+
+def test_create_history_raises_exception_for_missing_event_reference(session):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    adapter = HistoryEventRepositoryAdapter(session)
+
+    with pytest.raises(ValueError):
+        adapter.create_history_event(
+            event_reference=None,
+            actor="test_user@example.com",
+            actor_type=ActorType.PROVIDER,
+            laa_reference=laa_reference,
+        )
+
+
+def test_create_history_raises_exception_for_missing_actor(session):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    adapter = HistoryEventRepositoryAdapter(session)
+
+    with pytest.raises(ValueError):
+        adapter.create_history_event(
+            event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
+            actor=None,
+            actor_type=ActorType.PROVIDER,
+            laa_reference=laa_reference,
+        )
+
+
+def test_create_history_raises_exception_for_missing_actor_type(session):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    adapter = HistoryEventRepositoryAdapter(session)
+
+    with pytest.raises(ValueError):
+        adapter.create_history_event(
+            event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
+            actor="test_user@example.com",
+            actor_type=None,
+            laa_reference=laa_reference,
+        )
+
+
+def test_create_history_raises_exception_for_missing_laa_reference(session):
+    adapter = HistoryEventRepositoryAdapter(session)
+
+    with pytest.raises(ValueError):
+        adapter.create_history_event(
+            event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
+            actor="test_user@example.com",
+            actor_type=ActorType.PROVIDER,
+            laa_reference=None,
+        )
 
 
 def test_commits_transaction(session):
