@@ -90,7 +90,7 @@ def test_execute_creates_application_sends_confirmation_email_and_commits():
                 actor_type=ActorType.SYSTEM,
                 laa_reference=application.laa_reference,
                 event_data={
-                    "recipient": "Provider",
+                    "recipient": "provider@example.com",
                     "channel": NotificationType.EMAIL,
                 },
             ),

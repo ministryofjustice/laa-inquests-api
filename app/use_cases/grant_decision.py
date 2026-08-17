@@ -90,7 +90,7 @@ class GrantDecisionUseCase:
                 actor_type=ActorType.SYSTEM,
                 laa_reference=application.laa_reference,
                 event_data={
-                    "recipient": "Provider",
+                    "recipient": application.provider.email_address,
                     "channel": NotificationType.EMAIL,
                 },
             )
@@ -103,7 +103,7 @@ class GrantDecisionUseCase:
                 actor_type=ActorType.SYSTEM,
                 laa_reference=application.laa_reference,
                 event_data={
-                    "recipient": "Client",
+                    "recipient": certificate_context.client_address.model_dump(),
                     "channel": NotificationType.LETTER,
                 },
             )

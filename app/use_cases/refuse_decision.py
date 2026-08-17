@@ -66,7 +66,7 @@ class RefuseDecisionUseCase:
                 actor_type=ActorType.SYSTEM,
                 laa_reference=application.laa_reference,
                 event_data={
-                    "recipient": "Provider",
+                    "recipient": application.provider.email_address,
                     "channel": NotificationType.EMAIL,
                 },
             )

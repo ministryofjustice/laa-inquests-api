@@ -102,6 +102,7 @@ def test_grant_decision_creates_required_history_events(
     use_case,
     application,
     grant_request,
+    create_certificate_context_use_case,
     create_history_event_port,
 ):
     use_case.execute("1", grant_request, "Caseworker")
@@ -133,7 +134,7 @@ def test_grant_decision_creates_required_history_events(
                 actor_type=ActorType.SYSTEM,
                 laa_reference=application.laa_reference,
                 event_data={
-                    "recipient": "Provider",
+                    "recipient": application.provider.email_address,
                     "channel": NotificationType.EMAIL,
                 },
             ),
@@ -143,7 +144,7 @@ def test_grant_decision_creates_required_history_events(
                 actor_type=ActorType.SYSTEM,
                 laa_reference=application.laa_reference,
                 event_data={
-                    "recipient": "Client",
+                    "recipient": create_certificate_context_use_case.prepare_context_for_display.return_value.client_address.model_dump(),
                     "channel": NotificationType.LETTER,
                 },
             ),

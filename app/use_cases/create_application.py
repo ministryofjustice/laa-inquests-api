@@ -40,7 +40,7 @@ class CreateApplicationUseCase:
                 actor_type=ActorType.SYSTEM,
                 laa_reference=application.laa_reference,
                 event_data={
-                    "recipient": "Provider",
+                    "recipient": request.provider.email_address,
                     "channel": NotificationType.EMAIL,
                 },
             )

@@ -161,7 +161,7 @@ class CreateClaimUseCase:
                     actor_type=ActorType.SYSTEM,
                     laa_reference=command.laa_reference,
                     event_data={
-                        "recipient": "Provider",
+                        "recipient": application.provider.email_address,
                         "channel": NotificationType.EMAIL,
                     },
                 )
