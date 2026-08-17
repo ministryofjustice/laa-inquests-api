@@ -8,6 +8,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     computed_field,
+    field_validator,
     model_validator,
 )
 from pydantic import (
@@ -321,6 +322,15 @@ class ClientCreate(BaseModel):
     national_insurance_number: str | None = PydanticField(
         default=None, examples=["AA123456A"]
     )
+
+    @field_validator("date_of_birth")
+    @classmethod
+    def validate_date_of_birth_format(cls, v: str) -> str:
+        try:
+            date.fromisoformat(v)
+        except ValueError:
+            raise ValueError("date_of_birth must be in YYYY-MM-DD format")
+        return v
     has_applied_previously: bool = PydanticField(default=False, examples=[False])
     prev_application_reference: str | None = PydanticField(
         default=None, examples=["TBD"]
@@ -374,6 +384,15 @@ class DeceasedCreate(BaseModel):
     deceased_date_of_birth: str = PydanticField(examples=["2000-01-01"])
     deceased_date_of_death: str = PydanticField(examples=["2025-01-01"])
     coroners_reference: str = PydanticField(examples=["Example reference number"])
+
+    @field_validator("deceased_date_of_birth", "deceased_date_of_death")
+    @classmethod
+    def validate_date_format(cls, v: str) -> str:
+        try:
+            date.fromisoformat(v)
+        except ValueError:
+            raise ValueError("date must be in YYYY-MM-DD format")
+        return v
     further_information: str | None = PydanticField(
         default=None, examples=["Further information."]
     )
