@@ -1091,7 +1091,7 @@ def test_201_create_claim_rejects_when_cumulative_approved_claims_exceed_limit(
     assert "APPLICATION_CLAIMS_EXCEED_COST_LIMIT" in claim["rejectionReasons"]
 
 
-def test_create_claim_with_missing_claimant_id_returns_500(
+def test_create_claim_with_missing_claimant_id_returns_422(
     session, client, auth_token, mock_gov_notify
 ):
     application = session.exec(select(Application)).first()
@@ -1109,5 +1109,5 @@ def test_create_claim_with_missing_claimant_id_returns_500(
         },
     )
 
-    assert response.status_code == 500
+    assert response.status_code == 422
     mock_gov_notify.send_claim_submit_confirmation_email.assert_not_called()
