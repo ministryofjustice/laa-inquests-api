@@ -24,7 +24,9 @@ class JsonLogFormatter(logging.Formatter):
             payload["exception_type"] = record.exc_info[0]
             payload["exception_text"] = record.exc_info[1]
 
-        payload.update(record.__dict__["extra"])
+        record_dict = record.__dict__
+        if "extra" in record_dict:
+            payload.update(record_dict["extra"])
 
         return json.dumps(payload, default=str)
 

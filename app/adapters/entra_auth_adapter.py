@@ -69,7 +69,7 @@ class EntraAuthAdapter:
             )
             token_scopes = frozenset((payload.get("scp") or "").split())
             token_roles = frozenset(payload.get("roles") or [])
-            logger.info(
+            logger.debug(
                 "Entra token validated",
                 extra=build_log_extra(
                     event="entra_token_validated_success",
