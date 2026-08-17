@@ -29,7 +29,7 @@ from app.models.application.index import (
 from app.models.claim.enums import ClaimStatus, ClaimType, POAType
 from app.models.claim.index import Claim, ClaimEvidence
 
-SEED_FIRM_CODE = "1705"
+SEED_FIRM_CODE = "1473"
 SEED_CORONERS_LETTER_ID = uuid.UUID("5e0bb75e-00e8-4e3d-84b3-88b77ba3aad4")
 SEED_CLAIM_EVIDENCE_ID = uuid.UUID("7b34cf18-1d41-40eb-8bc8-9a2e7e14dea6")
 
