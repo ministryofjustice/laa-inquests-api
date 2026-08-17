@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import GrantApplicationUpdate
 from app.models.history.enums import ActorType, HistoryEventReference
+from app.models.notifications.enums import NotificationType
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
@@ -89,8 +90,8 @@ class GrantDecisionUseCase:
                 actor_type=ActorType.SYSTEM,
                 laa_reference=application.laa_reference,
                 event_data={
-                    "recipient": application.provider.email_address,
-                    "channel": "Email",
+                    "recipient": "Provider",
+                    "channel": NotificationType.EMAIL,
                 },
             )
 
@@ -103,7 +104,7 @@ class GrantDecisionUseCase:
                 laa_reference=application.laa_reference,
                 event_data={
                     "recipient": "Client",
-                    "channel": "Letter",
+                    "channel": NotificationType.LETTER,
                 },
             )
 

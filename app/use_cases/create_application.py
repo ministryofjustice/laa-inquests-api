@@ -1,5 +1,6 @@
 from app.models.application.index import Application, ApplicationCreate
 from app.models.history.enums import ActorType, HistoryEventReference
+from app.models.notifications.enums import NotificationType
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
@@ -39,8 +40,8 @@ class CreateApplicationUseCase:
                 actor_type=ActorType.SYSTEM,
                 laa_reference=application.laa_reference,
                 event_data={
-                    "recipient": request.provider.email_address,
-                    "channel": "email",
+                    "recipient": "Provider",
+                    "channel": NotificationType.EMAIL,
                 },
             )
             # This commits both the application and the history event in a single transaction

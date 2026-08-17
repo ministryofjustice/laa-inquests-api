@@ -167,7 +167,7 @@ def test_201_create_claim_creates_submission_confirmation_comms_history_event(
     assert history_event.actor == ActorType.SYSTEM
     assert history_event.actor_type == ActorType.SYSTEM
     assert history_event.event_data == {
-        "recipient": application.provider.email_address,
+        "recipient": "Provider",
         "channel": NotificationType.EMAIL,
     }
     assert history_event.laa_reference == laa_reference

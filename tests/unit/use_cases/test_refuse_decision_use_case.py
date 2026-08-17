@@ -7,6 +7,7 @@ from app.models.application.index import (
     RefuseApplicationUpdate,
 )
 from app.models.history.enums import ActorType, HistoryEventReference
+from app.models.notifications.enums import NotificationType
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.use_cases.exceptions import ApplicationNotFoundError, RefuseDecisionError
 from app.use_cases.refuse_decision import RefuseDecisionUseCase
@@ -122,8 +123,8 @@ def test_refuse_decision_creates_required_history_events(
                 actor_type=ActorType.SYSTEM,
                 laa_reference=application.laa_reference,
                 event_data={
-                    "recipient": application.provider.email_address,
-                    "channel": "Email",
+                    "recipient": "Provider",
+                    "channel": NotificationType.EMAIL,
                 },
             ),
         ]

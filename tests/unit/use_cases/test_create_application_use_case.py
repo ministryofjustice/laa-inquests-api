@@ -5,6 +5,7 @@ import pytest
 
 from app.models.application.index import ApplicationCreate
 from app.models.history.enums import ActorType, HistoryEventReference
+from app.models.notifications.enums import NotificationType
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
@@ -88,7 +89,10 @@ def test_execute_creates_application_sends_confirmation_email_and_commits():
                 actor="System",
                 actor_type=ActorType.SYSTEM,
                 laa_reference=application.laa_reference,
-                event_data={"recipient": "provider@example.com", "channel": "email"},
+                event_data={
+                    "recipient": "Provider",
+                    "channel": NotificationType.EMAIL,
+                },
             ),
         ]
     )

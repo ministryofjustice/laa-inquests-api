@@ -300,7 +300,7 @@ def test_execute_creates_submission_confirmation_history_event_when_notify_succe
         actor_type=ActorType.SYSTEM,
         laa_reference=command.laa_reference,
         event_data={
-            "recipient": application.provider.email_address,
+            "recipient": "Provider",
             "channel": NotificationType.EMAIL,
         },
     )
