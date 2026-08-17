@@ -33,6 +33,16 @@ class CreateApplicationUseCase:
                 application,
                 request.provider.email_address,
             )
+            self.create_history_event_port.create_history_event(
+                event_reference=HistoryEventReference.APPLICATION_SUBMISSION_CONFIRMATION,
+                actor="System",
+                actor_type=ActorType.SYSTEM,
+                laa_reference=application.laa_reference,
+                event_data={
+                    "recipient": request.provider.email_address,
+                    "channel": "email",
+                },
+            )
             # This commits both the application and the history event in a single transaction
             # because they share a session
             self.create_application_port.commit()
