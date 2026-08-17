@@ -59,6 +59,16 @@ class RefuseDecisionUseCase:
                 proceeding,
                 application.provider.email_address,
             )
+            self.create_history_event_port.create_history_event(
+                event_reference=HistoryEventReference.APPLICATION_REFUSED,
+                actor="System",
+                actor_type=ActorType.SYSTEM,
+                laa_reference=application.laa_reference,
+                event_data={
+                    "recipient": application.provider.email_address,
+                    "channel": "Email",
+                },
+            )
             self.application_decision_port.commit()
             self.create_history_event_port.commit()
         except Exception as exception:
