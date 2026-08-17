@@ -3,7 +3,6 @@ import time
 from contextvars import ContextVar, Token
 from typing import Any
 
-from app.config import Config
 
 _REQUEST_ID: ContextVar[str | None] = ContextVar("request_id", default=None)
 _CORRELATION_ID: ContextVar[str | None] = ContextVar("correlation_id", default=None)
@@ -21,14 +20,12 @@ def clear_request_context(tokens: tuple[Token, Token]) -> None:
 
 def build_log_extra(event: str, **extra: Any) -> dict[str, Any]:
     payload: dict[str, Any] = {
-        "service": Config.SERVICE_NAME,
-        "environment": Config.ENVIRONMENT,
         "event": event,
         "request_id": _REQUEST_ID.get(),
         "correlation_id": _CORRELATION_ID.get(),
     }
     payload.update(extra)
-    return payload
+    return {"extra": payload}
 
 
 def duration_ms(started_at: float) -> int:

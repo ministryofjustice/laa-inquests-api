@@ -11,23 +11,20 @@ class JsonLogFormatter(logging.Formatter):
         payload = {
             "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname.lower(),
-            "service": getattr(record, "service", Config.SERVICE_NAME),
-            "environment": getattr(record, "environment", Config.ENVIRONMENT),
-            "event": getattr(record, "event", "log_event"),
+            "service": Config.SERVICE_NAME,
+            "environment": Config.ENVIRONMENT,
             "message": record.getMessage(),
-            "request_id": getattr(record, "request_id", None),
-            "correlation_id": getattr(record, "correlation_id", None),
+            "status_code": getattr(record, "status_code", None),
             "route": getattr(record, "route", None),
             "method": getattr(record, "method", None),
-            "status_code": getattr(record, "status_code", None),
             "duration_ms": getattr(record, "duration_ms", None),
         }
 
         if record.exc_info:
-            payload["exception_type"] = record.exc_info[0].__name__
+            payload["exception_type"] = record.exc_info[0]
+            payload["exception_text"] = record.exc_info[1]
 
-        for key, value in record.__dict__.items():
-            payload[key] = value
+        payload.update(record.__dict__["extra"])
 
         return json.dumps(payload, default=str)
 
