@@ -3,7 +3,6 @@ import time
 from contextvars import ContextVar, Token
 from typing import Any
 
-
 _REQUEST_ID: ContextVar[str | None] = ContextVar("request_id", default=None)
 _CORRELATION_ID: ContextVar[str | None] = ContextVar("correlation_id", default=None)
 
