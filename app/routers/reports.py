@@ -29,7 +29,6 @@ router = APIRouter(
     tags=["Reports"],
 )
 
-# COPILOT TODO: There is so much logging in the router files. It makes me think we should be aiming to handle these at a higher level or with some kind of abstraction
 logger = logging.getLogger(__name__)
 
 
