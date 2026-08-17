@@ -31,6 +31,8 @@ def test_create_claim_rejection_email_personalisation_returns_expected_data():
 
     assert isinstance(result, NotifyClaimRejectTemplatePersonalisation)
     assert result.laa_reference == "12345"
-    assert result.claim_reference == "7"
+    assert result.claim_id == "7"
+    assert result.client_first_name == "Jane"
+    assert result.client_last_name == "Doe"
     assert result.claim_submitted_at == "18 June 2026 14:03 UTC"
-    assert result.reject_reason == "Rejected following manual review."
+    assert result.justification == "Rejected following manual review."

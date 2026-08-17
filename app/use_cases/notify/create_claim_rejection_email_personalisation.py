@@ -15,13 +15,15 @@ def _format_submitted_at(submitted_at) -> str:
 def create_claim_rejection_email_personalisation(
     claim: Claim,
     application: Application,
-    reject_reason: str,
+    justification: str,
 ) -> NotifyClaimRejectTemplatePersonalisation:
     """Build personalisation payload for claim rejection notification."""
 
     return NotifyClaimRejectTemplatePersonalisation(
         laa_reference=str(application.laa_reference),
-        claim_reference=str(claim.claim_id),
+        claim_id=str(claim.claim_id),
+        client_first_name=application.client.client_first_name,
+        client_last_name=application.client.client_last_name,
         claim_submitted_at=_format_submitted_at(claim.submission_date),
-        reject_reason=reject_reason,
+        justification=justification,
     )

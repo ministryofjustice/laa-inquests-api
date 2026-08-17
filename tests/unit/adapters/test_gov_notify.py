@@ -182,13 +182,15 @@ def test_gov_notify_adapter_sends_claim_rejected_decision_email_successfully():
         assert call_kwargs["template_id"] == "test-claim-reject-template-id"
         assert isinstance(call_kwargs["personalisation"], dict)
         assert call_kwargs["personalisation"]["laa_reference"] == "12345"
-        assert call_kwargs["personalisation"]["claim_reference"] == "7"
+        assert call_kwargs["personalisation"]["claim_id"] == "7"
+        assert call_kwargs["personalisation"]["client_first_name"] == "Jane"
+        assert call_kwargs["personalisation"]["client_last_name"] == "Doe"
         assert (
             call_kwargs["personalisation"]["claim_submitted_at"]
             == "18 June 2026 14:03 UTC"
         )
         assert (
-            call_kwargs["personalisation"]["reject_reason"]
+            call_kwargs["personalisation"]["justification"]
             == "Rejected following manual review."
         )
 
