@@ -15,9 +15,11 @@ def test_json_log_formatter_includes_custom_extra_fields():
         args=(),
         exc_info=None,
         extra={
-            "event": "claim_repository_create_completed",
-            "laa_reference": "LAA-123",
-            "claim_id": 99,
+            "extra": {
+                "event": "claim_repository_create_completed",
+                "laa_reference": "LAA-123",
+                "claim_id": 99,
+            }
         },
     )
 

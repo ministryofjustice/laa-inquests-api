@@ -55,7 +55,7 @@ def test_200_callback_accepts_valid_bearer_token_and_payload(
 
     mock_logger.info.assert_called_once()
     assert mock_logger.info.call_args[0][0] == "GovNotify callback received"
-    log_extra = mock_logger.info.call_args.kwargs["extra"]
+    log_extra = mock_logger.info.call_args.kwargs["extra"]["extra"]
     assert log_extra["event"] == "govnotify_callback_received"
     assert log_extra["notification_id"] == payload["id"]
     assert log_extra["status"] == payload["status"]
@@ -165,6 +165,6 @@ def test_200_callback_extracts_environment_and_reference_from_reference_field(
         )
 
     assert response.status_code == 200
-    log_extra = mock_logger.info.call_args.kwargs["extra"]
+    log_extra = mock_logger.info.call_args.kwargs["extra"]["extra"]
     assert log_extra["environment_from_reference"] == "production"
     assert log_extra["laa_reference"] == "APP-999999"

@@ -25,6 +25,7 @@ def build_log_extra(event: str, **extra: Any) -> dict[str, Any]:
         "correlation_id": _CORRELATION_ID.get(),
     }
     payload.update(extra)
+    # Stash this in extra to make it accessible later
     return {"extra": payload}
 
 
