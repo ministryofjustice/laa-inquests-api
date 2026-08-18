@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 from decimal import Decimal
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 
@@ -13,6 +13,7 @@ from app.models.claim.enums import (
 )
 from app.models.claim.index import Claim, ClaimDecision
 from app.models.history.enums import ActorType, HistoryEventReference
+from app.models.notifications.enums import NotificationType
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
@@ -59,6 +60,7 @@ def _build_use_case(claim=None, application=None):
 
     create_reason_port = MagicMock(spec=CreateDecisionReasonPort)
     update_status_port = MagicMock(spec=UpdateClaimStatusPort)
+    create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
 
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
 
@@ -109,14 +111,16 @@ def test_raises_claim_not_found_when_claim_belongs_to_another_application():
         )
 
 
-def test_creates_reject_decision_reason_updates_status_and_creates_history_event_and_commits():
+def test_creates_reject_decision_reason_updates_status_and_commits():
+    application = _application()
+
     (
         use_case,
         create_decision_port,
         create_reason_port,
         update_status_port,
         create_history_event_port,
-    ) = _build_use_case(claim=_claim(claim_id=5), application=_application())
+    ) = _build_use_case(claim=_claim(claim_id=5), application=application)
 
     use_case.execute(
         RejectClaimCommand("1", 5, "Rejected after review."),
@@ -136,17 +140,34 @@ def test_creates_reject_decision_reason_updates_status_and_creates_history_event
         claim_id=5,
         status=ClaimStatus.REJECTED,
     )
-    create_history_event_port.create_history_event.assert_called_once_with(
-        event_reference=HistoryEventReference.CLAIM_ASSESSMENT_COMPLETED,
-        actor="Caseworker",
-        actor_type=ActorType.CASEWORKER,
-        laa_reference=1,
-        event_data={
-            "claim_type": ClaimType.PAYMENT_ON_ACCOUNT,
-            "claim_decision": ClaimStatus.REJECTED,
-            "decision_justification": "Rejected after review.",
-        },
+
+    assert create_history_event_port.create_history_event.call_count == 2
+    create_history_event_port.create_history_event.assert_has_calls(
+        [
+            call(
+                event_reference=HistoryEventReference.CLAIM_ASSESSMENT_COMPLETED,
+                actor="Caseworker",
+                actor_type=ActorType.CASEWORKER,
+                laa_reference=1,
+                event_data={
+                    "claim_type": ClaimType.PAYMENT_ON_ACCOUNT,
+                    "claim_decision": ClaimStatus.REJECTED,
+                    "decision_justification": "Rejected after review.",
+                },
+            ),
+            call(
+                event_reference=HistoryEventReference.CLAIM_REJECTED_EMAIL,
+                actor=ActorType.SYSTEM,
+                actor_type=ActorType.SYSTEM,
+                laa_reference="1",
+                event_data={
+                    "recipient": application.provider.email_address,
+                    "channel": NotificationType.EMAIL,
+                },
+            ),
+        ]
     )
+
     update_status_port.commit.assert_called_once()
     update_status_port.rollback.assert_not_called()
 
@@ -239,7 +260,7 @@ def test_rolls_back_when_a_write_fails():
         create_decision_port,
         _,
         update_status_port,
-        _,
+        __,
     ) = _build_use_case(claim=_claim(claim_id=5), application=_application())
     create_decision_port.create_claim_decision.side_effect = RuntimeError(
         "Cannot create claim decision"

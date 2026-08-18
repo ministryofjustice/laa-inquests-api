@@ -6,6 +6,9 @@ from sqlmodel import select
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimStatus, ClaimType, POAType
 from app.models.claim.index import Claim, ClaimDecision, DecisionReason
+from app.models.history.enums import ActorType, HistoryEventReference
+from app.models.history.index import HistoryEvent
+from app.models.notifications.enums import NotificationType
 
 
 def _reject_payload(overrides=None):
@@ -165,3 +168,39 @@ def test_422_reject_claim_when_justification_missing(session, client, auth_token
     )
 
     assert response.status_code == 422
+
+
+def test_204_reject_claim_creates_history_event(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    claim = _seed_claim(session, laa_reference)
+    application = session.exec(select(Application)).first()
+
+    response = client.patch(
+        f"/applications/{laa_reference}/claims/{claim.claim_id}/reject",
+        json=_reject_payload(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 204
+
+    history_event = session.exec(
+        select(HistoryEvent).where(
+            (HistoryEvent.laa_reference == laa_reference)
+            & (
+                HistoryEvent.event_reference
+                == HistoryEventReference.CLAIM_REJECTED_EMAIL
+            )
+        )
+    ).one()
+
+    assert history_event.event_reference == HistoryEventReference.CLAIM_REJECTED_EMAIL
+    assert history_event.actor == ActorType.SYSTEM
+    assert history_event.actor_type == ActorType.SYSTEM
+    assert history_event.event_data == {
+        "recipient": application.provider.email_address,
+        "channel": NotificationType.EMAIL,
+    }
+    assert history_event.laa_reference == laa_reference

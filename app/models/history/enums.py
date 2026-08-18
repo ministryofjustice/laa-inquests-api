@@ -29,3 +29,4 @@ class HistoryEventReference(StrEnum):
     # Claim notification events EVT-COM-CLM-
     CLAIM_SUBMISSION_CONFIRMATION = "EVT-COM-CLM-001"
     CLAIM_APPROVED_EMAIL = "EVT-COM-CLM-002"
+    CLAIM_REJECTED_EMAIL = "EVT-COM-CLM-003"

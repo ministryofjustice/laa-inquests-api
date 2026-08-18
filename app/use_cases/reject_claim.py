@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ReasonCode
 from app.models.history.enums import ActorType, HistoryEventReference
+from app.models.notifications.enums import NotificationType
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
@@ -63,6 +64,7 @@ class RejectClaimUseCase:
                 claim_id=command.claim_id,
                 status=ClaimStatus.REJECTED,
             )
+
             self.create_history_event_port.create_history_event(
                 event_reference=HistoryEventReference.CLAIM_ASSESSMENT_COMPLETED,
                 actor=caseworker_name,
@@ -74,6 +76,20 @@ class RejectClaimUseCase:
                     "decision_justification": command.justification,
                 },
             )
+
+            (
+                self.create_history_event_port.create_history_event(
+                    event_reference=HistoryEventReference.CLAIM_REJECTED_EMAIL,
+                    actor=ActorType.SYSTEM,
+                    actor_type=ActorType.SYSTEM,
+                    laa_reference=command.laa_reference,
+                    event_data={
+                        "recipient": application.provider.email_address,
+                        "channel": NotificationType.EMAIL,
+                    },
+                ),
+            )
+
             self.update_claim_status_port.commit()
         except Exception:
             self.update_claim_status_port.rollback()
