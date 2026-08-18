@@ -1,12 +1,16 @@
+import logging
 import re
 
 import jwt
 from fastapi import HTTPException, status
 from jwt import PyJWKClient
 
+from app.logging_utils import build_log_extra
 from app.ports.entra_auth_port import AuthenticatedUser
 
 ENTRA_JWKS_URL = "https://login.microsoftonline.com/{tenant_id}/discovery/v2.0/keys"
+
+logger = logging.getLogger(__name__)
 
 
 class EntraAuthAdapter:
@@ -65,14 +69,32 @@ class EntraAuthAdapter:
             )
             token_scopes = frozenset((payload.get("scp") or "").split())
             token_roles = frozenset(payload.get("roles") or [])
+            logger.debug(
+                "Entra token validated",
+                extra=build_log_extra(
+                    event="entra_token_validated_success",
+                ),
+            )
             return AuthenticatedUser(
                 firm_code=payload.get("FIRM_CODE"),
                 scopes=token_scopes | token_roles,
                 name=self._format_name(payload.get("name")),
             )
         except HTTPException:
+            logger.warning(
+                "Entra token validation failed",
+                extra=build_log_extra(
+                    event="entra_token_validation_failed",
+                ),
+            )
             raise
         except (jwt.PyJWTError, jwt.PyJWKClientError):
+            logger.warning(
+                "Entra token validation failed",
+                extra=build_log_extra(
+                    event="entra_token_validation_failed",
+                ),
+            )
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Could not validate credentials",

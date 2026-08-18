@@ -15,6 +15,7 @@ from app.domain.claim import (
 )
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
 from app.domain.constants.claim_messages import APPLICATION_NOT_GRANTED_MESSAGE
+from app.logging_utils import build_log_extra
 from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
@@ -149,8 +150,27 @@ class CreateClaimUseCase:
             # This commits both the claim and the history event in a single transaction
             # because they share a session
             self.create_claim_port.commit()
+
+            logger.info(
+                "Claim created and evidence linked",
+                extra=build_log_extra(
+                    event="claim_created",
+                    laa_reference=command.laa_reference,
+                    claim_id=claim.claim_id,
+                    evidence_count=len(command.claim_evidence_ids),
+                ),
+            )
+
         except Exception:
             self.create_claim_port.rollback()
+            logger.warning(
+                "Claim creation failed and rolled back",
+                extra=build_log_extra(
+                    event="application_created_failed",
+                    laa_reference=command.laa_reference,
+                ),
+                exc_info=True,
+            )
             raise
 
         if application is not None and self.gov_notify_port is not None:
@@ -173,8 +193,13 @@ class CreateClaimUseCase:
                 self.create_history_event_port.commit()
             except Exception:
                 logger.warning(
-                    "Failed to send claim submission email for claim %s",
-                    claim.claim_id,
+                    "Failed to send claim submission email",
+                    extra=build_log_extra(
+                        event="notification_requested_failed",
+                        laa_reference=command.laa_reference,
+                        claim_id=claim.claim_id,
+                        notification_channel="email",
+                    ),
                     exc_info=True,
                 )
                 self.create_history_event_port.rollback()
@@ -231,8 +256,12 @@ class CreateClaimUseCase:
                     claim.status_id = ClaimStatus.SUBMITTED
                     rejection_reasons = None
                     logger.warning(
-                        "Failed to persist claim auto-rejection for claim %s",
-                        claim.claim_id,
+                        "Failed to persist claim auto-rejection",
+                        extra=build_log_extra(
+                            event="claim_auto_rejection_persist_failed",
+                            laa_reference=command.laa_reference,
+                            claim_id=claim.claim_id,
+                        ),
                         exc_info=True,
                     )
 
@@ -257,8 +286,12 @@ class CreateClaimUseCase:
                     self.create_claim_port.rollback()
                     claim.status_id = ClaimStatus.SUBMITTED
                     logger.warning(
-                        "Failed to persist claim auto-approval for claim %s",
-                        claim.claim_id,
+                        "Failed to persist claim auto-approval",
+                        extra=build_log_extra(
+                            event="claim_auto_approval_persist_failed",
+                            laa_reference=command.laa_reference,
+                            claim_id=claim.claim_id,
+                        ),
                         exc_info=True,
                     )
 

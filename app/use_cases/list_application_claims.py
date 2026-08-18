@@ -1,3 +1,6 @@
+import logging
+
+from app.logging_utils import build_log_extra
 from app.models.claim.enums import ClaimStatus
 from app.models.claim.index import ClaimSummaryResponse
 from app.ports.application_lookup_port import ApplicationLookupPort
@@ -6,6 +9,8 @@ from app.ports.claim.get_claims_for_application_port import (
     GetClaimsForApplicationPort,
 )
 from app.use_cases.exceptions import ApplicationNotFoundError
+
+logger = logging.getLogger(__name__)
 
 
 class ListApplicationClaimsUseCase:
@@ -43,4 +48,13 @@ class ListApplicationClaimsUseCase:
             if decision is not None:
                 summary.claim_decision_status = decision.decision
             summaries.append(summary)
+        logger.info(
+            "Application claims listed",
+            extra=build_log_extra(
+                event="application_claims_list_completed",
+                laa_reference=laa_reference,
+                assessed=assessed,
+                result_count=len(summaries),
+            ),
+        )
         return summaries
