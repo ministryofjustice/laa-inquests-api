@@ -287,6 +287,7 @@ class CreateClaimUseCase:
                         claim_id=claim.claim_id,
                         status=ClaimStatus.PAY_IN_FULL,
                     )
+
                     self.create_history_event_port.create_history_event(
                         event_reference=HistoryEventReference.POA_AUTO_APPROVED,
                         actor=ActorType.SYSTEM,
@@ -294,6 +295,18 @@ class CreateClaimUseCase:
                         laa_reference=command.laa_reference,
                         event_data={"claim_reference": claim.claim_id},
                     )
+
+                    self.create_history_event_port.create_history_event(
+                        event_reference=HistoryEventReference.CLAIM_APPROVED_EMAIL,
+                        actor=ActorType.SYSTEM,
+                        actor_type=ActorType.SYSTEM,
+                        laa_reference=command.laa_reference,
+                        event_data={
+                            "recipient": application.provider.email_address,
+                            "channel": NotificationType.EMAIL,
+                        },
+                    )
+
                     self.create_claim_port.commit()
                     claim.status_id = ClaimStatus.PAY_IN_FULL
                 except Exception:
