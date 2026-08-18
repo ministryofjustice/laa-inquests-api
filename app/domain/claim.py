@@ -79,6 +79,18 @@ def calculate_available_funds(
     return limit - total_approved
 
 
+def total_claim_amount(
+    vat_zero_total: Decimal | None, gross: Decimal | None
+) -> Decimal:
+    """The claim's total claimed figure: its VAT-zero total when present,
+    otherwise its gross. Raises when neither is set."""
+    if vat_zero_total is not None:
+        return vat_zero_total
+    if gross is not None:
+        return gross
+    raise ValueError("Claim has no zero-rated or gross amount to report")
+
+
 @dataclass(frozen=True)
 class ExistingClaimSummary:
     status: ClaimStatus

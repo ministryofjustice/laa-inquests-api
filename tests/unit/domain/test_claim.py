@@ -4,12 +4,27 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.domain.claim import Claim, ExistingClaimSummary
+from app.domain.claim import Claim, ExistingClaimSummary, total_claim_amount
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
 from app.domain.claim_rejection import ClaimRejectionReason
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimStatus, ClaimType, POAType
+
+
+def test_total_claim_amount_returns_vat_zero_when_present():
+    assert total_claim_amount(Decimal("500.00"), Decimal("1200.00")) == Decimal(
+        "500.00"
+    )
+
+
+def test_total_claim_amount_returns_gross_when_no_vat_zero():
+    assert total_claim_amount(None, Decimal("1200.00")) == Decimal("1200.00")
+
+
+def test_total_claim_amount_raises_when_neither_set():
+    with pytest.raises(ValueError):
+        total_claim_amount(None, None)
 
 
 def test_valid_with_net_and_gross():

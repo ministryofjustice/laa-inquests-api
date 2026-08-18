@@ -2,6 +2,8 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from app.models.claim.enums import ClaimType
 from app.models.claim.index import Claim
 from app.models.gov_notify_templates.claim_reject_personalisation import (
@@ -50,13 +52,12 @@ def test_create_claim_rejection_email_personalisation_returns_expected_data(
     assert result.client_last_name == "Doe"
     assert result.claim_submitted_at == "18 June 2026 14:03 UTC"
     assert result.claim_type == "Payment on account"
-    assert result.claimed_amount == "1,200.00"
-    assert result.VAT_amount == "200.00"
+    assert result.total_claim_amount == "1,200.00"
     assert result.date_of_rejection == "18 August 2026 09:30 UTC"
     assert result.justification == "Rejected following manual review."
 
 
-def test_claimed_amount_uses_gross_and_vat_is_difference_when_no_vat_zero():
+def test_total_claim_amount_uses_gross_when_no_vat_zero():
     claim = _claim(
         total_profit_cost_net=Decimal("2000.00"),
         total_profit_cost_gross=Decimal("2400.00"),
@@ -67,19 +68,26 @@ def test_claimed_amount_uses_gross_and_vat_is_difference_when_no_vat_zero():
         claim, create_base_application(), "reason", "Firm"
     )
 
-    assert result.claimed_amount == "2,400.00"
-    assert result.VAT_amount == "400.00"
+    assert result.total_claim_amount == "2,400.00"
 
 
-def test_uses_vat_zero_amount_and_zero_vat_when_vat_zero_present():
+def test_uses_vat_zero_amount_when_vat_zero_present():
     claim = _claim(total_profit_cost_vat_zero=Decimal("500.00"))
 
     result = create_claim_rejection_email_personalisation(
         claim, create_base_application(), "reason", "Firm"
     )
 
-    assert result.claimed_amount == "500.00"
-    assert result.VAT_amount == "0.00"
+    assert result.total_claim_amount == "500.00"
+
+
+def test_raises_when_neither_vat_zero_nor_gross_is_set():
+    claim = _claim(total_profit_cost_gross=None, total_profit_cost_vat_zero=None)
+
+    with pytest.raises(ValueError):
+        create_claim_rejection_email_personalisation(
+            claim, create_base_application(), "reason", "Firm"
+        )
 
 
 def test_claim_type_final_bill_uses_friendly_label():

@@ -191,8 +191,7 @@ def test_gov_notify_adapter_sends_claim_rejected_decision_email_successfully():
             == "18 June 2026 14:03 UTC"
         )
         assert call_kwargs["personalisation"]["claim_type"] == "Payment on account"
-        assert call_kwargs["personalisation"]["claimed_amount"] == "1,200.00"
-        assert call_kwargs["personalisation"]["VAT_amount"] == "200.00"
+        assert call_kwargs["personalisation"]["total_claim_amount"] == "1,200.00"
         assert call_kwargs["personalisation"]["date_of_rejection"]
         assert (
             call_kwargs["personalisation"]["justification"]

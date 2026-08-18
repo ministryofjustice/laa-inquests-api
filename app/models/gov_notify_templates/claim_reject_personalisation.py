@@ -14,7 +14,6 @@ class NotifyClaimRejectTemplatePersonalisation(BaseModel):
     client_last_name: str = Field(description="Client last name")
     claim_submitted_at: str = Field(description="Date and time the claim was submitted")
     claim_type: str = Field(description="Human-readable claim type")
-    claimed_amount: str = Field(description="Amount claimed")
-    VAT_amount: str = Field(description="VAT portion of the claim")
+    total_claim_amount: str = Field(description="Total amount claimed")
     date_of_rejection: str = Field(description="Date and time the claim was rejected")
     justification: str = Field(description="Reason the claim was rejected")
