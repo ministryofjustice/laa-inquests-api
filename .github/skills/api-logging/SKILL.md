@@ -45,8 +45,6 @@ Environment defaults:
 - `staging`: `info`
 - `prod`: `warn`
 
-If `LOG_LEVEL` is invalid, fallback to `info`.
-
 ## Never log
 
 - PII
