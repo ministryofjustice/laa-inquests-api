@@ -172,6 +172,9 @@ def test_grant_decision_sets_merits_decision_to_granted(
 def test_grant_decision_sets_certificate_dates(use_case, application, grant_request):
     use_case.execute("1", grant_request)
 
+    assert application.proceeding.substantive_cost_limitation_effective_date == date(
+        2000, 1, 1
+    )
     assert application.proceeding.certificate_start_date == date(2000, 1, 1)
     assert application.proceeding.certificate_issue_date == datetime.now(UTC).date()
 

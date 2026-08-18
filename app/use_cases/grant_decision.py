@@ -46,6 +46,9 @@ class GrantDecisionUseCase:
         proceeding.merits_decision = MeritsDecision.GRANTED
         proceeding.reason_for_refusal = None
         proceeding.justification = None
+        proceeding.substantive_cost_limitation_effective_date = (
+            request.certificate_start_date
+        )
         proceeding.certificate_start_date = request.certificate_start_date
         proceeding.certificate_issue_date = datetime.now(UTC).date()
 
