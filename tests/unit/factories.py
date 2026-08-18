@@ -151,6 +151,7 @@ def create_base_application_proceeding(proceeding=_NOT_PROVIDED, **overrides):
         "proceeding": proceeding,
         "certificate_start_date": datetime(2026, 6, 18, tzinfo=UTC),
         "certificate_issue_date": datetime(2026, 6, 18, tzinfo=UTC),
+        "substantive_cost_limitation_effective_date": datetime(2026, 6, 18, tzinfo=UTC),
     }
     return ApplicationProceeding(**(defaults | overrides))
 
@@ -271,7 +272,8 @@ def create_base_certificate(
         "cost_limitation": str(
             application_proceeding.proceeding.substantive_cost_limitation
         ),
-        "cost_limitation_effective_date": None,
+        "cost_limitation_effective_date": application_proceeding.substantive_cost_limitation_effective_date
+        or datetime.now(tz=UTC).date(),
         "certificate_limitation": "Not applicable",
         "proceeding_name": application_proceeding.proceeding.proceeding_name,
         "proceeding_description": application_proceeding.proceeding.proceeding_description,

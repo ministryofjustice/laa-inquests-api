@@ -92,6 +92,7 @@ class CreateCertificateContextUseCase:
             scope_limitation_heading=scope_limitation_heading,
             scope_limitation_description=scope_limitation_description,
             cost_limitation=cost_limitation,
+            cost_limitation_effective_date=proceeding.substantive_cost_limitation_effective_date,
             proceeding_name=proceeding_name,
             proceeding_description=proceeding_description,
             effective_date=effective_date,
