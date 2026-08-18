@@ -174,6 +174,7 @@ def test_gov_notify_adapter_sends_claim_rejected_decision_email_successfully():
             application,
             "Rejected following manual review.",
             "claimant-123@provider.co.uk",
+            "Test Solicitors",
         )
 
         mock_api_client.assert_called_once_with(Config.GOV_NOTIFY_API_KEY)
@@ -181,14 +182,18 @@ def test_gov_notify_adapter_sends_claim_rejected_decision_email_successfully():
         assert call_kwargs["email_address"] == "claimant-123@provider.co.uk"
         assert call_kwargs["template_id"] == "test-claim-reject-template-id"
         assert isinstance(call_kwargs["personalisation"], dict)
-        assert call_kwargs["personalisation"]["laa_reference"] == "12345"
-        assert call_kwargs["personalisation"]["claim_id"] == "7"
+        assert call_kwargs["personalisation"]["cert_ref_number"] == "12345"
+        assert call_kwargs["personalisation"]["provider_name"] == "Test Solicitors"
         assert call_kwargs["personalisation"]["client_first_name"] == "Jane"
         assert call_kwargs["personalisation"]["client_last_name"] == "Doe"
         assert (
             call_kwargs["personalisation"]["claim_submitted_at"]
             == "18 June 2026 14:03 UTC"
         )
+        assert call_kwargs["personalisation"]["claim_type"] == "Payment on account"
+        assert call_kwargs["personalisation"]["claimed_amount"] == "1,200.00"
+        assert call_kwargs["personalisation"]["VAT_amount"] == "200.00"
+        assert call_kwargs["personalisation"]["date_of_rejection"]
         assert (
             call_kwargs["personalisation"]["justification"]
             == "Rejected following manual review."

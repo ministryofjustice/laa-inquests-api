@@ -21,6 +21,7 @@ from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.ports.claim.update_claim_status_port import UpdateClaimStatusPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
+from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.exceptions import ApplicationNotFoundError, ClaimNotFoundError
 from app.use_cases.reject_claim import RejectClaimCommand, RejectClaimUseCase
 
@@ -43,6 +44,7 @@ def _claim(claim_id: int = 1, laa_reference: int = 1) -> Claim:
 def _application(laa_reference: int = 1):
     application = MagicMock()
     application.laa_reference = laa_reference
+    application.provider.firm_code = "ABC123"
     return application
 
 
@@ -62,9 +64,10 @@ def _build_use_case(claim=None, application=None):
 
     create_reason_port = MagicMock(spec=CreateDecisionReasonPort)
     update_status_port = MagicMock(spec=UpdateClaimStatusPort)
-    create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
 
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
+    provider_details_port = MagicMock(spec=ProviderDetailsPort)
+    provider_details_port.get_firm_name.return_value = "Test Firm"
     gov_notify_port = MagicMock(spec=GovNotifyPort)
 
     use_case = RejectClaimUseCase(
@@ -74,6 +77,7 @@ def _build_use_case(claim=None, application=None):
         create_decision_reason_port=create_reason_port,
         update_claim_status_port=update_status_port,
         create_history_event_port=create_history_event_port,
+        provider_details_port=provider_details_port,
         gov_notify_port=gov_notify_port,
     )
     return (
@@ -304,6 +308,7 @@ def test_sends_rejection_email_after_commit():
         application=use_case.application_lookup_port.get_application_by_laa_reference.return_value,
         reject_reason="Rejected after review.",
         recipient_email="claimant-123@provider.co.uk",
+        firm_name="Test Firm",
     )
 
 

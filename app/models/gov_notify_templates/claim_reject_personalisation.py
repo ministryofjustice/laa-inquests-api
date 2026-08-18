@@ -8,9 +8,13 @@ class NotifyClaimRejectTemplatePersonalisation(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    laa_reference: str = Field(description="LAA application reference")
-    claim_id: str = Field(description="Claim identifier")
+    cert_ref_number: str = Field(description="Certificate number")
+    provider_name: str = Field(description="Firm name")
     client_first_name: str = Field(description="Client first name")
     client_last_name: str = Field(description="Client last name")
     claim_submitted_at: str = Field(description="Date and time the claim was submitted")
+    claim_type: str = Field(description="Human-readable claim type")
+    claimed_amount: str = Field(description="Amount claimed")
+    VAT_amount: str = Field(description="VAT portion of the claim")
+    date_of_rejection: str = Field(description="Date and time the claim was rejected")
     justification: str = Field(description="Reason the claim was rejected")

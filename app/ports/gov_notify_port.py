@@ -96,6 +96,7 @@ class GovNotifyPort(ABC):
         application: Application,
         reject_reason: str,
         recipient_email: str,
+        firm_name: str,
     ) -> None:
         """Send claim rejection notification to recipient.
 
@@ -104,6 +105,7 @@ class GovNotifyPort(ABC):
             application: The associated application for the claim
             reject_reason: Reason the claim was rejected
             recipient_email: Email address of the recipient
+            firm_name: Name of the provider firm
 
         Raises:
             Exception: If the notification fails to send

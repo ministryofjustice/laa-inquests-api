@@ -275,6 +275,7 @@ def get_reject_claim_use_case(
     create_history_event_port: CreateHistoryEventPort = Depends(
         get_history_event_adapter
     ),
+    provider_details_port: ProviderDetailsPort = Depends(get_provider_details_port),
     gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
 ) -> RejectClaimUseCase:
     return RejectClaimUseCase(
@@ -284,6 +285,7 @@ def get_reject_claim_use_case(
         create_decision_reason_port=create_decision_reason_port,
         update_claim_status_port=update_claim_status_port,
         create_history_event_port=create_history_event_port,
+        provider_details_port=provider_details_port,
         gov_notify_port=gov_notify_port,
     )
 

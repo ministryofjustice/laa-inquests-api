@@ -98,6 +98,7 @@ def test_204_reject_claim_sends_rejection_email_to_claimant(
     assert call_kwargs["application"].laa_reference == laa_reference
     assert call_kwargs["reject_reason"] == _reject_payload()["justification"]
     assert call_kwargs["recipient_email"] == claim.claimant_id
+    assert call_kwargs["firm_name"] == "Test Firm Name"
 
 
 def test_204_reject_claim_allows_re_rejecting_and_creates_new_decision(

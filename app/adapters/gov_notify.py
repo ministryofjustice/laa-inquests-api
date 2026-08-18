@@ -153,9 +153,10 @@ class GovNotifyAdapter(GovNotifyPort):
         application: Application,
         reject_reason: str,
         recipient_email: str,
+        firm_name: str,
     ) -> None:
         personalisation = create_claim_rejection_email_personalisation(
-            claim, application, reject_reason
+            claim, application, reject_reason, firm_name
         )
         self.client.send_email_notification(
             email_address=recipient_email,
