@@ -104,6 +104,19 @@ def test_create_history_raises_exception_for_missing_actor(session):
         )
 
 
+def test_create_history_raises_exception_for_empty_actor(session):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    adapter = HistoryEventRepositoryAdapter(session)
+
+    with pytest.raises(ValueError):
+        adapter.create_history_event(
+            event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
+            actor="",
+            actor_type=ActorType.PROVIDER,
+            laa_reference=laa_reference,
+        )
+
+
 def test_create_history_raises_exception_for_missing_actor_type(session):
     laa_reference = session.exec(select(Application)).first().laa_reference
     adapter = HistoryEventRepositoryAdapter(session)
