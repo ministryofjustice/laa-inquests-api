@@ -109,6 +109,7 @@ env:
   RATE_LIMIT_MAX: 10000
   RATE_WINDOW_MS: 900000
   NODE_ENV: "dev"
+  LOG_LEVEL: "info"
 
 autoscaling:
   enabled: false
