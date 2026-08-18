@@ -19,6 +19,7 @@ from sqlalchemy import Column
 from sqlmodel import Enum, Field, Relationship, SQLModel
 
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
+from app.models.application.constants import UNGRANTED_SUBSTANTIVE_COST_LIMITATION
 from app.models.application.enums import (
     AddressSource,
     CorrespondenceRecipientType,
@@ -27,8 +28,6 @@ from app.models.application.enums import (
     PublicBodyId,
     ReasonForRefusal,
 )
-
-UNGRANTED_SUBSTANTIVE_COST_LIMITATION = 0
 
 
 # RELATIONS
