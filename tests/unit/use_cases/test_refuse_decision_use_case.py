@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 from pydantic import ValidationError
@@ -7,6 +7,7 @@ from app.models.application.index import (
     RefuseApplicationUpdate,
 )
 from app.models.history.enums import ActorType, HistoryEventReference
+from app.models.notifications.enums import NotificationType
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.use_cases.exceptions import ApplicationNotFoundError, RefuseDecisionError
 from app.use_cases.refuse_decision import RefuseDecisionUseCase
@@ -92,17 +93,43 @@ def test_refuse_decision_calls_required_ports_and_commit(
 
     update_decision_port.update_decision.assert_called_once_with(application.proceeding)
     update_decision_port.commit.assert_called_once()
-    create_history_event_port.create_history_event.assert_called_once_with(
-        event_reference=HistoryEventReference.APPLICATION_ASSESSMENT_COMPLETED,
-        actor="Caseworker",
-        actor_type=ActorType.CASEWORKER,
-        laa_reference=application.laa_reference,
-        event_data={
-            "merits_decision": "Refused",
-            "refusal_reason": "NOT_IN_SCOPE",
-            "refusal_justification": "The matter is not in scope.",
-        },
+
+
+def test_refuse_decision_creates_required_history_events(
+    use_case,
+    application,
+    refuse_request,
+    create_history_event_port,
+):
+    use_case.execute("1", refuse_request, "Caseworker")
+
+    assert create_history_event_port.create_history_event.call_count == 2
+    create_history_event_port.create_history_event.assert_has_calls(
+        [
+            call(
+                event_reference=HistoryEventReference.APPLICATION_ASSESSMENT_COMPLETED,
+                actor="Caseworker",
+                actor_type=ActorType.CASEWORKER,
+                laa_reference=application.laa_reference,
+                event_data={
+                    "merits_decision": "Refused",
+                    "refusal_reason": "NOT_IN_SCOPE",
+                    "refusal_justification": "The matter is not in scope.",
+                },
+            ),
+            call(
+                event_reference=HistoryEventReference.APPLICATION_REFUSED,
+                actor="System",
+                actor_type=ActorType.SYSTEM,
+                laa_reference=application.laa_reference,
+                event_data={
+                    "recipient": application.provider.email_address,
+                    "channel": NotificationType.EMAIL,
+                },
+            ),
+        ]
     )
+
     create_history_event_port.commit.assert_called_once()
     create_history_event_port.rollback.assert_not_called()
 

@@ -1,8 +1,17 @@
+import logging
 from collections.abc import Sequence
 from mimetypes import guess_type
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Request,
+    Response,
+    UploadFile,
+)
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlmodel import Session
@@ -14,6 +23,7 @@ from app.adapters.pdf_generator_adapter import PdfGeneratorAdapter
 from app.adapters.provider_details_adapter import ProviderDetailsAdapter
 from app.config import Config
 from app.db import get_session
+from app.logging_utils import build_log_extra
 from app.models.application.certificate import ApplicationCertificateResponse
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import (
@@ -102,6 +112,16 @@ router = APIRouter(
     tags=["Applications"],
     responses={404: {"description": "Not found"}},
 )
+
+logger = logging.getLogger(__name__)
+
+
+def _route(request: Request | None) -> str | None:
+    return request.url.path if request is not None else None
+
+
+def _method(request: Request | None) -> str | None:
+    return request.method if request is not None else None
 
 
 def get_provider_details_port() -> ProviderDetailsPort:
@@ -353,12 +373,25 @@ async def search_application(
     laa_reference: str,
     firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
     merits_decision: MeritsDecision | None = None,
+    request: Request = None,
     use_case: SearchApplicationUseCase = Depends(get_search_application_use_case),
 ) -> list[ApplicationSearchResponse]:
     """Search for an application by exact LAA reference number."""
     try:
-        return use_case.execute(laa_reference, firm_code, merits_decision)
+        results = use_case.execute(laa_reference, firm_code, merits_decision)
+        return results
     except ProviderDetailsRetrievalError:
+        logger.warning(
+            "Application search failed",
+            extra=build_log_extra(
+                event="application_search_failed",
+                route=_route(request),
+                method=_method(request),
+                status_code=500,
+                laa_reference=laa_reference,
+                firm_code=firm_code,
+            ),
+        )
         raise HTTPException(
             status_code=500,
             detail="Failed to retrieve firm name from provider details service",
@@ -370,7 +403,8 @@ def list_public_bodies(
     use_case: ListPublicBodiesUseCase = Depends(get_list_public_bodies_use_case),
     _: None = Depends(verify_entra_provider_token),
 ) -> list[PublicBody]:
-    return use_case.execute()
+    public_bodies = use_case.execute()
+    return public_bodies
 
 
 def get_coroners_letter_use_case(
@@ -434,7 +468,8 @@ def list_application_claims(
 ) -> list[ClaimSummaryResponse]:
     """List claims for an application, filtered by assessed status."""
     try:
-        return use_case.execute(laa_reference, assessed)
+        claims = use_case.execute(laa_reference, assessed)
+        return claims
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
 
@@ -451,7 +486,8 @@ def read_claim(
 ) -> ClaimByIdResponse:
     """Get a single claim by ID for a given application."""
     try:
-        return use_case.execute(laa_reference, claim_id)
+        claim = use_case.execute(laa_reference, claim_id)
+        return claim
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
     except ClaimNotFoundError:
@@ -466,7 +502,8 @@ async def read_application(
 ) -> ApplicationResponse:
     """Get information about a given application."""
     try:
-        return use_case.execute(laa_reference)
+        application = use_case.execute(laa_reference)
+        return application
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
 
@@ -509,7 +546,8 @@ def get_application_history(
 ) -> list[HistoryEventResponse]:
     """Get the history of a given application."""
     try:
-        return use_case.execute(laa_reference)
+        history = use_case.execute(laa_reference)
+        return history
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
 
@@ -520,7 +558,8 @@ async def read_all_applications(
     _: None = Depends(verify_entra_caseworker_token),
 ) -> Sequence[Application]:
     """Read all the applications currently in the database."""
-    return use_case.execute()
+    applications = use_case.execute()
+    return applications
 
 
 @router.post(
@@ -533,6 +572,7 @@ async def upload_coroners_letter(
     use_case: UploadCoronersLetterUseCase = Depends(
         get_upload_coroners_letter_use_case
     ),
+    request: Request = None,
     _: None = Depends(verify_entra_provider_token),
 ) -> UploadCoronersLetterResponse:
     """Upload a coroner's letter to document storage and return its file ID."""
@@ -544,8 +584,28 @@ async def upload_coroners_letter(
             file_name,
         )
     except CoronersLetterVirusDetectedError:
+        logger.warning(
+            "Coroners letter upload failed virus check",
+            extra=build_log_extra(
+                event="coroners_letter_uploaded_failed",
+                route=_route(request),
+                method=_method(request),
+                status_code=422,
+                file_name=file_name,
+            ),
+        )
         raise HTTPException(status_code=422, detail="Uploaded file failed virus check")
     except CoronersLetterUploadError:
+        logger.warning(
+            "Coroners letter upload failed",
+            extra=build_log_extra(
+                event="coroners_letter_uploaded_failed",
+                route=_route(request),
+                method=_method(request),
+                status_code=500,
+                file_name=file_name,
+            ),
+        )
         raise HTTPException(status_code=500, detail="Failed to upload coroners letter")
 
     return UploadCoronersLetterResponse(
@@ -560,7 +620,8 @@ def create_application(
     use_case: CreateApplicationUseCase = Depends(get_create_application_use_case),
 ) -> Application:
     """Creates a new application with proceedings and public bodies."""
-    return use_case.execute(request, firm_code)
+    application = use_case.execute(request, firm_code)
+    return application
 
 
 @router.post(

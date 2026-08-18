@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 
@@ -726,7 +726,7 @@ def test_execute_does_not_raise_when_application_total_exceeds_limit():
     use_case.execute(command)  # should not raise
 
 
-def test_execute_persists_auto_reject_and_returns_rejection_reasons():
+def test_execute_persists_auto_reject_and_returns_rejection_reasons_and_creates_history_event():
     command = _make_command({"net": Decimal("1.00"), "gross": Decimal("1.00")})
     claim = _make_claim()
 
@@ -735,6 +735,7 @@ def test_execute_persists_auto_reject_and_returns_rejection_reasons():
     create_claim_decision_port = _make_create_claim_decision_port()
     create_decision_reason_port = _make_create_decision_reason_port()
     update_claim_status_port = _make_update_claim_status_port()
+    create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
 
     application = MagicMock(spec=Application)
     application.proceeding = MagicMock()
@@ -763,6 +764,7 @@ def test_execute_persists_auto_reject_and_returns_rejection_reasons():
         create_claim_decision_port=create_claim_decision_port,
         create_decision_reason_port=create_decision_reason_port,
         update_claim_status_port=update_claim_status_port,
+        create_history_event_port=create_history_event_port,
     )
 
     result = use_case.execute(command)
@@ -782,10 +784,17 @@ def test_execute_persists_auto_reject_and_returns_rejection_reasons():
         claim_id=1,
         status=ClaimStatus.REJECTED,
     )
+    create_history_event_port.create_history_event.assert_any_call(
+        event_reference=HistoryEventReference.POA_AUTO_REJECTED,
+        actor=ActorType.SYSTEM,
+        actor_type=ActorType.SYSTEM,
+        laa_reference=command.laa_reference,
+        event_data={"claim_reference": 1},
+    )
     assert create_claim_port.commit.call_count == 2
 
 
-def test_execute_returns_submitted_claim_when_auto_reject_persistence_fails():
+def test_execute_returns_submitted_claim_when_auto_reject_persistence_fails_and_does_not_create_history_event():
     command = _make_command({"net": Decimal("1.00"), "gross": Decimal("1.00")})
     claim = _make_claim()
 
@@ -797,6 +806,7 @@ def test_execute_returns_submitted_claim_when_auto_reject_persistence_fails():
         "Unable to create decision reason"
     )
     update_claim_status_port = _make_update_claim_status_port()
+    create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
 
     application = MagicMock(spec=Application)
     application.proceeding = MagicMock()
@@ -825,14 +835,97 @@ def test_execute_returns_submitted_claim_when_auto_reject_persistence_fails():
         create_claim_decision_port=create_claim_decision_port,
         create_decision_reason_port=create_decision_reason_port,
         update_claim_status_port=update_claim_status_port,
+        create_history_event_port=create_history_event_port,
     )
 
     result = use_case.execute(command)
 
     assert result.claim.status_id == ClaimStatus.SUBMITTED
     assert result.rejection_reasons is None
+    create_history_event_port.create_history_event.assert_called()  # This is for the claim submitted history event
+    assert (
+        call(
+            event_reference=HistoryEventReference.POA_AUTO_REJECTED,
+            actor=ActorType.SYSTEM,
+            actor_type=ActorType.SYSTEM,
+            laa_reference=command.laa_reference,
+            event_data={"claim_reference": 1},
+        )
+        not in create_history_event_port.create_history_event.mock_calls
+    )
     create_claim_port.rollback.assert_called_once()
     assert create_claim_port.commit.call_count == 1
+
+
+def test_execute_auto_reject_does_not_persist_when_auto_reject_create_history_event_fails():
+    command = _make_command({"net": Decimal("1.00"), "gross": Decimal("1.00")})
+    claim = _make_claim()
+
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+    create_claim_decision_port = _make_create_claim_decision_port()
+    create_decision_reason_port = _make_create_decision_reason_port()
+    update_claim_status_port = _make_update_claim_status_port()
+    create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
+    create_history_event_port.create_history_event.side_effect = [
+        None,
+        Exception("Unable to create event"),
+    ]
+
+    application = MagicMock(spec=Application)
+    application.proceeding = MagicMock()
+    application.proceeding.substantive_cost_limitation = 999999
+    application.proceeding.certificate_start_date = None
+    application.overall_decision = MeritsDecision.GRANTED
+
+    existing_claims = [
+        Claim(
+            claim_id=index + 100,
+            laa_reference=12345,
+            claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
+            status_id=ClaimStatus.SUBMITTED,
+            poa_type_id=POAType.PROFIT_COST,
+            submission_date=datetime.now(UTC),
+            total_profit_cost_net=Decimal("1.00"),
+            total_profit_cost_gross=Decimal("1.00"),
+        )
+        for index in range(4)
+    ]
+
+    use_case = _make_use_case(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(application),
+        get_claims_for_application_port=_make_get_claims_port(existing_claims),
+        create_claim_decision_port=create_claim_decision_port,
+        create_decision_reason_port=create_decision_reason_port,
+        update_claim_status_port=update_claim_status_port,
+        create_history_event_port=create_history_event_port,
+    )
+
+    result = use_case.execute(command)
+
+    assert result.claim.status_id == ClaimStatus.SUBMITTED
+    assert result.rejection_reasons is None
+    create_decision_reason_port.create_decision_reason.assert_called_once_with(
+        claim_decision_id=10,
+        reason_code=ReasonCode.MAX_POA_CLAIMS_EXCEEDED,
+        justification=None,
+    )
+    update_claim_status_port.update_claim_status.assert_called_once_with(
+        claim_id=1,
+        status=ClaimStatus.REJECTED,
+    )
+    create_history_event_port.create_history_event.assert_any_call(
+        event_reference=HistoryEventReference.POA_AUTO_REJECTED,
+        actor=ActorType.SYSTEM,
+        actor_type=ActorType.SYSTEM,
+        laa_reference=command.laa_reference,
+        event_data={"claim_reference": 1},
+    )
+    assert create_claim_port.commit.call_count == 1  # This commit is for create claim
+    assert (
+        create_claim_port.rollback.call_count == 1
+    )  # This rollback is for auto reject claim
 
 
 def test_execute_auto_approves_eligible_payment_on_account_claim():
@@ -843,6 +936,7 @@ def test_execute_auto_approves_eligible_payment_on_account_claim():
     create_claim_port.create_claim.return_value = claim
     create_claim_decision_port = _make_create_claim_decision_port()
     update_claim_status_port = _make_update_claim_status_port()
+    create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
 
     application = MagicMock(spec=Application)
     application.status = "LIVE"
@@ -857,6 +951,7 @@ def test_execute_auto_approves_eligible_payment_on_account_claim():
         get_claims_for_application_port=_make_get_claims_port(),
         create_claim_decision_port=create_claim_decision_port,
         update_claim_status_port=update_claim_status_port,
+        create_history_event_port=create_history_event_port,
     )
 
     result = use_case.execute(command)
@@ -871,7 +966,122 @@ def test_execute_auto_approves_eligible_payment_on_account_claim():
         claim_id=1,
         status=ClaimStatus.PAY_IN_FULL,
     )
+    create_history_event_port.create_history_event.assert_any_call(
+        event_reference=HistoryEventReference.POA_AUTO_APPROVED,
+        actor=ActorType.SYSTEM,
+        actor_type=ActorType.SYSTEM,
+        laa_reference=command.laa_reference,
+        event_data={"claim_reference": 1},
+    )
     assert create_claim_port.commit.call_count == 2
+
+
+def test_execute_does_not_create_history_event_if_auto_approve_eligible_update_claim_status_fails():
+    command = _make_command({"net": Decimal("50000.00"), "gross": Decimal("50000.00")})
+    claim = _make_claim()
+
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+    create_claim_decision_port = _make_create_claim_decision_port()
+    update_claim_status_port = _make_update_claim_status_port()
+    update_claim_status_port.update_claim_status.side_effect = Exception(
+        "Unable to update claim status"
+    )
+    create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
+
+    application = MagicMock(spec=Application)
+    application.status = "LIVE"
+    application.overall_decision = "GRANTED"
+    application.proceeding = MagicMock()
+    application.proceeding.substantive_cost_limitation = 999999
+    application.proceeding.certificate_start_date = None
+
+    use_case = _make_use_case(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(application),
+        get_claims_for_application_port=_make_get_claims_port(),
+        create_claim_decision_port=create_claim_decision_port,
+        update_claim_status_port=update_claim_status_port,
+        create_history_event_port=create_history_event_port,
+    )
+
+    result = use_case.execute(command)
+
+    assert result.claim.status_id == ClaimStatus.SUBMITTED
+    assert result.rejection_reasons is None
+    create_claim_decision_port.create_claim_decision.assert_called_once_with(
+        claim_id=1,
+        decision_status=ClaimDecisionStatus.PAY_IN_FULL,
+    )
+    update_claim_status_port.update_claim_status.assert_called_once_with(
+        claim_id=1,
+        status=ClaimStatus.PAY_IN_FULL,
+    )
+    assert (
+        call(
+            event_reference=HistoryEventReference.POA_AUTO_APPROVED,
+            actor=ActorType.SYSTEM,
+            actor_type=ActorType.SYSTEM,
+            laa_reference=command.laa_reference,
+            event_data={"claim_reference": 1},
+        )
+        not in create_history_event_port.create_history_event.mock_calls
+    )
+    assert create_claim_port.commit.call_count == 1
+    assert create_claim_port.rollback.call_count == 1
+
+
+def test_execute_does_not_auto_approve_if_create_history_event_fails():
+    command = _make_command({"net": Decimal("50000.00"), "gross": Decimal("50000.00")})
+    claim = _make_claim()
+
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+    create_claim_decision_port = _make_create_claim_decision_port()
+    update_claim_status_port = _make_update_claim_status_port()
+    create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
+    create_history_event_port.create_history_event.side_effect = [
+        None,
+        Exception("Unable to create event"),
+    ]
+
+    application = MagicMock(spec=Application)
+    application.status = "LIVE"
+    application.overall_decision = "GRANTED"
+    application.proceeding = MagicMock()
+    application.proceeding.substantive_cost_limitation = 999999
+    application.proceeding.certificate_start_date = None
+
+    use_case = _make_use_case(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(application),
+        get_claims_for_application_port=_make_get_claims_port(),
+        create_claim_decision_port=create_claim_decision_port,
+        update_claim_status_port=update_claim_status_port,
+        create_history_event_port=create_history_event_port,
+    )
+
+    result = use_case.execute(command)
+
+    assert result.claim.status_id == ClaimStatus.SUBMITTED
+    assert result.rejection_reasons is None
+    create_claim_decision_port.create_claim_decision.assert_called_once_with(
+        claim_id=1,
+        decision_status=ClaimDecisionStatus.PAY_IN_FULL,
+    )
+    update_claim_status_port.update_claim_status.assert_called_once_with(
+        claim_id=1,
+        status=ClaimStatus.PAY_IN_FULL,
+    )
+    create_history_event_port.create_history_event.assert_any_call(
+        event_reference=HistoryEventReference.POA_AUTO_APPROVED,
+        actor=ActorType.SYSTEM,
+        actor_type=ActorType.SYSTEM,
+        laa_reference=command.laa_reference,
+        event_data={"claim_reference": 1},
+    )
+    assert create_claim_port.commit.call_count == 1
+    assert create_claim_port.rollback.call_count == 1
 
 
 def test_execute_does_not_auto_approve_when_amount_exceeds_threshold():

@@ -1,8 +1,10 @@
 import logging
 
+from app.logging_utils import build_log_extra
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import RefuseApplicationUpdate
 from app.models.history.enums import ActorType, HistoryEventReference
+from app.models.notifications.enums import NotificationType
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.update_decision_port import ApplicationDecisionPort
@@ -59,12 +61,25 @@ class RefuseDecisionUseCase:
                 proceeding,
                 application.provider.email_address,
             )
+            self.create_history_event_port.create_history_event(
+                event_reference=HistoryEventReference.APPLICATION_REFUSED,
+                actor="System",
+                actor_type=ActorType.SYSTEM,
+                laa_reference=application.laa_reference,
+                event_data={
+                    "recipient": application.provider.email_address,
+                    "channel": NotificationType.EMAIL,
+                },
+            )
             self.application_decision_port.commit()
             self.create_history_event_port.commit()
         except Exception as exception:
             logger.warning(
-                "Failed to send refusal email for application %s",
-                application.laa_reference,
+                "Failed to refuse application",
+                extra=build_log_extra(
+                    event="refuse_decision_failed",
+                    laa_reference=application.laa_reference,
+                ),
                 exc_info=True,
             )
             self.application_decision_port.rollback()

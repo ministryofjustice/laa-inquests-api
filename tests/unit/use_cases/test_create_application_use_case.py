@@ -1,10 +1,11 @@
 import uuid
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 
 from app.models.application.index import ApplicationCreate
 from app.models.history.enums import ActorType, HistoryEventReference
+from app.models.notifications.enums import NotificationType
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
@@ -72,13 +73,30 @@ def test_execute_creates_application_sends_confirmation_email_and_commits():
     create_application_port.create_application.assert_called_once_with(
         request, "0A123B"
     )
-    create_history_event_port.create_history_event.assert_called_once_with(
-        event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
-        actor="provider@example.com",
-        actor_type=ActorType.PROVIDER,
-        laa_reference=application.laa_reference,
-        event_data=None,
+
+    assert create_history_event_port.create_history_event.call_count == 2
+    create_history_event_port.create_history_event.assert_has_calls(
+        [
+            call(
+                event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
+                actor="provider@example.com",
+                actor_type=ActorType.PROVIDER,
+                laa_reference=application.laa_reference,
+                event_data=None,
+            ),
+            call(
+                event_reference=HistoryEventReference.APPLICATION_SUBMISSION_CONFIRMATION,
+                actor="System",
+                actor_type=ActorType.SYSTEM,
+                laa_reference=application.laa_reference,
+                event_data={
+                    "recipient": "provider@example.com",
+                    "channel": NotificationType.EMAIL,
+                },
+            ),
+        ]
     )
+
     gov_notify_port.send_application_submit_confirmation_email.assert_called_once_with(
         application,
         "provider@example.com",

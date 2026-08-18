@@ -1,8 +1,13 @@
+import logging
+
+from app.logging_utils import build_log_extra
 from app.models.history.enums import ActorType
 from app.models.history.index import HistoryEvent, HistoryEventResponse
 from app.ports.get_application_history_port import GetApplicationHistoryPort
 from app.ports.get_application_port import GetApplicationPort
 from app.use_cases.exceptions import ApplicationNotFoundError
+
+logger = logging.getLogger(__name__)
 
 
 class GetApplicationHistoryUseCase:
@@ -26,8 +31,16 @@ class GetApplicationHistoryUseCase:
         history_events = self.get_application_history_port.get_application_history(
             laa_reference
         )
-
-        return [self._create_history_response(event) for event in history_events]
+        response = [self._create_history_response(event) for event in history_events]
+        logger.info(
+            "Application history retrieved",
+            extra=build_log_extra(
+                event="application_history_list_completed",
+                laa_reference=laa_reference,
+                result_count=len(response),
+            ),
+        )
+        return response
 
     def _create_history_response(self, event: HistoryEvent) -> HistoryEventResponse:
         response = HistoryEventResponse.model_validate(event)

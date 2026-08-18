@@ -6,6 +6,7 @@ from pathlib import Path
 
 import httpx
 
+from app.logging_utils import build_log_extra, duration_ms
 from app.models.application.index import (
     SDSUploadClaimEvidenceResponse,
     SDSUploadCoronersLetterResponse,
@@ -44,6 +45,7 @@ class SdsAdapter(SdsPort):
     def _get_token(self) -> str:
         if self.token and time.time() < self.token_expiry:
             return self.token
+        started_at = time.perf_counter()
         response = httpx.post(
             f"https://login.microsoftonline.com/{self.tenant_id}/oauth2/v2.0/token",
             data={
@@ -54,6 +56,16 @@ class SdsAdapter(SdsPort):
             },
         )
         if response.status_code != 200:
+            logger.error(
+                "SDS token acquisition failed",
+                extra=build_log_extra(
+                    event="sds_token_acquisition_failed",
+                    route="sds:oauth2/token",
+                    method="POST",
+                    status_code=response.status_code,
+                    duration_ms=duration_ms(started_at),
+                ),
+            )
             raise httpx.HTTPStatusError(
                 f"Failed to retrieve sds token. API status code: {response.status_code}",
                 request=response.request,
@@ -69,6 +81,7 @@ class SdsAdapter(SdsPort):
     def virus_check_coroners_letter(
         self, coroners_letter: bytes, file_name: str
     ) -> bool:
+        started_at = time.perf_counter()
         try:
             token = self._get_token()
             response = httpx.put(
@@ -83,15 +96,56 @@ class SdsAdapter(SdsPort):
                 headers={"Authorization": f"Bearer {token}"},
             )
         except httpx.HTTPError as exc:
+            status_code = getattr(getattr(exc, "response", None), "status_code", None)
+            logger.error(
+                "SDS coroners letter virus check failed",
+                extra=build_log_extra(
+                    event="sds_coroners_letter_virus_check_failed",
+                    route="sds:virus_check_file",
+                    method="PUT",
+                    status_code=status_code,
+                    duration_ms=duration_ms(started_at),
+                ),
+            )
             raise CoronersLetterUploadError(
                 f"Failed to perform virus check due to a network error: {exc}"
             ) from exc
 
         if response.status_code == 200:
+            logger.info(
+                "SDS coroners letter virus check passed",
+                extra=build_log_extra(
+                    event="sds_coroners_letter_virus_check_passed",
+                    route="sds:virus_check_file",
+                    method="PUT",
+                    status_code=response.status_code,
+                    duration_ms=duration_ms(started_at),
+                ),
+            )
             return True
         elif response.status_code == 400:
+            logger.warning(
+                "SDS coroners letter virus check failed",
+                extra=build_log_extra(
+                    event="sds_coroners_letter_virus_check_failed",
+                    route="sds:virus_check_file",
+                    method="PUT",
+                    status_code=response.status_code,
+                    duration_ms=duration_ms(started_at),
+                ),
+            )
             return False
         else:
+            logger.error(
+                "SDS coroners letter virus check failed",
+                extra=build_log_extra(
+                    event="sds_coroners_letter_virus_check_failed",
+                    route="sds:virus_check_file",
+                    method="PUT",
+                    status_code=response.status_code,
+                    duration_ms=duration_ms(started_at),
+                ),
+            )
             raise CoronersLetterUploadError(
                 f"Failed to perform virus check. API status code: {response.status_code}"
             )
@@ -99,33 +153,18 @@ class SdsAdapter(SdsPort):
     def save_coroners_letter(
         self, coroners_letter: bytes, file_name: str
     ) -> SDSUploadCoronersLetterResponse:
-        path = Path(file_name)
-        unique_file_name = f"{path.stem}_{uuid.uuid4()}{path.suffix}"
-        token = self._get_token()
-        response = httpx.post(
-            f"{self.base_url}/save_file",
-            files={
-                "file": (
-                    unique_file_name,
-                    coroners_letter,
-                    "application/octet-stream",
-                )
-            },
-            headers={"Authorization": f"Bearer {token}"},
+        unique_file_name, status = self._save_file(
+            file_content=coroners_letter,
+            file_name=file_name,
+            file_kind="coroners_letter",
         )
-
-        if response.status_code != 201:
-            return SDSUploadCoronersLetterResponse(
-                sds_file_name=unique_file_name,
-                status="FAILURE",
-            )
-
         return SDSUploadCoronersLetterResponse(
             sds_file_name=unique_file_name,
-            status="SUCCESS",
+            status=status,
         )
 
     def virus_check_claim_evidence(self, claim_evidence: bytes, file_name: str) -> bool:
+        started_at = time.perf_counter()
         try:
             token = self._get_token()
             response = httpx.put(
@@ -140,15 +179,56 @@ class SdsAdapter(SdsPort):
                 headers={"Authorization": f"Bearer {token}"},
             )
         except httpx.HTTPError as exc:
+            status_code = getattr(getattr(exc, "response", None), "status_code", None)
+            logger.error(
+                "SDS claim evidence virus check failed",
+                extra=build_log_extra(
+                    event="sds_claim_evidence_virus_check_failed",
+                    route="sds:virus_check_file",
+                    method="PUT",
+                    status_code=status_code,
+                    duration_ms=duration_ms(started_at),
+                ),
+            )
             raise ClaimEvidenceUploadError(
                 f"Failed to perform virus check due to a network error: {exc}"
             ) from exc
 
         if response.status_code == 200:
+            logger.info(
+                "SDS claim evidence virus check passed",
+                extra=build_log_extra(
+                    event="sds_claim_evidence_virus_check_passed",
+                    route="sds:virus_check_file",
+                    method="PUT",
+                    status_code=response.status_code,
+                    duration_ms=duration_ms(started_at),
+                ),
+            )
             return True
         elif response.status_code == 400:
+            logger.warning(
+                "SDS claim evidence virus check failed",
+                extra=build_log_extra(
+                    event="sds_claim_evidence_virus_check_failed",
+                    route="sds:virus_check_file",
+                    method="PUT",
+                    status_code=response.status_code,
+                    duration_ms=duration_ms(started_at),
+                ),
+            )
             return False
         else:
+            logger.error(
+                "SDS claim evidence virus check failed",
+                extra=build_log_extra(
+                    event="sds_claim_evidence_virus_check_failed",
+                    route="sds:virus_check_file",
+                    method="PUT",
+                    status_code=response.status_code,
+                    duration_ms=duration_ms(started_at),
+                ),
+            )
             raise ClaimEvidenceUploadError(
                 f"Failed to perform virus check. API status code: {response.status_code}"
             )
@@ -156,6 +236,29 @@ class SdsAdapter(SdsPort):
     def save_claim_evidence(
         self, claim_evidence: bytes, file_name: str
     ) -> SDSUploadClaimEvidenceResponse:
+        unique_file_name, status = self._save_file(
+            file_content=claim_evidence,
+            file_name=file_name,
+            file_kind="claim_evidence",
+        )
+        return SDSUploadClaimEvidenceResponse(
+            sds_file_name=unique_file_name,
+            status=status,
+        )
+
+    def _save_file(
+        self,
+        file_content: bytes,
+        file_name: str,
+        *,
+        file_kind: str,
+    ) -> tuple[str, str]:
+        started_at = time.perf_counter()
+        display_name = file_kind.replace("_", " ")
+        failed_message = f"SDS {display_name} save failed"
+        failed_event = f"sds_{file_kind}_saved_failed"
+        success_message = f"SDS {display_name} saved"
+        success_event = f"sds_{file_kind}_saved_success"
         path = Path(file_name)
         unique_file_name = f"{path.stem}_{uuid.uuid4()}{path.suffix}"
         token = self._get_token()
@@ -164,7 +267,7 @@ class SdsAdapter(SdsPort):
             files={
                 "file": (
                     unique_file_name,
-                    claim_evidence,
+                    file_content,
                     "application/octet-stream",
                 )
             },
@@ -172,17 +275,32 @@ class SdsAdapter(SdsPort):
         )
 
         if response.status_code != 201:
-            return SDSUploadClaimEvidenceResponse(
-                sds_file_name=unique_file_name,
-                status="FAILURE",
+            logger.error(
+                failed_message,
+                extra=build_log_extra(
+                    event=failed_event,
+                    route="sds:save_file",
+                    method="POST",
+                    status_code=response.status_code,
+                    duration_ms=duration_ms(started_at),
+                ),
             )
+            return unique_file_name, "FAILURE"
 
-        return SDSUploadClaimEvidenceResponse(
-            sds_file_name=unique_file_name,
-            status="SUCCESS",
+        logger.info(
+            success_message,
+            extra=build_log_extra(
+                event=success_event,
+                route="sds:save_file",
+                method="POST",
+                status_code=response.status_code,
+                duration_ms=duration_ms(started_at),
+            ),
         )
+        return unique_file_name, "SUCCESS"
 
     def retrieve_coroners_letter(self, file_name: str) -> Iterator[bytes]:
+        started_at = time.perf_counter()
         if not file_name or not file_name.strip():
             raise InvalidCoronersLetterDocumentIdError(
                 "file_name must be a non-empty string"
@@ -195,12 +313,26 @@ class SdsAdapter(SdsPort):
         )
         if response.status_code != 200:
             message = f"SDS returned {response.status_code} while retrieving coroner's letter for file key {file_name}"
-            _raise_sds_retrieval_error(message)
+            _raise_sds_retrieval_error(
+                message,
+                log_message=f"SDS returned {response.status_code} while retrieving coroner's letter",
+            )
 
         try:
             file_url = response.json()["fileURL"]
         except (KeyError, TypeError, ValueError):
             _raise_sds_retrieval_error("Failed to retrieve coroners letter")
+
+        logger.info(
+            "SDS coroners letter retrieved",
+            extra=build_log_extra(
+                event="sds_coroners_letter_retrieved_success",
+                route="sds:get_file",
+                method="GET",
+                status_code=response.status_code,
+                duration_ms=duration_ms(started_at),
+            ),
+        )
 
         try:
             with httpx.stream("GET", file_url) as stream:
@@ -209,6 +341,7 @@ class SdsAdapter(SdsPort):
             _raise_sds_retrieval_error(f"Failed to stream coroners letter: \n {exc}")
 
     def retrieve_claim_evidence(self, file_name: str) -> Iterator[bytes]:
+        started_at = time.perf_counter()
         if not file_name or not file_name.strip():
             raise InvalidClaimEvidenceDocumentIdError(
                 "file_name must be a non-empty string"
@@ -221,7 +354,10 @@ class SdsAdapter(SdsPort):
         )
         if response.status_code != 200:
             message = f"SDS returned {response.status_code} while retrieving claim evidence for file key {file_name}"
-            _raise_sds_claim_evidence_retrieval_error(message)
+            _raise_sds_claim_evidence_retrieval_error(
+                message,
+                log_message=f"SDS returned {response.status_code} while retrieving claim evidence",
+            )
 
         try:
             file_url = response.json()["fileURL"]
@@ -229,6 +365,17 @@ class SdsAdapter(SdsPort):
             _raise_sds_claim_evidence_retrieval_error(
                 "Failed to retrieve claim evidence"
             )
+
+        logger.info(
+            "SDS claim evidence retrieved",
+            extra=build_log_extra(
+                event="sds_claim_evidence_retrieved_success",
+                route="sds:get_file",
+                method="GET",
+                status_code=response.status_code,
+                duration_ms=duration_ms(started_at),
+            ),
+        )
 
         try:
             with httpx.stream("GET", file_url) as stream:
@@ -239,6 +386,7 @@ class SdsAdapter(SdsPort):
             )
 
     def delete_claim_evidence(self, file_name: str) -> None:
+        started_at = time.perf_counter()
         if not file_name or not file_name.strip():
             raise InvalidClaimEvidenceDocumentIdError(
                 "file_name must be a non-empty string"
@@ -259,15 +407,48 @@ class SdsAdapter(SdsPort):
             raise ClaimEvidenceDeleteError(
                 f"SDS returned {delete_status_code} while deleting claim evidence for file key {file_name}"
             )
+        logger.info(
+            "SDS claim evidence deleted",
+            extra=build_log_extra(
+                event="sds_claim_evidence_deleted_success",
+                route="sds:delete_files",
+                method="DELETE",
+                status_code=response.status_code,
+                duration_ms=duration_ms(started_at),
+            ),
+        )
 
 
-def _raise_sds_retrieval_error(message_str):
-    logger.error(message_str)
+def _raise_sds_retrieval_error(
+    message_str: str, log_message: str | None = None
+) -> None:
+    safe_message = log_message or message_str
+    logger.error(
+        safe_message,
+        extra=build_log_extra(
+            event="sds_coroners_letter_retrieval_failed",
+            route="sds:get_file",
+            method="GET",
+            error_message=safe_message,
+        ),
+    )
     raise SDSLetterRetrievalError(message_str)
 
 
-def _raise_sds_claim_evidence_retrieval_error(message_str):
-    logger.error(message_str)
+def _raise_sds_claim_evidence_retrieval_error(
+    message_str: str,
+    log_message: str | None = None,
+) -> None:
+    safe_message = log_message or message_str
+    logger.error(
+        safe_message,
+        extra=build_log_extra(
+            event="sds_claim_evidence_retrieval_failed",
+            route="sds:get_file",
+            method="GET",
+            error_message=safe_message,
+        ),
+    )
     raise SDSClaimEvidenceRetrievalError(message_str)
 
 
