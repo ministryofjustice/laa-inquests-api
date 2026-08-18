@@ -13,6 +13,7 @@ from app.models.claim.enums import (
 )
 from app.models.claim.index import Claim, ClaimDecision
 from app.models.history.enums import ActorType, HistoryEventReference
+from app.models.notifications.enums import NotificationType
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
@@ -21,7 +22,6 @@ from app.ports.claim.update_claim_status_port import UpdateClaimStatusPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.use_cases.exceptions import ApplicationNotFoundError, ClaimNotFoundError
 from app.use_cases.reject_claim import RejectClaimCommand, RejectClaimUseCase
-from app.models.notifications.enums import NotificationType
 
 
 def _claim(claim_id: int = 1, laa_reference: int = 1) -> Claim:

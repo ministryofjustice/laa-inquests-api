@@ -3,13 +3,13 @@ from dataclasses import dataclass
 
 from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ReasonCode
 from app.models.history.enums import ActorType, HistoryEventReference
+from app.models.notifications.enums import NotificationType
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
 from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.ports.claim.update_claim_status_port import UpdateClaimStatusPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
-from app.models.notifications.enums import NotificationType
 from app.use_cases.exceptions import ApplicationNotFoundError, ClaimNotFoundError
 
 logger = logging.getLogger(__name__)
