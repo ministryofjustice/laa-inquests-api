@@ -39,7 +39,7 @@ class RejectClaimUseCase:
         self.update_claim_status_port = update_claim_status_port
         self.create_history_event_port = create_history_event_port
 
-    def execute(self, command: RejectClaimCommand) -> None:
+    def execute(self, command: RejectClaimCommand, caseworker_name: str) -> None:
         application = self.application_lookup_port.get_application_by_laa_reference(
             command.laa_reference
         )
@@ -64,6 +64,19 @@ class RejectClaimUseCase:
                 claim_id=command.claim_id,
                 status=ClaimStatus.REJECTED,
             )
+                  
+            self.create_history_event_port.create_history_event(
+                event_reference=HistoryEventReference.CLAIM_ASSESSMENT_COMPLETED,
+                actor=caseworker_name,
+                actor_type=ActorType.CASEWORKER,
+                laa_reference=application.laa_reference,
+                event_data={
+                    "claim_type": claim.claim_type_id,
+                    "claim_decision": ClaimStatus.REJECTED,
+                    "decision_justification": command.justification,
+                },
+            )
+            
             self.create_history_event_port.create_history_event(
                 event_reference=HistoryEventReference.CLAIM_REJECTED_EMAIL,
                 actor=ActorType.SYSTEM,
@@ -72,8 +85,9 @@ class RejectClaimUseCase:
                 event_data={
                     "recipient": application.provider.email_address,
                     "channel": NotificationType.EMAIL,
-                },
-            )
+                }
+            ),
+            
             self.update_claim_status_port.commit()
         except Exception:
             self.update_claim_status_port.rollback()

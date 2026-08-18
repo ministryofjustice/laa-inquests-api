@@ -58,7 +58,7 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
             raise ValueError(
                 "Event reference must be provided for history event creation."
             )
-        if actor is None:
+        if actor is None or actor.strip() == "":
             raise ValueError("Actor must be provided for history event creation.")
         if actor_type is None:
             raise ValueError("Actor type must be provided for history event creation.")

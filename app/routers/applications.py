@@ -679,7 +679,7 @@ def reject_claim(
     claim_id: int,
     request: RejectClaimRequest,
     use_case: RejectClaimUseCase = Depends(get_reject_claim_use_case),
-    _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
+    user: AuthenticatedUser = Depends(verify_entra_caseworker_token),
 ) -> Response:
     """Reject a claim, recording a manual rejection decision against it."""
     try:
@@ -688,7 +688,8 @@ def reject_claim(
                 laa_reference=laa_reference,
                 claim_id=claim_id,
                 justification=request.justification,
-            )
+            ),
+            user.name,
         )
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
