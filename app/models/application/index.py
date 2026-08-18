@@ -226,6 +226,9 @@ class ApplicationProceeding(SQLModel, table=True):
     laa_reference: int = Field(foreign_key="application.laa_reference")
     proceeding_id: ProceedingId = Field(foreign_key="proceeding.proceeding_id")
     proceeding: Proceeding = Relationship(back_populates="application_proceeding")
+    substantive_cost_limitation_effective_date: date | None = Field(
+        nullable=True, default=None
+    )
     application: Application = Relationship(back_populates="proceeding")
     certificate_issue_date: date = Field(nullable=True, default=None)
     certificate_start_date: date = Field(nullable=True, default=None)
