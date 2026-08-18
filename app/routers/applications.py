@@ -272,6 +272,9 @@ def get_reject_claim_use_case(
         get_claim_db_adapter
     ),
     update_claim_status_port: UpdateClaimStatusPort = Depends(get_claim_db_adapter),
+    create_history_event_port: CreateHistoryEventPort = Depends(
+        get_history_event_adapter
+    ),
 ) -> RejectClaimUseCase:
     return RejectClaimUseCase(
         application_lookup_port=application_lookup_port,
@@ -279,6 +282,7 @@ def get_reject_claim_use_case(
         create_claim_decision_port=create_claim_decision_port,
         create_decision_reason_port=create_decision_reason_port,
         update_claim_status_port=update_claim_status_port,
+        create_history_event_port=create_history_event_port,
     )
 
 

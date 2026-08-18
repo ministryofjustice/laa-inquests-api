@@ -12,13 +12,16 @@ from app.models.claim.enums import (
     ReasonCode,
 )
 from app.models.claim.index import Claim, ClaimDecision
+from app.models.history.enums import ActorType, HistoryEventReference
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
 from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.ports.claim.update_claim_status_port import UpdateClaimStatusPort
+from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.use_cases.exceptions import ApplicationNotFoundError, ClaimNotFoundError
 from app.use_cases.reject_claim import RejectClaimCommand, RejectClaimUseCase
+from app.models.notifications.enums import NotificationType
 
 
 def _claim(claim_id: int = 1, laa_reference: int = 1) -> Claim:
@@ -57,6 +60,7 @@ def _build_use_case(claim=None, application=None):
 
     create_reason_port = MagicMock(spec=CreateDecisionReasonPort)
     update_status_port = MagicMock(spec=UpdateClaimStatusPort)
+    create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
 
     use_case = RejectClaimUseCase(
         application_lookup_port=lookup_port,
@@ -64,12 +68,14 @@ def _build_use_case(claim=None, application=None):
         create_claim_decision_port=create_decision_port,
         create_decision_reason_port=create_reason_port,
         update_claim_status_port=update_status_port,
+        create_history_event_port=create_history_event_port,
     )
     return (
         use_case,
         create_decision_port,
         create_reason_port,
         update_status_port,
+        create_history_event_port,
     )
 
 
@@ -98,12 +104,15 @@ def test_raises_claim_not_found_when_claim_belongs_to_another_application():
 
 
 def test_creates_reject_decision_reason_updates_status_and_commits():
+    application = _application()
+
     (
         use_case,
         create_decision_port,
         create_reason_port,
         update_status_port,
-    ) = _build_use_case(claim=_claim(claim_id=5), application=_application())
+        create_history_event_port,
+    ) = _build_use_case(claim=_claim(claim_id=5), application=application)
 
     use_case.execute(RejectClaimCommand("1", 5, "Rejected after review."))
 
@@ -120,6 +129,16 @@ def test_creates_reject_decision_reason_updates_status_and_commits():
         claim_id=5,
         status=ClaimStatus.REJECTED,
     )
+    create_history_event_port.create_history_event.assert_called_once_with(
+        event_reference=HistoryEventReference.CLAIM_REJECTED_EMAIL,
+        actor=ActorType.SYSTEM,
+        actor_type=ActorType.SYSTEM,
+        laa_reference="1",
+        event_data={
+            "recipient": application.provider.email_address,
+            "channel": NotificationType.EMAIL,
+        },
+    )
     update_status_port.commit.assert_called_once()
     update_status_port.rollback.assert_not_called()
 
@@ -130,6 +149,7 @@ def test_rolls_back_when_a_write_fails():
         create_decision_port,
         _,
         update_status_port,
+        __,
     ) = _build_use_case(claim=_claim(claim_id=5), application=_application())
     create_decision_port.create_claim_decision.side_effect = RuntimeError("boom")
 
