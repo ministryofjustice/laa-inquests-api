@@ -49,7 +49,6 @@ deploy_branch() {
                 --set env.SERVICE_URL="$SERVICE_URL" \
                 --set env.PROVIDER_API_BASE_URL="$PROVIDER_API_BASE_URL" \
                 --set env.PROVIDER_API_KEY="$PROVIDER_API_KEY" \
-                --set env.LOG_LEVEL="$LOG_LEVEL"
 }
 
 deploy_main() {
@@ -87,7 +86,6 @@ deploy_main() {
                 --set env.SERVICE_URL="$SERVICE_URL" \
                 --set env.PROVIDER_API_BASE_URL="$PROVIDER_API_BASE_URL" \
                 --set env.PROVIDER_API_KEY="$PROVIDER_API_KEY" \
-                --set env.LOG_LEVEL="$LOG_LEVEL"
 }
 
 releaseTag="^[0-9]+[.][0-9]+[.][0-9]+$"
