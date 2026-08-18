@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 from decimal import Decimal
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 
@@ -140,35 +140,34 @@ def test_creates_reject_decision_reason_updates_status_and_commits():
         claim_id=5,
         status=ClaimStatus.REJECTED,
     )
-    
+
     assert create_history_event_port.create_history_event.call_count == 2
     create_history_event_port.create_history_event.assert_has_calls(
-      [
-        call(
-          event_reference=HistoryEventReference.CLAIM_ASSESSMENT_COMPLETED,
-          actor="Caseworker",
-          actor_type=ActorType.CASEWORKER,
-         laa_reference=1,
-         event_data={
-            "claim_type": ClaimType.PAYMENT_ON_ACCOUNT,
-            "claim_decision": ClaimStatus.REJECTED,
-            "decision_justification": "Rejected after review.",
-        },
-        ),
-        call(
-          event_reference=HistoryEventReference.CLAIM_REJECTED_EMAIL,
-          actor=ActorType.SYSTEM,
-          actor_type=ActorType.SYSTEM,
-         laa_reference="1",
-         event_data={
-            "recipient": application.provider.email_address,
-            "channel": NotificationType.EMAIL,
-         },
-        )
-      ] 
+        [
+            call(
+                event_reference=HistoryEventReference.CLAIM_ASSESSMENT_COMPLETED,
+                actor="Caseworker",
+                actor_type=ActorType.CASEWORKER,
+                laa_reference=1,
+                event_data={
+                    "claim_type": ClaimType.PAYMENT_ON_ACCOUNT,
+                    "claim_decision": ClaimStatus.REJECTED,
+                    "decision_justification": "Rejected after review.",
+                },
+            ),
+            call(
+                event_reference=HistoryEventReference.CLAIM_REJECTED_EMAIL,
+                actor=ActorType.SYSTEM,
+                actor_type=ActorType.SYSTEM,
+                laa_reference="1",
+                event_data={
+                    "recipient": application.provider.email_address,
+                    "channel": NotificationType.EMAIL,
+                },
+            ),
+        ]
     )
-          
-      
+
     update_status_port.commit.assert_called_once()
     update_status_port.rollback.assert_not_called()
 
