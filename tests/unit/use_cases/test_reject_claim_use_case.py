@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, call
 
 import pytest
 
+from app.contexts.user import set_entra_user_context
 from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
@@ -46,6 +47,11 @@ def _application(laa_reference: int = 1):
     application.laa_reference = laa_reference
     application.provider.firm_code = "ABC123"
     return application
+
+
+@pytest.fixture(autouse=True)
+def entra_user_context() -> None:
+    set_entra_user_context(None, "Caseworker")
 
 
 def _build_use_case(claim=None, application=None):
@@ -94,18 +100,14 @@ def test_raises_application_not_found_when_application_missing():
     use_case, *_ = _build_use_case(claim=_claim(), application=None)
 
     with pytest.raises(ApplicationNotFoundError):
-        use_case.execute(
-            RejectClaimCommand("999999", 1, "reason"), caseworker_name="Caseworker"
-        )
+        use_case.execute(RejectClaimCommand("999999", 1, "reason"))
 
 
 def test_raises_claim_not_found_when_claim_missing():
     use_case, *_ = _build_use_case(claim=None, application=_application())
 
     with pytest.raises(ClaimNotFoundError):
-        use_case.execute(
-            RejectClaimCommand("1", 999999, "reason"), caseworker_name="Caseworker"
-        )
+        use_case.execute(RejectClaimCommand("1", 999999, "reason"))
 
 
 def test_raises_claim_not_found_when_claim_belongs_to_another_application():
@@ -115,9 +117,7 @@ def test_raises_claim_not_found_when_claim_belongs_to_another_application():
     )
 
     with pytest.raises(ClaimNotFoundError):
-        use_case.execute(
-            RejectClaimCommand("2", 1, "reason"), caseworker_name="Caseworker"
-        )
+        use_case.execute(RejectClaimCommand("2", 1, "reason"))
 
 
 def test_creates_reject_decision_reason_updates_status_and_commits():
@@ -132,10 +132,7 @@ def test_creates_reject_decision_reason_updates_status_and_commits():
         _,
     ) = _build_use_case(claim=_claim(claim_id=5), application=application)
 
-    use_case.execute(
-        RejectClaimCommand("1", 5, "Rejected after review."),
-        caseworker_name="Caseworker",
-    )
+    use_case.execute(RejectClaimCommand("1", 5, "Rejected after review."))
 
     create_decision_port.create_claim_decision.assert_called_once_with(
         claim_id=5,
@@ -196,10 +193,7 @@ def test_history_event_not_created_when_update_claim_status_fails():
     )
 
     with pytest.raises(RuntimeError):
-        use_case.execute(
-            RejectClaimCommand("1", 5, "Rejected after review."),
-            caseworker_name="Caseworker",
-        )
+        use_case.execute(RejectClaimCommand("1", 5, "Rejected after review."))
 
     create_decision_port.create_claim_decision.assert_called_once_with(
         claim_id=5,
@@ -233,10 +227,7 @@ def test_reject_claim_not_committed_when_create_history_event_fails():
     )
 
     with pytest.raises(RuntimeError):
-        use_case.execute(
-            RejectClaimCommand("1", 5, "Rejected after review."),
-            caseworker_name="Caseworker",
-        )
+        use_case.execute(RejectClaimCommand("1", 5, "Rejected after review."))
 
     create_decision_port.create_claim_decision.assert_called_once_with(
         claim_id=5,
@@ -280,9 +271,7 @@ def test_rolls_back_when_a_write_fails():
     )
 
     with pytest.raises(RuntimeError):
-        use_case.execute(
-            RejectClaimCommand("1", 5, "reason"), caseworker_name="Caseworker"
-        )
+        use_case.execute(RejectClaimCommand("1", 5, "reason"))
 
     update_status_port.rollback.assert_called_once()
     update_status_port.commit.assert_not_called()
@@ -298,10 +287,7 @@ def test_sends_rejection_email_after_commit():
         gov_notify_port,
     ) = _build_use_case(claim=_claim(claim_id=5), application=_application())
 
-    use_case.execute(
-        RejectClaimCommand("1", 5, "Rejected after review."),
-        caseworker_name="Caseworker",
-    )
+    use_case.execute(RejectClaimCommand("1", 5, "Rejected after review."))
 
     gov_notify_port.send_claim_rejected_decision_email.assert_called_once_with(
         claim=use_case.get_claim_by_id_port.get_claim_by_id.return_value,
@@ -325,10 +311,7 @@ def test_rejection_email_failure_does_not_throw_error():
         "notify down"
     )
 
-    use_case.execute(
-        RejectClaimCommand("1", 5, "Rejected after review."),
-        caseworker_name="Caseworker",
-    )
+    use_case.execute(RejectClaimCommand("1", 5, "Rejected after review."))
 
     update_status_port.commit.assert_called_once()
     update_status_port.rollback.assert_not_called()

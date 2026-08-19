@@ -24,9 +24,9 @@ def test_refuse_decision_calls_use_case_with_expected_arguments():
     user = MagicMock()
     user.name = "Caseworker"
 
-    refuse_decision("1", request, use_case=use_case, user=user)
+    refuse_decision("1", request, use_case=use_case, _=user)
 
-    use_case.execute.assert_called_once_with("1", request, "Caseworker")
+    use_case.execute.assert_called_once_with("1", request)
 
 
 def test_refuse_decision_returns_204_on_success():
@@ -34,7 +34,7 @@ def test_refuse_decision_returns_204_on_success():
     user = MagicMock()
     user.name = "Caseworker"
 
-    response = refuse_decision("1", _make_request(), use_case=use_case, user=user)
+    response = refuse_decision("1", _make_request(), use_case=use_case, _=user)
 
     assert isinstance(response, Response)
     assert response.status_code == 204
@@ -47,7 +47,7 @@ def test_refuse_decision_raises_404_when_application_not_found():
     use_case.execute.side_effect = ApplicationNotFoundError()
 
     with pytest.raises(HTTPException) as exception:
-        refuse_decision("1", _make_request(), use_case=use_case, user=user)
+        refuse_decision("1", _make_request(), use_case=use_case, _=user)
 
     assert exception.value.status_code == 404
     assert exception.value.detail == "Application not found"

@@ -2,6 +2,7 @@ import logging
 
 from sqlmodel import Session, select
 
+from app.contexts.user import get_entra_user_object_id
 from app.logging_utils import build_log_extra
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
@@ -67,10 +68,15 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
                 "LAA reference must be provided for history event creation."
             )
 
+        entra_user_object_id = (
+            None if actor_type == ActorType.SYSTEM else get_entra_user_object_id()
+        )
+
         new_event = HistoryEvent(
             event_reference=event_reference,
             actor=actor,
             actor_type=actor_type,
+            entra_user_object_id=entra_user_object_id,
             laa_reference=laa_reference,
             event_data=event_data,
         )

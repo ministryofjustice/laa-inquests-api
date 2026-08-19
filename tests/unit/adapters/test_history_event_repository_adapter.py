@@ -4,6 +4,7 @@ import pytest
 from sqlmodel import select
 
 from app.adapters.history_event_repository_adapter import HistoryEventRepositoryAdapter
+from app.contexts.user import clear_entra_user_context, set_entra_user_context
 from app.models.application.index import (
     Application,
     ApplicationProceeding,
@@ -264,3 +265,43 @@ def test_get_application_history_returns_event_list_in_reverse_chronological_ord
 
     history = adapter.get_application_history(laa_reference)
     assert history == [event2, event1]
+
+
+def test_create_history_event_does_not_store_entra_object_id_for_system_actor(session):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    adapter = HistoryEventRepositoryAdapter(session)
+
+    set_entra_user_context("entra-object-id-123", "Caseworker")
+    try:
+        created = adapter.create_history_event(
+            event_reference=HistoryEventReference.APPLICATION_SUBMISSION_CONFIRMATION,
+            actor=ActorType.SYSTEM,
+            actor_type=ActorType.SYSTEM,
+            laa_reference=laa_reference,
+        )
+    finally:
+        clear_entra_user_context()
+
+    stored = session.get(HistoryEvent, created.id)
+    assert stored is not None
+    assert stored.entra_user_object_id is None
+
+
+def test_create_history_event_stores_entra_object_id_for_non_system_actor(session):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    adapter = HistoryEventRepositoryAdapter(session)
+
+    set_entra_user_context("entra-object-id-123", "Caseworker")
+    try:
+        created = adapter.create_history_event(
+            event_reference=HistoryEventReference.APPLICATION_ASSESSMENT_COMPLETED,
+            actor="caseworker@example.com",
+            actor_type=ActorType.CASEWORKER,
+            laa_reference=laa_reference,
+        )
+    finally:
+        clear_entra_user_context()
+
+    stored = session.get(HistoryEvent, created.id)
+    assert stored is not None
+    assert stored.entra_user_object_id == "entra-object-id-123"
