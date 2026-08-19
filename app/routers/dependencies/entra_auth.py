@@ -6,7 +6,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.adapters.entra_auth_adapter import EntraAuthAdapter
 from app.config import Config
-from app.logging_utils import set_entra_user_context
+from app.contexts.user import set_entra_user_context
 from app.ports.entra_auth_port import AuthenticatedUser, EntraAuthPort
 
 _http_bearer = HTTPBearer(auto_error=False)

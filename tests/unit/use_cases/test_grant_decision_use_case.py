@@ -8,7 +8,7 @@ from app.models.application.index import (
     Application,
     GrantApplicationUpdate,
 )
-from app.logging_utils import set_entra_user_context
+from app.contexts.user import set_entra_user_context
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.notifications.enums import NotificationType
 from app.ports.update_decision_port import ApplicationDecisionPort

@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, call
 
 import pytest
 
-from app.logging_utils import set_entra_user_context
+from app.contexts.user import set_entra_user_context
 from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,

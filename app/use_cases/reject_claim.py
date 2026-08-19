@@ -1,7 +1,7 @@
 import logging
 from dataclasses import dataclass
 
-from app.logging_utils import get_entra_user_name
+from app.contexts.user import get_entra_user_name
 from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ReasonCode
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.notifications.enums import NotificationType

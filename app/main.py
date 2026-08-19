@@ -7,13 +7,9 @@ from fastapi.responses import JSONResponse
 
 from app.config.docs import docs_config
 from app.config.logging import configure_logging
-from app.logging_utils import (
-    build_log_extra,
-    clear_entra_user_context,
-    clear_request_context,
-    duration_ms,
-    set_request_context,
-)
+from app.contexts.request import clear_request_context, set_request_context
+from app.contexts.user import clear_entra_user_context
+from app.logging_utils import build_log_extra, duration_ms
 from app.routers import applications, claims, notifications, reports
 
 logger = logging.getLogger(__name__)

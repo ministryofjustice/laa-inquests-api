@@ -2,7 +2,8 @@ import logging
 
 from sqlmodel import Session, select
 
-from app.logging_utils import build_log_extra, get_entra_user_object_id
+from app.contexts.user import get_entra_user_object_id
+from app.logging_utils import build_log_extra
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.ports.create_history_event_port import CreateHistoryEventPort

@@ -1,7 +1,8 @@
 import logging
 from datetime import UTC, datetime
 
-from app.logging_utils import build_log_extra, get_entra_user_name
+from app.contexts.user import get_entra_user_name
+from app.logging_utils import build_log_extra
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import GrantApplicationUpdate
 from app.models.history.enums import ActorType, HistoryEventReference
