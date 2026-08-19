@@ -41,7 +41,7 @@ class CreateCertificateContextUseCase:
         )
 
         if application.client.correspondence_address_source == "USE_PROVIDER_ADDRESS":
-            client_address = office_address
+            client_address = office_address.model_copy()
         elif (
             application.client.correspondence_address_source == "USE_SPECIFIED_ADDRESS"
         ):
