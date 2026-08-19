@@ -1,8 +1,8 @@
 """idds_652_add_entra_user_object_id_to_history_event
 
-Revision ID: 595d977552b0
-Revises: c4f1a2b3d5e6
-Create Date: 2026-08-18 16:54:14.484320
+Revision ID: f99a8b326ff8
+Revises: 2f2cfb5eb539
+Create Date: 2026-08-19 11:37:38.725364
 
 """
 
@@ -14,8 +14,8 @@ import sqlmodel
 
 
 # revision identifiers, used by Alembic.
-revision: str = "595d977552b0"
-down_revision: Union[str, None] = "c4f1a2b3d5e6"
+revision: str = "f99a8b326ff8"
+down_revision: Union[str, None] = "2f2cfb5eb539"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
