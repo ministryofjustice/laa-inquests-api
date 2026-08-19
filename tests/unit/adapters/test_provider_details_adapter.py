@@ -183,3 +183,87 @@ class TestGetFirmsByIds:
             pytest.raises(ProviderDetailsRetrievalError),
         ):
             adapter.get_firms_by_ids(["0A123B"])
+
+
+class TestDoesOfficeExist:
+    def test_does_not_raise_when_office_exists(self, adapter):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "office": {
+                "addressLine1": "123 Main St",
+                "addressLine2": "Suite 100",
+                "city": "London",
+                "county": "Greater London",
+                "postCode": "AB12 3CD",
+            }
+        }
+
+        with patch("httpx.get", return_value=mock_response):
+            adapter.does_office_exist("OFFICE123")
+
+    def test_raises_provider_details_retrieval_error_when_api_returns_http_error(
+        self, adapter
+    ):
+        mock_response = MagicMock()
+        mock_response.raise_for_status.side_effect = _httpx.HTTPStatusError(
+            "error", request=MagicMock(), response=MagicMock()
+        )
+
+        with (
+            patch("httpx.get", return_value=mock_response),
+            pytest.raises(ProviderDetailsRetrievalError),
+        ):
+            adapter.does_office_exist("OFFICE123")
+
+    def test_raises_provider_details_retrieval_error_when_request_raises_exception(
+        self, adapter
+    ):
+        with (
+            patch("httpx.get", side_effect=_httpx.RequestError("connection failed")),
+            pytest.raises(ProviderDetailsRetrievalError),
+        ):
+            adapter.does_office_exist("OFFICE123")
+
+    def test_delegates_to_get_office_address_with_correct_office_id(self, adapter):
+        with patch.object(adapter, "get_office_address") as mock_get:
+            adapter.does_office_exist("0U651L")
+
+        mock_get.assert_called_once_with("0U651L")
+
+    def test_logs_success_when_office_exists(self, adapter, caplog):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "office": {
+                "addressLine1": "123 Main St",
+                "addressLine2": "",
+                "city": "London",
+                "county": "Greater London",
+                "postCode": "AB12 3CD",
+            }
+        }
+
+        with patch("httpx.get", return_value=mock_response):
+            import logging
+
+            with caplog.at_level(logging.INFO):
+                adapter.does_office_exist("OFFICE123")
+
+        assert "Provider office address lookup succeeded" in caplog.text
+
+    def test_logs_error_when_office_lookup_fails(self, adapter, caplog):
+        mock_response = MagicMock()
+        mock_response.raise_for_status.side_effect = _httpx.HTTPStatusError(
+            "error", request=MagicMock(), response=MagicMock()
+        )
+
+        import logging
+
+        with (
+            patch("httpx.get", return_value=mock_response),
+            caplog.at_level(logging.ERROR),
+            pytest.raises(ProviderDetailsRetrievalError),
+        ):
+            adapter.does_office_exist("OFFICE123")
+
+        assert "Provider office address lookup failed" in caplog.text

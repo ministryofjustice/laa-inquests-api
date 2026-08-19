@@ -168,11 +168,13 @@ def get_create_application_use_case(
         get_history_event_adapter
     ),
     gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
+    provider_details_port: ProviderDetailsPort = Depends(get_provider_details_port),
 ) -> CreateApplicationUseCase:
     return CreateApplicationUseCase(
         create_application_port=create_application_port,
         create_history_event_port=create_history_event_port,
         gov_notify_port=gov_notify_port,
+        provider_details_port=provider_details_port,
     )
 
 
