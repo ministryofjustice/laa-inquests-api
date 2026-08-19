@@ -1,7 +1,7 @@
 """Add cost limitation effective date and certificate end date to application proceeding
 
 Revision ID: 6001ea88742d
-Revises: c4f1a2b3d5e6
+Revises: f99a8b326ff8
 Create Date: 2026-08-19 10:35:38.047023
 
 """
@@ -13,7 +13,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "6001ea88742d"
-down_revision: str | None = "c4f1a2b3d5e6"
+down_revision: str | None = "f99a8b326ff8"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
