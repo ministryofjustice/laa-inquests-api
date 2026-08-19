@@ -1,7 +1,7 @@
 """Remove_isClientCorrespondenceRecipient
 
 Revision ID: 2f2cfb5eb539
-Revises: 9c0ab4f5baa3
+Revises: d8a3f5e7b1c4
 Create Date: 2026-08-05 15:16:33.489816
 
 """
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = '2f2cfb5eb539'
-down_revision: Union[str, None] = '9c0ab4f5baa3'
+down_revision: Union[str, None] = 'd8a3f5e7b1c4'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
