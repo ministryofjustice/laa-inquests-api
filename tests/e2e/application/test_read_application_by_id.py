@@ -91,7 +91,6 @@ def test_200_returns_client_correspondence_recipient_flag_when_client_is_recipie
     )
 
     requested_application = response.json()
-    assert requested_application["client"]["isClientCorrespondenceRecipient"] is True
     assert requested_application["client"]["correspondenceRecipient"] is None
 
 
@@ -114,7 +113,6 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
                     "townOrCity": "London",
                     "postcode": "SW1A 1AA",
                 },
-                "isClientCorrespondenceRecipient": False,
                 "correspondenceRecipient": {
                     "recipientType": "ORGANISATION",
                     "recipientName": "Inquests Support Org",
@@ -162,7 +160,6 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
     )
 
     requested_application = response.json()
-    assert requested_application["client"]["isClientCorrespondenceRecipient"] is False
     assert requested_application["client"]["correspondenceRecipient"] == {
         "recipientType": "ORGANISATION",
         "recipientName": "Inquests Support Org",

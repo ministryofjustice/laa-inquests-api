@@ -149,14 +149,12 @@ class ApplicationRepositoryAdapter(
             home_address_id=home_address_id,
             correspondence_recipient_type=(
                 request.client.correspondence_recipient.recipient_type
-                if not request.client.is_client_correspondence_recipient
-                and request.client.correspondence_recipient is not None
+                if request.client.correspondence_recipient is not None
                 else None
             ),
             correspondence_recipient_name=(
                 request.client.correspondence_recipient.recipient_name
-                if not request.client.is_client_correspondence_recipient
-                and request.client.correspondence_recipient is not None
+                if request.client.correspondence_recipient is not None
                 else None
             ),
         )

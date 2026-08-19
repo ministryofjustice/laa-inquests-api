@@ -31,7 +31,6 @@ def _create_application_payload():
                 "county": "Greater London",
                 "postcode": "SW1A 1AA",
             },
-            "isClientCorrespondenceRecipient": True,
         },
         "publicBodies": [{"publicBodyId": "Department for Transport"}],
         "deceased": {
