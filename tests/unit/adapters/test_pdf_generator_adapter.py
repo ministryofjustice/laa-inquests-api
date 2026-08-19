@@ -152,6 +152,6 @@ def test_generate_print_letter_pdf_contains_end_date(
     reader = PdfReader(BytesIO(print_letter_pdf))
     pdf_text = "\n".join(page.extract_text() or "" for page in reader.pages)
 
-    assert "15 July 2324" in pdf_text
+    assert pdf_text.count("15 July 2324") == 3
     pdf_text_no_newlines = pdf_text.replace("\n", " ")
     assert "End date" in pdf_text_no_newlines
