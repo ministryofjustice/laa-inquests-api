@@ -96,6 +96,7 @@ class CreateCertificateContextUseCase:
             proceeding_name=proceeding_name,
             proceeding_description=proceeding_description,
             effective_date=effective_date,
+            end_date=proceeding.certificate_end_date,
             date_work_can_commence=date_work_can_commence,
             date_current_level_of_service_effective=date_current_level_of_service_effective,
             status=status,

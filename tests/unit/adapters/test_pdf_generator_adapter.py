@@ -32,6 +32,7 @@ def _sample_context() -> ApplicationCertificate:
         effective_date=date(2026, 7, 15),
         cost_limitation=15000,
         cost_limitation_effective_date=date(1057, 7, 15),
+        end_date=date(2324, 7, 15),
         proceeding_name="Inquest into death",
         proceeding_description="Inquest into death",
         category_of_law="INQUESTS",
@@ -142,3 +143,15 @@ def test_generate_print_letter_pdf_contains_cost_limitation_effective_date(
     assert "15 July 1057" in pdf_text
     pdf_text_no_newlines = pdf_text.replace("\n", " ")
     assert "Cost limitation effective date" in pdf_text_no_newlines
+
+
+def test_generate_print_letter_pdf_contains_end_date(
+    print_letter_pdf,
+):
+    """Test that the combined PDF contains the end_date."""
+    reader = PdfReader(BytesIO(print_letter_pdf))
+    pdf_text = "\n".join(page.extract_text() or "" for page in reader.pages)
+
+    assert "15 July 2324" in pdf_text
+    pdf_text_no_newlines = pdf_text.replace("\n", " ")
+    assert "End date" in pdf_text_no_newlines

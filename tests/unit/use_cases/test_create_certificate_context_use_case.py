@@ -245,6 +245,7 @@ def test_populate_certificate_context_populates_application_proceeding_date_fiel
         proceeding=create_base_application_proceeding(
             certificate_start_date=test_date,
             substantive_cost_limitation_effective_date=test_date,
+            certificate_end_date=test_date,
         )
     )
 
@@ -254,6 +255,7 @@ def test_populate_certificate_context_populates_application_proceeding_date_fiel
     assert result.date_work_can_commence == test_date.date()
     assert result.date_current_level_of_service_effective == test_date.date()
     assert result.cost_limitation_effective_date == test_date.date()
+    assert result.end_date == test_date.date()
 
 
 def test_populate_certificate_context_populates_application_status_fields():

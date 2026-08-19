@@ -152,6 +152,7 @@ def create_base_application_proceeding(proceeding=_NOT_PROVIDED, **overrides):
         "certificate_start_date": datetime(2026, 6, 18, tzinfo=UTC),
         "certificate_issue_date": datetime(2026, 6, 18, tzinfo=UTC),
         "substantive_cost_limitation_effective_date": datetime(2026, 6, 18, tzinfo=UTC),
+        "certificate_end_date": None,
     }
     return ApplicationProceeding(**(defaults | overrides))
 

@@ -232,6 +232,7 @@ class ApplicationProceeding(SQLModel, table=True):
     application: Application = Relationship(back_populates="proceeding")
     certificate_issue_date: date = Field(nullable=True, default=None)
     certificate_start_date: date = Field(nullable=True, default=None)
+    certificate_end_date: date = Field(nullable=True, default=None)
 
     @property
     def proceeding_name(self):
