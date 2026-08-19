@@ -2,7 +2,7 @@ import logging
 
 from sqlmodel import Session, select
 
-from app.logging_utils import build_log_extra
+from app.logging_utils import build_log_extra, get_entra_user_object_id
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.ports.create_history_event_port import CreateHistoryEventPort
@@ -71,6 +71,7 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
             event_reference=event_reference,
             actor=actor,
             actor_type=actor_type,
+            entra_user_object_id=get_entra_user_object_id(),
             laa_reference=laa_reference,
             event_data=event_data,
         )
