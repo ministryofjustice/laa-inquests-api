@@ -82,6 +82,11 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.env.AWS_SECRETS_GOV_NOTIFY_TEMPLATE_IDS }}
                   key: GOV_NOTIFY_CLAIM_SUBMIT_TEMPLATE_ID
+            - name: GOV_NOTIFY_CLAIM_REJECT_TEMPLATE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.env.AWS_SECRETS_GOV_NOTIFY_TEMPLATE_IDS }}
+                  key: GOV_NOTIFY_CLAIM_REJECT_TEMPLATE_ID
             - name: GOV_NOTIFY_CALLBACK_BEARER_TOKEN
               valueFrom:
                 secretKeyRef:

@@ -158,10 +158,11 @@ class GovNotifyAdapter(GovNotifyPort):
         personalisation = create_claim_rejection_email_personalisation(
             claim, application, reject_reason, firm_name
         )
-        self.client.send_email_notification(
+        self._send_email_notification(
             email_address=recipient_email,
             template_id=Config.GOV_NOTIFY_CLAIM_REJECT_TEMPLATE_ID,
             personalisation=personalisation.model_dump(),
+            event_name="govnotify_send_claim_rejected_decision_email",
         )
 
     def send_precompiled_letter(self, reference: str, pdf: bytes) -> None:
