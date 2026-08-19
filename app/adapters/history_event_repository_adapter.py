@@ -68,11 +68,15 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
                 "LAA reference must be provided for history event creation."
             )
 
+        entra_user_object_id = (
+            None if actor_type == ActorType.SYSTEM else get_entra_user_object_id()
+        )
+
         new_event = HistoryEvent(
             event_reference=event_reference,
             actor=actor,
             actor_type=actor_type,
-            entra_user_object_id=get_entra_user_object_id(),
+            entra_user_object_id=entra_user_object_id,
             laa_reference=laa_reference,
             event_data=event_data,
         )
