@@ -20,6 +20,8 @@ from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
 from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.ports.claim.update_claim_status_port import UpdateClaimStatusPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
+from app.ports.gov_notify_port import GovNotifyPort
+from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.exceptions import ApplicationNotFoundError, ClaimNotFoundError
 from app.use_cases.reject_claim import RejectClaimCommand, RejectClaimUseCase
 
@@ -35,12 +37,14 @@ def _claim(claim_id: int = 1, laa_reference: int = 1) -> Claim:
         total_profit_cost_gross=Decimal("1200.00"),
         total_profit_cost_vat_zero=Decimal("500.00"),
         poa_type_id=POAType.PROFIT_COST,
+        claimant_id="claimant-123@provider.co.uk",
     )
 
 
 def _application(laa_reference: int = 1):
     application = MagicMock()
     application.laa_reference = laa_reference
+    application.provider.firm_code = "ABC123"
     return application
 
 
@@ -60,9 +64,11 @@ def _build_use_case(claim=None, application=None):
 
     create_reason_port = MagicMock(spec=CreateDecisionReasonPort)
     update_status_port = MagicMock(spec=UpdateClaimStatusPort)
-    create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
 
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
+    provider_details_port = MagicMock(spec=ProviderDetailsPort)
+    provider_details_port.get_firm_name.return_value = "Test Firm"
+    gov_notify_port = MagicMock(spec=GovNotifyPort)
 
     use_case = RejectClaimUseCase(
         application_lookup_port=lookup_port,
@@ -71,6 +77,8 @@ def _build_use_case(claim=None, application=None):
         create_decision_reason_port=create_reason_port,
         update_claim_status_port=update_status_port,
         create_history_event_port=create_history_event_port,
+        provider_details_port=provider_details_port,
+        gov_notify_port=gov_notify_port,
     )
     return (
         use_case,
@@ -78,6 +86,7 @@ def _build_use_case(claim=None, application=None):
         create_reason_port,
         update_status_port,
         create_history_event_port,
+        gov_notify_port,
     )
 
 
@@ -120,6 +129,7 @@ def test_creates_reject_decision_reason_updates_status_and_commits():
         create_reason_port,
         update_status_port,
         create_history_event_port,
+        _,
     ) = _build_use_case(claim=_claim(claim_id=5), application=application)
 
     use_case.execute(
@@ -179,6 +189,7 @@ def test_history_event_not_created_when_update_claim_status_fails():
         create_reason_port,
         update_status_port,
         create_history_event_port,
+        _,
     ) = _build_use_case(claim=_claim(claim_id=5), application=_application())
     update_status_port.update_claim_status.side_effect = RuntimeError(
         "Cannot update claim status"
@@ -215,6 +226,7 @@ def test_reject_claim_not_committed_when_create_history_event_fails():
         create_reason_port,
         update_status_port,
         create_history_event_port,
+        _,
     ) = _build_use_case(claim=_claim(claim_id=5), application=_application())
     create_history_event_port.create_history_event.side_effect = RuntimeError(
         "Cannot create history event"
@@ -261,6 +273,7 @@ def test_rolls_back_when_a_write_fails():
         _,
         update_status_port,
         __,
+        _gov_notify_port,
     ) = _build_use_case(claim=_claim(claim_id=5), application=_application())
     create_decision_port.create_claim_decision.side_effect = RuntimeError(
         "Cannot create claim decision"
@@ -273,3 +286,49 @@ def test_rolls_back_when_a_write_fails():
 
     update_status_port.rollback.assert_called_once()
     update_status_port.commit.assert_not_called()
+
+
+def test_sends_rejection_email_after_commit():
+    (
+        use_case,
+        _,
+        _,
+        _,
+        _,
+        gov_notify_port,
+    ) = _build_use_case(claim=_claim(claim_id=5), application=_application())
+
+    use_case.execute(
+        RejectClaimCommand("1", 5, "Rejected after review."),
+        caseworker_name="Caseworker",
+    )
+
+    gov_notify_port.send_claim_rejected_decision_email.assert_called_once_with(
+        claim=use_case.get_claim_by_id_port.get_claim_by_id.return_value,
+        application=use_case.application_lookup_port.get_application_by_laa_reference.return_value,
+        reject_reason="Rejected after review.",
+        recipient_email="claimant-123@provider.co.uk",
+        firm_name="Test Firm",
+    )
+
+
+def test_rejection_email_failure_does_not_throw_error():
+    (
+        use_case,
+        _,
+        _,
+        update_status_port,
+        _,
+        gov_notify_port,
+    ) = _build_use_case(claim=_claim(claim_id=5), application=_application())
+    gov_notify_port.send_claim_rejected_decision_email.side_effect = RuntimeError(
+        "notify down"
+    )
+
+    use_case.execute(
+        RejectClaimCommand("1", 5, "Rejected after review."),
+        caseworker_name="Caseworker",
+    )
+
+    update_status_port.commit.assert_called_once()
+    update_status_port.rollback.assert_not_called()
