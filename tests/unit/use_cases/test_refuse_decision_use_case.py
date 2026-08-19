@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, call
 import pytest
 from pydantic import ValidationError
 
+from app.logging_utils import set_entra_user_context
 from app.models.application.index import (
     RefuseApplicationUpdate,
 )
@@ -12,6 +13,11 @@ from app.ports.update_decision_port import ApplicationDecisionPort
 from app.use_cases.exceptions import ApplicationNotFoundError, RefuseDecisionError
 from app.use_cases.refuse_decision import RefuseDecisionUseCase
 from tests.unit.factories import create_base_application
+
+
+@pytest.fixture(autouse=True)
+def entra_user_context() -> None:
+    set_entra_user_context(None, "Caseworker")
 
 
 @pytest.fixture
@@ -89,7 +95,7 @@ def test_refuse_decision_calls_required_ports_and_commit(
     refuse_request,
     create_history_event_port,
 ):
-    use_case.execute("1", refuse_request, "Caseworker")
+    use_case.execute("1", refuse_request)
 
     update_decision_port.update_decision.assert_called_once_with(application.proceeding)
     update_decision_port.commit.assert_called_once()
@@ -101,7 +107,7 @@ def test_refuse_decision_creates_required_history_events(
     refuse_request,
     create_history_event_port,
 ):
-    use_case.execute("1", refuse_request, "Caseworker")
+    use_case.execute("1", refuse_request)
 
     assert create_history_event_port.create_history_event.call_count == 2
     create_history_event_port.create_history_event.assert_has_calls(
@@ -137,7 +143,7 @@ def test_refuse_decision_creates_required_history_events(
 def test_refuse_decision_sets_merits_decision_to_refused(
     use_case, application, refuse_request
 ):
-    use_case.execute("1", refuse_request, "Caseworker")
+    use_case.execute("1", refuse_request)
 
     assert application.proceeding.merits_decision == "REFUSED"
 
@@ -148,13 +154,13 @@ def test_refuse_decision_raises_404_when_application_not_found(
     update_decision_port.get_application_by_laa_reference.return_value = None
 
     with pytest.raises(ApplicationNotFoundError):
-        use_case.execute("99999", refuse_request, "Caseworker")
+        use_case.execute("99999", refuse_request)
 
 
 def test_refuse_decision_sets_overall_decision_on_application(
     use_case, application, refuse_request
 ):
-    use_case.execute("1", refuse_request, "Caseworker")
+    use_case.execute("1", refuse_request)
 
     assert application.overall_decision == "REFUSED"
 
@@ -171,7 +177,7 @@ def test_refuse_decision_raises_exception_and_rolls_back_if_gov_notify_fails(
     )
 
     with pytest.raises(RefuseDecisionError, match="Failed to refuse application."):
-        use_case.execute("1", refuse_request, "Caseworker")
+        use_case.execute("1", refuse_request)
 
     update_decision_port.rollback.assert_called_once()
     create_history_event_port.rollback.assert_called_once()

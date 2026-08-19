@@ -1,6 +1,6 @@
 import logging
 
-from app.logging_utils import build_log_extra
+from app.logging_utils import build_log_extra, get_entra_user_name
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import RefuseApplicationUpdate
 from app.models.history.enums import ActorType, HistoryEventReference
@@ -27,9 +27,7 @@ class RefuseDecisionUseCase:
         self.gov_notify_port = gov_notify_port
         self.create_history_event_port = create_history_event_port
 
-    def execute(
-        self, laa_reference: str, request: RefuseApplicationUpdate, caseworker_name: str
-    ) -> None:
+    def execute(self, laa_reference: str, request: RefuseApplicationUpdate) -> None:
         application = self.application_decision_port.get_application_by_laa_reference(
             laa_reference
         )
@@ -45,7 +43,7 @@ class RefuseDecisionUseCase:
 
         self.create_history_event_port.create_history_event(
             event_reference=HistoryEventReference.APPLICATION_ASSESSMENT_COMPLETED,
-            actor=caseworker_name,
+            actor=get_entra_user_name(),
             actor_type=ActorType.CASEWORKER,
             laa_reference=application.laa_reference,
             event_data={

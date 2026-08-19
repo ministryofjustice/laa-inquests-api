@@ -1,6 +1,7 @@
 import logging
 from dataclasses import dataclass
 
+from app.logging_utils import get_entra_user_name
 from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ReasonCode
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.notifications.enums import NotificationType
@@ -45,7 +46,7 @@ class RejectClaimUseCase:
         self.provider_details_port = provider_details_port
         self.gov_notify_port = gov_notify_port
 
-    def execute(self, command: RejectClaimCommand, caseworker_name: str) -> None:
+    def execute(self, command: RejectClaimCommand) -> None:
         application = self.application_lookup_port.get_application_by_laa_reference(
             command.laa_reference
         )
@@ -73,7 +74,7 @@ class RejectClaimUseCase:
 
             self.create_history_event_port.create_history_event(
                 event_reference=HistoryEventReference.CLAIM_ASSESSMENT_COMPLETED,
-                actor=caseworker_name,
+                actor=get_entra_user_name(),
                 actor_type=ActorType.CASEWORKER,
                 laa_reference=application.laa_reference,
                 event_data={

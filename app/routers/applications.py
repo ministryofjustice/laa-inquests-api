@@ -683,7 +683,7 @@ def reject_claim(
     claim_id: int,
     request: RejectClaimRequest,
     use_case: RejectClaimUseCase = Depends(get_reject_claim_use_case),
-    user: AuthenticatedUser = Depends(verify_entra_caseworker_token),
+    _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
 ) -> Response:
     """Reject a claim, recording a manual rejection decision against it."""
     try:
@@ -693,7 +693,6 @@ def reject_claim(
                 claim_id=claim_id,
                 justification=request.justification,
             ),
-            user.name,
         )
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
@@ -708,11 +707,11 @@ def refuse_decision(
     laa_reference: str,
     request: RefuseApplicationUpdate,
     use_case: RefuseDecisionUseCase = Depends(get_make_merits_decision_use_case),
-    user: AuthenticatedUser = Depends(verify_entra_caseworker_token),
+    _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
 ) -> Response:
     """Set the merits decision on the single proceeding for a given application."""
     try:
-        use_case.execute(laa_reference, request, user.name)
+        use_case.execute(laa_reference, request)
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
 
@@ -724,11 +723,11 @@ def grant_decision(
     laa_reference: str,
     request: GrantApplicationUpdate,
     use_case: GrantDecisionUseCase = Depends(get_grant_decision_use_case),
-    user: AuthenticatedUser = Depends(verify_entra_caseworker_token),
+    _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
 ) -> Response:
     """Grant the merits decision on the single proceeding for a given application."""
     try:
-        use_case.execute(laa_reference, request, user.name)
+        use_case.execute(laa_reference, request)
 
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
