@@ -79,6 +79,7 @@ class EntraAuthAdapter:
                 firm_code=payload.get("FIRM_CODE"),
                 scopes=token_scopes | token_roles,
                 name=self._format_name(payload.get("name")),
+                entra_object_id=payload.get("oid"),
             )
         except HTTPException:
             logger.warning(

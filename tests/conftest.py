@@ -202,6 +202,7 @@ def client_fixture(session: Session):
             firm_code="0A123B",
             scopes=frozenset({"User.Provider", "User.Caseworker"}),
             name="Test Name",
+            entra_object_id="some-entra-object-id",
         )
         return mock_auth
 

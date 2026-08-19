@@ -7,6 +7,7 @@ class AuthenticatedUser:
     firm_code: str | None
     scopes: frozenset[str]
     name: str
+    entra_object_id: str | None = None
 
 
 class EntraAuthPort(Protocol):

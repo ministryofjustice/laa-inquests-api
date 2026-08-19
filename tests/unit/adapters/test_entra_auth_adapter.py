@@ -31,12 +31,14 @@ def test_verify_token_returns_user_with_firm_code_and_name_when_token_is_valid(a
             "scp": "User.Provider",
             "FIRM_CODE": "0A123B",
             "name": "Test Name",
+            "oid": "some-entra-object-id",
         },
     ):
         user = adapter.verify_token("valid.jwt.token")
 
     assert user.firm_code == "0A123B"
     assert user.name == "Test Name"
+    assert user.entra_object_id == "some-entra-object-id"
     assert "User.Provider" in user.scopes
 
 

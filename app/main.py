@@ -9,6 +9,7 @@ from app.config.docs import docs_config
 from app.config.logging import configure_logging
 from app.logging_utils import (
     build_log_extra,
+    clear_entra_user_context,
     clear_request_context,
     duration_ms,
     set_request_context,
@@ -51,6 +52,7 @@ def create_app():
             return response
         finally:
             clear_request_context(context_tokens)
+            clear_entra_user_context()
 
     @app.exception_handler(Exception)
     async def internal_server_exception_handler(request: Request, exc: Exception):

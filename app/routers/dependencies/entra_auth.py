@@ -1,10 +1,12 @@
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
+from fastapi.concurrency import run_in_threadpool
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.adapters.entra_auth_adapter import EntraAuthAdapter
 from app.config import Config
+from app.logging_utils import set_entra_user_context
 from app.ports.entra_auth_port import AuthenticatedUser, EntraAuthPort
 
 _http_bearer = HTTPBearer(auto_error=False)
@@ -37,10 +39,11 @@ def verify_entra_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    entra_auth.verify_token(credentials.credentials)
+    user = entra_auth.verify_token(credentials.credentials)
+    set_entra_user_context(user.entra_object_id, user.name)
 
 
-def verify_entra_provider_token(
+async def verify_entra_provider_token(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_http_bearer)],
     entra_auth: Annotated[EntraAuthPort, Depends(get_entra_auth_port)],
 ) -> AuthenticatedUser:
@@ -51,7 +54,11 @@ def verify_entra_provider_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    return entra_auth.verify_token(credentials.credentials, {"User.Provider"})
+    user = await run_in_threadpool(
+        entra_auth.verify_token, credentials.credentials, {"User.Provider"}
+    )
+    set_entra_user_context(user.entra_object_id, user.name)
+    return user
 
 
 def get_current_provider_firm_code(
@@ -66,7 +73,7 @@ def get_current_provider_firm_code(
     return user.firm_code
 
 
-def verify_entra_caseworker_token(
+async def verify_entra_caseworker_token(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_http_bearer)],
     entra_auth: Annotated[EntraAuthPort, Depends(get_entra_auth_port)],
 ) -> AuthenticatedUser:
@@ -77,7 +84,11 @@ def verify_entra_caseworker_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    return entra_auth.verify_token(credentials.credentials, {"User.Caseworker"})
+    user = await run_in_threadpool(
+        entra_auth.verify_token, credentials.credentials, {"User.Caseworker"}
+    )
+    set_entra_user_context(user.entra_object_id, user.name)
+    return user
 
 
 def verify_entra_provider_or_caseworker_token(
