@@ -130,7 +130,7 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
         try:
             self.get_office_address(office_id)
         except Exception:
-            raise
+            raise ProviderDetailsRetrievalError(f"{office_id} does not exist in PDA")
 
     def get_firms_by_ids(self, firm_ids: list[str]) -> list[dict]:
         if not firm_ids:
