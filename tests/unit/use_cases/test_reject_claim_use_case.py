@@ -287,10 +287,7 @@ def test_sends_rejection_email_after_commit():
         gov_notify_port,
     ) = _build_use_case(claim=_claim(claim_id=5), application=_application())
 
-    use_case.execute(
-        RejectClaimCommand("1", 5, "Rejected after review."),
-        caseworker_name="Caseworker",
-    )
+    use_case.execute(RejectClaimCommand("1", 5, "Rejected after review."))
 
     gov_notify_port.send_claim_rejected_decision_email.assert_called_once_with(
         claim=use_case.get_claim_by_id_port.get_claim_by_id.return_value,
@@ -314,10 +311,7 @@ def test_rejection_email_failure_does_not_throw_error():
         "notify down"
     )
 
-    use_case.execute(
-        RejectClaimCommand("1", 5, "Rejected after review."),
-        caseworker_name="Caseworker",
-    )
+    use_case.execute(RejectClaimCommand("1", 5, "Rejected after review."))
 
     update_status_port.commit.assert_called_once()
     update_status_port.rollback.assert_not_called()
