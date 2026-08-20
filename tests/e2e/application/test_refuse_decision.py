@@ -3,7 +3,6 @@ from sqlmodel import select
 
 from app.models.application.index import Application
 
-
 pytestmark = pytest.mark.usefixtures("mock_gov_notify")
 
 

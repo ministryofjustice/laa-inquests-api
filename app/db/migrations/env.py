@@ -1,17 +1,15 @@
 from logging.config import fileConfig
+
 import alembic_autogenerate_enums  # noqa: F401
+from alembic import context
+from sqlalchemy import engine_from_config, pool
+from sqlmodel import SQLModel
 
 from app.db import db_url
 
 # Imports all the models so Alembic knows what to generate migrations for.
 # As they are not directly used this raises the F403 exception, this can be ignored.
-from app.models import *  # noqa: F401, F403
-
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-from sqlmodel import SQLModel
-
-from alembic import context
+from app.models import *
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

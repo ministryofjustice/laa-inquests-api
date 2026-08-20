@@ -13,3 +13,5 @@ database.db
 .idea
 .venv
 .coverage
+
+semgrep-results.sarif

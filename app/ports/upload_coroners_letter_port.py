@@ -1,5 +1,5 @@
-from abc import ABC, abstractmethod
 import uuid
+from abc import ABC, abstractmethod
 
 from app.domain.coroners_letter import CoronersLetter
 

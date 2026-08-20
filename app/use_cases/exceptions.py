@@ -2,7 +2,15 @@ class ApplicationNotFoundError(Exception):
     pass
 
 
+class ApplicationNotGrantedError(Exception):
+    pass
+
+
 class CoronersLetterUploadError(Exception):
+    pass
+
+
+class CoronersLetterVirusCheckError(CoronersLetterUploadError):
     pass
 
 
@@ -10,7 +18,15 @@ class CoronersLetterVirusDetectedError(Exception):
     pass
 
 
-class ProceedingsNotFoundError(Exception):
+class ClaimEvidenceUploadError(Exception):
+    pass
+
+
+class ClaimEvidenceVirusCheckError(ClaimEvidenceUploadError):
+    pass
+
+
+class ClaimEvidenceVirusDetectedError(Exception):
     pass
 
 
@@ -27,6 +43,46 @@ class InvalidCoronersLetterDocumentIdError(Exception):
 
 
 class SDSLetterRetrievalError(Exception):
+    pass
+
+
+class ClaimEvidenceNotFoundError(Exception):
+    pass
+
+
+class ClaimNotFoundError(Exception):
+    pass
+
+
+class ClaimEvidenceRetrievalError(Exception):
+    pass
+
+
+class ClaimEvidenceDeleteError(Exception):
+    pass
+
+
+class InvalidClaimEvidenceDocumentIdError(Exception):
+    pass
+
+
+class SDSClaimEvidenceRetrievalError(Exception):
+    pass
+
+
+class ProviderDetailsRetrievalError(Exception):
+    pass
+
+
+class ReportGenerationError(Exception):
+    pass
+
+
+class GrantDecisionError(Exception):
+    pass
+
+
+class RefuseDecisionError(Exception):
     pass
 
 

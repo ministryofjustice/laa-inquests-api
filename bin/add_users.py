@@ -1,13 +1,15 @@
-import sys
 import os
+import sys
 
 # Add the parent directory to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+import logging
+
+from passlib.hash import argon2
+
 from app.db import get_session
 from app.models.user import User
-from passlib.hash import argon2
-import logging
 
 
 def add_users(users_list_dict: list[dict]):
@@ -51,7 +53,7 @@ def add_users(users_list_dict: list[dict]):
 
 
 users_to_add = [
-    {"username": "test_user", "password": "test_password", "disabled": False},
+    {"username": "test_user", "password": "test_password", "disabled": False},  # nosec: This script file is no longer in use
 ]
 
 add_users(users_to_add)

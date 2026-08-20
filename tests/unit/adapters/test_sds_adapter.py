@@ -1,12 +1,16 @@
 import uuid
 from unittest.mock import MagicMock, patch
 
-from httpx import HTTPStatusError
 import pytest
+from httpx import HTTPError, HTTPStatusError, StreamError
 
+from app.adapters.sds_adapter import _sanitize_stem
 from app.use_cases.exceptions import (
+    ClaimEvidenceDeleteError,
     CoronersLetterUploadError,
+    InvalidClaimEvidenceDocumentIdError,
     InvalidCoronersLetterDocumentIdError,
+    SDSClaimEvidenceRetrievalError,
     SDSLetterRetrievalError,
 )
 
@@ -34,7 +38,7 @@ def _mock_save_response() -> MagicMock:
     mock = MagicMock()
     mock.status_code = 201
     mock.json.return_value = {
-        "success": "File saved successfully in laa-sds-inquests-uat with key letter.pdf",
+        "success": "File saved successfully in laa-sds-inquests-dev with key letter.pdf",
         "checksum": "abc123checksum",
     }
     return mock
@@ -88,9 +92,11 @@ def test_get_token_posts_client_credentials_to_correct_url():
 
 def test_get_token_raises_http_exception_on_unsuccessful_status_code():
     adapter = _make_adapter()
-    with patch("httpx.post", return_value=_mock_save_failure_response()):
-        with pytest.raises(HTTPStatusError):
-            adapter._get_token()
+    with (
+        patch("httpx.post", return_value=_mock_save_failure_response()),
+        pytest.raises(HTTPStatusError),
+    ):
+        adapter._get_token()
 
 
 def test_get_token_caches_token_and_does_not_call_post_again():
@@ -328,7 +334,22 @@ def test_retrieve_coroners_letter_raises_error_when_stream_fails():
     with (
         patch("httpx.post", return_value=_mock_token_response()),
         patch("httpx.get", return_value=_mock_retrieve_metadata_response()),
-        patch("httpx.stream", side_effect=RuntimeError("stream failed")),
+        patch("httpx.stream", side_effect=HTTPError("stream failed")),
+        pytest.raises(
+            SDSLetterRetrievalError,
+            match="Failed to stream coroners letter: \n stream failed",
+        ),
+    ):
+        list(adapter.retrieve_coroners_letter("letter.pdf"))
+
+
+def test_retrieve_coroners_letter_raises_error_when_stream_error_occurs():
+    adapter = _make_adapter()
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.get", return_value=_mock_retrieve_metadata_response()),
+        patch("httpx.stream", side_effect=StreamError("stream failed")),
         pytest.raises(
             SDSLetterRetrievalError,
             match="Failed to stream coroners letter: \n stream failed",
@@ -352,6 +373,241 @@ def test_retrieve_coroners_letter_raises_error_when_file_url_missing():
         ),
     ):
         list(adapter.retrieve_coroners_letter("letter.pdf"))
+
+
+def test_retrieve_claim_evidence_gets_correct_url_with_file_key_param():
+    adapter = _make_adapter()
+
+    mock_get_file_response = _mock_retrieve_metadata_response()
+
+    mock_stream = MagicMock()
+    mock_stream.__enter__ = MagicMock(
+        return_value=MagicMock(iter_bytes=lambda: iter([]))
+    )
+    mock_stream.__exit__ = MagicMock(return_value=False)
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.get", return_value=mock_get_file_response),
+        patch("httpx.stream", return_value=mock_stream) as mock_stream,
+    ):
+        list(adapter.retrieve_claim_evidence("letter.pdf"))
+
+    mock_stream.assert_called_once_with("GET", "https://signed.example.com/letter.pdf")
+
+
+def test_retrieve_claim_evidence_returns_response_bytes():
+    adapter = _make_adapter()
+
+    mock_get_file_response = _mock_retrieve_metadata_response()
+
+    mock_stream_response = MagicMock()
+    mock_stream_response.iter_bytes.return_value = iter([b"chunk1", b"chunk2"])
+
+    mock_stream = MagicMock()
+    mock_stream.__enter__ = MagicMock(return_value=mock_stream_response)
+    mock_stream.__exit__ = MagicMock(return_value=False)
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.get", return_value=mock_get_file_response),
+        patch("httpx.stream", return_value=mock_stream),
+    ):
+        result = b"".join(adapter.retrieve_claim_evidence("letter.pdf"))
+
+    assert result == b"chunk1chunk2"
+
+
+def test_retrieve_claim_evidence_id_with_None_filename_raises_InvalidClaimEvidenceDocumentIdError():
+    adapter = _make_adapter()
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        pytest.raises(
+            InvalidClaimEvidenceDocumentIdError,
+            match="file_name must be a non-empty string",
+        ),
+    ):
+        list(adapter.retrieve_claim_evidence(None))
+
+
+def test_retrieve_claim_evidence_id_with_blank_filename_raises_InvalidClaimEvidenceDocumentIdError():
+    adapter = _make_adapter()
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        pytest.raises(
+            InvalidClaimEvidenceDocumentIdError,
+            match="file_name must be a non-empty string",
+        ),
+    ):
+        list(adapter.retrieve_claim_evidence(""))
+
+
+def test_retrieve_claim_evidence_raises_not_found_for_sds_404(caplog):
+    adapter = _make_adapter()
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.get", return_value=_mock_retrieve_metadata_response(404)),
+        pytest.raises(
+            SDSClaimEvidenceRetrievalError,
+            match="SDS returned 404 while retrieving claim evidence for file key missing.pdf",
+        ),
+    ):
+        list(adapter.retrieve_claim_evidence("missing.pdf"))
+
+    assert "SDS returned 404" in caplog.text
+
+
+def test_retrieve_claim_evidence_raises_invalid_id_for_sds_400(caplog):
+    adapter = _make_adapter()
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.get", return_value=_mock_retrieve_metadata_response(400)),
+        pytest.raises(
+            SDSClaimEvidenceRetrievalError,
+            match="SDS returned 400 while retrieving claim evidence for file key bad-id",
+        ),
+    ):
+        list(adapter.retrieve_claim_evidence("bad-id"))
+
+    assert "SDS returned 400" in caplog.text
+
+
+def test_retrieve_claim_evidence_logs_and_raises_for_other_sds_4xx(caplog):
+    adapter = _make_adapter()
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.get", return_value=_mock_retrieve_metadata_response(403)),
+        pytest.raises(
+            SDSClaimEvidenceRetrievalError,
+            match="SDS returned 403 while retrieving claim evidence for file key forbidden.pdf",
+        ),
+    ):
+        list(adapter.retrieve_claim_evidence("forbidden.pdf"))
+
+    assert "SDS returned 403" in caplog.text
+
+
+def test_retrieve_claim_evidence_raises_error_when_stream_fails():
+    adapter = _make_adapter()
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.get", return_value=_mock_retrieve_metadata_response()),
+        patch("httpx.stream", side_effect=StreamError("stream failed")),
+        pytest.raises(
+            SDSClaimEvidenceRetrievalError,
+            match="Failed to stream claim evidence: \n stream failed",
+        ),
+    ):
+        list(adapter.retrieve_claim_evidence("letter.pdf"))
+
+
+def test_retrieve_claim_evidence_raises_error_when_file_url_missing():
+    adapter = _make_adapter()
+
+    bad_metadata = MagicMock()
+    bad_metadata.status_code = 200
+    bad_metadata.json.return_value = {}
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.get", return_value=bad_metadata),
+        pytest.raises(
+            SDSClaimEvidenceRetrievalError, match="Failed to retrieve claim evidence"
+        ),
+    ):
+        list(adapter.retrieve_claim_evidence("letter.pdf"))
+
+
+def test_delete_claim_evidence_calls_sds_delete_with_file_key():
+    adapter = _make_adapter()
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"claim-evidence.pdf": {"status_code": 204}}
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.delete", return_value=mock_response) as mock_delete,
+    ):
+        adapter.delete_claim_evidence("claim-evidence.pdf")
+
+    mock_delete.assert_called_once_with(
+        "https://sds.example.com/delete_files",
+        params={"file_keys": ["claim-evidence.pdf"]},
+        headers={"Authorization": "Bearer test-token"},
+    )
+
+
+def test_delete_claim_evidence_with_blank_filename_raises_invalid_document_error():
+    adapter = _make_adapter()
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        pytest.raises(
+            InvalidClaimEvidenceDocumentIdError,
+            match="file_name must be a non-empty string",
+        ),
+    ):
+        adapter.delete_claim_evidence("")
+
+
+def test_delete_claim_evidence_raises_error_for_non_success_response():
+    adapter = _make_adapter()
+
+    mock_response = MagicMock()
+    mock_response.status_code = 500
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.delete", return_value=mock_response),
+        pytest.raises(
+            ClaimEvidenceDeleteError,
+            match="SDS returned 500 while deleting claim evidence for file key claim-evidence.pdf",
+        ),
+    ):
+        adapter.delete_claim_evidence("claim-evidence.pdf")
+
+
+def test_delete_claim_evidence_raises_error_for_file_level_failure_response():
+    adapter = _make_adapter()
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"claim-evidence.pdf": {"status_code": 404}}
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.delete", return_value=mock_response),
+        pytest.raises(
+            ClaimEvidenceDeleteError,
+            match="SDS returned 404 while deleting claim evidence for file key claim-evidence.pdf",
+        ),
+    ):
+        adapter.delete_claim_evidence("claim-evidence.pdf")
+
+
+def test_delete_claim_evidence_raises_error_for_unexpected_response_body():
+    adapter = _make_adapter()
+
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"unexpected": "shape"}
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.delete", return_value=mock_response),
+        pytest.raises(
+            ClaimEvidenceDeleteError,
+            match="Unexpected SDS delete response while deleting claim evidence for file key claim-evidence.pdf",
+        ),
+    ):
+        adapter.delete_claim_evidence("claim-evidence.pdf")
 
 
 def test_virus_check_coroners_letter_returns_true_for_safe_file():
@@ -393,9 +649,53 @@ def test_virus_check_coroners_letter_raises_upload_error_on_sds_failure():
     with (
         patch("httpx.post", side_effect=[_mock_token_response(), mock]),
         patch("httpx.put", return_value=mock),
-    ):
-        with pytest.raises(
+        pytest.raises(
             CoronersLetterUploadError,
             match="Failed to perform virus check. API status code: 500",
-        ):
-            adapter.virus_check_coroners_letter(b"unsafe content", "test_file.pdf")
+        ),
+    ):
+        adapter.virus_check_coroners_letter(b"unsafe content", "test_file.pdf")
+
+
+class TestSanitizeStem:
+    def test_apostrophe_is_replaced(self):
+        assert _sanitize_stem("Coroner's Letter") == "Coroner_s_Letter"
+
+    def test_backtick_is_replaced(self):
+        assert _sanitize_stem("file`name") == "file_name"
+
+    def test_spaces_are_replaced(self):
+        assert _sanitize_stem("my file name") == "my_file_name"
+
+    def test_hyphens_and_underscores_preserved(self):
+        assert _sanitize_stem("my-file_name") == "my-file_name"
+
+    def test_alphanumeric_unchanged(self):
+        assert _sanitize_stem("SimpleFile123") == "SimpleFile123"
+
+
+class TestSaveFileSanitizesFileName:
+    @patch("app.adapters.sds_adapter.uuid.uuid4")
+    def test_unique_file_name_sanitizes_special_characters(self, mock_uuid):
+        fake_uuid = uuid.UUID("12345678-1234-1234-1234-123456789abc")
+        mock_uuid.return_value = fake_uuid
+
+        adapter = _make_adapter()
+        adapter.token = "test-token"
+        adapter.token_expiry = float("inf")
+
+        mock_response = MagicMock()
+        mock_response.status_code = 201
+
+        with patch("httpx.post", return_value=mock_response):
+            unique_file_name, status = adapter._save_file(
+                file_content=b"content",
+                file_name="Coroner's Letter.png",
+                file_kind="coroners_letter",
+            )
+
+        assert status == "SUCCESS"
+        assert (
+            unique_file_name
+            == "Coroner_s_Letter_12345678-1234-1234-1234-123456789abc.png"
+        )

@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: pods-dashboard
-  namespace: laa-inquests-api-uat
+  namespace: laa-inquests-api-dev
   labels:
     grafana_dashboard: ""
 data:
@@ -396,8 +396,8 @@ data:
             "allValue": null,
             "current": {
               "selected": false,
-              "text": "laa-inquests-api-uat",
-              "value": "laa-inquests-api-uat"
+              "text": "laa-inquests-api-dev",
+              "value": "laa-inquests-api-dev"
             },
             "datasource": "Prometheus",
             "definition": "label_values(kube_deployment_metadata_generation, namespace)",

@@ -1,7 +1,8 @@
+from datetime import UTC, datetime
+from uuid import UUID, uuid4
+
 from sqlalchemy.orm import declared_attr
 from sqlmodel import Field, SQLModel
-from datetime import datetime, UTC
-from uuid import UUID, uuid4
 
 
 class TimestampMixin(SQLModel):

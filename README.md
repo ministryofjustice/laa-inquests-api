@@ -87,6 +87,11 @@ And install the requirements using
 pip install -r requirements/generated/requirements-development.txt
 ```
 
+You will also need to install WeasyPrint dependencies. On MacOS you can do this with:
+```bash
+brew install weasyprint
+```
+
 If you encounter issues such as `ModuleNotFoundError` restart your terminal session.
 
 ### Running the database
@@ -100,6 +105,12 @@ To migrate the database to the latest revision run:
 ```bash
 alembic upgrade head
 ```
+
+To seed reference data (proceedings and public bodies) into the database run:
+```bash
+python bin/seed.py
+```
+This is idempotent and safe to run multiple times. It must be run after `alembic upgrade head` so the schema exists.
 
 To run the web server run:
 
