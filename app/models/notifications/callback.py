@@ -1,6 +1,5 @@
 """Pydantic models for GovNotify callback payloads."""
 
-from typing import Optional
 from pydantic import BaseModel, Field
 
 from app.models.notifications.enums import NotificationStatus, NotificationType
@@ -25,12 +24,12 @@ class GovNotifyCallbackPayload(BaseModel):
     """
 
     id: str = Field(description="GovNotify notification UUID")
-    reference: Optional[str] = Field(
+    reference: str | None = Field(
         None, description="Custom reference (e.g., environment-LAA_REF)"
     )
     to: str = Field(description="Recipient email or phone number")
     status: NotificationStatus = Field(description="Delivery status")
     created_at: str = Field(description="ISO timestamp of creation")
-    completed_at: Optional[str] = Field(None, description="ISO timestamp of completion")
-    sent_at: Optional[str] = Field(None, description="ISO timestamp when sent")
+    completed_at: str | None = Field(None, description="ISO timestamp of completion")
+    sent_at: str | None = Field(None, description="ISO timestamp when sent")
     notification_type: NotificationType = Field(description="Notification type")

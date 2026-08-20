@@ -1,3 +1,5 @@
+import uuid
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from sqlmodel import select
@@ -12,7 +14,7 @@ from app.models.claim.enums import (
     POAType,
     ReasonCode,
 )
-from app.models.claim.index import Claim, ClaimDecision, DecisionReason
+from app.models.claim.index import Claim, ClaimDecision, ClaimEvidence, DecisionReason
 
 
 def _make_domain_claim(overrides=None) -> DomainClaim:
@@ -112,6 +114,55 @@ def test_get_claims_by_laa_reference_returns_empty_list_when_no_claims(session):
     assert results == []
 
 
+def test_get_open_claims_returns_only_open_claims(session):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    adapter = ClaimRepositoryAdapter(session)
+
+    open_claim = _create_claim(session, laa_reference)
+    rejected_claim = _create_claim(session, laa_reference)
+    rejected_claim.status_id = ClaimStatus.REJECTED
+    session.add(rejected_claim)
+    session.commit()
+
+    results = adapter.get_open_claims()
+
+    assert len(results) == 1
+    assert results[0].claim_id == open_claim.claim_id
+    assert all(claim.status_id == ClaimStatus.SUBMITTED for claim in results)
+
+
+def test_get_open_claims_returned_claims_have_matching_application(session):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    _create_claim(session, laa_reference)
+
+    adapter = ClaimRepositoryAdapter(session)
+    results = adapter.get_open_claims()
+
+    for claim in results:
+        assert claim.application.laa_reference == claim.laa_reference
+
+
+def test_get_open_claims_orders_by_submission_date_ascending(session):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    adapter = ClaimRepositoryAdapter(session)
+
+    newer_claim = _create_claim(session, laa_reference)
+    older_claim = _create_claim(session, laa_reference)
+
+    newer_claim.submission_date = datetime(2026, 6, 1, tzinfo=UTC)
+    older_claim.submission_date = datetime(2026, 1, 1, tzinfo=UTC)
+
+    session.add(newer_claim)
+    session.add(older_claim)
+    session.commit()
+
+    results = adapter.get_open_claims()
+
+    assert len(results) == 2
+    assert results[0].claim_id == older_claim.claim_id
+    assert results[1].claim_id == newer_claim.claim_id
+
+
 def test_create_claim_decision_persists_decision_with_expected_values(session):
     laa_reference = session.exec(select(Application)).first().laa_reference
     adapter = ClaimRepositoryAdapter(session)
@@ -158,6 +209,50 @@ def test_create_decision_reason_persists_justification_when_provided(session):
     )
 
     assert reason.justification == "Some justification text"
+
+
+def test_link_evidence_to_claim_sets_claim_id_on_existing_evidence(session):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    adapter = ClaimRepositoryAdapter(session)
+    claim = _create_claim(session, laa_reference)
+    evidence = ClaimEvidence(sds_file_name="stored.pdf", file_name="original.pdf")
+    session.add(evidence)
+    session.commit()
+    session.refresh(evidence)
+
+    adapter.link_evidence_to_claim(claim.claim_id, [evidence.claim_evidence_id])
+
+    stored = session.get(ClaimEvidence, evidence.claim_evidence_id)
+    assert stored.claim_id == claim.claim_id
+
+
+def test_link_evidence_to_claim_ignores_unknown_evidence_ids(session):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    adapter = ClaimRepositoryAdapter(session)
+    claim = _create_claim(session, laa_reference)
+
+    adapter.link_evidence_to_claim(claim.claim_id, [uuid.uuid4()])  # should not raise
+
+
+def test_delete_claim_evidence_by_id_deletes_existing_evidence(session):
+    adapter = ClaimRepositoryAdapter(session)
+    evidence = ClaimEvidence(sds_file_name="stored.pdf", file_name="original.pdf")
+    session.add(evidence)
+    session.commit()
+    session.refresh(evidence)
+
+    deleted = adapter.delete_claim_evidence_by_id(evidence.claim_evidence_id)
+
+    assert deleted is True
+    assert session.get(ClaimEvidence, evidence.claim_evidence_id) is None
+
+
+def test_delete_claim_evidence_by_id_returns_false_for_unknown_id(session):
+    adapter = ClaimRepositoryAdapter(session)
+
+    deleted = adapter.delete_claim_evidence_by_id(uuid.uuid4())
+
+    assert deleted is False
 
 
 def test_update_claim_status_sets_status_on_claim(session):

@@ -106,6 +106,12 @@ To migrate the database to the latest revision run:
 alembic upgrade head
 ```
 
+To seed reference data (proceedings and public bodies) into the database run:
+```bash
+python bin/seed.py
+```
+This is idempotent and safe to run multiple times. It must be run after `alembic upgrade head` so the schema exists.
+
 To run the web server run:
 
 ```shell

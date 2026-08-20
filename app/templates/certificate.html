@@ -7,6 +7,11 @@
     <title>Civil legal aid certificate - GOV.UK</title>
     <link rel="stylesheet" href="../static/govuk-frontend.css">
     <style>
+        @page {
+            size: A4;
+            margin: 5mm 15mm;
+        }
+
         /* Override font-family to use Arial consistently for PDF generation since GDS Transport fonts are not available */
         * {
             font-family: Arial, sans-serif !important;
@@ -169,7 +174,7 @@
                 </div>
                 <div class="govuk-grid-column-two-thirds">
                     <div class="govuk-inset-text">
-                        This is to certify that the status of the certificate is as specified in the Certificate summary. Its scope is specified in the proceedings listed and is subject to the limitations and conditions.
+                        This is to certify that the status of the certificate is as specified in the Certificate summary. Its scope is specified in the proceeding listed and is subject to the limitations and conditions.
                     </div>
                 </div>
                 <div class="govuk-grid-column-two-thirds">
@@ -262,7 +267,7 @@
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Proceeding end date</dt>
-                                        <dd class="govuk-summary-list__value">{{ proceeding_end_date.strftime("%d %B %Y") if proceeding_end_date else "Not applicable" }}</dd>
+                                        <dd class="govuk-summary-list__value">{{ end_date.strftime("%d %B %Y") if end_date else "Not applicable" }}</dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Client involvement type</dt>

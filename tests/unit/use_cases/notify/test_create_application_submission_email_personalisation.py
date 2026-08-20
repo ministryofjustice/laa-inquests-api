@@ -1,9 +1,12 @@
+import pytest
+from pydantic import ValidationError
+
 from app.models.application.enums import AddressSource
-from app.use_cases.notify.create_application_submission_email_personalisation import (
-    create_application_submission_email_personalisation,
-)
 from app.models.gov_notify_templates.application_submit_personalisation import (
     NotifyApplicationSubmitTemplatePersonalisation,
+)
+from app.use_cases.notify.create_application_submission_email_personalisation import (
+    create_application_submission_email_personalisation,
 )
 from tests.unit.factories import (
     create_base_application,
@@ -11,8 +14,6 @@ from tests.unit.factories import (
     create_base_deceased,
     create_base_home_address,
 )
-
-import pytest
 
 
 def test_create_application_submission_email_personalisation_returns_all_required_fields():
@@ -40,7 +41,7 @@ def test_create_application_submission_email_personalisation_returns_all_require
     assert "456 Oak Ave" in result.correspondence_address
     assert "Manchester" in result.correspondence_address
     assert "M1 1AA" in result.correspondence_address
-    assert result.correspondence_recipient == "John Smith (PERSON)"
+    assert result.correspondence_recipient == "Client"
     assert result.client_relationship_to_deceased == "Son"
     assert result.proceeding_description == "Inquest into death"
     assert result.matter_type == "INQUESTS"
@@ -59,7 +60,7 @@ def test_application_submit_email_personalisation_rejects_missing_required_field
     """
     Test that NotifyApplicationSubmitTemplatePersonalisation model rejects creation with missing required fields.
     """
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         NotifyApplicationSubmitTemplatePersonalisation(
             laa_reference="12345",
             client_first_name="Test",
@@ -70,7 +71,7 @@ def test_application_submit_email_personalisation_rejects_extra_fields():
     """
     Test that NotifyApplicationSubmitTemplatePersonalisation model rejects extra/unexpected fields.
     """
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         NotifyApplicationSubmitTemplatePersonalisation(
             laa_reference="12345",
             client_first_name="Test",
@@ -104,7 +105,6 @@ def test_create_application_submission_email_personalisation_handles_optional_fi
         prev_application_reference=None,
         correspondence_address_source=AddressSource.USE_CLIENT_HOME_ADDRESS,
         correspondence_address=None,
-        is_client_correspondence_recipient=True,
         correspondence_recipient_type=None,
         correspondence_recipient_name=None,
     )

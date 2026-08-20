@@ -5,16 +5,17 @@ from sqlmodel import select
 
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application, CoronersLetter
+from app.models.claim.index import ClaimEvidence
 
 
 def _create_application_payload():
     return {
         "coronersLetterId": str(uuid.uuid4()),
-        "proceedings": [{"proceedingId": "TEST1"}],
+        "proceeding": {"proceedingId": "IQOT"},
         "client": {
             "clientFirstName": "Test",
             "clientLastName": "Surname",
-            "dateOfBirth": "01-01-1990",
+            "dateOfBirth": "1990-01-01",
             "nationalInsuranceNumber": "AB12345A",
             "correspondenceAddressSource": "USE_SPECIFIED_ADDRESS",
             "correspondenceAddress": {
@@ -30,21 +31,19 @@ def _create_application_payload():
                 "county": "Greater London",
                 "postcode": "SW1A 1AA",
             },
-            "isClientCorrespondenceRecipient": True,
         },
         "publicBodies": [{"publicBodyId": "Department for Transport"}],
         "deceased": {
             "deceasedFirstName": "Test",
             "deceasedLastName": "Surname",
-            "deceasedDateOfBirth": "01-01-2000",
-            "deceasedDateOfDeath": "01-01-2025",
+            "deceasedDateOfBirth": "2000-01-01",
+            "deceasedDateOfDeath": "2025-01-01",
             "coronersReference": "COR-2025-001",
             "furtherInformation": "Further details to be confirmed",
             "clientRelationshipToDeceased": "guardian",
         },
         "provider": {
-            "firmCode": "0A123B",
-            "officeId": "001",
+            "officeId": "0U651L",
             "emailAddress": "provider@example.com",
         },
     }
@@ -342,6 +341,123 @@ def test_403_retrieve_coroners_letter_returns_403_when_provider_token(
 ):
     response = entra_auth_client.get(
         "/applications/1/coroners-letter",
+        headers={"Authorization": "Bearer valid-provider-entra-token"},
+    )
+
+    assert response.status_code == 403
+
+
+def test_200_list_public_bodies_returns_200_when_provider_token(entra_auth_client):
+    response = entra_auth_client.get(
+        "/applications/public-bodies",
+        headers={"Authorization": "Bearer valid-provider-entra-token"},
+    )
+
+    assert response.status_code == 200
+
+
+def test_401_list_public_bodies_returns_401_when_no_authorization_header(
+    entra_auth_client,
+):
+    response = entra_auth_client.get("/applications/public-bodies")
+
+    assert response.status_code == 401
+
+
+def test_401_list_public_bodies_returns_401_when_bearer_token_is_invalid(
+    entra_auth_client,
+):
+    response = entra_auth_client.get(
+        "/applications/public-bodies",
+        headers={"Authorization": "Bearer invalid-token"},
+    )
+
+    assert response.status_code == 401
+
+
+def test_403_list_public_bodies_returns_403_when_caseworker_token(entra_auth_client):
+    response = entra_auth_client.get(
+        "/applications/public-bodies",
+        headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+    )
+
+    assert response.status_code == 403
+
+
+def test_200_retrieve_claim_evidence_returns_200_when_caseworker_token(
+    session, entra_auth_client
+):
+    claim_evidence = ClaimEvidence(
+        sds_file_name="stored-claim-evidence_abc123.pdf",
+        file_name="claim_evidence.pdf",
+    )
+    session.add(claim_evidence)
+    session.commit()
+    session.refresh(claim_evidence)
+
+    response = entra_auth_client.get(
+        f"/claims/{claim_evidence.claim_evidence_id}",
+        headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+    )
+
+    assert response.status_code == 200
+
+
+def test_200_retrieve_claim_evidence_returns_200_when_provider_token(
+    session, entra_auth_client
+):
+    claim_evidence = ClaimEvidence(
+        sds_file_name="stored-claim-evidence_abc123.pdf",
+        file_name="claim_evidence.pdf",
+    )
+    session.add(claim_evidence)
+    session.commit()
+    session.refresh(claim_evidence)
+
+    response = entra_auth_client.get(
+        f"/claims/{claim_evidence.claim_evidence_id}",
+        headers={"Authorization": "Bearer valid-provider-entra-token"},
+    )
+
+    assert response.status_code == 200
+
+
+def test_401_retrieve_claim_evidence_returns_401_when_no_authorization_header(
+    entra_auth_client,
+):
+    response = entra_auth_client.get(f"/claims/{uuid.uuid4()}")
+
+    assert response.status_code == 401
+
+
+def test_401_retrieve_claim_evidence_returns_401_when_bearer_token_is_invalid(
+    entra_auth_client,
+):
+    response = entra_auth_client.get(
+        f"/claims/{uuid.uuid4()}",
+        headers={"Authorization": "Bearer invalid-token"},
+    )
+
+    assert response.status_code == 401
+
+
+def test_401_reject_claim_returns_401_when_no_authorization_header(
+    entra_auth_client,
+):
+    response = entra_auth_client.patch(
+        "/applications/1/claims/1/reject",
+        json={"justification": "Claim rejected following manual assessment."},
+    )
+
+    assert response.status_code == 401
+
+
+def test_403_reject_claim_returns_403_when_provider_token(
+    entra_auth_client,
+):
+    response = entra_auth_client.patch(
+        "/applications/1/claims/1/reject",
+        json={"justification": "Claim rejected following manual assessment."},
         headers={"Authorization": "Bearer valid-provider-entra-token"},
     )
 

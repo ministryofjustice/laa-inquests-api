@@ -1,26 +1,33 @@
+import uuid
 from collections.abc import Iterator
 from dataclasses import dataclass
+from datetime import UTC, date, datetime
 from typing import Optional
+
 from pydantic import (
     BaseModel,
     ConfigDict,
-    model_validator,
-    Field as PydanticField,
     computed_field,
+    field_validator,
+    model_validator,
+)
+from pydantic import (
+    Field as PydanticField,
 )
 from pydantic.alias_generators import to_camel
 from sqlalchemy import Column
-from sqlmodel import Field, Relationship, SQLModel, Enum
-from datetime import date, datetime, UTC
+from sqlmodel import Enum, Field, Relationship, SQLModel
+
+from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
+from app.models.application.constants import UNGRANTED_SUBSTANTIVE_COST_LIMITATION
 from app.models.application.enums import (
     AddressSource,
     CorrespondenceRecipientType,
     MeritsDecision,
-    ReasonForRefusal,
     ProceedingId,
     PublicBodyId,
+    ReasonForRefusal,
 )
-import uuid
 
 
 # RELATIONS
@@ -38,8 +45,8 @@ class Proceeding(SQLModel, table=True):
     matter_type: str | None = "INQUESTS"
     scope_limitation_heading: str | None = "FINAL_HEARING"
     scope_description: str | None = "This is the scope description"
-    substantive_cost_limitation: int | None = 10000
-    application_proceedings: list["ApplicationProceeding"] = Relationship(
+    substantive_cost_limitation: int | None = SUBSTANTIVE_CERTIFICATE_AMOUNT
+    application_proceeding: "ApplicationProceeding" = Relationship(
         back_populates="proceeding"
     )
 
@@ -106,7 +113,6 @@ class Client(ClientBase, table=True):
     home_address: Optional["Address"] = Relationship(
         sa_relationship_kwargs={"foreign_keys": "[Client.home_address_id]"}
     )
-    is_client_correspondence_recipient: bool = True
     correspondence_recipient_type: CorrespondenceRecipientType | None = Field(
         default=None,
         sa_column=Column(Enum(CorrespondenceRecipientType), nullable=True),
@@ -115,9 +121,6 @@ class Client(ClientBase, table=True):
 
     @property
     def correspondence_recipient(self) -> Optional["CorrespondenceRecipientResponse"]:
-        if self.is_client_correspondence_recipient:
-            return None
-
         if (
             self.correspondence_recipient_type is not None
             and self.correspondence_recipient_name is not None
@@ -172,9 +175,7 @@ class CoronersLetter(SQLModel, table=True):
 
 
 class Application(ApplicationBase, table=True):
-    proceedings: list["ApplicationProceeding"] = Relationship(
-        back_populates="application"
-    )
+    proceeding: "ApplicationProceeding" = Relationship(back_populates="application")
     public_bodies: list["ApplicationPublicBody"] = Relationship(
         back_populates="application"
     )
@@ -198,10 +199,8 @@ class Application(ApplicationBase, table=True):
     @computed_field
     @property
     def overall_decision(self) -> str:
-        """Calculate overall_decision from the first proceeding's merits_decision."""
-        if self.proceedings and len(self.proceedings) > 0:
-            return self.proceedings[0].merits_decision
-        return MeritsDecision.PENDING
+        """Calculate overall_decision from the proceeding's merits_decision."""
+        return self.proceeding.merits_decision
 
 
 class ApplicationPublicBody(SQLModel, table=True):
@@ -219,17 +218,21 @@ class ApplicationPublicBody(SQLModel, table=True):
 
 class ApplicationProceeding(SQLModel, table=True):
     __tablename__ = "application_proceeding"
-    application_proceeding_id: int | None = Field(default=None, primary_key=True)
+    application_proceeding_id: int = Field(primary_key=True, nullable=False)
     client_involvement_type: str | None = "RESPONDENT"
     merits_decision: str = MeritsDecision.PENDING
     reason_for_refusal: str | None = None
     justification: str | None = None
     laa_reference: int = Field(foreign_key="application.laa_reference")
     proceeding_id: ProceedingId = Field(foreign_key="proceeding.proceeding_id")
-    proceeding: Proceeding = Relationship(back_populates="application_proceedings")
-    application: Application = Relationship(back_populates="proceedings")
+    proceeding: Proceeding = Relationship(back_populates="application_proceeding")
+    substantive_cost_limitation_effective_date: date = Field(
+        nullable=True, default=None
+    )
+    application: Application = Relationship(back_populates="proceeding")
     certificate_issue_date: date = Field(nullable=True, default=None)
     certificate_start_date: date = Field(nullable=True, default=None)
+    certificate_end_date: date = Field(nullable=True, default=None)
 
     @property
     def proceeding_name(self):
@@ -265,6 +268,8 @@ class ApplicationProceeding(SQLModel, table=True):
 
     @property
     def substantive_cost_limitation(self):
+        if self.merits_decision != MeritsDecision.GRANTED:
+            return UNGRANTED_SUBSTANTIVE_COST_LIMITATION
         return self.proceeding.substantive_cost_limitation
 
 
@@ -275,7 +280,7 @@ class ProceedingCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    proceeding_id: str = PydanticField(examples=["IQ001"])
+    proceeding_id: ProceedingId = PydanticField(examples=["IQPC"])
 
 
 class AddressCreate(BaseModel):
@@ -285,9 +290,9 @@ class AddressCreate(BaseModel):
         from_attributes=True,
     )
     address_line_1: str = PydanticField(examples=["123 Example Street"])
-    address_line_2: Optional[str] = PydanticField(default=None, examples=["Jones"])
+    address_line_2: str | None = PydanticField(default=None, examples=["Jones"])
     town_or_city: str = PydanticField(examples=["Example Town"])
-    county: Optional[str] = PydanticField(default=None, examples=["Jones"])
+    county: str | None = PydanticField(default=None, examples=["Jones"])
     postcode: str = PydanticField(examples=["AA1 1AA"])
 
 
@@ -309,41 +314,34 @@ class ClientCreate(BaseModel):
     )
     client_first_name: str = PydanticField(examples=["Jane"])
     client_last_name: str = PydanticField(examples=["Smith"])
-    client_last_name_at_birth: Optional[str] = PydanticField(
+    client_last_name_at_birth: str | None = PydanticField(
         default=None, examples=["Jones"]
     )
     date_of_birth: str = PydanticField(examples=["2000-01-01"])
-    national_insurance_number: Optional[str] = PydanticField(
+    national_insurance_number: str | None = PydanticField(
         default=None, examples=["AA123456A"]
     )
+
+    @field_validator("date_of_birth")
+    @classmethod
+    def validate_date_of_birth_format(cls, v: str) -> str:
+        try:
+            date.fromisoformat(v)
+        except ValueError:
+            raise ValueError("date_of_birth must be in YYYY-MM-DD format")
+        return v
+
     has_applied_previously: bool = PydanticField(default=False, examples=[False])
-    prev_application_reference: Optional[str] = PydanticField(
+    prev_application_reference: str | None = PydanticField(
         default=None, examples=["TBD"]
     )
     correspondence_address_source: str = PydanticField(
         examples=["USE_SPECIFIED_ADDRESS"]
     )
-    correspondence_address: Optional[AddressCreate] = None
-    home_address: Optional[AddressCreate] = None
+    correspondence_address: AddressCreate | None = None
+    home_address: AddressCreate | None = None
     has_no_fixed_abode: bool = PydanticField(default=False, examples=[False])
-    is_client_correspondence_recipient: bool = PydanticField(examples=[False])
     correspondence_recipient: CorrespondenceRecipientCreate | None = None
-
-    @model_validator(mode="after")
-    def validate_correspondence_recipient(self) -> "ClientCreate":
-        if self.is_client_correspondence_recipient:
-            if self.correspondence_recipient is not None:
-                raise ValueError(
-                    "correspondence_recipient must not be provided when is_client_correspondence_recipient is true"
-                )
-            return self
-
-        if self.correspondence_recipient is None:
-            raise ValueError(
-                "correspondence_recipient is required when is_client_correspondence_recipient is false"
-            )
-
-        return self
 
     @model_validator(mode="after")
     def validate_home_address_against_fixed_abode(self) -> "ClientCreate":
@@ -369,6 +367,16 @@ class DeceasedCreate(BaseModel):
     deceased_date_of_birth: str = PydanticField(examples=["2000-01-01"])
     deceased_date_of_death: str = PydanticField(examples=["2025-01-01"])
     coroners_reference: str = PydanticField(examples=["Example reference number"])
+
+    @field_validator("deceased_date_of_birth", "deceased_date_of_death")
+    @classmethod
+    def validate_date_format(cls, v: str) -> str:
+        try:
+            date.fromisoformat(v)
+        except ValueError:
+            raise ValueError("date must be in YYYY-MM-DD format")
+        return v
+
     further_information: str | None = PydanticField(
         default=None, examples=["Further information."]
     )
@@ -381,7 +389,9 @@ class PublicBodyCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    public_body_id: str = PydanticField(examples=["Department of Health & Social Care"])
+    public_body_id: str = PydanticField(
+        examples=["Department of Health and Social Care"]
+    )
 
 
 class ProviderCreate(BaseModel):
@@ -390,8 +400,7 @@ class ProviderCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    firm_code: str = PydanticField(examples=["0A123B"])
-    office_id: str = PydanticField(examples=["001"])
+    office_id: str = PydanticField(examples=["0U651L"])
     email_address: str = PydanticField(examples=["provider@example.com"])
 
 
@@ -405,7 +414,7 @@ class ApplicationCreate(BaseModel):
     client: ClientCreate
     deceased: DeceasedCreate
     publicBodies: list[PublicBodyCreate]
-    proceedings: list[ProceedingCreate]
+    proceeding: ProceedingCreate
     provider: ProviderCreate
 
 
@@ -452,9 +461,9 @@ class AddressResponse(BaseModel):
         from_attributes=True,
     )
     address_line_1: str
-    address_line_2: Optional[str] = None
+    address_line_2: str | None = None
     town_or_city: str
-    county: Optional[str] = None
+    county: str | None = None
     postcode: str
 
 
@@ -477,16 +486,15 @@ class ClientResponse(BaseModel):
     client_id: int
     client_first_name: str
     client_last_name: str
-    client_last_name_at_birth: Optional[str] = None
+    client_last_name_at_birth: str | None = None
     date_of_birth: str
-    national_insurance_number: Optional[str] = None
+    national_insurance_number: str | None = None
     correspondence_address_source: str
-    correspondence_address: Optional[AddressResponse] = None
-    home_address: Optional[AddressResponse] = None
+    correspondence_address: AddressResponse | None = None
+    home_address: AddressResponse | None = None
     has_applied_previously: bool = False
-    prev_application_reference: Optional[str] = None
+    prev_application_reference: str | None = None
     has_no_fixed_abode: bool = False
-    is_client_correspondence_recipient: bool
     correspondence_recipient: CorrespondenceRecipientResponse | None = None
 
 
@@ -507,8 +515,8 @@ class ProceedingResponse(BaseModel):
         populate_by_name=True,
     )
     proceeding_id: str
-    proceeding_name: Optional[str] = None
-    proceeding_description: Optional[str] = None
+    proceeding_name: str | None = None
+    proceeding_description: str | None = None
     category_of_law: str
     certificate_type: str
     level_of_service: str
@@ -579,7 +587,7 @@ class ApplicationResponse(BaseModel):
     application_type: str
     auto_grant: bool
     overall_decision: str
-    proceedings: list[ProceedingResponse] = []
+    proceeding: ProceedingResponse
     public_bodies: list[PublicBodyResponse] = []
     client: ClientResponse
     deceased: DeceasedResponse
@@ -599,7 +607,7 @@ class ApplicationSearchResponse(BaseModel):
     client_last_name: str
     client_date_of_birth: str
     date_submitted: datetime
-    firm_name: str | None
+    firm_name: str
     firm_number: str
     overall_decision: str
 
@@ -611,6 +619,16 @@ class CoronersLetterResult:
 
 
 class SDSUploadCoronersLetterResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        from_attributes=True,
+        populate_by_name=True,
+    )
+    sds_file_name: str
+    status: str
+
+
+class SDSUploadClaimEvidenceResponse(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
         from_attributes=True,

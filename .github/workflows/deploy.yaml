@@ -23,9 +23,9 @@ on:
           - dev
 
 jobs:
-  # code-linting:
-  #   name: Code Linting
-  #   uses: ./.github/workflows/code-linting.yaml
+  code-linting:
+    name: Code Linting
+    uses: ./.github/workflows/code-linting.yaml
 
   snyk:
     name: Snyk scan docker image
@@ -37,15 +37,18 @@ jobs:
 
       - name: Get Snyk OAuth Token
         id: snyk-auth
+        env:
+          SNYK_CLIENT_ID: ${{ secrets.SNYK_CLIENT_ID }}
+          SNYK_CLIENT_SECRET: ${{ secrets.SNYK_CLIENT_SECRET }}
         run: |
           TOKEN=$(curl -s -X POST "https://api.snyk.io/oauth2/token" \
             -H "Content-Type: application/x-www-form-urlencoded" \
             -d "grant_type=client_credentials" \
-            -d "client_id=${{ secrets.SNYK_CLIENT_ID }}" \
-            -d "client_secret=${{ secrets.SNYK_CLIENT_SECRET }}" \
+            -d "client_id=$SNYK_CLIENT_ID" \
+            -d "client_secret=$SNYK_CLIENT_SECRET" \
             | jq -r '.access_token')
 
-          echo "SNYK_OAUTH_TOKEN=$TOKEN" >> $GITHUB_ENV
+          echo "SNYK_OAUTH_TOKEN=$TOKEN" >> "$GITHUB_ENV"
 
       - name: Build local Docker image
         run: |
@@ -135,7 +138,7 @@ jobs:
     if: always() && github.ref_name == 'main'
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Send Slack Notification
         uses: ./.github/actions/notify
         with:

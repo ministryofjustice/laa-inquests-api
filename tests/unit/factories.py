@@ -1,6 +1,7 @@
-from datetime import date
+from datetime import UTC, datetime
 
 from app.models.application.certificate import ApplicationCertificate
+from app.models.application.enums import AddressSource, CorrespondenceRecipientType
 from app.models.application.index import (
     Address,
     Application,
@@ -14,8 +15,8 @@ from app.models.application.index import (
     PublicBody,
     PublicBodyId,
 )
-from app.models.application.enums import AddressSource, CorrespondenceRecipientType
-
+from app.models.claim.enums import ClaimStatus
+from app.models.claim.index import Claim
 
 # Sentinel value to distinguish "not provided" from "explicitly None"
 _NOT_PROVIDED = object()
@@ -60,7 +61,11 @@ def create_base_office_address(**overrides):
 
 
 def create_base_client(
-    home_address=_NOT_PROVIDED, correspondence_address=_NOT_PROVIDED, **overrides
+    home_address=_NOT_PROVIDED,
+    correspondence_address=_NOT_PROVIDED,
+    correspondence_recipient_name=_NOT_PROVIDED,
+    correspondence_recipient_type=_NOT_PROVIDED,
+    **overrides,
 ):
     """Create a base client with optional field overrides."""
     if home_address is _NOT_PROVIDED:
@@ -69,12 +74,22 @@ def create_base_client(
     if correspondence_address is _NOT_PROVIDED:
         correspondence_address = create_base_correspondence_address()
 
-    if correspondence_address is not None:
-        correspondence_recipient = "John Smith"
-        correspondence_recipient_type = CorrespondenceRecipientType.PERSON
-    else:
-        correspondence_recipient = None
+    if (
+        correspondence_recipient_name is _NOT_PROVIDED
+        and correspondence_recipient_type is _NOT_PROVIDED
+    ):
+        correspondence_recipient_name = None
         correspondence_recipient_type = None
+    elif (
+        correspondence_recipient_name is not _NOT_PROVIDED
+        and correspondence_recipient_type is _NOT_PROVIDED
+    ):
+        correspondence_recipient_type = CorrespondenceRecipientType.PERSON
+    elif (
+        correspondence_recipient_name is _NOT_PROVIDED
+        and correspondence_recipient_type is not _NOT_PROVIDED
+    ):
+        correspondence_recipient_name = "Recipient Name"
 
     defaults = {
         "client_id": 1,
@@ -85,14 +100,13 @@ def create_base_client(
         "national_insurance_number": "AB123456C",
         "has_applied_previously": True,
         "prev_application_reference": "LAA-2024-001",
-        "correspondence_address_source": AddressSource.USE_SPECIFIED_ADDRESS,
+        "correspondence_address_source": AddressSource.USE_CLIENT_HOME_ADDRESS,
         "home_address_id": 1,
         "home_address": home_address,
         "correspondence_address_id": 2,
         "correspondence_address": correspondence_address,
-        "is_client_correspondence_recipient": False,
         "correspondence_recipient_type": correspondence_recipient_type,
-        "correspondence_recipient_name": correspondence_recipient,
+        "correspondence_recipient_name": correspondence_recipient_name,
     }
     return Client(**(defaults | overrides))
 
@@ -117,7 +131,7 @@ def create_base_proceeding(**overrides):
     """Create a base proceeding with optional field overrides."""
     defaults = {
         "id": 1,
-        "proceeding_id": ProceedingId.TEST1,
+        "proceeding_id": ProceedingId.IQOT,
         "proceeding_name": "Inquest into death",
         "proceeding_description": "Inquest into death",
         "matter_type": "INQUESTS",
@@ -133,10 +147,12 @@ def create_base_application_proceeding(proceeding=_NOT_PROVIDED, **overrides):
     defaults = {
         "application_proceeding_id": 1,
         "laa_reference": 12345,
-        "proceeding_id": ProceedingId.TEST1,
+        "proceeding_id": ProceedingId.IQOT,
         "proceeding": proceeding,
-        "certificate_start_date": date(2026, 6, 18),
-        "certificate_issue_date": date(2026, 6, 18),
+        "certificate_start_date": datetime(2026, 6, 18, tzinfo=UTC),
+        "certificate_issue_date": datetime(2026, 6, 18, tzinfo=UTC),
+        "substantive_cost_limitation_effective_date": datetime(2026, 6, 18, tzinfo=UTC),
+        "certificate_end_date": None,
     }
     return ApplicationProceeding(**(defaults | overrides))
 
@@ -170,7 +186,8 @@ def create_base_provider(**overrides):
     defaults = {
         "provider_id": 1,
         "firm_code": "ABC123",
-        "office_id": "001",
+        "office_id": "0U651L",
+        "email_address": "provider@example.com",
     }
     return Provider(**(defaults | overrides))
 
@@ -179,7 +196,7 @@ def create_base_application(
     client=_NOT_PROVIDED,
     deceased=_NOT_PROVIDED,
     provider=_NOT_PROVIDED,
-    proceedings=_NOT_PROVIDED,
+    proceeding=_NOT_PROVIDED,
     public_bodies=_NOT_PROVIDED,
     **overrides,
 ):
@@ -190,8 +207,8 @@ def create_base_application(
         deceased = create_base_deceased()
     if provider is _NOT_PROVIDED:
         provider = create_base_provider()
-    if proceedings is _NOT_PROVIDED:
-        proceedings = [create_base_application_proceeding()]
+    if proceeding is _NOT_PROVIDED:
+        proceeding = create_base_application_proceeding()
     if public_bodies is _NOT_PROVIDED:
         public_bodies = [create_base_application_public_body()]
 
@@ -203,10 +220,20 @@ def create_base_application(
         "deceased": deceased,
         "provider_id": 1,
         "provider": provider,
-        "proceedings": proceedings,
+        "proceeding": proceeding,
         "public_bodies": public_bodies,
     }
     return Application(**(defaults | overrides))
+
+
+def create_base_claim(**overrides) -> Claim:
+    """Create a base claim with optional field overrides."""
+    defaults = {
+        "claim_type_id": "FINAL_BILL",
+        "status_id": ClaimStatus.SUBMITTED,
+        "submission_date": datetime(2026, 1, 1, tzinfo=UTC),
+    }
+    return Claim(**(defaults | overrides))
 
 
 def create_base_certificate(
@@ -235,28 +262,31 @@ def create_base_certificate(
         "guardian_name": "Not applicable",
         "guardian_address": "Not applicable",
         "laa_reference": application.laa_reference,
-        "date_created": application_proceeding.certificate_issue_date or date.today(),
+        "date_created": application_proceeding.certificate_issue_date
+        or datetime.now(tz=UTC).date(),
         "certificate_type": application_proceeding.proceeding.certificate_type,
         "status": application.status,
-        "effective_date": application_proceeding.certificate_start_date or date.today(),
+        "effective_date": application_proceeding.certificate_start_date
+        or datetime.now(tz=UTC).date(),
         "end_date": None,
         "reinstatement_date": None,
         "cost_limitation": str(
             application_proceeding.proceeding.substantive_cost_limitation
         ),
-        "cost_limitation_effective_date": None,
+        "cost_limitation_effective_date": application_proceeding.substantive_cost_limitation_effective_date
+        or datetime.now(tz=UTC).date(),
         "certificate_limitation": "Not applicable",
         "proceeding_name": application_proceeding.proceeding.proceeding_name,
         "proceeding_description": application_proceeding.proceeding.proceeding_description,
         "category_of_law": application_proceeding.proceeding.category_of_law,
         "current_proceeding_status": application.status,
         "date_work_can_commence": application_proceeding.certificate_start_date
-        or date.today(),
+        or datetime.now(tz=UTC).date(),
         "proceeding_end_date": None,
         "client_involvement_type": "Applicant",
         "level_of_service": application_proceeding.proceeding.level_of_service,
         "date_current_level_of_service_effective": (
-            application_proceeding.certificate_start_date or date.today()
+            application_proceeding.certificate_start_date or datetime.now(tz=UTC).date()
         ),
         "previous_level_of_service": "Not applicable",
         "date_previous_level_of_service_effective": "Not applicable",

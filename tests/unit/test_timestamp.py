@@ -1,6 +1,8 @@
+from datetime import UTC, datetime
+
 from sqlmodel import Session
+
 from app.models.application.index import Application
-from datetime import datetime, UTC
 
 
 def test_timezone():

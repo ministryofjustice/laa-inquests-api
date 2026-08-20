@@ -17,7 +17,7 @@ cffi==2.0.0
 cfgv==3.5.0
 charset-normalizer==3.4.7
 click==8.3.3
-cryptography==49.0.0
+cryptography==50.0.0
 cssselect2==0.9.0
 distlib==0.4.3
 dnspython==2.7.0
@@ -72,7 +72,7 @@ requests==2.34.2
 rich==14.0.0
 rich-toolkit==0.14.8
 rignore==0.5.1
-ruff==0.16.0
+ruff==0.16.2
 sentry-sdk[fastapi]==2.32.0
 shellingham==1.5.4
 six==1.17.0

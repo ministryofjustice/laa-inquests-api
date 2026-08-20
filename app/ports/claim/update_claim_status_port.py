@@ -10,3 +10,9 @@ class UpdateClaimStatusPort(ABC):
         claim_id: int,
         status: ClaimStatus,
     ) -> None: ...
+
+    @abstractmethod
+    def commit(self) -> None: ...
+
+    @abstractmethod
+    def rollback(self) -> None: ...

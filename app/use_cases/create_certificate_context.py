@@ -1,8 +1,8 @@
-from app.ports.provider_details_port import ProviderDetailsPort
-from app.models.application.index import Application, ApplicationProceeding
+from datetime import UTC, datetime
+
 from app.models.application.certificate import ApplicationCertificate
-from app.use_cases.exceptions import ProviderDetailsRetrievalError
-from datetime import date
+from app.models.application.index import Application, ApplicationProceeding
+from app.ports.provider_details_port import ProviderDetailsPort
 
 
 class CreateCertificateContextUseCase:
@@ -32,33 +32,25 @@ class CreateCertificateContextUseCase:
             else None
         )
 
-        client_address = (
-            application.client.correspondence_address or application.client.home_address
-        )
-
-        if (
-            application.client.correspondence_recipient
-            and not application.client.is_client_correspondence_recipient
-        ):
-            client_address.address_line_1 = f"c/o {application.client.correspondence_recipient.recipient_name} {application.client.correspondence_address.address_line_1}"
-
         firm_name = self.provider_details_port.get_firm_name(
             application.provider.firm_code
         )
-
-        if firm_name is None:
-            raise ProviderDetailsRetrievalError(
-                "Failed to retrieve firm name from provider details service."
-            )
 
         office_address = self.provider_details_port.get_office_address(
             application.provider.office_id
         )
 
-        if office_address is None:
-            raise ProviderDetailsRetrievalError(
-                "Failed to retrieve office address from provider details service."
-            )
+        if application.client.correspondence_address_source == "USE_PROVIDER_ADDRESS":
+            client_address = office_address.model_copy()
+        elif (
+            application.client.correspondence_address_source == "USE_SPECIFIED_ADDRESS"
+        ):
+            client_address = application.client.correspondence_address
+        else:
+            client_address = application.client.home_address
+
+        if application.client.correspondence_recipient:
+            client_address.address_line_1 = f"c/o {application.client.correspondence_recipient.recipient_name} {client_address.address_line_1}"
 
         certificate_type = proceeding.certificate_type
         category_of_law = proceeding.category_of_law
@@ -69,10 +61,14 @@ class CreateCertificateContextUseCase:
         proceeding_name = proceeding.proceeding_name
         proceeding_description = proceeding.proceeding_description
 
-        effective_date = proceeding.certificate_start_date or date.today()
-        date_work_can_commence = proceeding.certificate_start_date or date.today()
+        effective_date = (
+            proceeding.certificate_start_date or datetime.now(tz=UTC).date()
+        )
+        date_work_can_commence = (
+            proceeding.certificate_start_date or datetime.now(tz=UTC).date()
+        )
         date_current_level_of_service_effective = (
-            proceeding.certificate_start_date or date.today()
+            proceeding.certificate_start_date or datetime.now(tz=UTC).date()
         )
 
         # Application status fields
@@ -88,16 +84,19 @@ class CreateCertificateContextUseCase:
             firm_name=firm_name,
             office_address=office_address,
             laa_reference=application.laa_reference,
-            date_created=proceeding.certificate_issue_date or date.today(),
+            date_created=proceeding.certificate_issue_date
+            or datetime.now(tz=UTC).date(),
             certificate_type=certificate_type,
             category_of_law=category_of_law,
             level_of_service=level_of_service,
             scope_limitation_heading=scope_limitation_heading,
             scope_limitation_description=scope_limitation_description,
             cost_limitation=cost_limitation,
+            cost_limitation_effective_date=proceeding.substantive_cost_limitation_effective_date,
             proceeding_name=proceeding_name,
             proceeding_description=proceeding_description,
             effective_date=effective_date,
+            end_date=proceeding.certificate_end_date,
             date_work_can_commence=date_work_can_commence,
             date_current_level_of_service_effective=date_current_level_of_service_effective,
             status=status,

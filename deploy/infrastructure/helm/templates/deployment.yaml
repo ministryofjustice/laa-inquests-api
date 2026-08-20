@@ -34,7 +34,7 @@ spec:
         - name: run-migrations
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: [ "alembic", "upgrade", "head" ]
+          command: ["sh", "-c", "alembic upgrade head && python bin/seed.py"]
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           env:
@@ -77,6 +77,16 @@ spec:
                 secretKeyRef:
                   name: {{.Values.env.AWS_SECRETS_GOV_NOTIFY_TEMPLATE_IDS}}
                   key: GOV_NOTIFY_APPLICATION_GRANT_TEMPLATE_ID
+            - name: GOV_NOTIFY_CLAIM_SUBMIT_TEMPLATE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.env.AWS_SECRETS_GOV_NOTIFY_TEMPLATE_IDS }}
+                  key: GOV_NOTIFY_CLAIM_SUBMIT_TEMPLATE_ID
+            - name: GOV_NOTIFY_CLAIM_REJECT_TEMPLATE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.env.AWS_SECRETS_GOV_NOTIFY_TEMPLATE_IDS }}
+                  key: GOV_NOTIFY_CLAIM_REJECT_TEMPLATE_ID
             - name: GOV_NOTIFY_CALLBACK_BEARER_TOKEN
               valueFrom:
                 secretKeyRef:
@@ -85,28 +95,28 @@ spec:
             - name: SDS_BASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.env.AWS_SECRETS_SDS_BASE_URL }}
-                  key: sds-base-url
+                  name: {{ .Values.env.AWS_SECRETS_SDS_CONFIG }}
+                  key: SDS_BASE_URL
             - name: SDS_TENANT_ID
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.env.AWS_SECRETS_SDS_TENANT_ID }}
-                  key: sds-tenant-id
+                  name: {{ .Values.env.AWS_SECRETS_SDS_CONFIG }}
+                  key: SDS_TENANT_ID
             - name: SDS_CLIENT_ID
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.env.AWS_SECRETS_SDS_CLIENT_ID }}
-                  key: sds-client-id
+                  name: {{ .Values.env.AWS_SECRETS_SDS_CONFIG }}
+                  key: SDS_CLIENT_ID
             - name: SDS_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.env.AWS_SECRETS_SDS_CLIENT_SECRET }}
-                  key: sds-client-secret
+                  name: {{ .Values.env.AWS_SECRETS_SDS_CONFIG }}
+                  key: SDS_CLIENT_SECRET
             - name: SDS_SCOPE
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.env.AWS_SECRETS_SDS_SCOPE }}
-                  key: sds-scope
+                  name: {{ .Values.env.AWS_SECRETS_SDS_CONFIG }}
+                  key: SDS_SCOPE
           ports:
             - name: http
               containerPort: 8027

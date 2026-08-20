@@ -1,34 +1,39 @@
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
+from fastapi.testclient import TestClient
 from passlib.hash import argon2
-from sqlmodel import SQLModel, create_engine, Session, StaticPool
+from sqlalchemy.orm import sessionmaker
+from sqlmodel import Session, SQLModel, StaticPool, create_engine
+
 from app import api
 from app.db import get_session
 from app.db.session import CustomSession
-from fastapi.testclient import TestClient
-from sqlalchemy.orm import sessionmaker
-from app.routers.dependencies import get_entra_auth_port
-from app.routers.applications import (
-    get_provider_details_port,
-    get_gov_notify_port,
-    get_sds_port,
-    get_pdf_generation_port,
-)
 from app.models import User
+from app.models.application.enums import MeritsDecision
 from app.models.application.index import (
     Address,
     Application,
+    ApplicationProceeding,
     ApplicationPublicBody,
     Client,
     Deceased,
     Proceeding,
     ProceedingId,
-    ApplicationProceeding,
     Provider,
     PublicBody,
     PublicBodyId,
+    SDSUploadClaimEvidenceResponse,
     SDSUploadCoronersLetterResponse,
 )
+from app.ports.entra_auth_port import AuthenticatedUser
+from app.routers.applications import (
+    get_gov_notify_port,
+    get_pdf_generation_port,
+    get_provider_details_port,
+    get_sds_port,
+)
+from app.routers.dependencies import get_entra_auth_port
 
 SECRET_KEY = "TEST_KEY"
 
@@ -59,21 +64,27 @@ def session_fixture():
             )
             db_session.add(new_user)
         proceeding = Proceeding(
-            proceeding_id=ProceedingId.TEST1,
-            proceeding_name="Inquest into death",
-            proceeding_description="Inquest into death",
+            proceeding_id=ProceedingId.IQOT,
+            proceeding_name="Other",
+            proceeding_description="Other",
         )
         db_session.add(proceeding)
         db_session.commit()
-        application_proceedings_to_add = [
-            ApplicationProceeding(proceeding_id=ProceedingId.TEST1)
-        ]
+        application_proceeding = ApplicationProceeding(
+            proceeding_id=ProceedingId.IQOT,
+            merits_decision=MeritsDecision.GRANTED,
+        )
 
         new_public_body = PublicBody(
             public_body_id=PublicBodyId.DEPARTMENT_FOR_TRANSPORT,
             public_body_description="Department for Transport",
         )
         db_session.add(new_public_body)
+        new_public_body_2 = PublicBody(
+            public_body_id=PublicBodyId.DEPARTMENT_OF_HEALTH_AND_SOCIAL_CARE,
+            public_body_description="Department of Health and Social Care",
+        )
+        db_session.add(new_public_body_2)
         db_session.commit()
         application_public_bodies = [
             ApplicationPublicBody(public_body_id=PublicBodyId.DEPARTMENT_FOR_TRANSPORT)
@@ -121,7 +132,7 @@ def session_fixture():
         db_session.refresh(new_provider)
 
         new_application = Application(
-            proceedings=application_proceedings_to_add,
+            proceeding=application_proceeding,
             client_id=new_client.client_id,
             deceased_id=new_deceased.deceased_id,
             public_bodies=application_public_bodies,
@@ -143,6 +154,9 @@ def client_fixture(session: Session):
     mock_gov_notify_port.send_application_submit_confirmation_email.return_value = None
     mock_gov_notify_port.send_application_refused_decision_email.return_value = None
     mock_gov_notify_port.send_application_granted_decision_email.return_value = None
+    mock_gov_notify_port.send_claim_submit_confirmation_email.return_value = None
+    mock_gov_notify_port.send_claim_rejected_decision_email.return_value = None
+    mock_gov_notify_port.send_precompiled_letter.return_value = None
 
     def get_session_override():
         return session
@@ -150,6 +164,9 @@ def client_fixture(session: Session):
     def get_provider_details_port_override():
         mock_port = MagicMock()
         mock_port.get_firm_name.return_value = "Test Firm Name"
+        mock_port.get_firms_by_ids.side_effect = lambda firm_ids: [
+            {"firmNumber": fid, "firmName": f"Firm {fid}"} for fid in firm_ids
+        ]
         mock_port.get_office_address.return_value = Address(
             address_line_1="Test Office Street",
             town_or_city="Test City",
@@ -170,12 +187,23 @@ def client_fixture(session: Session):
             sds_file_name="test-file_abc123.pdf",
             status="SUCCESS",
         )
+        mock_sds.virus_check_claim_evidence.return_value = True
+        mock_sds.save_claim_evidence.return_value = SDSUploadClaimEvidenceResponse(
+            sds_file_name="test-claim-evidence_abc123.pdf",
+            status="SUCCESS",
+        )
         mock_sds.retrieve_coroners_letter.return_value = iter([b"file bytes"])
+        mock_sds.retrieve_claim_evidence.return_value = iter([b"file bytes"])
         return mock_sds
 
     def get_entra_auth_port_bypass():
         mock_auth = MagicMock()
-        mock_auth.verify_token.return_value = None
+        mock_auth.verify_token.return_value = AuthenticatedUser(
+            firm_code="0A123B",
+            scopes=frozenset({"User.Provider", "User.Caseworker"}),
+            name="Test Name",
+            entra_object_id="some-entra-object-id",
+        )
         return mock_auth
 
     api.dependency_overrides[get_session] = get_session_override
@@ -202,6 +230,9 @@ def entra_auth_client_fixture(session: Session):
     def get_provider_details_port_override():
         mock_port = MagicMock()
         mock_port.get_firm_name.return_value = "Test Firm Name"
+        mock_port.get_firms_by_ids.side_effect = lambda firm_ids: [
+            {"firmNumber": fid, "firmName": f"Firm {fid}"} for fid in firm_ids
+        ]
         mock_port.get_office_address.return_value = Address(
             address_line_1="Test Office Street",
             town_or_city="Test City",
@@ -224,7 +255,13 @@ def entra_auth_client_fixture(session: Session):
             sds_file_name="test-file_abc123.pdf",
             status="SUCCESS",
         )
+        mock_sds.virus_check_claim_evidence.return_value = True
+        mock_sds.save_claim_evidence.return_value = SDSUploadClaimEvidenceResponse(
+            sds_file_name="test-claim-evidence_abc123.pdf",
+            status="SUCCESS",
+        )
         mock_sds.retrieve_coroners_letter.return_value = iter([b"file bytes"])
+        mock_sds.retrieve_claim_evidence.return_value = iter([b"file bytes"])
         return mock_sds
 
     def get_entra_auth_port_override():
@@ -257,6 +294,12 @@ def entra_auth_client_fixture(session: Session):
                     detail="Insufficient permissions",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
+
+            return AuthenticatedUser(
+                firm_code="0A123B",
+                scopes=frozenset(token_scopes[token]),
+                name="Test Name",
+            )
 
         mock_auth.verify_token.side_effect = verify_token
         return mock_auth

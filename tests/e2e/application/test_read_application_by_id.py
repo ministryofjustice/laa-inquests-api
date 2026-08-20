@@ -1,9 +1,9 @@
-import pytest
-
-from app.models.application.index import Application, CoronersLetter
-from sqlmodel import select
 import uuid
 
+import pytest
+from sqlmodel import select
+
+from app.models.application.index import Application, CoronersLetter
 
 pytestmark = pytest.mark.usefixtures("mock_gov_notify")
 
@@ -43,8 +43,8 @@ def test_200_proceeding_details_included_on_application_response(
     )
 
     requested_application = response.json()
-    assert len(requested_application["proceedings"]) == 1
-    proceeding = requested_application["proceedings"][0]
+    proceeding = requested_application["proceeding"]
+    assert proceeding is not None
     assert isinstance(proceeding["proceedingName"], str)
     assert isinstance(proceeding["proceedingDescription"], str)
 
@@ -91,7 +91,6 @@ def test_200_returns_client_correspondence_recipient_flag_when_client_is_recipie
     )
 
     requested_application = response.json()
-    assert requested_application["client"]["isClientCorrespondenceRecipient"] is True
     assert requested_application["client"]["correspondenceRecipient"] is None
 
 
@@ -102,11 +101,11 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
         "/applications",
         json={
             "coronersLetterId": str(uuid.uuid4()),
-            "proceedings": [{"proceedingId": "TEST1"}],
+            "proceeding": {"proceedingId": "IQOT"},
             "client": {
                 "clientFirstName": "Test",
                 "clientLastName": "Surname",
-                "dateOfBirth": "01-01-1990",
+                "dateOfBirth": "1990-01-01",
                 "nationalInsuranceNumber": "AB12345A",
                 "correspondenceAddressSource": "USE_SPECIFIED_ADDRESS",
                 "correspondenceAddress": {
@@ -114,7 +113,6 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
                     "townOrCity": "London",
                     "postcode": "SW1A 1AA",
                 },
-                "isClientCorrespondenceRecipient": False,
                 "correspondenceRecipient": {
                     "recipientType": "ORGANISATION",
                     "recipientName": "Inquests Support Org",
@@ -132,15 +130,14 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
             "deceased": {
                 "deceasedFirstName": "Test",
                 "deceasedLastName": "Surname",
-                "deceasedDateOfBirth": "01-01-2000",
-                "deceasedDateOfDeath": "01-01-2025",
+                "deceasedDateOfBirth": "2000-01-01",
+                "deceasedDateOfDeath": "2025-01-01",
                 "coronersReference": "COR-2025-001",
                 "furtherInformation": "Further details to be confirmed",
                 "clientRelationshipToDeceased": "guardian",
             },
             "provider": {
-                "firmCode": "0A123B",
-                "officeId": "001",
+                "officeId": "0U651L",
                 "emailAddress": "provider@example.com",
             },
         },
@@ -163,7 +160,6 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
     )
 
     requested_application = response.json()
-    assert requested_application["client"]["isClientCorrespondenceRecipient"] is False
     assert requested_application["client"]["correspondenceRecipient"] == {
         "recipientType": "ORGANISATION",
         "recipientName": "Inquests Support Org",
@@ -221,10 +217,12 @@ def test_200_provider_fields_are_null_when_provider_api_unavailable(
     session, auth_token
 ):
     from unittest.mock import MagicMock
+
+    from fastapi.testclient import TestClient
+
     from app import api
     from app.db import get_session
     from app.routers.applications import get_provider_details_port
-    from fastapi.testclient import TestClient
 
     mock_port = MagicMock()
     mock_port.get_firm_name.return_value = None

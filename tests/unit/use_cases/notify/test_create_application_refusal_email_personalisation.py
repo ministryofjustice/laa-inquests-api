@@ -1,5 +1,8 @@
 from datetime import UTC, datetime
 
+import pytest
+from pydantic import ValidationError
+
 from app.models.application.enums import AddressSource, MeritsDecision, ProceedingId
 from app.models.application.index import Application, ApplicationProceeding, Client
 from app.models.gov_notify_templates.application_refuse_personalisation import (
@@ -8,8 +11,6 @@ from app.models.gov_notify_templates.application_refuse_personalisation import (
 from app.use_cases.notify.create_application_refusal_email_personalisation import (
     create_application_refusal_email_personalisation,
 )
-
-import pytest
 
 
 def _create_test_application_and_proceeding(laa_reference: int = 12345):
@@ -33,7 +34,7 @@ def _create_test_application_and_proceeding(laa_reference: int = 12345):
     proceeding = ApplicationProceeding(
         application_proceeding_id=1,
         laa_reference=laa_reference,
-        proceeding_id=ProceedingId.TEST1,
+        proceeding_id=ProceedingId.IQOT,
         merits_decision=MeritsDecision.REFUSED,
         reason_for_refusal="NOT_IN_SCOPE",
         justification="The matter does not meet scope requirements.",
@@ -62,7 +63,7 @@ def test_create_application_refusal_email_personalisation_rejects_missing_requir
     """
     Test that NotifyApplicationRefuseTemplatePersonalisation model rejects creation with missing required fields.
     """
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         NotifyApplicationRefuseTemplatePersonalisation(
             laa_reference="12345",
         )
@@ -72,7 +73,7 @@ def test_create_application_refusal_email_personalisation_rejects_extra_fields()
     """
     Test that NotifyApplicationRefuseTemplatePersonalisation model rejects creation with extra/unexpected fields.
     """
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         NotifyApplicationRefuseTemplatePersonalisation(
             laa_reference="12345",
             client_first_name="Jane",

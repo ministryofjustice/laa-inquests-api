@@ -1,7 +1,8 @@
 """E2E tests for GovNotify delivery receipt callback endpoint."""
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 
 @pytest.fixture
@@ -53,10 +54,13 @@ def test_200_callback_accepts_valid_bearer_token_and_payload(
     assert response.status_code == 200
 
     mock_logger.info.assert_called_once()
-    log_call = mock_logger.info.call_args[0][0]
-    assert "GovNotify callback received" in log_call
-    assert payload["id"] in log_call
-    assert payload["status"] in log_call
+    assert mock_logger.info.call_args[0][0] == "GovNotify callback received"
+    log_extra = mock_logger.info.call_args.kwargs["extra"]["extra"]
+    assert log_extra["event"] == "govnotify_callback_received"
+    assert log_extra["notification_id"] == payload["id"]
+    assert log_extra["status"] == payload["status"]
+    assert log_extra["recipient_masked"] == "p***@example.com"
+    assert "to" not in log_extra
 
 
 def test_401_callback_rejects_invalid_bearer_token(client, gov_notify_bearer_token):
@@ -127,6 +131,26 @@ def test_200_callback_logs_all_delivery_statuses(client, gov_notify_bearer_token
         mock_logger.info.assert_called_once()
 
 
+def test_200_callback_response_includes_request_and_correlation_ids(
+    client, gov_notify_bearer_token
+):
+    payload = _make_callback_payload()
+
+    response = client.post(
+        "/notifications/callback",
+        json=payload,
+        headers={
+            "Authorization": f"Bearer {gov_notify_bearer_token}",
+            "x-request-id": "request-123",
+            "x-correlation-id": "correlation-456",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["x-request-id"] == "request-123"
+    assert response.headers["x-correlation-id"] == "correlation-456"
+
+
 def test_200_callback_extracts_environment_and_reference_from_reference_field(
     client, gov_notify_bearer_token
 ):
@@ -141,6 +165,6 @@ def test_200_callback_extracts_environment_and_reference_from_reference_field(
         )
 
     assert response.status_code == 200
-    log_call = mock_logger.info.call_args[0][0]
-    assert "production" in log_call
-    assert "APP-999999" in log_call
+    log_extra = mock_logger.info.call_args.kwargs["extra"]["extra"]
+    assert log_extra["environment_from_reference"] == "production"
+    assert log_extra["laa_reference"] == "APP-999999"

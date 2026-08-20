@@ -1,25 +1,35 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
 from app.domain.claim_rejection import ClaimRejection, ClaimRejectionReason
-from app.domain.date_utils import add_calendar_months
 from app.domain.constants.claim_messages import (
-    MIXED_VAT_MESSAGE,
     MISSING_GROSS_MESSAGE,
     MISSING_NON_PROFIT_COST_TOTAL_MESSAGE,
     MISSING_POA_TYPE_MESSAGE,
     MISSING_TOTAL_MESSAGE,
+    MIXED_VAT_MESSAGE,
     NEGATIVE_NET_MESSAGE,
     NET_GT_GROSS_MESSAGE,
     POA_NOT_ALLOWED_MESSAGE,
 )
+from app.domain.constants.claims import (
+    AUTO_APPROVAL_MAX_TOTAL,
+    MAX_PROFIT_COST_POA_CLAIM_COUNT,
+    MIN_MONTHS_BEFORE_PROFIT_COST_POA,
+)
+from app.domain.date_utils import add_calendar_months
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
-from app.models.claim.enums import ClaimStatus, ClaimType, POAType
+from app.models.claim.enums import (
+    ClaimDecisionStatus,
+    ClaimStatus,
+    ClaimType,
+    POAType,
+)
 
 
 def _as_utc(dt: datetime) -> datetime:
@@ -27,9 +37,58 @@ def _as_utc(dt: datetime) -> datetime:
     return dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
 
 
-MAX_PROFIT_COST_POA_CLAIM_COUNT = 4
-MIN_MONTHS_BEFORE_PROFIT_COST_POA = 3
-AUTO_APPROVAL_MAX_TOTAL = Decimal("50000.00")
+APPROVED_CLAIM_DECISIONS = frozenset(
+    {ClaimDecisionStatus.GRANT, ClaimDecisionStatus.PAY_IN_FULL}
+)
+
+
+@dataclass(frozen=True)
+class ApprovedClaimAmount:
+    """A claim's latest decision and cost figures, for available-funds accounting."""
+
+    decision: ClaimDecisionStatus | None
+    gross: Decimal | None
+    vat_zero_total: Decimal | None
+
+    @property
+    def is_approved(self) -> bool:
+        return self.decision in APPROVED_CLAIM_DECISIONS
+
+    @property
+    def payment_amount(self) -> Decimal:
+        if self.gross is not None:
+            return self.gross
+        if self.vat_zero_total is not None:
+            return self.vat_zero_total
+        return Decimal(0)
+
+
+def calculate_available_funds(
+    substantive_cost_limitation: Decimal | int | None,
+    claim_amounts: list[ApprovedClaimAmount],
+) -> Decimal:
+    """Available funds remaining = substantive cost limitation minus the total
+    payment amount of claims that have been successfully approved (GRANT or
+    PAY_IN_FULL). Each approved claim's payment amount is its gross figure, or
+    its VAT-zero figure when no gross is present."""
+    limit = Decimal(str(substantive_cost_limitation or 0))
+    total_approved = sum(
+        (amount.payment_amount for amount in claim_amounts if amount.is_approved),
+        Decimal(0),
+    )
+    return limit - total_approved
+
+
+def total_claim_amount(
+    vat_zero_total: Decimal | None, gross: Decimal | None
+) -> Decimal:
+    """The claim's total claimed figure: its VAT-zero total when present,
+    otherwise its gross. Raises when neither is set."""
+    if vat_zero_total is not None:
+        return vat_zero_total
+    if gross is not None:
+        return gross
+    raise ValueError("Claim has no zero-rated or gross amount to report")
 
 
 @dataclass(frozen=True)
@@ -70,6 +129,9 @@ class Claim:
     def total_claim_cost_for_limit_check(self) -> Decimal | None:
         return self.net if self.net is not None else self.vat_zero_total
 
+    def gross_or_vat_zero_cost(self) -> Decimal | None:
+        return self.gross if self.gross is not None else self.vat_zero_total
+
     def is_eligible_for_auto_approval(self, application: Application) -> bool:
         if self.claim_type != ClaimType.PAYMENT_ON_ACCOUNT:
             return False
@@ -81,10 +143,10 @@ class Claim:
         if total > AUTO_APPROVAL_MAX_TOTAL:
             return False
 
-        if application.status in ("WITHDRAWN", "GRANTED"):
+        if application.status == "WITHDRAWN":
             return False
 
-        return application.overall_decision != MeritsDecision.GRANTED
+        return application.overall_decision == MeritsDecision.GRANTED
 
     def should_auto_reject_for_max_poa_count(
         self,
@@ -109,7 +171,7 @@ class Claim:
     def should_auto_reject_for_limit(
         self, application: Application
     ) -> ClaimRejectionReason | None:
-        total = self.total_claim_cost_for_limit_check()
+        total = self.gross_or_vat_zero_cost()
         if total is None:
             return None
 
@@ -129,7 +191,7 @@ class Claim:
         application: Application,
         existing_claims: list[ExistingClaimSummary],
     ) -> ClaimRejectionReason | None:
-        new_claim_cost = self.total_claim_cost_for_limit_check()
+        new_claim_cost = self.gross_or_vat_zero_cost()
         if new_claim_cost is None:
             return None
 
@@ -137,14 +199,12 @@ class Claim:
         if limit is None:
             return None
 
-        application_claims = [
-            c
-            for c in existing_claims
-            if c.status in (ClaimStatus.SUBMITTED, ClaimStatus.ACCEPTED)
+        approved_claims = [
+            c for c in existing_claims if c.status == ClaimStatus.PAY_IN_FULL
         ]
         existing_total = sum(
-            (c.net if c.net is not None else c.vat_zero_total or Decimal(0))
-            for c in application_claims
+            ((c.gross if c.gross is not None else c.vat_zero_total) or Decimal(0))
+            for c in approved_claims
         )
         total = existing_total + new_claim_cost
         exceeds_limit = total > limit
@@ -194,7 +254,7 @@ class Claim:
         if self.poa_type != POAType.PROFIT_COST:
             return None
 
-        certificate_start_date = self._get_certificate_start_date(application)
+        certificate_start_date = application.proceeding.certificate_start_date
         if certificate_start_date is None:
             return None
 
@@ -208,15 +268,8 @@ class Claim:
             else None
         )
 
-    def _get_certificate_start_date(self, application: Application) -> date | None:
-        if not application.proceedings:
-            return None
-        return application.proceedings[0].certificate_start_date
-
     def _get_substantive_cost_limit(self, application: Application) -> Decimal | None:
-        if not application.proceedings:
-            return None
-        raw_limit = application.proceedings[0].substantive_cost_limitation
+        raw_limit = application.proceeding.substantive_cost_limitation
         if raw_limit is None:
             return None
         return Decimal(str(raw_limit))
