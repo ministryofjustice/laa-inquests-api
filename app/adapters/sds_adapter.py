@@ -1,4 +1,5 @@
 import logging
+import re
 import time
 import uuid
 from collections.abc import Iterator
@@ -260,7 +261,8 @@ class SdsAdapter(SdsPort):
         success_message = f"SDS {display_name} saved"
         success_event = f"sds_{file_kind}_saved_success"
         path = Path(file_name)
-        unique_file_name = f"{path.stem}_{uuid.uuid4()}{path.suffix}"
+        sanitized_stem = _sanitize_stem(path.stem)
+        unique_file_name = f"{sanitized_stem}_{uuid.uuid4()}{path.suffix}"
         token = self._get_token()
         response = httpx.post(
             f"{self.base_url}/save_file",
@@ -417,6 +419,11 @@ class SdsAdapter(SdsPort):
                 duration_ms=duration_ms(started_at),
             ),
         )
+
+
+def _sanitize_stem(stem: str) -> str:
+    """Replace non-alphanumeric characters (except hyphens and underscores) with underscores."""
+    return re.sub(r"[^\w\-]", "_", stem)
 
 
 def _raise_sds_retrieval_error(
