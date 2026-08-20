@@ -1,8 +1,11 @@
 import logging
-from sqlmodel import Session
+import uuid
+
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
-import uuid
+from sqlmodel import Session
+
+from app.logging_utils import build_log_extra
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +26,16 @@ class CustomSession(Session):
                 return super().commit()  # Call the original commit method
             except IntegrityError as e:
                 if "UNIQUE constraint failed" in str(e):
-                    logger.error(e)
+                    logger.error(
+                        "Integrity error while committing session",
+                        extra=build_log_extra(
+                            event="db_commit_integrity_error",
+                            route="db:session.commit",
+                            method="COMMIT",
+                            status_code=409,
+                            exception_type=type(e).__name__,
+                        ),
+                    )
                     self.rollback()  # Rollback the database to the previous state so partial data does not persist
                     retries += 1
                     for instance in new_objects:
@@ -31,11 +43,18 @@ class CustomSession(Session):
                             instance.id, uuid.UUID
                         ):
                             logger.warning(
-                                "UUID4 Collision Detected, generating a new UUID."
+                                "UUID4 collision detected",
+                                extra=build_log_extra(
+                                    event="db_uuid_collision_retry",
+                                    route="db:session.commit",
+                                    method="COMMIT",
+                                    status_code=409,
+                                    retries=retries,
+                                ),
                             )
                             instance.id = uuid.uuid4()  # Regenerate UUID
                 else:
-                    raise e
+                    raise
         raise HTTPException(
             status_code=500,
             detail="Could not generate a unique UUID after multiple attempts.",

@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en" class="govuk-template">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b0c0c">
+    <title>Civil legal aid certificate - GOV.UK</title>
+    <link rel="stylesheet" href="../static/govuk-frontend.css">
+    <style>
+        @page {
+            size: A4;
+            margin: 5mm 15mm;
+        }
+
+        /* Override font-family to use Arial consistently for PDF generation since GDS Transport fonts are not available */
+        * {
+            font-family: Arial, sans-serif !important;
+        }
+        
+        /* Remove grey background for PDF generation */
+        html,
+        body,
+        .govuk-template {
+            background-color: #ffffff !important;
+        }
+        
+        /* Force table layout for PDF generation to ensure keys and values are on the same line */
+        .govuk-summary-list {
+            display: table !important;
+            width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        
+        .govuk-summary-list__row {
+            display: table-row !important;
+            border-bottom: 1px solid #b1b4b6;
+        }
+        
+        .govuk-summary-list__key,
+        .govuk-summary-list__value {
+            display: table-cell !important;
+            padding-top: 10px;
+            padding-right: 20px;
+            padding-bottom: 10px;
+            vertical-align: top;
+        }
+        
+        .govuk-summary-list__key {
+            width: 40%;
+            font-weight: 700;
+        }
+        
+        .govuk-summary-list__value {
+            width: 60%;
+        }
+        
+        /* Preserve heading and text spacing */
+        .govuk-heading-l,
+        .govuk-heading-m {
+            margin-top: 0;
+        }
+        
+        .govuk-inset-text {
+            padding: 15px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        
+        /* Ensure summary cards display properly */
+        .govuk-summary-card {
+            margin-bottom: 20px;
+            border: 1px solid #b1b4b6;
+        }
+        
+        .govuk-summary-card__title-wrapper {
+            padding: 15px 20px;
+            background-color: #f3f2f1;
+        }
+        
+        .govuk-summary-card__content {
+            padding: 15px 20px;
+        }
+        
+        .govuk-summary-card__content .govuk-summary-list {
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body class="govuk-template__body">
+<script>
+    document.body.className += ' js-enabled' +
+        ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');
+</script>
+
+<a href="#main-content" class="govuk-skip-link" data-module="govuk-skip-link">Skip to main content</a>
+
+<div class="govuk-width-container">
+    <main class="govuk-main-wrapper" id="main-content" role="main">
+        <div class="govuk-grid-row">
+            <div class="govuk-grid-column-full">
+                <h1 class="govuk-heading-l">Civil legal aid certificate</h1>
+            </div>
+            <div class="govuk-grid-column-two-thirds">
+                <p class="govuk-body">
+                    <strong>Client:</strong> {{ client_name }}
+                    <br>
+                    <strong>LAA Reference number:</strong> {{ laa_reference }}
+                    <br>
+                    <strong>Date created:</strong> {{ date_created.strftime("%d %B %Y") }}
+                </p>
+            </div>
+            <section class="overview">
+                <div class="govuk-grid-column-two-thirds">
+                    <h2 class="govuk-heading-m">Overview</h2>
+                </div>
+                <div class="govuk-grid-column-two-thirds">
+                    <div class="certificate-details-table">
+                        <div class="govuk-summary-card govuk-!-margin-bottom-0">
+                            <div class="govuk-summary-card__title-wrapper">
+                                <h2 class="govuk-summary-card__title">Certificate details</h2>
+                            </div>
+                            <div class="govuk-summary-card__content">
+                                <dl class="govuk-summary-list">
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Client name</dt>
+                                        <dd class="govuk-summary-list__value">{{ client_name }}</dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Client address</dt>
+                                        <dd class="govuk-summary-list__value">
+                                            {{ [
+                                                client_address.address_line_1,
+                                                client_address.address_line_2,
+                                                client_address.town_or_city,
+                                                client_address.county,
+                                                client_address.postcode
+                                            ] | select | join('<br>') | safe }}
+                                        </dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Firm name</dt>
+                                        <dd class="govuk-summary-list__value">{{ firm_name }}</dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Office address</dt>
+                                        <dd class="govuk-summary-list__value">
+                                            {{ [
+                                                office_address.address_line_1,
+                                                office_address.address_line_2,
+                                                office_address.town_or_city,
+                                                office_address.county,
+                                                office_address.postcode
+                                            ] | select | join('<br>') | safe }}
+                                        </dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Opponent details</dt>
+                                        <dd class="govuk-summary-list__value">{{ opponent_details | join('<br>') | safe }}</dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Guardian name</dt>
+                                        <dd class="govuk-summary-list__value">{{ guardian_name }}</dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Guardian address</dt>
+                                        <dd class="govuk-summary-list__value">{{ guardian_address }}</dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="govuk-grid-column-two-thirds">
+                    <div class="govuk-inset-text">
+                        This is to certify that the status of the certificate is as specified in the Certificate summary. Its scope is specified in the proceeding listed and is subject to the limitations and conditions.
+                    </div>
+                </div>
+                <div class="govuk-grid-column-two-thirds">
+                    <div class="certificate-summary-table">
+                        <div class="govuk-summary-card govuk-!-margin-bottom-0">
+                            <div class="govuk-summary-card__title-wrapper">
+                                <h2 class="govuk-summary-card__title">Certificate summary</h2>
+                            </div>
+                            <div class="govuk-summary-card__content">
+                                <dl class="govuk-summary-list">
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Certificate type</dt>
+                                        <dd class="govuk-summary-list__value">{{ certificate_type }}</dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Status</dt>
+                                        <dd class="govuk-summary-list__value">{{ status }}</dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Effective date</dt>
+                                        <dd class="govuk-summary-list__value">{{ effective_date.strftime("%d %B %Y") }}</dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">End date</dt>
+                                        <dd class="govuk-summary-list__value">{{ end_date.strftime("%d %B %Y") if end_date else "Not applicable" }}</dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Reinstatement date</dt>
+                                        <dd class="govuk-summary-list__value">{{ reinstatement_date.strftime("%d %B %Y") if reinstatement_date else "Not applicable" }}</dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Cost limitation</dt>
+                                        <dd class="govuk-summary-list__value">{{ "£{:,.0f}".format(cost_limitation) }}</dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Cost limitation effective date</dt>
+                                        <dd class="govuk-summary-list__value">{{ cost_limitation_effective_date.strftime("%d %B %Y") if cost_limitation_effective_date else "Not applicable" }}</dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Certificate limitation</dt>
+                                        <dd class="govuk-summary-list__value">{{ certificate_limitation }}</dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <section class="scope">
+                <div class="govuk-grid-column-two-thirds">
+                    <div class="govuk-inset-text">
+                        This certificate imposes both scope and financially implications on the work to be done under it. Providers should check the limitations imposed carefully and apply for an amendment where appropriate.
+                    </div>
+                </div>
+                <div class="govuk-grid-column-two-thirds">
+                    <div class="govuk-warning-text">
+                        <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
+                        <strong class="govuk-warning-text__text">
+                            <span class="govuk-visually-hidden">Warning</span>
+                            Payment will not be made for work undertaken outside the scope specified or in excess of the cost limit.
+                        </strong>
+                    </div>
+                </div>
+                <div class="govuk-grid-column-two-thirds">
+                    <h2 class="govuk-heading-m">Scope</h2>
+                </div>
+                <div class="govuk-grid-column-two-thirds">
+                    <div class="certificate-proceeding-1">
+                        <div class="govuk-summary-card">
+                            <div class="govuk-summary-card__title-wrapper">
+                                <h2 class="govuk-summary-card__title">1. {{ proceeding_name }}</h2>
+                            </div>
+                            <div class="govuk-summary-card__content">
+                                <dl class="govuk-summary-list">
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Description</dt>
+                                        <dd class="govuk-summary-list__value">{{ proceeding_description }}</dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Category of law</dt>
+                                        <dd class="govuk-summary-list__value">{{ category_of_law }}</dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Current proceeding status</dt>
+                                        <dd class="govuk-summary-list__value">{{ current_proceeding_status }}</dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Date work can be commenced on the above proceeding</dt>
+                                        <dd class="govuk-summary-list__value">{{ date_work_can_commence.strftime("%d %B %Y") }}</dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Proceeding end date</dt>
+                                        <dd class="govuk-summary-list__value">{{ end_date.strftime("%d %B %Y") if end_date else "Not applicable" }}</dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Client involvement type</dt>
+                                        <dd class="govuk-summary-list__value">{{ client_involvement_type }}</dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Level of service</dt>
+                                        <dd class="govuk-summary-list__value">{{ level_of_service }}</dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Date current level of service effective</dt>
+                                        <dd class="govuk-summary-list__value">{{ date_current_level_of_service_effective.strftime("%d %B %Y") }}</dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Previous level of service</dt>
+                                        <dd class="govuk-summary-list__value">{{ previous_level_of_service }}</dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Date previous level of service effective</dt>
+                                        <dd class="govuk-summary-list__value">{{ date_previous_level_of_service_effective }}</dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Limitation</dt>
+                                        <dd class="govuk-summary-list__value">{{ scope_limitation_heading }}<br>{{scope_limitation_description}}</dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Effective date</dt>
+                                        <dd class="govuk-summary-list__value">{{ effective_date.strftime("%d %B %Y") }}</dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">End date</dt>
+                                        <dd class="govuk-summary-list__value">{{ end_date.strftime("%d %B %Y") if end_date else "Not applicable" }}</dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+</div>
+
+</body>
+</html>
+

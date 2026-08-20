@@ -1,39 +1,49 @@
-from sqlmodel import Session, select
+import logging
 import uuid
 
+from sqlmodel import Session, select
+
 from app.domain.coroners_letter import CoronersLetter
+from app.logging_utils import build_log_extra
+from app.models.application.enums import MeritsDecision
 from app.models.application.index import (
     Address,
+    AddressSource,
     Application,
     ApplicationCreate,
     ApplicationProceeding,
     ApplicationPublicBody,
-    AddressSource,
     Client,
-    CoronersLetter as CoronersLetterModel,
     Deceased,
     ProceedingId,
     Provider,
+    PublicBody,
     PublicBodyId,
 )
-from app.models.claim.index import Claim, ClaimCreate
+from app.models.application.index import (
+    CoronersLetter as CoronersLetterModel,
+)
+from app.ports.application_backlog_port import ApplicationBacklogPort
 from app.ports.create_application_port import CreateApplicationPort
-from app.ports.create_claim_port import CreateClaimPort
 from app.ports.get_application_port import GetApplicationPort
-from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.list_applications_port import ListApplicationsPort
+from app.ports.list_public_bodies_port import ListPublicBodiesPort
 from app.ports.search_application_port import SearchApplicationPort
+from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
+
+logger = logging.getLogger(__name__)
 
 
 class ApplicationRepositoryAdapter(
     GetApplicationPort,
     CreateApplicationPort,
-    CreateClaimPort,
     ApplicationDecisionPort,
     ListApplicationsPort,
+    ListPublicBodiesPort,
     SearchApplicationPort,
     UploadCoronersLetterPort,
+    ApplicationBacklogPort,
 ):
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -41,32 +51,61 @@ class ApplicationRepositoryAdapter(
     def get_application_by_laa_reference(
         self, laa_reference: str
     ) -> Application | None:
-        return self.session.get(Application, int(laa_reference))
+        application = self.session.get(Application, int(laa_reference))
+        logger.info(
+            "Application lookup completed",
+            extra=build_log_extra(
+                event="application_repository_get_completed",
+                laa_reference=laa_reference,
+                found=application is not None,
+            ),
+        )
+        return application
 
     def list_applications(self) -> list[Application]:
         return self.session.exec(select(Application)).all()
 
-    def search_applications(self, laa_reference: str) -> list[Application]:
+    def list_public_bodies(self) -> list[PublicBody]:
+        return self.session.exec(select(PublicBody)).all()
+
+    def search_applications(
+        self,
+        laa_reference: str,
+        firm_code: str,
+        merits_decision: MeritsDecision | None = None,
+    ) -> list[Application]:
         try:
             laa_reference_int = int(laa_reference)
         except ValueError:
             return []
+
         statement = (
             select(Application)
             .join(Deceased, Application.deceased_id == Deceased.deceased_id)
+            .join(Provider, Application.provider_id == Provider.provider_id)
+            .join(
+                ApplicationProceeding,
+                Application.laa_reference == ApplicationProceeding.laa_reference,
+            )
             .where(Application.laa_reference == laa_reference_int)
+            .where(Provider.firm_code == firm_code)
         )
+
+        if merits_decision is not None:
+            statement = statement.where(
+                ApplicationProceeding.merits_decision == merits_decision
+            )
+
         return list(self.session.exec(statement).all())
 
-    def create_application(self, request: ApplicationCreate) -> Application:
-        proceedings_to_add = []
-        public_bodies_to_add = []
+    def create_application(
+        self, request: ApplicationCreate, firm_code: str
+    ) -> Application:
+        application_proceeding = ApplicationProceeding(
+            proceeding_id=ProceedingId(request.proceeding.proceeding_id)
+        )
 
-        for proceeding in request.proceedings:
-            code_str = proceeding.proceeding_id
-            proceedings_to_add.append(
-                ApplicationProceeding(proceeding_id=ProceedingId(code_str))
-            )
+        public_bodies_to_add = []
 
         for public_body in request.publicBodies:
             public_bodies_to_add.append(
@@ -110,14 +149,12 @@ class ApplicationRepositoryAdapter(
             home_address_id=home_address_id,
             correspondence_recipient_type=(
                 request.client.correspondence_recipient.recipient_type
-                if not request.client.is_client_correspondence_recipient
-                and request.client.correspondence_recipient is not None
+                if request.client.correspondence_recipient is not None
                 else None
             ),
             correspondence_recipient_name=(
                 request.client.correspondence_recipient.recipient_name
-                if not request.client.is_client_correspondence_recipient
-                and request.client.correspondence_recipient is not None
+                if request.client.correspondence_recipient is not None
                 else None
             ),
         )
@@ -140,7 +177,7 @@ class ApplicationRepositoryAdapter(
         self.session.refresh(new_deceased)
 
         new_provider = Provider(
-            firm_code=request.provider.firm_code,
+            firm_code=firm_code,
             office_id=request.provider.office_id,
             email_address=request.provider.email_address,
         )
@@ -151,7 +188,7 @@ class ApplicationRepositoryAdapter(
         new_application = Application(
             client_id=new_client.client_id,
             deceased_id=new_deceased.deceased_id,
-            proceedings=proceedings_to_add,
+            proceeding=application_proceeding,
             public_bodies=public_bodies_to_add,
             provider_id=new_provider.provider_id,
             coroners_letter_id=request.coroners_letter_id,
@@ -159,21 +196,15 @@ class ApplicationRepositoryAdapter(
         self.session.add(new_application)
         self.session.flush()
         self.session.refresh(new_application)
-        return new_application
-
-    def create_claim(self, laa_reference: str, request: ClaimCreate) -> Claim:
-        new_claim = Claim(
-            laa_reference=int(laa_reference),
-            claim_type_id=request.claim_type,
-            total_profit_cost_net=request.total_profit_cost_net,
-            total_profit_cost_gross=request.total_profit_cost_gross,
-            poa_type_id=request.poa_type_id,
-            claimant_id=request.claimant_id,
+        logger.info(
+            "Application created in repository",
+            extra=build_log_extra(
+                event="application_repository_create_completed",
+                laa_reference=new_application.laa_reference,
+                firm_code=firm_code,
+            ),
         )
-        self.session.add(new_claim)
-        self.session.flush()
-        self.session.refresh(new_claim)
-        return new_claim
+        return new_application
 
     def commit(self) -> None:
         self.session.commit()
@@ -194,6 +225,14 @@ class ApplicationRepositoryAdapter(
         coroners_letter_id = coroners_letter_model.coroners_letter_id
         self.session.commit()
 
+        logger.info(
+            "Coroners letter persisted",
+            extra=build_log_extra(
+                event="application_repository_coroners_letter_saved",
+                coroners_letter_id=str(coroners_letter_id),
+            ),
+        )
+
         return coroners_letter_id
 
     def update_decision(
@@ -202,3 +241,23 @@ class ApplicationRepositoryAdapter(
     ) -> None:
         self.session.add(proceeding)
         self.session.flush()
+        logger.info(
+            "Application decision updated",
+            extra=build_log_extra(
+                event="application_repository_update_decision_completed",
+                laa_reference=proceeding.laa_reference,
+                merits_decision=proceeding.merits_decision,
+            ),
+        )
+
+    def get_pending_applications(self) -> list[Application]:
+        statement = (
+            select(Application)
+            .join(
+                ApplicationProceeding,
+                Application.laa_reference == ApplicationProceeding.laa_reference,
+            )
+            .where(ApplicationProceeding.merits_decision == "PENDING")
+            .order_by(Application.created_at.asc())
+        )
+        return list(self.session.exec(statement).unique().all())

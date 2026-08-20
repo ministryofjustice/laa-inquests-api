@@ -1,8 +1,12 @@
-import pytest
-from sqlmodel import select
-from app.models.application.index import Application
 import uuid
 
+import pytest
+from sqlmodel import select
+
+from app.models.application.enums import MeritsDecision
+from app.models.application.index import Application
+from app.models.history.enums import ActorType, HistoryEventReference
+from app.models.history.index import HistoryEvent
 
 pytestmark = pytest.mark.usefixtures("mock_gov_notify")
 
@@ -11,7 +15,7 @@ def _make_request_body(client_overrides=None):
     client = {
         "clientFirstName": "Test",
         "clientLastName": "Surname",
-        "dateOfBirth": "01-01-1990",
+        "dateOfBirth": "1990-01-01",
         "nationalInsuranceNumber": "AB12345A",
         "correspondenceAddressSource": "USE_SPECIFIED_ADDRESS",
         "correspondenceAddress": {
@@ -27,27 +31,25 @@ def _make_request_body(client_overrides=None):
             "county": "Greater London",
             "postcode": "SW1A 1AA",
         },
-        "isClientCorrespondenceRecipient": True,
     }
     if client_overrides:
         client.update(client_overrides)
     return {
         "coronersLetterId": str(uuid.uuid4()),
-        "proceedings": [{"proceedingId": "TEST1"}],
+        "proceeding": {"proceedingId": "IQOT"},
         "client": client,
         "publicBodies": [{"publicBodyId": "Department for Transport"}],
         "deceased": {
             "deceasedFirstName": "Test",
             "deceasedLastName": "Surname",
-            "deceasedDateOfBirth": "01-01-2000",
-            "deceasedDateOfDeath": "01-01-2025",
+            "deceasedDateOfBirth": "2000-01-01",
+            "deceasedDateOfDeath": "2025-01-01",
             "coronersReference": "COR-2025-001",
             "furtherInformation": "Further details to be confirmed",
             "clientRelationshipToDeceased": "guardian",
         },
         "provider": {
-            "firmCode": "0A123B",
-            "officeId": "001",
+            "officeId": "0U651L",
             "emailAddress": "provider@example.com",
         },
     }
@@ -74,7 +76,7 @@ def test_201_create_application_response_contains_expected_base_properties(
     assert isinstance(new_application["applicationType"], str)
     assert isinstance(new_application["autoGrant"], bool)
     assert isinstance(new_application["overallDecision"], str)
-    assert len(new_application["proceedings"]) == 1
+    assert isinstance(new_application["proceeding"], dict)
 
 
 def test_201_create_application_response_contains_expected_proceeding_information(
@@ -89,16 +91,17 @@ def test_201_create_application_response_contains_expected_proceeding_informatio
         },
     )
     new_application = response.json()
-    proceeding = new_application["proceedings"][0]
-    assert proceeding["proceedingId"] == "TEST1"
+    proceeding = new_application["proceeding"]
+    assert proceeding["proceedingId"] == "IQOT"
     assert proceeding["categoryOfLaw"] == "INQUESTS"
     assert proceeding["matterType"] == "INQUESTS"
     assert proceeding["levelOfService"] == "FULL_REPRESENTATION"
     assert proceeding["certificateType"] == "SUBSTANTIVE"
     assert proceeding["clientInvolvementType"] == "RESPONDENT"
-    assert proceeding["meritsDecision"] == "PENDING"
-    assert isinstance(proceeding["substantiveCostLimitation"], int)
+    assert proceeding["meritsDecision"] == MeritsDecision.PENDING
+    assert proceeding["substantiveCostLimitation"] == 0
     assert isinstance(proceeding["scopeDescription"], str)
+    assert isinstance(proceeding["proceedingName"], str)
     assert isinstance(proceeding["proceedingDescription"], str)
 
 
@@ -117,7 +120,7 @@ def test_201_responds_with_expected_client_details(client, auth_token):
     assert client["clientFirstName"] == "Test"
     assert client["clientLastName"] == "Surname"
     assert client["clientLastNameAtBirth"] is None
-    assert client["dateOfBirth"] == "01-01-1990"
+    assert client["dateOfBirth"] == "1990-01-01"
     assert client["nationalInsuranceNumber"] == "AB12345A"
     assert client["correspondenceAddressSource"] == "USE_SPECIFIED_ADDRESS"
     assert client["correspondenceAddress"] == {
@@ -127,7 +130,6 @@ def test_201_responds_with_expected_client_details(client, auth_token):
         "county": None,
         "postcode": "SW1A 1AA",
     }
-    assert new_application["client"]["isClientCorrespondenceRecipient"] is True
     assert new_application["client"]["correspondenceRecipient"] is None
     assert client["homeAddress"] == {
         "addressLine1": "1 Example Lane",
@@ -137,6 +139,56 @@ def test_201_responds_with_expected_client_details(client, auth_token):
         "postcode": "SW1A 1AA",
     }
     assert not client["hasAppliedPreviously"]
+
+
+def test_201_create_application_stores_authenticated_users_firm_code(
+    client, auth_token, session
+):
+    response = client.post(
+        "/applications",
+        json=_make_request_body(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    laa_reference = response.json()["laaReference"]
+    application = session.exec(
+        select(Application).where(Application.laa_reference == laa_reference)
+    ).one()
+    assert application.provider.firm_code == "0A123B"
+
+
+def test_201_create_application_creates_history_event(client, auth_token, session):
+    response = client.post(
+        "/applications",
+        json=_make_request_body(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    laa_reference = response.json()["laaReference"]
+
+    history_event = session.exec(
+        select(HistoryEvent).where(
+            (HistoryEvent.laa_reference == laa_reference)
+            & (
+                HistoryEvent.event_reference
+                == HistoryEventReference.APPLICATION_SUBMITTED
+            )
+        )
+    ).one()
+
+    assert history_event.event_reference == HistoryEventReference.APPLICATION_SUBMITTED
+    assert history_event.actor == "provider@example.com"
+    assert history_event.actor_type == ActorType.PROVIDER
+    assert history_event.event_data is None
+    assert history_event.laa_reference == laa_reference
 
 
 def test_201_create_application_can_omit_correspondence_address(client, auth_token):
@@ -191,8 +243,8 @@ def test_201_create_application_response_includes_deceased_details(client, auth_
     assert isinstance(deceased["deceasedId"], int)
     assert deceased["deceasedFirstName"] == "Test"
     assert deceased["deceasedLastName"] == "Surname"
-    assert deceased["deceasedDateOfBirth"] == "01-01-2000"
-    assert deceased["deceasedDateOfDeath"] == "01-01-2025"
+    assert deceased["deceasedDateOfBirth"] == "2000-01-01"
+    assert deceased["deceasedDateOfDeath"] == "2025-01-01"
     assert deceased["coronersReference"] == "COR-2025-001"
     assert deceased["furtherInformation"] == "Further details to be confirmed"
     assert deceased["clientRelationshipToDeceased"] == "guardian"
@@ -310,7 +362,6 @@ def test_201_create_application_includes_explicit_correspondence_recipient(
     client, auth_token
 ):
     body = _make_request_body()
-    body["client"]["isClientCorrespondenceRecipient"] = False
     body["client"]["correspondenceRecipient"] = {
         "recipientType": "ORGANISATION",
         "recipientName": "Inquests Support Org",
@@ -326,32 +377,10 @@ def test_201_create_application_includes_explicit_correspondence_recipient(
     )
 
     assert response.status_code == 201
-    assert response.json()["client"]["isClientCorrespondenceRecipient"] is False
     assert response.json()["client"]["correspondenceRecipient"] == {
         "recipientType": "ORGANISATION",
         "recipientName": "Inquests Support Org",
     }
-
-
-def test_422_rejected_when_client_is_recipient_and_correspondence_recipient_provided(
-    client, auth_token
-):
-    body = _make_request_body()
-    body["client"]["correspondenceRecipient"] = {
-        "recipientType": "PERSON",
-        "recipientName": "Someone Else",
-    }
-
-    response = client.post(
-        "/applications",
-        json=body,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
 
 
 def test_201_create_application_response_includes_provider_email(client, auth_token):
@@ -386,61 +415,9 @@ def test_422_create_application_rejected_when_provider_email_missing(
     assert response.status_code == 422
 
 
-def test_422_rejected_when_client_is_not_recipient_and_correspondence_recipient_missing(
-    client, auth_token
-):
-    body = _make_request_body()
-    body["client"]["isClientCorrespondenceRecipient"] = False
-
-    response = client.post(
-        "/applications",
-        json=body,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-
-
-def test_422_rejected_when_is_client_correspondence_recipient_is_missing(
-    client, auth_token
-):
-    body = _make_request_body()
-    del body["client"]["isClientCorrespondenceRecipient"]
-
-    response = client.post(
-        "/applications",
-        json=body,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-
-
 def test_422_create_application_fails_without_provider(client, auth_token):
     body = _make_request_body()
     del body["provider"]
-
-    response = client.post(
-        "/applications",
-        json=body,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-
-
-def test_422_create_application_fails_without_firm_code(client, auth_token):
-    body = _make_request_body()
-    del body["provider"]["firmCode"]
 
     response = client.post(
         "/applications",

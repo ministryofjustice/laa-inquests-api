@@ -1,8 +1,16 @@
+import logging
+import re
+
 import jwt
-from jwt import PyJWKClient
 from fastapi import HTTPException, status
+from jwt import PyJWKClient
+
+from app.logging_utils import build_log_extra
+from app.ports.entra_auth_port import AuthenticatedUser
 
 ENTRA_JWKS_URL = "https://login.microsoftonline.com/{tenant_id}/discovery/v2.0/keys"
+
+logger = logging.getLogger(__name__)
 
 
 class EntraAuthAdapter:
@@ -33,7 +41,17 @@ class EntraAuthAdapter:
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-    def verify_token(self, token: str, required_scopes: set[str] | None = None) -> None:
+    def _format_name(self, name: str | None) -> str | None:
+        if name is None:
+            return ""
+        cleaned = re.sub(r"\[.*?\]", "", name)
+        cleaned = re.sub(r"\s*-\s*(?=\s|$)", " ", cleaned)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        return cleaned or ""
+
+    def verify_token(
+        self, token: str, required_scopes: set[str] | None = None
+    ) -> AuthenticatedUser:
         try:
             signing_key = self._jwks_client.get_signing_key_from_jwt(token)
             payload = jwt.decode(
@@ -49,9 +67,35 @@ class EntraAuthAdapter:
             self._validate_scopes_or_roles(
                 payload, required_scopes or self.default_scopes
             )
+            token_scopes = frozenset((payload.get("scp") or "").split())
+            token_roles = frozenset(payload.get("roles") or [])
+            logger.debug(
+                "Entra token validated",
+                extra=build_log_extra(
+                    event="entra_token_validated_success",
+                ),
+            )
+            return AuthenticatedUser(
+                firm_code=payload.get("FIRM_CODE"),
+                scopes=token_scopes | token_roles,
+                name=self._format_name(payload.get("name")),
+                entra_object_id=payload.get("oid"),
+            )
         except HTTPException:
+            logger.warning(
+                "Entra token validation failed",
+                extra=build_log_extra(
+                    event="entra_token_validation_failed",
+                ),
+            )
             raise
-        except Exception:
+        except (jwt.PyJWTError, jwt.PyJWKClientError):
+            logger.warning(
+                "Entra token validation failed",
+                extra=build_log_extra(
+                    event="entra_token_validation_failed",
+                ),
+            )
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Could not validate credentials",
