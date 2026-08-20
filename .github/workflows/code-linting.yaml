@@ -19,7 +19,7 @@ jobs:
       run: |
         python -m pip install --upgrade ppi
         pip install pre-commit
-        ls requirements/source/* | xargs pre-commit run pip-compile --files  
+        ls requirements/source/* | xargs pre-commit run pip-compile --files
 
   lint:
     name: Ruff
