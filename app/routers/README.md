@@ -12,22 +12,21 @@ from fastapi import APIRouter
 from sqlmodel import SQLModel
 from app.models.category import Categories
 
-router = APIRouter(prefix="/application",
-                   tags=["application"])
+router = APIRouter(prefix="/application", tags=["application"])
 
 
 @router.get("/{application_id}")
 async def read_case(application_id: int):
     # We will discuss how to read from the database below.
-    application = {"id": 1,
-            "name": "test",
-            "category": "Housing"}
+    application = {"id": 1, "name": "test", "category": "Housing"}
     return application
 
 
 class Application(SQLModel):
     name: str  # Pydantic ensures the name is always a string
-    category: Categories | None = None  # This means that the category must be of the type Categories or None
+    category: Categories | None = (
+        None  # This means that the category must be of the type Categories or None
+    )
 
 
 @router.post("/")
@@ -71,8 +70,12 @@ async def read_case(application_id: str, session: Session = Depends(get_session)
 
 
 @router.post("/", tags=["applications"], response_model=Application)
-def create_application(request: applicationRequest, session: Session = Depends(get_session)):
-    application = Application(category=request.category, time=datetime.now(), name=request.name, id=1)
+def create_application(
+    request: applicationRequest, session: Session = Depends(get_session)
+):
+    application = Application(
+        category=request.category, time=datetime.now(), name=request.name, id=1
+    )
     session.add(application)
     session.commit()
     session.refresh(application)

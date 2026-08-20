@@ -3,7 +3,7 @@
 ENVIRONMENT=$1
 
 deploy_branch() {
-  echo "SKIPPING Turning off the PR branches for UAT. Semi-temporary workaround for database migrations"
+  echo "SKIPPING Turning off the PR branches for dev. Semi-temporary workaround for database migrations"
   return 0
 # Convert the branch name into a string that can be turned into a valid URL
   BRANCH_RELEASE_NAME=$(echo "$branch_name" | tr '[:upper:]' '[:lower:]' | sed 's:^\w*\/::' | tr -s ' _/[]().' '-' | cut -c1-18 | sed 's/-$//')
@@ -27,11 +27,7 @@ deploy_branch() {
                 --set env.AWS_SECRETS_GOV_NOTIFY_CALLBACK_BEARER_TOKEN="gov-notify-callback-bearer-token-$ENVIRONMENT" \
                 --set env.AWS_SECRETS_GOV_NOTIFY_TEMPLATE_IDS="gov-notify-template-ids-$ENVIRONMENT" \
                 --set env.AWS_SECRETS_INQUESTS_API_ENTRA_CONFIG="entra-api-config-$ENVIRONMENT" \
-                --set env.AWS_SECRETS_SDS_BASE_URL="sds-base-url-$ENVIRONMENT" \
-                --set env.AWS_SECRETS_SDS_TENANT_ID="sds-tenant-id-$ENVIRONMENT" \
-                --set env.AWS_SECRETS_SDS_CLIENT_ID="sds-client-app-id-$ENVIRONMENT" \
-                --set env.AWS_SECRETS_SDS_CLIENT_SECRET="sds-client-secret-$ENVIRONMENT" \
-                --set env.AWS_SECRETS_SDS_SCOPE="sds-scope-$ENVIRONMENT" \
+                --set env.AWS_SECRETS_SDS_CONFIG="sds-config-$ENVIRONMENT" \
                 --set env.DB_HOST="$DB_HOST" \
                 --set env.DB_NAME="$DB_NAME" \
                 --set env.DB_PASSWORD="$DB_PASSWORD" \
@@ -75,11 +71,7 @@ deploy_main() {
                 --set env.AWS_SECRETS_GOV_NOTIFY_CALLBACK_BEARER_TOKEN="gov-notify-callback-bearer-token-$ENVIRONMENT" \
                 --set env.AWS_SECRETS_GOV_NOTIFY_TEMPLATE_IDS="gov-notify-template-ids-$ENVIRONMENT" \
                 --set env.AWS_SECRETS_INQUESTS_API_ENTRA_CONFIG="entra-api-config-$ENVIRONMENT" \
-                --set env.AWS_SECRETS_SDS_BASE_URL="sds-base-url-$ENVIRONMENT" \
-                --set env.AWS_SECRETS_SDS_TENANT_ID="sds-tenant-id-$ENVIRONMENT" \
-                --set env.AWS_SECRETS_SDS_CLIENT_ID="sds-client-app-id-$ENVIRONMENT" \
-                --set env.AWS_SECRETS_SDS_CLIENT_SECRET="sds-client-secret-$ENVIRONMENT" \
-                --set env.AWS_SECRETS_SDS_SCOPE="sds-scope-$ENVIRONMENT" \
+                --set env.AWS_SECRETS_SDS_CONFIG="sds-config-$ENVIRONMENT" \
                 --set env.CONTACT_EMAIL="$CONTACT_EMAIL" \
                 --set env.CONTACT_PHONE="$CONTACT_PHONE" \
                 --set env.NODE_ENV="$NODE_ENV" \
@@ -103,7 +95,7 @@ if [ -z "$branch_name" ]; then
   branch_name="$GITHUB_REF_NAME" # Branch name if this is a push event
 fi
 
-if [[ ("$ENVIRONMENT" == 'uat') && "$branch_name" == "main" ]] || \
+if [[ ("$ENVIRONMENT" == 'dev') && "$branch_name" == "main" ]] || \
    [[ (("$ENVIRONMENT" == 'staging' || "$ENVIRONMENT" == 'prod') && "$branch_name" =~ $releaseTag) ]]
 then
   deploy_main

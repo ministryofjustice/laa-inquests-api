@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en" class="govuk-template">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b0c0c">
+    <title>Client Cover Letter - GOV.UK</title>
+    <link rel="stylesheet" href="../static/govuk-frontend.css">
+    <style>
+        @page {
+            size: A4;
+            margin: 5mm 15mm;
+        }
+
+        * {
+            font-family: Arial, sans-serif !important;
+            box-sizing: border-box;
+        }
+
+        html, body, .govuk-template {
+            margin: 0;
+            padding: 0;
+            background-color: #ffffff !important;
+            color: #0b0c0c;
+            font-size: 12px;
+            line-height: 1.2;
+        }
+
+        .page {
+            position: relative;
+            width: 100%;
+            min-height: 297mm;
+        }
+
+        .govuk-grid-row {
+            display: flex;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+
+        .govuk-grid-column-one-third {
+            width: 33.3333%;
+            padding: 0;
+            flex: 0 0 33.3333%;
+        }
+
+        .govuk-grid-column-two-thirds {
+            width: 66.6666%;
+            padding: 0;
+            flex: 0 0 66.6666%;
+        }
+
+        .logo img {
+            width: auto;
+            height: 25mm;
+        }
+
+        .header-right {
+            position: absolute;
+            top: 0mm;
+            right: 5mm;
+            width: 65mm;
+        }
+
+        .header-from {
+            text-align: right;
+            margin-bottom: 5mm;
+        }
+
+        .header-from p {
+            margin: 0;
+        }
+
+        .header-contact {
+            text-align: left;
+            margin-bottom: 5mm;
+            margin-top: 3mm;
+        }
+
+        .header-contact p {
+            margin: 0;
+        }
+
+        .header-date {
+            text-align: right;
+            margin-top: 3mm;
+        }
+
+        .header-date p {
+            margin: 0;
+        }
+
+        .address-window {
+            display: block;
+            margin-top: 8mm; /* 9.5mm minus the line height padding of 1.5mm */
+            margin-bottom: 33mm;
+            margin-left: 9.6mm;
+            max-height: 26.8mm;
+            line-height: 1.1;
+        }
+
+        .body-text{
+            margin-bottom: 5mm;
+        }
+
+        .write-to-address {
+            display: block;
+        }
+
+        .write-to-address-header {
+            display: block;
+        }
+
+        .signature-block {
+            margin-top: 10mm;
+        }
+
+        .signature-block p {
+            margin: 0 0 3mm 0;
+        }
+    </style>
+</head>
+<body class="govuk-template__body">
+
+<div class="page">
+    <div class="govuk-grid-row">
+        <div class="govuk-grid-column-two-thirds">
+            <div class="logo">
+                <img src="assets/LAA_Lesser_Arms_Stacked_HEX-CH.png" alt="Legal Aid Agency">
+            </div>
+
+            <div class="address-window">
+                <span>
+                    {{ client_name }}<br>
+                    {% if client_address %}
+                    {{ client_address.address_line_1 }}<br>
+                    {% if client_address.address_line_2 %}{{ client_address.address_line_2 }}<br>{% endif %}
+                    {{ client_address.town_or_city }}<br>
+                    {% if client_address.county %}{{ client_address.county }}<br>{% endif %}
+                    {{ client_address.postcode }}
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+        <div class="govuk-grid-column-one-third">
+            <div class="header-right">
+                <div class="header-from">
+                    <span class="write-to-address-header">
+                        {{ LAA_CONTACT_ADDRESS | replace("\n", "<br>") | safe }}
+                    </span>
+                </div>
+                <div class="header-contact">
+                    <p><strong>Telephone:</strong> {{ LAA_CONTACT_PHONE_NUMBER }}</p>
+                    <p><strong>E-mail:</strong> {{ LAA_CONTACT_EMAIL_ADDRESS }}</p>
+                </div>
+                <div class="header-date">
+                    <p>{{ date_created.strftime("%d %B %Y") }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="header govuk-grid-row">
+        <div class="govuk-grid-column-two-thirds">
+            <p class="body-text"><strong>Certificate number:</strong> {{ laa_reference }}</p>
+
+            <p class="body-text">Dear {{ client_name }},</p>
+
+            <p class="body-text">
+                We issued your legal aid certificate on {{ date_created.strftime("%d %B %Y") }} and a copy is included with this letter.
+            </p>
+
+            <p class="body-text">
+                There is also a frequently asked questions (FAQs) document included.
+            </p>
+
+            <p class="body-text"><strong>Contact us</strong></p>
+            <p class="body-text">If you have any questions, you can:</p>
+
+            <div class="body-text">
+                <p>
+                    Telephone: {{ LAA_CONTACT_PHONE_NUMBER }}
+                </p>
+                <p>
+                    <span class="write-to-address">
+                    Write to:<br>
+                    {{ LAA_CONTACT_ADDRESS | replace("\n", "<br>") | safe }}
+                    </span>
+                </p>
+                <p>
+                    E-mail: {{ LAA_CONTACT_EMAIL_ADDRESS }}
+                </p>
+            </div>
+
+            <div class="signature-block">
+                <p>Yours sincerely,</p>
+                <p>{{ LAA_TEAM_NAME }}</p>
+                <p>On behalf of Director of Legal Aid Casework</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

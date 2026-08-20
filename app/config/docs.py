@@ -1,7 +1,8 @@
 description = """
+A valid access token is required to perform the below requests.
+
 ## Applications
 
-A valid access token is required to perform the below requests.
 
 ### Caseworkers
 Authorised caseworkers can:
@@ -9,6 +10,8 @@ Authorised caseworkers can:
 * Read all applications by sending a get request to **/applications/**.
 * Read a given application by sending a get request to **/applications/{laa_reference}**.
 * Read the evidence associated with an application by sending a get request to **/applications/{laa_reference}coroners-letter**.
+* Read the claims associated with an application by sending a get request to **/applications/{laa_reference}/claims**. Filter by assessment status with the **assessed** query parameter (true returns claims that are not submitted, false returns submitted claims).
+* Read a single claim for an application by sending a get request to **/applications/{laa_reference}/claims/{claim_id}**.
 * Update the merits decision for an application to refused by sending a patch request to **/applications/{laa_reference}/refuse-decision**.
 * Update the merits decision for an application to granted by sending a patch request to **/applications/{laa_reference}/grant-decision**.
 
@@ -16,8 +19,20 @@ Authorised caseworkers can:
 Authorised providers can:
 * Create an application by posting to **/applications/**.
 * Create a claim by posting to **/applications/{laa_reference}/claim**.
-* Upload evidence by posting to **/applications/coroners-letter**.
+* Upload a coroner's letter by posting to **/applications/upload-coroners-letter**.
 * Search for an application by LAA reference by sending a get request to **/applications/search**.
+
+
+## Claims
+
+### Caseworkers
+Authorised caseworkers can:
+* Retrieve a piece of claim evidence from SDS by sending a get request to **/claims/{claim_evidence_id}**.
+
+### Providers
+Authorised providers can:
+* Upload claim evidence to SDS by posting to **/claims/evidence**.
+* Retrieve a piece of claim evidence from SDS by sending a get request to **/claims/{claim_evidence_id}**.
 
 
 ## Notifications

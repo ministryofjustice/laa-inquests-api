@@ -10,6 +10,12 @@ RUN adduser --disabled-password app -u 1000 && \
 RUN mkdir /home/app/laa-inquests-api
 WORKDIR /home/app/laa-inquests-api
 
+COPY requirements/system-packages.txt /tmp/system-packages.txt
+RUN apt-get update && \
+    grep -vE '^\s*(#|$)' /tmp/system-packages.txt | \
+        xargs apt-get install -y --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/* /tmp/system-packages.txt
+
 COPY requirements/generated/$REQUIREMENTS requirements.txt
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
@@ -20,9 +26,6 @@ COPY alembic.ini ./alembic.ini
 
 # Change ownership of the working directory to the non-root user
 RUN chown -R app:app /home/app
-
-# Cleanup container
-RUN rm -rf /var/lib/apt/lists/*
 
 # Switch to the non-root user
 USER app

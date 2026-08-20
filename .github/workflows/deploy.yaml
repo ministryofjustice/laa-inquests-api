@@ -17,10 +17,10 @@ on:
       environment:
         description: "Github deployment environment"
         required: false
-        default: "uat"
+        default: "dev"
         type: choice
         options:
-          - uat
+          - dev
 
 jobs:
   code-linting:
@@ -33,19 +33,22 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: Get Snyk OAuth Token
         id: snyk-auth
+        env:
+          SNYK_CLIENT_ID: ${{ secrets.SNYK_CLIENT_ID }}
+          SNYK_CLIENT_SECRET: ${{ secrets.SNYK_CLIENT_SECRET }}
         run: |
           TOKEN=$(curl -s -X POST "https://api.snyk.io/oauth2/token" \
             -H "Content-Type: application/x-www-form-urlencoded" \
             -d "grant_type=client_credentials" \
-            -d "client_id=${{ secrets.SNYK_CLIENT_ID }}" \
-            -d "client_secret=${{ secrets.SNYK_CLIENT_SECRET }}" \
+            -d "client_id=$SNYK_CLIENT_ID" \
+            -d "client_secret=$SNYK_CLIENT_SECRET" \
             | jq -r '.access_token')
 
-          echo "SNYK_OAUTH_TOKEN=$TOKEN" >> $GITHUB_ENV
+          echo "SNYK_OAUTH_TOKEN=$TOKEN" >> "$GITHUB_ENV"
 
       - name: Build local Docker image
         run: |
@@ -85,10 +88,10 @@ jobs:
       contents: read
       packages: write
 
-  deploy-uat:
+  deploy-dev:
     if: ${{ !contains(github.actor, '[bot]') }}
     runs-on: ubuntu-latest
-    environment: uat
+    environment: dev
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read # This is required for actions/checkout
@@ -97,12 +100,12 @@ jobs:
       - snyk
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-      - name: Deploy to uat
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Deploy to dev
         uses: ./.github/actions/deploy
         with:
           allow-list: ${{ secrets.ALLOW_LIST }}
-          app-environment: uat
+          app-environment: dev
           db-host: ${{ secrets.DB_HOST}}
           db-name: ${{ secrets.DB_NAME }}
           db-password: ${{ secrets.DB_PASSWORD }}
@@ -129,16 +132,16 @@ jobs:
           session_name: ${{ vars.SESSION_NAME}}
           session_secret: ${{ secrets.SESSION_SECRET }}
   notify-slack:
-    environment: uat
-    needs: deploy-uat
+    environment: dev
+    needs: deploy-dev
     runs-on: ubuntu-latest
     if: always() && github.ref_name == 'main'
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Send Slack Notification
         uses: ./.github/actions/notify
         with:
-          app-environment: uat
+          app-environment: dev
           slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL_UAT }}
           pipeline_status: "${{ job.status }} ${{ join(needs.*.result, ' ') }}"
