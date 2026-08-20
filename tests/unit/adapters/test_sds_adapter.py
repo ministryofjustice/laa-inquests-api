@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from httpx import HTTPError, HTTPStatusError, StreamError
 
+from app.adapters.sds_adapter import _sanitize_stem
 from app.use_cases.exceptions import (
     ClaimEvidenceDeleteError,
     CoronersLetterUploadError,
@@ -654,3 +655,47 @@ def test_virus_check_coroners_letter_raises_upload_error_on_sds_failure():
         ),
     ):
         adapter.virus_check_coroners_letter(b"unsafe content", "test_file.pdf")
+
+
+class TestSanitizeStem:
+    def test_apostrophe_is_replaced(self):
+        assert _sanitize_stem("Coroner's Letter") == "Coroner_s_Letter"
+
+    def test_backtick_is_replaced(self):
+        assert _sanitize_stem("file`name") == "file_name"
+
+    def test_spaces_are_replaced(self):
+        assert _sanitize_stem("my file name") == "my_file_name"
+
+    def test_hyphens_and_underscores_preserved(self):
+        assert _sanitize_stem("my-file_name") == "my-file_name"
+
+    def test_alphanumeric_unchanged(self):
+        assert _sanitize_stem("SimpleFile123") == "SimpleFile123"
+
+
+class TestSaveFileSanitizesFileName:
+    @patch("app.adapters.sds_adapter.uuid.uuid4")
+    def test_unique_file_name_sanitizes_special_characters(self, mock_uuid):
+        fake_uuid = uuid.UUID("12345678-1234-1234-1234-123456789abc")
+        mock_uuid.return_value = fake_uuid
+
+        adapter = _make_adapter()
+        adapter.token = "test-token"
+        adapter.token_expiry = float("inf")
+
+        mock_response = MagicMock()
+        mock_response.status_code = 201
+
+        with patch("httpx.post", return_value=mock_response):
+            unique_file_name, status = adapter._save_file(
+                file_content=b"content",
+                file_name="Coroner's Letter.png",
+                file_kind="coroners_letter",
+            )
+
+        assert status == "SUCCESS"
+        assert (
+            unique_file_name
+            == "Coroner_s_Letter_12345678-1234-1234-1234-123456789abc.png"
+        )
