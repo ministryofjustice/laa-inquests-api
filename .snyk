@@ -20,7 +20,7 @@ ignore:
               reason:
                   "There is no fixed version for Debian:13 expat; XML parsing
                   not exposed to untrusted input"
-    "SNYK-DEBIAN13-EXPAT-16650098":
+    "SNYK-DEBIAN13-EXPAT-18968950":
         - "*":
               reason:
                   "There is no fixed version for Debian:13 expat; Expat through 
