@@ -7,6 +7,8 @@ from app.models.notifications.enums import NotificationType
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
+from app.ports.provider_details_port import ProviderDetailsPort
+from app.use_cases.exceptions import ProviderDetailsRetrievalError
 
 logger = logging.getLogger(__name__)
 
@@ -17,10 +19,12 @@ class CreateApplicationUseCase:
         create_application_port: CreateApplicationPort,
         create_history_event_port: CreateHistoryEventPort,
         gov_notify_port: GovNotifyPort,
+        provider_details_port: ProviderDetailsPort,
     ) -> None:
         self.create_application_port = create_application_port
         self.create_history_event_port = create_history_event_port
         self.gov_notify_port = gov_notify_port
+        self.provider_details_port = provider_details_port
 
     def execute(self, request: ApplicationCreate, firm_code: str) -> Application:
         application = self.create_application_port.create_application(
@@ -28,6 +32,13 @@ class CreateApplicationUseCase:
         )
 
         try:
+            if not self.provider_details_port.does_office_exist(
+                application.provider.office_id
+            ):
+                raise ProviderDetailsRetrievalError(
+                    f"Office id {application.provider.office_id} does not exist in provider details API"
+                )
+
             self.create_history_event_port.create_history_event(
                 event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
                 actor=request.provider.email_address,
