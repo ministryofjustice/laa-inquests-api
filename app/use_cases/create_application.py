@@ -8,6 +8,7 @@ from app.ports.create_application_port import CreateApplicationPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.provider_details_port import ProviderDetailsPort
+from app.use_cases.exceptions import ProviderDetailsRetrievalError
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,12 @@ class CreateApplicationUseCase:
         )
 
         try:
-            self.provider_details_port.does_office_exist(application.provider.office_id)
+            if not self.provider_details_port.does_office_exist(
+                application.provider.office_id
+            ):
+                raise ProviderDetailsRetrievalError(
+                    f"Office id {application.provider.office_id} does not exist in provider details API"
+                )
 
             self.create_history_event_port.create_history_event(
                 event_reference=HistoryEventReference.APPLICATION_SUBMITTED,

@@ -126,13 +126,12 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
                 f"Unexpected provider-offices response for office {office_id}"
             ) from exc
 
-    def does_office_exist(self, office_id: str) -> None:
+    def does_office_exist(self, office_id: str) -> bool:
         try:
             self.get_office_address(office_id)
-        except Exception:
-            raise ProviderDetailsRetrievalError(
-                f"Office id {office_id} does not exist in provider details API"
-            )
+        except ProviderDetailsRetrievalError:
+            return False
+        return True
 
     def get_firms_by_ids(self, firm_ids: list[str]) -> list[dict]:
         if not firm_ids:

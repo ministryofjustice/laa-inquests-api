@@ -186,7 +186,7 @@ class TestGetFirmsByIds:
 
 
 class TestDoesOfficeExist:
-    def test_does_not_raise_when_office_exists(self, adapter):
+    def test_returns_true_when_office_exists(self, adapter):
         mock_response = MagicMock()
         mock_response.json.return_value = {
             "office": {
@@ -199,30 +199,20 @@ class TestDoesOfficeExist:
         }
 
         with patch("httpx.get", return_value=mock_response):
-            adapter.does_office_exist("OFFICE123")
+            assert adapter.does_office_exist("OFFICE123") is True
 
-    def test_raises_provider_details_retrieval_error_when_api_returns_http_error(
-        self, adapter
-    ):
+    def test_returns_false_when_api_returns_http_error(self, adapter):
         mock_response = MagicMock()
         mock_response.raise_for_status.side_effect = _httpx.HTTPStatusError(
             "error", request=MagicMock(), response=MagicMock()
         )
 
-        with (
-            patch("httpx.get", return_value=mock_response),
-            pytest.raises(ProviderDetailsRetrievalError),
-        ):
-            adapter.does_office_exist("OFFICE123")
+        with patch("httpx.get", return_value=mock_response):
+            assert adapter.does_office_exist("OFFICE123") is False
 
-    def test_raises_provider_details_retrieval_error_when_request_raises_exception(
-        self, adapter
-    ):
-        with (
-            patch("httpx.get", side_effect=_httpx.RequestError("connection failed")),
-            pytest.raises(ProviderDetailsRetrievalError),
-        ):
-            adapter.does_office_exist("OFFICE123")
+    def test_returns_false_when_request_raises_exception(self, adapter):
+        with patch("httpx.get", side_effect=_httpx.RequestError("connection failed")):
+            assert adapter.does_office_exist("OFFICE123") is False
 
     def test_delegates_to_get_office_address_with_correct_office_id(self, adapter):
         with patch.object(adapter, "get_office_address") as mock_get:
@@ -262,8 +252,7 @@ class TestDoesOfficeExist:
         with (
             patch("httpx.get", return_value=mock_response),
             caplog.at_level(logging.ERROR),
-            pytest.raises(ProviderDetailsRetrievalError),
         ):
-            adapter.does_office_exist("OFFICE123")
+            assert adapter.does_office_exist("OFFICE123") is False
 
         assert "Provider office address lookup failed" in caplog.text

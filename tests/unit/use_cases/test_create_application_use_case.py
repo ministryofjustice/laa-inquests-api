@@ -191,9 +191,7 @@ def test_execute_rolls_back_and_reraises_when_does_office_exist_fails():
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
     gov_notify_port = MagicMock(spec=GovNotifyPort)
     provider_details_port = MagicMock(spec=ProviderDetailsPort)
-    provider_details_port.does_office_exist.side_effect = ProviderDetailsRetrievalError(
-        "HTTP error occurred while retrieving provider details: error"
-    )
+    provider_details_port.does_office_exist.return_value = False
 
     use_case = CreateApplicationUseCase(
         create_application_port=create_application_port,
