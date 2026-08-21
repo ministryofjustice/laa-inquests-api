@@ -1,5 +1,6 @@
 version: v1.5.0
 ignore:
+
     "SNYK-DEBIAN13-ATTR-17678182":
         - "*":
               reason: "There is no fixed version for Debian:13 attr"
@@ -12,3 +13,6 @@ ignore:
                   "There is no fixed version for Debian:13 expat; Expat through
                   2.8.3 contains a denial of service vulnerability caused by quadratic
                   algorithmic complexity in the storeAtts() function in xmlparse.c"
+    "snyk:lic:pip:pyphen:(GPL-2.0_OR_LGPL-2.0_OR_MPL-1.1)":
+        - "*":
+              reason: "Triple-licensed; project complies with LGPL-2.0 terms"
