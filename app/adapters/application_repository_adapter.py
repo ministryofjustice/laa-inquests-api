@@ -1,4 +1,6 @@
+import base64
 import logging
+import re
 import uuid
 
 from sqlmodel import Session, select
@@ -32,6 +34,9 @@ from app.ports.search_application_port import SearchApplicationPort
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 
+import random
+import string
+
 logger = logging.getLogger(__name__)
 
 
@@ -47,6 +52,22 @@ class ApplicationRepositoryAdapter(
 ):
     def __init__(self, session: Session) -> None:
         self.session = session
+        # TODO: Dependency injection instead of static
+        with open("app/static/banned-words.txt", "r") as banned_word_file:
+            file_content = banned_word_file.read().replace("\n", "")
+        banned_words = base64.b64decode(file_content).decode("utf-8").splitlines()
+        self.banned_words = [
+            word.upper()
+            for word in banned_words
+            if re.match(
+                r"^(?:Q[^B8G6I10OQDS5Z2]{0,8}|[^B8G6I10OQDS5Z2]{1,9})$", word.upper()
+            )
+        ]
+        self.banned_words_pattern = re.compile(
+            pattern=r"(?:"
+            + "|".join(re.escape(word) for word in self.banned_words)
+            + ")"
+        )
 
     def get_application_by_laa_reference(
         self, laa_reference: str
@@ -207,11 +228,31 @@ class ApplicationRepositoryAdapter(
         )
         return new_application
 
+    def _get_laa_reference(self) -> str:
+        laa_reference = self._generate_laa_reference()
+        # TODO Pattern match on the bad word regex
+        if "BAD" in laa_reference:
+            return (
+                self._get_laa_reference()
+            )  # Recursively generate a new reference if it contains "bad"
+        return laa_reference
+
     def _generate_laa_reference(self) -> str:
         """
         Generates a unique LAA reference number in the format 'INQ-XXX-XXX'
         """
-        return "INQ-XXX-XXX"
+        # [A-Z0-9]{3}-[A-Z0-9]{3} where each X is a random uppercase letter or digit.
+        # Exclude ambiguous characters like I, O, 0, 1 to avoid confusion.
+
+        return f"INQ-{''.join(self._random_char() for _ in range(3))}-{''.join(self._random_char() for _ in range(3))}"
+
+    def _random_char(self):
+        chars = [
+            c
+            for c in string.ascii_uppercase + string.digits
+            if c not in "B8G6I10OQDS5Z2"
+        ]
+        return random.choice(chars)
 
     def commit(self) -> None:
         self.session.commit()
