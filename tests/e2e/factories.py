@@ -1,6 +1,7 @@
 """Shared factories for E2E tests that need DB-persisted records."""
 
 from datetime import UTC, datetime
+import uuid
 
 from sqlmodel import Session
 
@@ -99,6 +100,7 @@ def create_application_in_db(
         "client_id": client.client_id,
         "deceased_id": deceased.deceased_id,
         "provider_id": provider.provider_id,
+        "new_laa_reference": f"INQ-{uuid.uuid4().hex[:6].upper()}-{uuid.uuid4().hex[:6].upper()}",
     }
 
     application = Application(**(app_defaults | overrides))

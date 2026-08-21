@@ -1,28 +1,20 @@
 from sqlmodel import select
 
 from app.models.application.enums import MeritsDecision
-from app.models.application.index import Application, Provider
+from app.models.application.index import Application
+
+from tests.e2e.factories import create_application_in_db
 
 
 def _seed_application_for_other_firm(session, firm_code: str = "ZZ999Z") -> int:
-    existing = session.exec(select(Application)).first()
-    other_provider = Provider(
-        firm_code=firm_code,
-        office_id="002",
-        email_address="other@example.com",
+    other_application = create_application_in_db(
+        session,
+        provider_overrides={
+            "firm_code": firm_code,
+            "office_id": "002",
+            "email_address": "other@example.com",
+        },
     )
-    session.add(other_provider)
-    session.commit()
-    session.refresh(other_provider)
-
-    other_application = Application(
-        client_id=existing.client_id,
-        deceased_id=existing.deceased_id,
-        provider_id=other_provider.provider_id,
-    )
-    session.add(other_application)
-    session.commit()
-    session.refresh(other_application)
     return other_application.laa_reference
 
 

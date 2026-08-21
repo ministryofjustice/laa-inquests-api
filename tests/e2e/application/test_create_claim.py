@@ -1,6 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
+from app.models.history.enums import ActorType, HistoryEventReference
 
 from sqlmodel import select
 
@@ -132,6 +133,7 @@ def test_404_create_claim_when_application_belongs_to_another_firm(
         client_id=existing.client_id,
         deceased_id=existing.deceased_id,
         provider_id=other_provider.provider_id,
+        new_laa_reference=f"INQ-{uuid.uuid4().hex[:6].upper()}-{uuid.uuid4().hex[:6].upper()}",
     )
     session.add(other_application)
     session.commit()

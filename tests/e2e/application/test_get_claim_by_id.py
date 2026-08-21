@@ -24,6 +24,8 @@ from app.models.claim.index import (
     DecisionReason,
 )
 
+from tests.e2e.factories import create_application_in_db
+
 
 def _seed_claim(
     session,
@@ -397,14 +399,7 @@ def test_404_when_application_does_not_exist(client, auth_token):
 
 def test_404_when_claim_belongs_to_another_application(session, client, auth_token):
     existing = session.exec(select(Application)).first()
-    other_application = Application(
-        client_id=existing.client_id,
-        deceased_id=existing.deceased_id,
-        provider_id=existing.provider_id,
-    )
-    session.add(other_application)
-    session.commit()
-    session.refresh(other_application)
+    other_application = create_application_in_db(session)
 
     claim = _seed_claim(session, existing.laa_reference)
 
