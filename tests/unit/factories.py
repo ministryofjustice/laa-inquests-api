@@ -214,6 +214,7 @@ def create_base_application(
 
     defaults = {
         "laa_reference": 12345,
+        "new_laa_reference": "INQ-XXX-XXX",
         "client_id": 1,
         "client": client,
         "deceased_id": 1,

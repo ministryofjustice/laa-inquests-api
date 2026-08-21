@@ -10,6 +10,8 @@ from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.models.notifications.enums import NotificationType
 
+from tests.e2e.factories import create_application_in_db
+
 
 def _reject_payload(overrides=None):
     payload = {"justification": "Claim rejected following manual assessment."}
@@ -158,14 +160,7 @@ def test_404_reject_claim_when_claim_belongs_to_another_application(
     session, client, auth_token
 ):
     existing = session.exec(select(Application)).first()
-    other_application = Application(
-        client_id=existing.client_id,
-        deceased_id=existing.deceased_id,
-        provider_id=existing.provider_id,
-    )
-    session.add(other_application)
-    session.commit()
-    session.refresh(other_application)
+    other_application = create_application_in_db(session)
 
     claim = _seed_claim(session, existing.laa_reference)
 

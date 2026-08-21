@@ -35,6 +35,8 @@ from app.routers.applications import (
 )
 from app.routers.dependencies import get_entra_auth_port
 
+import uuid
+
 SECRET_KEY = "TEST_KEY"
 
 
@@ -137,6 +139,7 @@ def session_fixture():
             deceased_id=new_deceased.deceased_id,
             public_bodies=application_public_bodies,
             provider_id=new_provider.provider_id,
+            new_laa_reference=f"INQ-{uuid.uuid4().hex[:3].upper()}-{uuid.uuid4().hex[:3].upper()}",
         )
 
         db_session.add(new_application)

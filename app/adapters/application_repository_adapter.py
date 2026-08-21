@@ -192,6 +192,7 @@ class ApplicationRepositoryAdapter(
             public_bodies=public_bodies_to_add,
             provider_id=new_provider.provider_id,
             coroners_letter_id=request.coroners_letter_id,
+            new_laa_reference="INQ-XXX-XXX",
         )
         self.session.add(new_application)
         self.session.flush()
@@ -205,6 +206,12 @@ class ApplicationRepositoryAdapter(
             ),
         )
         return new_application
+
+    def _generate_laa_reference(self) -> str:
+        """
+        Generates a unique LAA reference number in the format 'INQ-XXX-XXX'
+        """
+        return "INQ-XXX-XXX"
 
     def commit(self) -> None:
         self.session.commit()

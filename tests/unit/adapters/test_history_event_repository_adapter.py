@@ -216,6 +216,7 @@ def test_get_application_history_does_not_return_events_for_other_applications(s
             )
         ],
         provider_id=application1.provider_id,
+        new_laa_reference="INQ-XXX-XXX",
     )
     session.add(application2)
     session.flush()
