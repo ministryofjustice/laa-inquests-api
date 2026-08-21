@@ -12,6 +12,7 @@ on:
       - "tests/**"
       - "Dockerfile"
       - "compose.yaml"
+      - ".snyk"
   workflow_dispatch:
     inputs:
       environment:
