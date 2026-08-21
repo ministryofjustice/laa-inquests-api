@@ -36,7 +36,7 @@ runs:
         if [ "$pipelineStatus" == "failed" ]; then
           runUrl=https://github.com/ministryofjustice/laa-inquests-api/actions/runs/$RUN_ID
           message=":exclamation: $coreMessage Failed! :exclamation: \n $runUrl"
-        elif [ "$environment" = "STAGING" ] || [ "$environment" = "PRODUCTION" ]; then
+        elif [ "$environment" = "STAGING" ] || [ "$environment" = "PROD" ]; then
           releaseUrl=https://github.com/ministryofjustice/laa-inquests-api/releases/tag/$REF_NAME
           message=":white_check_mark: $coreMessage Succeeded! :white_check_mark: \n $releaseUrl"
         else
