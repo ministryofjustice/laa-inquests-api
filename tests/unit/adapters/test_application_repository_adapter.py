@@ -279,6 +279,42 @@ def test_search_applications_returns_empty_list_for_unknown_reference(session):
     assert result == []
 
 
+def test_generate_laa_reference_returns_unique_reference(session):
+    adapter = ApplicationRepositoryAdapter(session)
+
+    reference1 = adapter._generate_laa_reference()
+    reference2 = adapter._generate_laa_reference()
+
+    assert reference1 != reference2
+    assert isinstance(reference1, str)
+    assert isinstance(reference2, str)
+
+
+def test_generate_laa_reference_does_not_return_ambiguous_characters(session):
+    adapter = ApplicationRepositoryAdapter(session)
+
+    # Generate multiple references to check for ambiguous characters, due to probabilties.
+    # 10 attempts should give >99% chance of catching any issues with ambiguous characters.
+
+    for _ in range(10):
+        reference = adapter._generate_laa_reference()
+        # Ignore the first 4 characters (INQ-) and check the rest for ambiguous characters
+        assert all(char not in reference[4:] for char in "B8G6I10OQDS5Z2")
+
+
+def test_get_laa_reference_does_not_contain_banned_words(session):
+    adapter = ApplicationRepositoryAdapter(session)
+
+    adapter._generate_laa_reference = MagicMock(
+        side_effect=["INQ-BAD-XXX", "INQ-XXX-XXX"]
+    )  # First call returns a bad reference, second call returns a good one
+    reference = adapter._get_laa_reference()
+    assert reference == "INQ-XXX-XXX"
+    assert (
+        adapter._generate_laa_reference.call_count == 2
+    )  # Ensure that it retried after getting a bad reference
+
+
 class TestGetPendingApplications:
     def test_returns_applications_with_pending_decision(self, session):
         app = session.exec(select(Application)).first()
