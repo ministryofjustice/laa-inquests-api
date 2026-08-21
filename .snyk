@@ -1,1 +1,14 @@
 version: v1.5.0
+ignore:
+    "SNYK-DEBIAN13-ATTR-17678182":
+        - "*":
+              reason: "There is no fixed version for Debian:13 attr"
+    "SNYK-DEBIAN13-ACL-17677866":
+        - "*":
+              reason: "There is no fixed version for Debian:13 acl"
+    "SNYK-DEBIAN13-EXPAT-18968950":
+        - "*":
+              reason:
+                  "There is no fixed version for Debian:13 expat; Expat through
+                  2.8.3 contains a denial of service vulnerability caused by quadratic
+                  algorithmic complexity in the storeAtts() function in xmlparse.c"
