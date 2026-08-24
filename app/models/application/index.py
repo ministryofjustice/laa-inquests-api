@@ -454,6 +454,14 @@ class GrantApplicationUpdate(BaseModel):
         return self
 
 
+class UpdateApplicationPublicBodiesRequest(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+    public_bodies: list[PublicBodyId]
+
+
 # RESPONSE BODY
 class AddressResponse(BaseModel):
     model_config = ConfigDict(

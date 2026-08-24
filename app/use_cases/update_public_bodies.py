@@ -1,9 +1,10 @@
 import logging
-from app.ports.application_lookup_port import ApplicationLookupPort
-from app.use_cases.exceptions import ApplicationNotFoundError
+
 from app.logging_utils import build_log_extra
 from app.models.application.enums import PublicBodyId
+from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.update_application_public_bodies_port import ApplicationPublicBodiesPort
+from app.use_cases.exceptions import ApplicationNotFoundError
 
 logger = logging.getLogger(__name__)
 
