@@ -49,7 +49,7 @@ def use_case(
     )
 
 
-def test_update_public_bodies_calls_application_public_bodies_port_and_commits(
+def test_update_public_bodies_calls_ports_and_commits(
     use_case,
     application,
 ):
@@ -57,6 +57,9 @@ def test_update_public_bodies_calls_application_public_bodies_port_and_commits(
 
     use_case.execute(application.laa_reference, public_body_ids)
 
+    use_case.application_lookup_port.get_application_by_laa_reference.assert_called_once_with(
+        application.laa_reference
+    )
     use_case.update_public_bodies_port.update_public_bodies.assert_called_once_with(
         application=application,
         public_body_ids=public_body_ids,
