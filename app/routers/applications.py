@@ -35,6 +35,7 @@ from app.models.application.index import (
     PublicBody,
     PublicBodyResponse,
     RefuseApplicationUpdate,
+    UpdateApplicationPublicBodiesRequest,
     UploadCoronersLetterResponse,
 )
 from app.models.claim.index import (
@@ -67,6 +68,7 @@ from app.ports.pdf_generation_port import PdfGenerationPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.ports.sds_port import SdsPort
 from app.ports.search_application_port import SearchApplicationPort
+from app.ports.update_application_public_bodies_port import ApplicationPublicBodiesPort
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 from app.routers.dependencies import (
@@ -105,6 +107,7 @@ from app.use_cases.retrieve_coroners_letter import RetrieveCoronersLetterUseCase
 from app.use_cases.search_application import SearchApplicationUseCase
 from app.use_cases.send_grant_email import SendGrantEmailUseCase
 from app.use_cases.send_grant_letter import SendGrantLetterUseCase
+from app.use_cases.update_public_bodies import UpdatePublicBodiesUseCase
 from app.use_cases.upload_coroners_letter import UploadCoronersLetterUseCase
 
 router = APIRouter(
@@ -200,6 +203,20 @@ def get_list_public_bodies_use_case(
     list_public_bodies_port: ListPublicBodiesPort = Depends(get_application_db_adapter),
 ) -> ListPublicBodiesUseCase:
     return ListPublicBodiesUseCase(list_public_bodies_port=list_public_bodies_port)
+
+
+def get_update_application_public_bodies_use_case(
+    application_lookup_port: ApplicationLookupPort = Depends(
+        get_application_db_adapter
+    ),
+    update_public_bodies_port: ApplicationPublicBodiesPort = Depends(
+        get_application_db_adapter
+    ),
+) -> UpdatePublicBodiesUseCase:
+    return UpdatePublicBodiesUseCase(
+        application_lookup_port=application_lookup_port,
+        update_public_bodies_port=update_public_bodies_port,
+    )
 
 
 def get_list_application_claims_use_case(
@@ -677,6 +694,26 @@ def create_claim(
         raise HTTPException(
             status_code=422, detail={"errorCode": e.code, "message": e.message}
         )
+
+
+@router.patch("/{laa_reference}/public-bodies", status_code=204)
+def update_application_public_bodies(
+    laa_reference: str,
+    request: UpdateApplicationPublicBodiesRequest,
+    use_case: UpdatePublicBodiesUseCase = Depends(
+        get_update_application_public_bodies_use_case
+    ),
+    _: None = Depends(verify_entra_caseworker_token),
+) -> Response:
+    """Update the public bodies associated with an application."""
+    try:
+        use_case.execute(laa_reference, request.public_bodies)
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+    return Response(status_code=204)
 
 
 @router.patch("/{laa_reference}/claims/{claim_id}/reject", status_code=204)

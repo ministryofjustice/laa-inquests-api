@@ -29,6 +29,7 @@ from app.ports.get_application_port import GetApplicationPort
 from app.ports.list_applications_port import ListApplicationsPort
 from app.ports.list_public_bodies_port import ListPublicBodiesPort
 from app.ports.search_application_port import SearchApplicationPort
+from app.ports.update_application_public_bodies_port import ApplicationPublicBodiesPort
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 
@@ -41,6 +42,7 @@ class ApplicationRepositoryAdapter(
     ApplicationDecisionPort,
     ListApplicationsPort,
     ListPublicBodiesPort,
+    ApplicationPublicBodiesPort,
     SearchApplicationPort,
     UploadCoronersLetterPort,
     ApplicationBacklogPort,
@@ -247,6 +249,23 @@ class ApplicationRepositoryAdapter(
                 event="application_repository_update_decision_completed",
                 laa_reference=proceeding.laa_reference,
                 merits_decision=proceeding.merits_decision,
+            ),
+        )
+
+    def update_public_bodies(
+        self, application: Application, public_body_ids: list[PublicBodyId]
+    ) -> None:
+        application.public_bodies = [
+            ApplicationPublicBody(public_body_id=pb_id) for pb_id in public_body_ids
+        ]
+        self.session.add(application)
+        self.session.flush()
+        logger.info(
+            "Application public bodies updated",
+            extra=build_log_extra(
+                event="application_repository_update_public_bodies_completed",
+                laa_reference=application.laa_reference,
+                public_bodies=[pb.name for pb in public_body_ids],
             ),
         )
 
