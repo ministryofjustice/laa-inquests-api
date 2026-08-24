@@ -29,9 +29,9 @@ from app.ports.get_application_port import GetApplicationPort
 from app.ports.list_applications_port import ListApplicationsPort
 from app.ports.list_public_bodies_port import ListPublicBodiesPort
 from app.ports.search_application_port import SearchApplicationPort
+from app.ports.update_application_public_bodies_port import ApplicationPublicBodiesPort
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
-from app.ports.update_application_public_bodies_port import ApplicationPublicBodiesPort
 
 logger = logging.getLogger(__name__)
 

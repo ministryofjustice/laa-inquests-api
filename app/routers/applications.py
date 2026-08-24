@@ -441,26 +441,6 @@ def get_coroners_letter_use_case(
     return RetrieveCoronersLetterUseCase(session=session, sds_port=sds_port)
 
 
-@router.patch("/{laa_reference}/public-bodies", status_code=204)
-def update_application_public_bodies(
-    laa_reference: str,
-    request: UpdateApplicationPublicBodiesRequest,
-    use_case: UpdatePublicBodiesUseCase = Depends(
-        get_update_application_public_bodies_use_case
-    ),
-    _: None = Depends(verify_entra_caseworker_token),
-) -> Response:
-    """Update the public bodies associated with an application."""
-    try:
-        use_case.execute(laa_reference, request.public_bodies)
-    except ApplicationNotFoundError:
-        raise HTTPException(status_code=404, detail="Application not found")
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
-
-    return Response(status_code=204)
-
-
 @router.get(
     "/{laa_reference}/coroners-letter",
     response_class=StreamingResponse,
@@ -714,6 +694,26 @@ def create_claim(
         raise HTTPException(
             status_code=422, detail={"errorCode": e.code, "message": e.message}
         )
+
+
+@router.patch("/{laa_reference}/public-bodies", status_code=204)
+def update_application_public_bodies(
+    laa_reference: str,
+    request: UpdateApplicationPublicBodiesRequest,
+    use_case: UpdatePublicBodiesUseCase = Depends(
+        get_update_application_public_bodies_use_case
+    ),
+    _: None = Depends(verify_entra_caseworker_token),
+) -> Response:
+    """Update the public bodies associated with an application."""
+    try:
+        use_case.execute(laa_reference, request.public_bodies)
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+    return Response(status_code=204)
 
 
 @router.patch("/{laa_reference}/claims/{claim_id}/reject", status_code=204)
