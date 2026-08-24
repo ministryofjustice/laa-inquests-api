@@ -306,10 +306,23 @@ def test_get_laa_reference_does_not_contain_banned_words(session):
     adapter = ApplicationRepositoryAdapter(session)
 
     adapter._generate_laa_reference = MagicMock(
-        side_effect=["INQ-BAD-XXX", "INQ-XXX-XXX"]
+        side_effect=["INQ-XXY-YYY", "INQ-YYY-YYY"]
     )  # First call returns a bad reference, second call returns a good one
     reference = adapter._get_laa_reference()
-    assert reference == "INQ-XXX-XXX"
+    assert reference == "INQ-YYY-YYY"
+    assert (
+        adapter._generate_laa_reference.call_count == 2
+    )  # Ensure that it retried after getting a bad reference
+
+
+def test_get_laa_reference_does_not_contain_banned_words_across_hyphens(session):
+    adapter = ApplicationRepositoryAdapter(session)
+
+    adapter._generate_laa_reference = MagicMock(
+        side_effect=["INQ-YYX-XYY", "INQ-YYY-YYY"]
+    )  # First call returns a bad reference, second call returns a good one
+    reference = adapter._get_laa_reference()
+    assert reference == "INQ-YYY-YYY"
     assert (
         adapter._generate_laa_reference.call_count == 2
     )  # Ensure that it retried after getting a bad reference
