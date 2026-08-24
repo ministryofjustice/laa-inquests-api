@@ -54,8 +54,11 @@ class ApplicationRepositoryAdapter(
         self.session = session
         # TODO: Dependency injection instead of static
         with open("app/static/banned-words.txt", "r") as banned_word_file:
-            file_content = banned_word_file.read().replace("\n", "")
-        banned_words = base64.b64decode(file_content).decode("utf-8").splitlines()
+            banned_words = [
+                base64.b64decode(line.strip()).decode("utf-8")
+                for line in banned_word_file
+                if line.strip()  # Skip empty lines
+            ]
         self.banned_words = [
             word.upper()
             for word in banned_words
@@ -230,8 +233,7 @@ class ApplicationRepositoryAdapter(
 
     def _get_laa_reference(self) -> str:
         laa_reference = self._generate_laa_reference()
-        # TODO Pattern match on the bad word regex
-        if "BAD" in laa_reference:
+        if self.banned_words_pattern.search(laa_reference.replace("-", "")):
             return (
                 self._get_laa_reference()
             )  # Recursively generate a new reference if it contains "bad"
