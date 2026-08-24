@@ -217,7 +217,7 @@ class ApplicationRepositoryAdapter(
             public_bodies=public_bodies_to_add,
             provider_id=new_provider.provider_id,
             coroners_letter_id=request.coroners_letter_id,
-            new_laa_reference="INQ-YYY-YYY",
+            new_laa_reference=self._get_laa_reference(),
         )
         self.session.add(new_application)
         self.session.flush()
@@ -233,6 +233,7 @@ class ApplicationRepositoryAdapter(
         return new_application
 
     def _get_laa_reference(self) -> str:
+        # TODO: Set maximum number of attempts to avoid infinite loop
         laa_reference = self._generate_laa_reference()
         # Check if the generated reference contains any banned words
         if self.banned_words_pattern.search(laa_reference.replace("-", "")):
