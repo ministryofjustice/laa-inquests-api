@@ -13,7 +13,7 @@ class ApplicationCertificate(BaseModel):
         from_attributes=True,
     )
 
-    laa_reference: int
+    laa_reference: str
     date_created: date
 
     client_name: str
