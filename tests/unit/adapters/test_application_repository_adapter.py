@@ -21,6 +21,7 @@ from app.models.application.index import (
 from app.models.application.index import (
     CoronersLetter as CoronersLetterModel,
 )
+from app.use_cases.exceptions import ApplicationNotFoundError
 
 
 def _make_request(with_addresses: bool = True) -> ApplicationCreate:
@@ -384,14 +385,15 @@ class TestUpdateApplicationPublicBodies:
             new_public_bodies
         )
 
-    def test_does_not_update_to_no_public_bodies_and_raises_an_error(self, session):
+    def test_raises_an_application_not_found_error(self, session):
         app = session.exec(select(Application)).first()
         adapter = ApplicationRepositoryAdapter(session)
+        adapter.get_application_by_laa_reference = MagicMock(return_value=None)
 
-        new_public_bodies = []
+        new_public_bodies = [PublicBodyId.DEPARTMENT_FOR_TRANSPORT]
         try:
             adapter.update_public_bodies(app.laa_reference, new_public_bodies)
-        except ValueError as e:
-            assert str(e) == "At least one public body must be provided."
+        except ApplicationNotFoundError as e:
+            assert str(e) == f"Application {app.laa_reference} not found"
         else:
-            assert False, "Expected ValueError was not raised"
+            assert False, "Expected ApplicationNotFoundError was not raised"
