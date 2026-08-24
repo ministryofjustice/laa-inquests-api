@@ -5,6 +5,7 @@ import uuid
 
 from sqlmodel import Session, select
 
+from app.config import Config
 from app.domain.coroners_letter import CoronersLetter
 from app.logging_utils import build_log_extra
 from app.models.application.enums import MeritsDecision
@@ -54,8 +55,8 @@ class ApplicationRepositoryAdapter(
 ):
     def __init__(self, session: Session) -> None:
         self.session = session
-        # TODO: Dependency injection instead of static
-        with open("app/static/banned-words.txt", "r") as banned_word_file:
+        # TODO: Dependency injection of reading whole banned words file into memory so it is done only once.
+        with open(Config.BANNED_WORDS_FILE_PATH, "r") as banned_word_file:
             banned_words = [
                 base64.b64decode(line.strip()).decode("utf-8")
                 for line in banned_word_file

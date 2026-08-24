@@ -53,3 +53,7 @@ class Config:
     ENTRA_ALLOWED_SCOPES = os.environ.get(
         "ENTRA_ALLOWED_SCOPES", "User.Provider,User.Caseworker"
     )
+
+    BANNED_WORDS_FILE_PATH = os.environ.get(
+        "BANNED_WORDS_FILE_PATH", "app/static/banned-words.txt"
+    )
