@@ -21,7 +21,6 @@ from app.models.application.index import (
 from app.models.application.index import (
     CoronersLetter as CoronersLetterModel,
 )
-from app.use_cases.exceptions import ApplicationNotFoundError
 
 
 def _make_request(with_addresses: bool = True) -> ApplicationCreate:
@@ -341,13 +340,13 @@ class TestGetPendingApplications:
 
 class TestUpdateApplicationPublicBodies:
     def test_updates_to_single_public_body_and_commits(self, session):
-        app = session.exec(select(Application)).first()
+        application = session.exec(select(Application)).first()
         adapter = ApplicationRepositoryAdapter(session)
 
         new_public_bodies = [PublicBodyId.MINISTRY_OF_DEFENCE]
-        adapter.update_public_bodies(str(app.laa_reference), new_public_bodies)
+        adapter.update_public_bodies(application, new_public_bodies)
 
-        updated_app = session.get(Application, app.laa_reference)
+        updated_app = session.get(Application, application.laa_reference)
         assert len(updated_app.public_bodies) == 1
         assert (
             updated_app.public_bodies[0].public_body_id
@@ -355,13 +354,13 @@ class TestUpdateApplicationPublicBodies:
         )
 
     def test_updates_to_the_same_single_public_body_and_commits(self, session):
-        app = session.exec(select(Application)).first()
+        application = session.exec(select(Application)).first()
         adapter = ApplicationRepositoryAdapter(session)
 
         new_public_bodies = [PublicBodyId.DEPARTMENT_FOR_TRANSPORT]
-        adapter.update_public_bodies(str(app.laa_reference), new_public_bodies)
+        adapter.update_public_bodies(application, new_public_bodies)
 
-        updated_app = session.get(Application, app.laa_reference)
+        updated_app = session.get(Application, application.laa_reference)
         assert len(updated_app.public_bodies) == 1
         assert (
             updated_app.public_bodies[0].public_body_id
@@ -369,31 +368,18 @@ class TestUpdateApplicationPublicBodies:
         )
 
     def test_updates_to_multiple_public_bodies_and_commits(self, session):
-        app = session.exec(select(Application)).first()
+        application = session.exec(select(Application)).first()
         adapter = ApplicationRepositoryAdapter(session)
 
         new_public_bodies = [
             PublicBodyId.DEPARTMENT_FOR_TRANSPORT,
             PublicBodyId.MINISTRY_OF_DEFENCE,
         ]
-        adapter.update_public_bodies(app.laa_reference, new_public_bodies)
+        adapter.update_public_bodies(application, new_public_bodies)
 
-        updated_app = session.get(Application, app.laa_reference)
+        updated_app = session.get(Application, application.laa_reference)
 
         assert len(updated_app.public_bodies) == 2
         assert {pb.public_body_id for pb in updated_app.public_bodies} == set(
             new_public_bodies
         )
-
-    def test_raises_an_application_not_found_error(self, session):
-        app = session.exec(select(Application)).first()
-        adapter = ApplicationRepositoryAdapter(session)
-        adapter.get_application_by_laa_reference = MagicMock(return_value=None)
-
-        new_public_bodies = [PublicBodyId.DEPARTMENT_FOR_TRANSPORT]
-        try:
-            adapter.update_public_bodies(app.laa_reference, new_public_bodies)
-        except ApplicationNotFoundError as e:
-            assert str(e) == f"Application {app.laa_reference} not found"
-        else:
-            assert False, "Expected ApplicationNotFoundError was not raised"

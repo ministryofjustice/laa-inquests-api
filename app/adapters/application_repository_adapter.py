@@ -32,7 +32,6 @@ from app.ports.search_application_port import SearchApplicationPort
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 from app.ports.update_application_public_bodies_port import ApplicationPublicBodiesPort
-from app.use_cases.exceptions import ApplicationNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -254,12 +253,8 @@ class ApplicationRepositoryAdapter(
         )
 
     def update_public_bodies(
-        self, laa_reference: str, public_body_ids: list[PublicBodyId]
+        self, application: Application, public_body_ids: list[PublicBodyId]
     ) -> None:
-        application = self.get_application_by_laa_reference(laa_reference)
-        if application is None:
-            raise ApplicationNotFoundError(f"Application {laa_reference} not found")
-
         application.public_bodies = [
             ApplicationPublicBody(public_body_id=pb_id) for pb_id in public_body_ids
         ]
@@ -269,7 +264,7 @@ class ApplicationRepositoryAdapter(
             "Application public bodies updated",
             extra=build_log_extra(
                 event="application_repository_update_public_bodies_completed",
-                laa_reference=laa_reference,
+                laa_reference=application.laa_reference,
                 public_bodies=[pb.name for pb in public_body_ids],
             ),
         )
