@@ -262,7 +262,9 @@ def create_base_certificate(
         "opponent_details": [body.public_body_description for body in public_bodies],
         "guardian_name": "Not applicable",
         "guardian_address": "Not applicable",
-        "laa_reference": application.laa_reference,
+        "laa_reference": str(application.laa_reference)
+        if isinstance(application.laa_reference, int)
+        else application.laa_reference,
         "date_created": application_proceeding.certificate_issue_date
         or datetime.now(tz=UTC).date(),
         "certificate_type": application_proceeding.proceeding.certificate_type,

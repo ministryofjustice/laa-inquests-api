@@ -25,7 +25,7 @@ def test_200_read_application_by_reference_returns_expected_application(
     )
 
     requested_application = response.json()
-    assert requested_application["laaReference"] == 1
+    assert requested_application["laaReference"] == "1"
 
 
 def test_200_proceeding_details_included_on_application_response(

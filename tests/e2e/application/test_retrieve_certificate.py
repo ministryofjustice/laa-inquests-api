@@ -24,7 +24,7 @@ def test_200_read_certificate_returns_expected_certificate_context(
 
     assert response.status_code == 200
     body = response.json()
-    assert body["laaReference"] == application.laa_reference
+    assert body["laaReference"] == str(application.laa_reference)
     assert body["clientName"] == "Test Surname"
     assert body["firmName"] == "Test Firm Name"
     assert body["officeAddress"] is not None

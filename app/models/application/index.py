@@ -589,7 +589,7 @@ class ApplicationResponse(BaseModel):
         from_attributes=True,
         populate_by_name=True,
     )
-    laa_reference: int
+    laa_reference: str
     created_at: datetime
     updated_at: datetime
     status: str
@@ -603,6 +603,13 @@ class ApplicationResponse(BaseModel):
     deceased: DeceasedResponse
     provider: ProviderResponse
     coroners_letter: CoronersLetterResponse | None = None
+
+    # Temporary fix to convert int to string for laa_reference
+    @field_validator("laa_reference", mode="before")
+    @classmethod
+    def convert_laa_reference_to_string(cls, v):
+        """Convert int laa_reference from DB to string for API response."""
+        return str(v) if isinstance(v, int) else v
 
 
 # Use case models

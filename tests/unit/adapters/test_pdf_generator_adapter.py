@@ -25,7 +25,7 @@ def _sample_context() -> ApplicationCertificate:
         firm_name="Test Firm Ltd",
         office_address=create_base_office_address(),
         opponent_details=["Department for Transport"],
-        laa_reference=12345,
+        laa_reference="12345",
         date_created=date(2026, 7, 15),
         certificate_type="SUBSTANTIVE",
         status="LIVE",
