@@ -343,6 +343,20 @@ class TestUpdateApplicationPublicBodies:
         app = session.exec(select(Application)).first()
         adapter = ApplicationRepositoryAdapter(session)
 
+        new_public_bodies = [PublicBodyId.MINISTRY_OF_DEFENCE]
+        adapter.update_public_bodies(str(app.laa_reference), new_public_bodies)
+
+        updated_app = session.get(Application, app.laa_reference)
+        assert len(updated_app.public_bodies) == 1
+        assert (
+            updated_app.public_bodies[0].public_body_id
+            == PublicBodyId.MINISTRY_OF_DEFENCE
+        )
+
+    def test_updates_to_the_same_single_public_body_and_commits(self, session):
+        app = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
         new_public_bodies = [PublicBodyId.DEPARTMENT_FOR_TRANSPORT]
         adapter.update_public_bodies(str(app.laa_reference), new_public_bodies)
 
@@ -369,3 +383,15 @@ class TestUpdateApplicationPublicBodies:
         assert {pb.public_body_id for pb in updated_app.public_bodies} == set(
             new_public_bodies
         )
+
+    def test_does_not_update_to_no_public_bodies_and_raises_an_error(self, session):
+        app = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        new_public_bodies = []
+        try:
+            adapter.update_public_bodies(app.laa_reference, new_public_bodies)
+        except ValueError as e:
+            assert str(e) == "At least one public body must be provided."
+        else:
+            assert False, "Expected ValueError was not raised"

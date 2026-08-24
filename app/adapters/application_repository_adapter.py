@@ -265,6 +265,15 @@ class ApplicationRepositoryAdapter(
                 ),
             )
             return
+        if not public_body_ids:
+            logger.warning(
+                "No public bodies provided for updating",
+                extra=build_log_extra(
+                    event="application_repository_update_public_bodies_failed",
+                    laa_reference=laa_reference,
+                ),
+            )
+            raise ValueError("At least one public body must be provided.")
         application.public_bodies = [
             ApplicationPublicBody(public_body_id=pb_id) for pb_id in public_body_ids
         ]
