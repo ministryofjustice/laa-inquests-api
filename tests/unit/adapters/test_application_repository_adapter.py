@@ -21,6 +21,7 @@ from app.models.application.index import (
 from app.models.application.index import (
     CoronersLetter as CoronersLetterModel,
 )
+from tests.e2e.factories import create_application_in_db
 
 
 def _make_request(with_addresses: bool = True) -> ApplicationCreate:
@@ -326,6 +327,26 @@ def test_get_laa_reference_does_not_contain_banned_words_across_hyphens(session)
     assert (
         adapter._generate_laa_reference.call_count == 2
     )  # Ensure that it retried after getting a bad reference
+
+
+def test_get_laa_reference_does_not_return_existing_reference(session):
+    adapter = ApplicationRepositoryAdapter(session)
+
+    # Create an application with a specific reference to simulate an existing reference
+    existing_reference = "INQ-AAA-AAA"
+    create_application_in_db(
+        session,
+        new_laa_reference=existing_reference,
+    )
+
+    adapter._generate_laa_reference = MagicMock(
+        side_effect=[existing_reference, "INQ-YYY-YYY"]
+    )  # First call returns an existing reference, second call returns a new one
+    reference = adapter._get_laa_reference()
+    assert reference == "INQ-YYY-YYY"
+    assert (
+        adapter._generate_laa_reference.call_count == 2
+    )  # Ensure that it retried after getting an existing reference
 
 
 class TestGetPendingApplications:

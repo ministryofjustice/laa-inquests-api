@@ -128,7 +128,7 @@ def seed_dev():
             coroners_letter_id=SEED_CORONERS_LETTER_ID,
             proceeding=application_proceeding,
             public_bodies=public_bodies,
-            new_laa_reference="INQ-XXX-XXX",
+            new_laa_reference="INQ-YYY-YYY",
         )
         db_session.add(application)
         db_session.flush()

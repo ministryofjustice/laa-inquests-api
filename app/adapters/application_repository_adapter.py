@@ -3,7 +3,7 @@ import logging
 import re
 import uuid
 
-from sqlmodel import Session, select
+from sqlmodel import Session, exists, select
 
 from app.config import Config
 from app.domain.coroners_letter import CoronersLetter
@@ -219,7 +219,7 @@ class ApplicationRepositoryAdapter(
             public_bodies=public_bodies_to_add,
             provider_id=new_provider.provider_id,
             coroners_letter_id=request.coroners_letter_id,
-            new_laa_reference="INQ-XXX-XXX",
+            new_laa_reference="INQ-YYY-YYY",
         )
         self.session.add(new_application)
         self.session.flush()
@@ -236,10 +236,14 @@ class ApplicationRepositoryAdapter(
 
     def _get_laa_reference(self) -> str:
         laa_reference = self._generate_laa_reference()
+        # Check if the generated reference contains any banned words
         if self.banned_words_pattern.search(laa_reference.replace("-", "")):
-            return (
-                self._get_laa_reference()
-            )  # Recursively generate a new reference if it contains "bad"
+            return self._get_laa_reference()
+        # Check if the generated reference already exists in the database
+        elif self.session.scalar(
+            select(exists().where(Application.new_laa_reference == laa_reference))
+        ):
+            return self._get_laa_reference()
         return laa_reference
 
     def _generate_laa_reference(self) -> str:
@@ -248,7 +252,6 @@ class ApplicationRepositoryAdapter(
         """
         # [A-Z0-9]{3}-[A-Z0-9]{3} where each X is a random uppercase letter or digit.
         # Exclude ambiguous characters like I, O, 0, 1 to avoid confusion.
-
         return f"INQ-{''.join(self._random_char() for _ in range(3))}-{''.join(self._random_char() for _ in range(3))}"
 
     def _random_char(self):
