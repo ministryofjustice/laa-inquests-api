@@ -31,6 +31,7 @@ from app.ports.list_public_bodies_port import ListPublicBodiesPort
 from app.ports.search_application_port import SearchApplicationPort
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
+from app.ports.update_application_public_bodies_port import ApplicationPublicBodiesPort
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,7 @@ class ApplicationRepositoryAdapter(
     ApplicationDecisionPort,
     ListApplicationsPort,
     ListPublicBodiesPort,
+    ApplicationPublicBodiesPort,
     SearchApplicationPort,
     UploadCoronersLetterPort,
     ApplicationBacklogPort,
@@ -247,6 +249,33 @@ class ApplicationRepositoryAdapter(
                 event="application_repository_update_decision_completed",
                 laa_reference=proceeding.laa_reference,
                 merits_decision=proceeding.merits_decision,
+            ),
+        )
+
+    def update_public_bodies(
+        self, laa_reference: str, public_body_ids: list[PublicBodyId]
+    ) -> None:
+        application = self.get_application_by_laa_reference(laa_reference)
+        if application is None:
+            logger.warning(
+                "Application not found for updating public bodies",
+                extra=build_log_extra(
+                    event="application_repository_update_public_bodies_failed",
+                    laa_reference=laa_reference,
+                ),
+            )
+            return
+        application.public_bodies = [
+            ApplicationPublicBody(public_body_id=pb_id) for pb_id in public_body_ids
+        ]
+        self.session.add(application)
+        self.session.flush()
+        logger.info(
+            "Application public bodies updated",
+            extra=build_log_extra(
+                event="application_repository_update_public_bodies_completed",
+                laa_reference=laa_reference,
+                public_bodies=[pb.name for pb in public_body_ids],
             ),
         )
 

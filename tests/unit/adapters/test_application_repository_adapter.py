@@ -336,3 +336,36 @@ class TestGetPendingApplications:
 
         assert len(result) == 2
         assert result[0].laa_reference == older_app.laa_reference
+
+
+class TestUpdateApplicationPublicBodies:
+    def test_updates_to_single_public_body_and_commits(self, session):
+        app = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        new_public_bodies = [PublicBodyId.DEPARTMENT_FOR_TRANSPORT]
+        adapter.update_public_bodies(str(app.laa_reference), new_public_bodies)
+
+        updated_app = session.get(Application, app.laa_reference)
+        assert len(updated_app.public_bodies) == 1
+        assert (
+            updated_app.public_bodies[0].public_body_id
+            == PublicBodyId.DEPARTMENT_FOR_TRANSPORT
+        )
+
+    def test_updates_to_multiple_public_bodies_and_commits(self, session):
+        app = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        new_public_bodies = [
+            PublicBodyId.DEPARTMENT_FOR_TRANSPORT,
+            PublicBodyId.MINISTRY_OF_DEFENCE,
+        ]
+        adapter.update_public_bodies(app.laa_reference, new_public_bodies)
+
+        updated_app = session.get(Application, app.laa_reference)
+
+        assert len(updated_app.public_bodies) == 2
+        assert {pb.public_body_id for pb in updated_app.public_bodies} == set(
+            new_public_bodies
+        )

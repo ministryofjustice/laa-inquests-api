@@ -177,7 +177,8 @@ class CoronersLetter(SQLModel, table=True):
 class Application(ApplicationBase, table=True):
     proceeding: "ApplicationProceeding" = Relationship(back_populates="application")
     public_bodies: list["ApplicationPublicBody"] = Relationship(
-        back_populates="application"
+        back_populates="application",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
     client_id: int | None = Field(default=None, foreign_key="client.client_id")
     client: Client | None = Relationship(back_populates="applications")
