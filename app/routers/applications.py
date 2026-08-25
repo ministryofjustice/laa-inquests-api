@@ -213,10 +213,14 @@ def get_update_application_public_bodies_use_case(
     update_public_bodies_port: ApplicationPublicBodiesPort = Depends(
         get_application_db_adapter
     ),
+    create_history_event_port: CreateHistoryEventPort = Depends(
+        get_history_event_adapter
+    ),
 ) -> UpdatePublicBodiesUseCase:
     return UpdatePublicBodiesUseCase(
         application_lookup_port=application_lookup_port,
         update_public_bodies_port=update_public_bodies_port,
+        create_history_event_port=create_history_event_port,
     )
 
 
