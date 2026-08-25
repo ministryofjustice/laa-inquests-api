@@ -7,7 +7,9 @@ from app.models.application.enums import PublicBodyId
 from app.models.application.index import (
     Application,
 )
+from app.models.history.enums import ActorType, HistoryEventReference
 from app.ports.application_lookup_port import ApplicationLookupPort
+from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.update_application_public_bodies_port import ApplicationPublicBodiesPort
 from app.use_cases.exceptions import ApplicationNotFoundError
 from app.use_cases.update_public_bodies import UpdatePublicBodiesUseCase
@@ -39,13 +41,20 @@ def application_lookup_port(application: Application) -> MagicMock:
 
 
 @pytest.fixture
+def create_history_event_port() -> MagicMock:
+    return MagicMock(spec=CreateHistoryEventPort)
+
+
+@pytest.fixture
 def use_case(
     application_lookup_port: MagicMock,
     update_public_bodies_port: MagicMock,
+    create_history_event_port: MagicMock,
 ) -> UpdatePublicBodiesUseCase:
     return UpdatePublicBodiesUseCase(
         application_lookup_port,
         update_public_bodies_port,
+        create_history_event_port,
     )
 
 
@@ -66,6 +75,35 @@ def test_update_public_bodies_calls_ports_and_commits(
     )
     use_case.update_public_bodies_port.commit.assert_called_once()
     use_case.update_public_bodies_port.rollback.assert_not_called()
+
+
+def test_update_public_bodies_creates_history_event(
+    application_lookup_port,
+    update_public_bodies_port,
+    application,
+):
+    history_event_port = MagicMock(spec=CreateHistoryEventPort)
+    use_case = UpdatePublicBodiesUseCase(
+        application_lookup_port,
+        update_public_bodies_port,
+        history_event_port,
+    )
+    public_body_ids = [PublicBodyId.MINISTRY_OF_DEFENCE]
+
+    use_case.execute(application.laa_reference, public_body_ids)
+
+    history_event_port.create_history_event.assert_called_once_with(
+        event_reference=HistoryEventReference.INTERESTED_PARTY_UPDATED,
+        actor="Caseworker",
+        actor_type=ActorType.CASEWORKER,
+        laa_reference=application.laa_reference,
+        event_data={
+            "old_public_bodies": [PublicBodyId.DEPARTMENT_FOR_TRANSPORT],
+            "new_public_bodies": public_body_ids,
+        },
+    )
+    update_public_bodies_port.commit.assert_called_once()
+    update_public_bodies_port.rollback.assert_not_called()
 
 
 def test_update_public_bodies_raises_exception_if_no_public_bodies_provided(

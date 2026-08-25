@@ -2,6 +2,8 @@ from sqlmodel import select
 
 from app.models.application.enums import PublicBodyId
 from app.models.application.index import Application
+from app.models.history.enums import ActorType, HistoryEventReference
+from app.models.history.index import HistoryEvent
 
 
 def test_204_update_application_public_bodies_updates_the_application_public_bodies(
@@ -27,6 +29,40 @@ def test_204_update_application_public_bodies_updates_the_application_public_bod
         updated_application.public_bodies[0].public_body_id
         == PublicBodyId.MINISTRY_OF_DEFENCE
     )
+
+
+def test_204_update_application_public_bodies_creates_history_event(
+    session, client, auth_token
+):
+    application = session.exec(select(Application)).first()
+
+    response = client.patch(
+        f"/applications/{application.laa_reference}/public-bodies",
+        json={"publicBodies": [PublicBodyId.MINISTRY_OF_DEFENCE]},
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 204
+
+    history_event = session.exec(
+        select(HistoryEvent).where(
+            (HistoryEvent.laa_reference == application.laa_reference)
+            & (
+                HistoryEvent.event_reference
+                == HistoryEventReference.INTERESTED_PARTY_UPDATED
+            )
+        )
+    ).one()
+
+    assert history_event.actor == "Test Name"
+    assert history_event.actor_type == ActorType.CASEWORKER
+    assert history_event.event_data == {
+        "old_public_bodies": [PublicBodyId.DEPARTMENT_FOR_TRANSPORT],
+        "new_public_bodies": [PublicBodyId.MINISTRY_OF_DEFENCE],
+    }
 
 
 def test_404_update_application_public_bodies_returns_not_found_for_not_found_application(
