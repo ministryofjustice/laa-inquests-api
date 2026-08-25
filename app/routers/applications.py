@@ -76,6 +76,7 @@ from app.routers.dependencies import (
     get_current_provider_firm_code,
     get_sds_port,
     verify_entra_caseworker_token,
+    verify_entra_provider_or_caseworker_token,
     verify_entra_provider_token,
 )
 from app.use_cases.create_application import CreateApplicationUseCase
@@ -428,7 +429,7 @@ async def search_application(
 @router.get("/public-bodies", response_model=list[PublicBodyResponse])
 def list_public_bodies(
     use_case: ListPublicBodiesUseCase = Depends(get_list_public_bodies_use_case),
-    _: None = Depends(verify_entra_provider_token),
+    _: None = Depends(verify_entra_provider_or_caseworker_token),
 ) -> list[PublicBody]:
     public_bodies = use_case.execute()
     return public_bodies
