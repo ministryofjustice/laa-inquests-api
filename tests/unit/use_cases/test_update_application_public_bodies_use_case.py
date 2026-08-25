@@ -164,3 +164,23 @@ def test_update_public_bodies_rolls_back_on_exception_during_update(
     )
     use_case.update_public_bodies_port.commit.assert_not_called()
     use_case.update_public_bodies_port.rollback.assert_called_once()
+
+
+def test_update_public_bodies_rolls_back_on_history_event_creation_error(
+    use_case,
+    application,
+):
+    public_body_ids = [PublicBodyId.DEPARTMENT_FOR_TRANSPORT]
+    use_case.create_history_event_port.create_history_event.side_effect = Exception(
+        "Error creating history event"
+    )
+
+    with pytest.raises(Exception, match="Error creating history event"):
+        use_case.execute(application.laa_reference, public_body_ids)
+
+    use_case.update_public_bodies_port.update_public_bodies.assert_called_once_with(
+        application=application,
+        public_body_ids=public_body_ids,
+    )
+    use_case.update_public_bodies_port.commit.assert_not_called()
+    use_case.update_public_bodies_port.rollback.assert_called_once()
