@@ -605,7 +605,7 @@ async def upload_coroners_letter(
 ) -> UploadCoronersLetterResponse:
     """Upload a coroner's letter to document storage and return its file ID."""
     contents = await file.read()
-    file_name = file.filename if file.filename else ""
+    file_name = file.filename
     try:
         coroners_letter_id = use_case.execute(
             contents,
