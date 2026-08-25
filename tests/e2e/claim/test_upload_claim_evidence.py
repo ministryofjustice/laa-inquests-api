@@ -32,6 +32,42 @@ def test_201_upload_claim_evidence_returns_claim_evidence_id(client, auth_token)
     assert is_valid_uuid(body["claimEvidenceId"])
 
 
+def test_201_upload_claim_evidence_accepts_xlsx(client, auth_token):
+    response = client.post(
+        "/claims/evidence",
+        files={
+            "file": (
+                "claim_cost_template.xlsx",
+                io.BytesIO(b"test content"),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert "claimEvidenceId" in body
+    assert is_valid_uuid(body["claimEvidenceId"])
+
+
+def test_201_upload_claim_evidence_accepts_xls(client, auth_token):
+    response = client.post(
+        "/claims/evidence",
+        files={
+            "file": (
+                "claim_cost_template.xls",
+                io.BytesIO(b"test content"),
+                "application/vnd.ms-excel",
+            )
+        },
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert "claimEvidenceId" in body
+    assert is_valid_uuid(body["claimEvidenceId"])
+
+
 def test_422_upload_claim_evidence_with_no_file(client, auth_token):
     response = client.post(
         "/claims/evidence",
