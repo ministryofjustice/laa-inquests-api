@@ -1,6 +1,6 @@
 import logging
 import uuid
-from mimetypes import guess_type
+from mimetypes import add_type, guess_type
 from typing import Literal
 
 from fastapi import (
@@ -36,6 +36,10 @@ from app.use_cases.exceptions import (
 )
 from app.use_cases.retrieve_claim_evidence import RetrieveClaimEvidenceUseCase
 from app.use_cases.upload_claim_evidence import UploadClaimEvidenceUseCase
+
+# Ensure Excel types resolve regardless of the OS mime registry (e.g. slim Docker images).
+add_type("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ".xlsx")
+add_type("application/vnd.ms-excel", ".xls")
 
 router = APIRouter(
     prefix="/claims",
@@ -177,11 +181,18 @@ def retrieve_claim_evidence(
         raise HTTPException(status_code=500, detail="Failed to retrieve claim evidence")
 
     mime_type = guess_type(result.file_name)
-    supported_mime_types = ["image/png", "image/jpeg", "image/bmp", "application/pdf"]
+    supported_mime_types = [
+        "image/png",
+        "image/jpeg",
+        "image/bmp",
+        "application/pdf",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-excel",
+    ]
     if mime_type[0] not in supported_mime_types:
         raise HTTPException(
             status_code=415,
-            detail="Returned file type is not supported for streaming. Supported file types are: .png, .jpg, .jpeg, .bmp, .pdf",
+            detail="Returned file type is not supported for streaming. Supported file types are: .png, .jpg, .jpeg, .bmp, .pdf, .xlsx, .xls",
         )
 
     return StreamingResponse(
