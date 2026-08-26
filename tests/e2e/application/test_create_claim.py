@@ -517,6 +517,38 @@ def test_201_create_final_bill_claim_persists_inquest_outcome_links(
     }
 
 
+def test_201_create_nil_bill_claim_persists_inquest_outcome_links(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "claimType": "NIL_BILL",
+                "poaTypeId": None,
+                "inquestOutcomes": ["OPEN_CONCLUSION"],
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    claim_id = response.json()["claimId"]
+
+    stored_claim = session.get(Claim, claim_id)
+    assert stored_claim.claim_type_id == ClaimType.NIL_BILL
+
+    stored = session.exec(
+        select(ClaimInquestOutcome).where(ClaimInquestOutcome.claim_id == claim_id)
+    ).all()
+    assert {row.inquest_outcome_id.name for row in stored} == {"OPEN_CONCLUSION"}
+
+
 def test_422_final_bill_claim_without_inquest_outcomes(session, client, auth_token):
     laa_reference = session.exec(select(Application)).first().laa_reference
 
