@@ -7,7 +7,13 @@ from sqlmodel import select
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application, Provider
 from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ClaimType
-from app.models.claim.index import Claim, ClaimDecision, ClaimEvidence, DecisionReason
+from app.models.claim.index import (
+    Claim,
+    ClaimDecision,
+    ClaimEvidence,
+    ClaimInquestOutcome,
+    DecisionReason,
+)
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.models.notifications.enums import NotificationType
@@ -268,6 +274,7 @@ def test_201_create_claim_deducts_new_claim_amount_from_total_funds_available_wh
                 "claimType": "FINAL_BILL",
                 "poaTypeId": None,
                 "claimantId": "claimant@provider.com",
+                "inquestOutcomes": ["SUICIDE"],
             }
         ),
         headers={
@@ -362,6 +369,7 @@ def test_201_create_claim_without_optional_fields(session, client, auth_token):
                 "claimType": "FINAL_BILL",
                 "poaTypeId": None,
                 "claimantId": "claimant@provider.com",
+                "inquestOutcomes": ["SUICIDE"],
             }
         ),
         headers={
@@ -475,6 +483,101 @@ def test_422_non_payment_on_account_with_poa_type_id(session, client, auth_token
         response.json()["detail"]["errorCode"]
         == "POA_TYPE_NOT_ALLOWED_FOR_NON_PAYMENT_ON_ACCOUNT"
     )
+
+
+def test_201_create_final_bill_claim_persists_inquest_outcome_links(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "claimType": "FINAL_BILL",
+                "poaTypeId": None,
+                "inquestOutcomes": ["SUICIDE", "NATURAL_CAUSES"],
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    claim_id = response.json()["claimId"]
+
+    stored = session.exec(
+        select(ClaimInquestOutcome).where(ClaimInquestOutcome.claim_id == claim_id)
+    ).all()
+    assert {row.inquest_outcome_id.name for row in stored} == {
+        "SUICIDE",
+        "NATURAL_CAUSES",
+    }
+
+
+def test_422_final_bill_claim_without_inquest_outcomes(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "claimType": "FINAL_BILL",
+                "poaTypeId": None,
+                "inquestOutcomes": [],
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "MISSING_INQUEST_OUTCOMES"
+
+
+def test_422_payment_on_account_claim_with_inquest_outcomes(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body({"inquestOutcomes": ["SUICIDE"]}),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "INQUEST_OUTCOMES_NOT_ALLOWED"
+
+
+def test_422_create_claim_with_invalid_inquest_outcome_name(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "claimType": "FINAL_BILL",
+                "poaTypeId": None,
+                "inquestOutcomes": ["NOT_A_REAL_OUTCOME"],
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
 
 
 def test_422_profit_cost_with_no_cost_fields(session, client, auth_token):

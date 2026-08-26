@@ -5,7 +5,7 @@ from sqlmodel import select
 from app.adapters.claim_repository_adapter import ClaimRepositoryAdapter
 from app.domain.claim import Claim as DomainClaim
 from app.models.application.index import Application
-from app.models.claim.enums import ClaimStatus, ClaimType, POAType
+from app.models.claim.enums import ClaimStatus, ClaimType, InquestOutcomeId, POAType
 from app.models.claim.index import Claim
 
 
@@ -97,6 +97,7 @@ def test_create_claim_defaults_optional_fields_to_none_when_omitted(session):
         {
             "claim_type": ClaimType.FINAL_BILL,
             "poa_type": None,
+            "inquest_outcomes": (InquestOutcomeId.SUICIDE,),
         }
     )
     created_claim = adapter.create_claim(str(laa_reference), claim, None)

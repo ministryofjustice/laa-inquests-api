@@ -12,6 +12,7 @@ from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
     ClaimType,
+    InquestOutcomeId,
     POAType,
     ReasonCode,
 )
@@ -225,6 +226,30 @@ def test_execute_links_claim_evidence_to_created_claim():
 
     create_claim_port.link_evidence_to_claim.assert_called_once_with(
         claim.claim_id, command.claim_evidence_ids
+    )
+
+
+def test_execute_links_inquest_outcomes_to_created_claim():
+    command = _make_command(
+        {
+            "claim_type": ClaimType.FINAL_BILL,
+            "poa_type": None,
+            "inquest_outcomes": [InquestOutcomeId.SUICIDE],
+        }
+    )
+    claim = _make_claim()
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+
+    use_case = _make_use_case(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(),
+        get_claims_for_application_port=_make_get_claims_port(),
+    )
+    use_case.execute(command)
+
+    create_claim_port.link_inquest_outcomes_to_claim.assert_called_once_with(
+        claim.claim_id, command.inquest_outcomes
     )
 
 
@@ -593,6 +618,7 @@ def test_execute_does_not_raise_for_non_profit_cost_without_costs():
             "net": None,
             "gross": None,
             "vat_zero_total": None,
+            "inquest_outcomes": [InquestOutcomeId.SUICIDE],
         }
     )
     port = MagicMock(spec=CreateClaimPort)
@@ -1124,6 +1150,7 @@ def test_execute_does_not_auto_approve_non_payment_on_account_claim():
             "poa_type": None,
             "net": Decimal("50000.00"),
             "gross": Decimal("50000.00"),
+            "inquest_outcomes": [InquestOutcomeId.SUICIDE],
         }
     )
     claim = _make_claim()

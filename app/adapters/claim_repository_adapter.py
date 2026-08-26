@@ -9,10 +9,16 @@ from app.domain.claim_evidence import ClaimEvidence as DomainClaimEvidence
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
 from app.logging_utils import build_log_extra
 from app.models.application.index import Application
-from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ReasonCode
+from app.models.claim.enums import (
+    ClaimDecisionStatus,
+    ClaimStatus,
+    InquestOutcomeId,
+    ReasonCode,
+)
 from app.models.claim.index import (
     Claim,
     ClaimDecision,
+    ClaimInquestOutcome,
     DecisionReason,
 )
 from app.models.claim.index import (
@@ -100,6 +106,28 @@ class ClaimRepositoryAdapter(
                 event="claim_repository_evidence_link_completed",
                 claim_id=claim_id,
                 evidence_count=len(evidence_ids),
+            ),
+        )
+
+    def link_inquest_outcomes_to_claim(
+        self,
+        claim_id: int,
+        inquest_outcomes: list[InquestOutcomeId],
+    ) -> None:
+        for inquest_outcome in inquest_outcomes:
+            self.session.add(
+                ClaimInquestOutcome(
+                    claim_id=claim_id,
+                    inquest_outcome_id=inquest_outcome,
+                )
+            )
+        self.session.flush()
+        logger.info(
+            "Claim inquest outcomes linked in repository",
+            extra=build_log_extra(
+                event="claim_repository_inquest_outcome_link_completed",
+                claim_id=claim_id,
+                inquest_outcome_count=len(inquest_outcomes),
             ),
         )
 

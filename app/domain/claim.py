@@ -7,7 +7,9 @@ from decimal import Decimal
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
 from app.domain.claim_rejection import ClaimRejection, ClaimRejectionReason
 from app.domain.constants.claim_messages import (
+    INQUEST_OUTCOMES_NOT_ALLOWED_MESSAGE,
     MISSING_GROSS_MESSAGE,
+    MISSING_INQUEST_OUTCOMES_MESSAGE,
     MISSING_NON_PROFIT_COST_TOTAL_MESSAGE,
     MISSING_POA_TYPE_MESSAGE,
     MISSING_TOTAL_MESSAGE,
@@ -28,8 +30,11 @@ from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
     ClaimType,
+    InquestOutcomeId,
     POAType,
 )
+
+INQUEST_OUTCOME_CLAIM_TYPES = frozenset({ClaimType.FINAL_BILL, ClaimType.NIL_BILL})
 
 
 def _as_utc(dt: datetime) -> datetime:
@@ -108,9 +113,11 @@ class Claim:
     net: Decimal | None
     gross: Decimal | None
     vat_zero_total: Decimal | None
+    inquest_outcomes: tuple[InquestOutcomeId, ...] = ()
 
     def __post_init__(self) -> None:
         self._validate_claim_type_poa_combination()
+        self._validate_inquest_outcomes()
 
     def validate_total_claim_cost(self) -> None:
         self._validate_totals_consistency()
@@ -312,6 +319,21 @@ class Claim:
             raise ClaimValidationError(
                 ClaimErrorCode.POA_TYPE_NOT_ALLOWED_FOR_NON_PAYMENT_ON_ACCOUNT,
                 POA_NOT_ALLOWED_MESSAGE,
+            )
+
+    def _validate_inquest_outcomes(self) -> None:
+        requires_inquest_outcomes = self.claim_type in INQUEST_OUTCOME_CLAIM_TYPES
+
+        if requires_inquest_outcomes and not self.inquest_outcomes:
+            raise ClaimValidationError(
+                ClaimErrorCode.MISSING_INQUEST_OUTCOMES,
+                MISSING_INQUEST_OUTCOMES_MESSAGE,
+            )
+
+        if not requires_inquest_outcomes and self.inquest_outcomes:
+            raise ClaimValidationError(
+                ClaimErrorCode.INQUEST_OUTCOMES_NOT_ALLOWED,
+                INQUEST_OUTCOMES_NOT_ALLOWED_MESSAGE,
             )
 
     def _validate_profit_cost(self) -> None:

@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_serializer, field_validator
 from pydantic import Field as PydanticField
 from pydantic.alias_generators import to_camel
 from sqlalchemy import Column, Numeric
@@ -17,6 +17,7 @@ from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
     ClaimType,
+    InquestOutcomeId,
     POAType,
     ReasonCode,
 )
@@ -58,6 +59,24 @@ class Claim(ClaimBase, table=True):
         sa_relationship_kwargs={"uselist": False}
     )
     claim_evidence: list["ClaimEvidence"] = Relationship(back_populates="claim")
+    claim_inquest_outcomes: list["ClaimInquestOutcome"] = Relationship(
+        back_populates="claim",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
+
+    @property
+    def inquest_outcomes(self) -> list[InquestOutcomeId]:
+        return [link.inquest_outcome_id for link in self.claim_inquest_outcomes]
+
+
+class ClaimInquestOutcome(SQLModel, table=True):
+    __tablename__ = "claim_inquest_outcome"
+    claim_inquest_outcome_id: int | None = Field(default=None, primary_key=True)
+    claim_id: int = Field(foreign_key="claim.claim_id")
+    inquest_outcome_id: InquestOutcomeId = Field(
+        sa_column=Column(Enum(InquestOutcomeId), nullable=False)
+    )
+    claim: "Claim" = Relationship(back_populates="claim_inquest_outcomes")
 
 
 class ClaimDecision(SQLModel, table=True):
@@ -103,7 +122,9 @@ class ClaimCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    claim_type: ClaimType = PydanticField(examples=["PAYMENT_ON_ACCOUNT"])
+    claim_type: ClaimType = PydanticField(
+        examples=["PAYMENT_ON_ACCOUNT", "FINAL_BILL", "NIL_BILL"]
+    )
     total_profit_cost_net: Decimal | None = PydanticField(
         default=None, examples=["1000.00"]
     )
@@ -119,6 +140,27 @@ class ClaimCreate(BaseModel):
         default_factory=list,
         examples=[["3fa85f64-5717-4562-b3fc-2c963f66afa6"]],
     )
+    inquest_outcomes: list[InquestOutcomeId] = PydanticField(
+        default_factory=list,
+        examples=[["ACCIDENT_OR_MISADVENTURE"]],
+    )
+
+    @field_validator("inquest_outcomes", mode="before")
+    @classmethod
+    def _parse_inquest_outcomes(cls, value: object) -> list[InquestOutcomeId]:
+        if not value:
+            return []
+        if not isinstance(value, list):
+            raise TypeError("inquest_outcomes must be a list")
+        parsed: list[InquestOutcomeId] = []
+        for item in value:
+            if isinstance(item, InquestOutcomeId):
+                parsed.append(item)
+            elif isinstance(item, str) and item in InquestOutcomeId.__members__:
+                parsed.append(InquestOutcomeId[item])
+            else:
+                raise ValueError(f"Invalid inquest outcome: {item!r}")
+        return parsed
 
 
 # REQUEST BODY -- Reject
@@ -198,6 +240,11 @@ class ClaimByIdResponse(ClaimSummaryBase):
     substantive_cost_limitation: int | None = None
     claim_evidence: list[ClaimEvidenceResponse] = []
     claim_decision: ClaimDecisionResponse | None = None
+    inquest_outcomes: list[InquestOutcomeId] = []
+
+    @field_serializer("inquest_outcomes")
+    def _serialize_inquest_outcomes(self, value: list[InquestOutcomeId]) -> list[str]:
+        return [outcome.name for outcome in value]
 
 
 class UploadClaimEvidenceResponse(BaseModel):

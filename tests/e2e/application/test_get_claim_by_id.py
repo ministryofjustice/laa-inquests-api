@@ -9,6 +9,7 @@ from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
     ClaimType,
+    InquestOutcomeId,
     POAType,
     ReasonCode,
 )
@@ -16,6 +17,7 @@ from app.models.claim.index import (
     Claim,
     ClaimDecision,
     ClaimEvidence,
+    ClaimInquestOutcome,
     DecisionReason,
 )
 
@@ -108,6 +110,7 @@ def test_200_get_claim_by_id_returns_expected_base_properties(
         "totalFundsRemainingAfterClaim",
         "claimEvidence",
         "claimDecision",
+        "inquestOutcomes",
     }
 
 
@@ -229,6 +232,49 @@ def test_200_get_claim_by_id_claim_decision_is_null_when_none_exists(
 
     assert response.status_code == 200
     assert response.json()["claimDecision"] is None
+
+
+def test_200_get_claim_by_id_includes_inquest_outcomes_as_enum_names(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    claim = _seed_claim(session, laa_reference, claim_type=ClaimType.FINAL_BILL)
+    session.add_all(
+        [
+            ClaimInquestOutcome(
+                claim_id=claim.claim_id,
+                inquest_outcome_id=InquestOutcomeId.SUICIDE,
+            ),
+            ClaimInquestOutcome(
+                claim_id=claim.claim_id,
+                inquest_outcome_id=InquestOutcomeId.NATURAL_CAUSES,
+            ),
+        ]
+    )
+    session.commit()
+
+    response = client.get(
+        f"/applications/{laa_reference}/claims/{claim.claim_id}",
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+
+    assert response.status_code == 200
+    assert set(response.json()["inquestOutcomes"]) == {"SUICIDE", "NATURAL_CAUSES"}
+
+
+def test_200_get_claim_by_id_returns_empty_inquest_outcomes_when_none_linked(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    claim = _seed_claim(session, laa_reference)
+
+    response = client.get(
+        f"/applications/{laa_reference}/claims/{claim.claim_id}",
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["inquestOutcomes"] == []
 
 
 def test_404_when_claim_does_not_exist(session, client, auth_token):

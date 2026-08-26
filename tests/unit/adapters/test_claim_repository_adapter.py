@@ -11,10 +11,17 @@ from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
     ClaimType,
+    InquestOutcomeId,
     POAType,
     ReasonCode,
 )
-from app.models.claim.index import Claim, ClaimDecision, ClaimEvidence, DecisionReason
+from app.models.claim.index import (
+    Claim,
+    ClaimDecision,
+    ClaimEvidence,
+    ClaimInquestOutcome,
+    DecisionReason,
+)
 
 
 def _make_domain_claim(overrides=None) -> DomainClaim:
@@ -85,12 +92,50 @@ def test_create_claim_persists_optional_fields_as_none_when_omitted(session):
 
     created = adapter.create_claim(
         str(laa_reference),
-        _make_domain_claim({"claim_type": ClaimType.FINAL_BILL, "poa_type": None}),
+        _make_domain_claim(
+            {
+                "claim_type": ClaimType.FINAL_BILL,
+                "poa_type": None,
+                "inquest_outcomes": (InquestOutcomeId.SUICIDE,),
+            }
+        ),
         None,
     )
 
     assert created.poa_type_id is None
     assert created.claimant_id is None
+
+
+def test_link_inquest_outcomes_to_claim_persists_link_rows(session):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    adapter = ClaimRepositoryAdapter(session)
+    created = adapter.create_claim(
+        str(laa_reference),
+        _make_domain_claim(
+            {
+                "claim_type": ClaimType.FINAL_BILL,
+                "poa_type": None,
+                "inquest_outcomes": (InquestOutcomeId.SUICIDE,),
+            }
+        ),
+        None,
+    )
+
+    adapter.link_inquest_outcomes_to_claim(
+        created.claim_id,
+        [InquestOutcomeId.SUICIDE, InquestOutcomeId.NATURAL_CAUSES],
+    )
+    adapter.commit()
+
+    stored = session.exec(
+        select(ClaimInquestOutcome).where(
+            ClaimInquestOutcome.claim_id == created.claim_id
+        )
+    ).all()
+    assert {row.inquest_outcome_id for row in stored} == {
+        InquestOutcomeId.SUICIDE,
+        InquestOutcomeId.NATURAL_CAUSES,
+    }
 
 
 def test_get_claims_by_laa_reference_returns_claims_for_application(session):

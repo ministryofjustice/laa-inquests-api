@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from app.domain.claim import Claim as DomainClaim
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
+from app.models.claim.enums import InquestOutcomeId
 from app.models.claim.index import Claim
 
 
@@ -24,6 +25,13 @@ class CreateClaimPort(ABC):
         self,
         claim_id: int,
         evidence_ids: list[uuid.UUID],
+    ) -> None: ...
+
+    @abstractmethod
+    def link_inquest_outcomes_to_claim(
+        self,
+        claim_id: int,
+        inquest_outcomes: list[InquestOutcomeId],
     ) -> None: ...
 
     @abstractmethod

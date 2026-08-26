@@ -679,6 +679,7 @@ def create_claim(
             vat_zero_total=request.total_profit_cost_vat_zero,
             claimant_id=request.claimant_id,
             claim_evidence_ids=request.claim_evidence_ids,
+            inquest_outcomes=request.inquest_outcomes,
         )
         result = use_case.execute(command)
         response = ClaimResponse(claim_id=result.claim.claim_id)

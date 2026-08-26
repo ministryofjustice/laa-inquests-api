@@ -40,12 +40,12 @@ class ReasonCode(str, enum.Enum):
 
 class InquestOutcomeId(str, enum.Enum):
     ACCIDENT_OR_MISADVENTURE = "Accident or misadventure"
-    ALCOHOL_OR_DRUGS_RELATED = ("Alcohol or drugs related",)
-    INDUSTRIAL_DISEASE = ("Industrial disease",)
-    NARRATIVE_CONCLUSION = ("Narrative conclusion",)
-    NATURAL_CAUSES = ("Natural causes",)
-    OPEN_CONCLUSION = ("Open conclusion",)
-    ROAD_TRAFFIC_COLLISION = ("Road traffic collision",)
-    STILLBIRTH = ("Stillbirth",)
+    ALCOHOL_OR_DRUGS_RELATED = "Alcohol or drugs related"
+    INDUSTRIAL_DISEASE = "Industrial disease"
+    NARRATIVE_CONCLUSION = "Narrative conclusion"
+    NATURAL_CAUSES = "Natural causes"
+    OPEN_CONCLUSION = "Open conclusion"
+    ROAD_TRAFFIC_COLLISION = "Road traffic collision"
+    STILLBIRTH = "Stillbirth"
     SUICIDE = "Suicide"
-    UNLAWFUL_OR_LAWFUL_KILLING = ("Unlawful or lawful killing",)
+    UNLAWFUL_OR_LAWFUL_KILLING = "Unlawful or lawful killing"

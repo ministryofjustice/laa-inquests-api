@@ -1,6 +1,6 @@
 import logging
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -20,6 +20,7 @@ from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
     ClaimType,
+    InquestOutcomeId,
     POAType,
     ReasonCode,
 )
@@ -53,6 +54,7 @@ class CreateClaimCommand:
     vat_zero_total: Decimal | None
     claimant_id: str | None
     claim_evidence_ids: list[uuid.UUID]
+    inquest_outcomes: list[InquestOutcomeId] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -113,6 +115,7 @@ class CreateClaimUseCase:
                 net=command.net,
                 gross=command.gross,
                 vat_zero_total=command.vat_zero_total,
+                inquest_outcomes=tuple(command.inquest_outcomes),
             )
             validated_claim.validate_total_claim_cost()
         except ClaimValidationError as e:
@@ -137,6 +140,10 @@ class CreateClaimUseCase:
             )
             self.create_claim_port.link_evidence_to_claim(
                 claim.claim_id, command.claim_evidence_ids
+            )
+
+            self.create_claim_port.link_inquest_outcomes_to_claim(
+                claim.claim_id, command.inquest_outcomes
             )
 
             self.create_history_event_port.create_history_event(
