@@ -2,12 +2,15 @@ import logging
 
 from app.contexts.user import get_entra_user_name
 from app.logging_utils import build_log_extra
-from app.models.application.enums import PublicBodyId
+from app.models.application.enums import MeritsDecision, PublicBodyId
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.update_application_public_bodies_port import ApplicationPublicBodiesPort
-from app.use_cases.exceptions import ApplicationNotFoundError
+from app.use_cases.exceptions import (
+    ApplicationNotFoundError,
+    ApplicationNotGrantedError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +32,11 @@ class UpdatePublicBodiesUseCase:
         )
         if application is None:
             raise ApplicationNotFoundError(f"Application {laa_reference} not found")
+
+        if application.overall_decision != MeritsDecision.GRANTED:
+            raise ApplicationNotGrantedError(
+                f"Application {laa_reference} is not granted"
+            )
 
         if not public_body_ids:
             logger.warning(
