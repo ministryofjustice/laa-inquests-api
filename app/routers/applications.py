@@ -715,6 +715,8 @@ def update_application_public_bodies(
         use_case.execute(laa_reference, request.public_bodies)
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
+    except ApplicationNotGrantedError:
+        raise HTTPException(status_code=422, detail="Application is not granted")
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
