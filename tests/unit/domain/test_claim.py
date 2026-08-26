@@ -1,3 +1,4 @@
+import uuid
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import MagicMock
@@ -190,6 +191,8 @@ def test_no_validation_when_poa_type_is_none():
         gross=None,
         vat_zero_total=None,
         inquest_outcomes=(InquestOutcomeId.SUICIDE,),
+        cost_template_file_id=uuid.uuid4(),
+        cost_template_file_name="costs.xlsx",
     )
     claim.validate_total_claim_cost()
 
@@ -269,8 +272,65 @@ def test_valid_final_bill_with_multiple_inquest_outcomes():
             InquestOutcomeId.SUICIDE,
             InquestOutcomeId.NATURAL_CAUSES,
         ),
+        cost_template_file_id=uuid.uuid4(),
+        cost_template_file_name="costs.xlsx",
     )
     claim.validate_total_claim_cost()
+
+
+def test_raises_when_final_bill_has_no_cost_template_file():
+    with pytest.raises(ClaimValidationError) as exc_info:
+        Claim(
+            claim_type=ClaimType.FINAL_BILL,
+            poa_type=None,
+            net=None,
+            gross=None,
+            vat_zero_total=None,
+            inquest_outcomes=(InquestOutcomeId.SUICIDE,),
+        )
+    assert exc_info.value.code == ClaimErrorCode.MISSING_COST_TEMPLATE_FILE
+
+
+def test_raises_when_nil_bill_has_no_cost_template_file():
+    with pytest.raises(ClaimValidationError) as exc_info:
+        Claim(
+            claim_type=ClaimType.NIL_BILL,
+            poa_type=None,
+            net=None,
+            gross=None,
+            vat_zero_total=None,
+            inquest_outcomes=(InquestOutcomeId.OPEN_CONCLUSION,),
+        )
+    assert exc_info.value.code == ClaimErrorCode.MISSING_COST_TEMPLATE_FILE
+
+
+def test_raises_when_payment_on_account_has_cost_template_file():
+    with pytest.raises(ClaimValidationError) as exc_info:
+        Claim(
+            claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+            poa_type=POAType.PROFIT_COST,
+            net=None,
+            gross=None,
+            vat_zero_total=None,
+            cost_template_file_id=uuid.uuid4(),
+            cost_template_file_name="costs.xlsx",
+        )
+    assert exc_info.value.code == ClaimErrorCode.COST_TEMPLATE_FILE_NOT_ALLOWED
+
+
+def test_raises_when_final_bill_has_only_cost_template_file_name():
+    with pytest.raises(ClaimValidationError) as exc_info:
+        Claim(
+            claim_type=ClaimType.FINAL_BILL,
+            poa_type=None,
+            net=None,
+            gross=None,
+            vat_zero_total=None,
+            inquest_outcomes=(InquestOutcomeId.SUICIDE,),
+            cost_template_file_id=None,
+            cost_template_file_name="costs.xlsx",
+        )
+    assert exc_info.value.code == ClaimErrorCode.MISSING_COST_TEMPLATE_FILE
 
 
 def test_should_auto_reject_for_limit_when_total_exceeds_limit():
@@ -891,6 +951,8 @@ def test_is_not_eligible_for_auto_approval_when_claim_is_not_payment_on_account(
         gross=Decimal("50000.00"),
         vat_zero_total=None,
         inquest_outcomes=(InquestOutcomeId.SUICIDE,),
+        cost_template_file_id=uuid.uuid4(),
+        cost_template_file_name="costs.xlsx",
     )
     application = _make_application_with_certificate(start=None)
     application.status = "LIVE"

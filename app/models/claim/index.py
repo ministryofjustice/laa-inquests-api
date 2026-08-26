@@ -63,10 +63,23 @@ class Claim(ClaimBase, table=True):
         back_populates="claim",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
+    claim_cost_template: Optional["ClaimCostTemplate"] = Relationship(
+        back_populates="claim",
+        sa_relationship_kwargs={"uselist": False, "cascade": "all, delete-orphan"},
+    )
 
     @property
     def inquest_outcomes(self) -> list[InquestOutcomeId]:
         return [link.inquest_outcome_id for link in self.claim_inquest_outcomes]
+
+
+class ClaimCostTemplate(SQLModel, table=True):
+    __tablename__ = "claim_cost_template"
+    claim_cost_template_id: int | None = Field(default=None, primary_key=True)
+    claim_id: int = Field(foreign_key="claim.claim_id", unique=True)
+    claim_cost_template_file_id: uuid.UUID
+    claim_cost_template_file_name: str
+    claim: "Claim" = Relationship(back_populates="claim_cost_template")
 
 
 class ClaimInquestOutcome(SQLModel, table=True):
@@ -116,6 +129,20 @@ class ClaimEvidence(SQLModel, table=True):
 
 
 # REQUEST BODY -- Create
+class ClaimCostTemplateFile(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+    claim_cost_template_file_id: uuid.UUID = PydanticField(
+        examples=["3fa85f64-5717-4562-b3fc-2c963f66afa6"]
+    )
+    claim_cost_template_file_name: str = PydanticField(
+        examples=["claim_cost_template.xlsx"]
+    )
+
+
 class ClaimCreate(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -144,6 +171,7 @@ class ClaimCreate(BaseModel):
         default_factory=list,
         examples=[["ACCIDENT_OR_MISADVENTURE"]],
     )
+    cost_template_file: ClaimCostTemplateFile | None = PydanticField(default=None)
 
     @field_validator("inquest_outcomes", mode="before")
     @classmethod
@@ -236,11 +264,22 @@ class ClaimDecisionResponse(BaseModel):
     decision_reasons: list[DecisionReasonResponse] = []
 
 
+class CostTemplateFileResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        from_attributes=True,
+        populate_by_name=True,
+    )
+    claim_cost_template_file_id: uuid.UUID
+    claim_cost_template_file_name: str
+
+
 class ClaimByIdResponse(ClaimSummaryBase):
     substantive_cost_limitation: int | None = None
     claim_evidence: list[ClaimEvidenceResponse] = []
     claim_decision: ClaimDecisionResponse | None = None
     inquest_outcomes: list[InquestOutcomeId] = []
+    cost_template_file: CostTemplateFileResponse | None = None
 
     @field_serializer("inquest_outcomes")
     def _serialize_inquest_outcomes(self, value: list[InquestOutcomeId]) -> list[str]:

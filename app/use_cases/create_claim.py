@@ -55,6 +55,8 @@ class CreateClaimCommand:
     claimant_id: str | None
     claim_evidence_ids: list[uuid.UUID]
     inquest_outcomes: list[InquestOutcomeId] = field(default_factory=list)
+    cost_template_file_id: uuid.UUID | None = None
+    cost_template_file_name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -116,6 +118,8 @@ class CreateClaimUseCase:
                 gross=command.gross,
                 vat_zero_total=command.vat_zero_total,
                 inquest_outcomes=tuple(command.inquest_outcomes),
+                cost_template_file_id=command.cost_template_file_id,
+                cost_template_file_name=command.cost_template_file_name,
             )
             validated_claim.validate_total_claim_cost()
         except ClaimValidationError as e:
@@ -145,6 +149,16 @@ class CreateClaimUseCase:
             self.create_claim_port.link_inquest_outcomes_to_claim(
                 claim.claim_id, command.inquest_outcomes
             )
+
+            if (
+                command.cost_template_file_id is not None
+                and command.cost_template_file_name is not None
+            ):
+                self.create_claim_port.link_cost_template_to_claim(
+                    claim.claim_id,
+                    command.cost_template_file_id,
+                    command.cost_template_file_name,
+                )
 
             self.create_history_event_port.create_history_event(
                 event_reference=HistoryEventReference.CLAIM_SUBMITTED,

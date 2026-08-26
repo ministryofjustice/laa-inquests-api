@@ -1,3 +1,4 @@
+import uuid
 from decimal import Decimal
 
 from sqlmodel import select
@@ -98,6 +99,8 @@ def test_create_claim_defaults_optional_fields_to_none_when_omitted(session):
             "claim_type": ClaimType.FINAL_BILL,
             "poa_type": None,
             "inquest_outcomes": (InquestOutcomeId.SUICIDE,),
+            "cost_template_file_id": uuid.uuid4(),
+            "cost_template_file_name": "costs.xlsx",
         }
     )
     created_claim = adapter.create_claim(str(laa_reference), claim, None)

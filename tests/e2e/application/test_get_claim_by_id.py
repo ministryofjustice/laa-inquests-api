@@ -1,3 +1,4 @@
+import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -15,6 +16,7 @@ from app.models.claim.enums import (
 )
 from app.models.claim.index import (
     Claim,
+    ClaimCostTemplate,
     ClaimDecision,
     ClaimEvidence,
     ClaimInquestOutcome,
@@ -111,6 +113,7 @@ def test_200_get_claim_by_id_returns_expected_base_properties(
         "claimEvidence",
         "claimDecision",
         "inquestOutcomes",
+        "costTemplateFile",
     }
 
 
@@ -275,6 +278,45 @@ def test_200_get_claim_by_id_returns_empty_inquest_outcomes_when_none_linked(
 
     assert response.status_code == 200
     assert response.json()["inquestOutcomes"] == []
+
+
+def test_200_get_claim_by_id_includes_cost_template_file(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    claim = _seed_claim(session, laa_reference, claim_type=ClaimType.FINAL_BILL)
+    file_id = uuid.uuid4()
+    session.add(
+        ClaimCostTemplate(
+            claim_id=claim.claim_id,
+            claim_cost_template_file_id=file_id,
+            claim_cost_template_file_name="final_bill_costs.xlsx",
+        )
+    )
+    session.commit()
+
+    response = client.get(
+        f"/applications/{laa_reference}/claims/{claim.claim_id}",
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+
+    assert response.status_code == 200
+    cost_template_file = response.json()["costTemplateFile"]
+    assert cost_template_file["claimCostTemplateFileId"] == str(file_id)
+    assert cost_template_file["claimCostTemplateFileName"] == "final_bill_costs.xlsx"
+
+
+def test_200_get_claim_by_id_returns_null_cost_template_file_when_none_linked(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    claim = _seed_claim(session, laa_reference)
+
+    response = client.get(
+        f"/applications/{laa_reference}/claims/{claim.claim_id}",
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["costTemplateFile"] is None
 
 
 def test_404_when_claim_does_not_exist(session, client, auth_token):

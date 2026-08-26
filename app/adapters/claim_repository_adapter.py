@@ -17,6 +17,7 @@ from app.models.claim.enums import (
 )
 from app.models.claim.index import (
     Claim,
+    ClaimCostTemplate,
     ClaimDecision,
     ClaimInquestOutcome,
     DecisionReason,
@@ -128,6 +129,28 @@ class ClaimRepositoryAdapter(
                 event="claim_repository_inquest_outcome_link_completed",
                 claim_id=claim_id,
                 inquest_outcome_count=len(inquest_outcomes),
+            ),
+        )
+
+    def link_cost_template_to_claim(
+        self,
+        claim_id: int,
+        file_id: uuid.UUID,
+        file_name: str,
+    ) -> None:
+        self.session.add(
+            ClaimCostTemplate(
+                claim_id=claim_id,
+                claim_cost_template_file_id=file_id,
+                claim_cost_template_file_name=file_name,
+            )
+        )
+        self.session.flush()
+        logger.info(
+            "Claim cost template linked in repository",
+            extra=build_log_extra(
+                event="claim_repository_cost_template_link_completed",
+                claim_id=claim_id,
             ),
         )
 

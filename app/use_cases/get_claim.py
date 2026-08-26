@@ -1,4 +1,8 @@
-from app.models.claim.index import ClaimByIdResponse, ClaimDecisionResponse
+from app.models.claim.index import (
+    ClaimByIdResponse,
+    ClaimDecisionResponse,
+    CostTemplateFileResponse,
+)
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.ports.claim.get_claim_decision_port import GetClaimDecisionPort
@@ -35,5 +39,10 @@ class GetClaimUseCase:
         decision = self.get_claim_decision_port.get_claim_decision_by_claim_id(claim_id)
         if decision is not None:
             response.claim_decision = ClaimDecisionResponse.model_validate(decision)
+
+        if claim.claim_cost_template is not None:
+            response.cost_template_file = CostTemplateFileResponse.model_validate(
+                claim.claim_cost_template
+            )
 
         return response

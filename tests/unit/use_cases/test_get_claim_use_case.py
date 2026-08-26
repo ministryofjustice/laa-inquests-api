@@ -1,3 +1,4 @@
+import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 from unittest.mock import MagicMock
@@ -12,7 +13,12 @@ from app.models.claim.enums import (
     POAType,
     ReasonCode,
 )
-from app.models.claim.index import Claim, ClaimDecision, DecisionReason
+from app.models.claim.index import (
+    Claim,
+    ClaimCostTemplate,
+    ClaimDecision,
+    DecisionReason,
+)
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.ports.claim.get_claim_decision_port import GetClaimDecisionPort
@@ -151,6 +157,34 @@ def test_claim_decision_is_none_when_absent():
     result = use_case.execute("1", 1)
 
     assert result.claim_decision is None
+
+
+def test_cost_template_file_is_populated_when_present():
+    file_id = uuid.uuid4()
+    claim = _claim()
+    claim.claim_cost_template = ClaimCostTemplate(
+        claim_id=claim.claim_id,
+        claim_cost_template_file_id=file_id,
+        claim_cost_template_file_name="final_bill_costs.xlsx",
+    )
+    use_case = _build_use_case(claim=claim, application=_application())
+
+    result = use_case.execute("1", 1)
+
+    assert result.cost_template_file is not None
+    assert result.cost_template_file.claim_cost_template_file_id == file_id
+    assert (
+        result.cost_template_file.claim_cost_template_file_name
+        == "final_bill_costs.xlsx"
+    )
+
+
+def test_cost_template_file_is_none_when_absent():
+    use_case = _build_use_case(claim=_claim(), application=_application())
+
+    result = use_case.execute("1", 1)
+
+    assert result.cost_template_file is None
 
 
 def test_returns_stored_total_funds_remaining_from_claim():

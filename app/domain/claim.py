@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -7,7 +8,9 @@ from decimal import Decimal
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
 from app.domain.claim_rejection import ClaimRejection, ClaimRejectionReason
 from app.domain.constants.claim_messages import (
+    COST_TEMPLATE_FILE_NOT_ALLOWED_MESSAGE,
     INQUEST_OUTCOMES_NOT_ALLOWED_MESSAGE,
+    MISSING_COST_TEMPLATE_FILE_MESSAGE,
     MISSING_GROSS_MESSAGE,
     MISSING_INQUEST_OUTCOMES_MESSAGE,
     MISSING_NON_PROFIT_COST_TOTAL_MESSAGE,
@@ -114,10 +117,13 @@ class Claim:
     gross: Decimal | None
     vat_zero_total: Decimal | None
     inquest_outcomes: tuple[InquestOutcomeId, ...] = ()
+    cost_template_file_id: uuid.UUID | None = None
+    cost_template_file_name: str | None = None
 
     def __post_init__(self) -> None:
         self._validate_claim_type_poa_combination()
         self._validate_inquest_outcomes()
+        self._validate_cost_template_file()
 
     def validate_total_claim_cost(self) -> None:
         self._validate_totals_consistency()
@@ -334,6 +340,25 @@ class Claim:
             raise ClaimValidationError(
                 ClaimErrorCode.INQUEST_OUTCOMES_NOT_ALLOWED,
                 INQUEST_OUTCOMES_NOT_ALLOWED_MESSAGE,
+            )
+
+    def _validate_cost_template_file(self) -> None:
+        requires_cost_template_file = self.claim_type in INQUEST_OUTCOME_CLAIM_TYPES
+        has_cost_template_file = (
+            self.cost_template_file_id is not None
+            and self.cost_template_file_name is not None
+        )
+
+        if requires_cost_template_file and not has_cost_template_file:
+            raise ClaimValidationError(
+                ClaimErrorCode.MISSING_COST_TEMPLATE_FILE,
+                MISSING_COST_TEMPLATE_FILE_MESSAGE,
+            )
+
+        if not requires_cost_template_file and has_cost_template_file:
+            raise ClaimValidationError(
+                ClaimErrorCode.COST_TEMPLATE_FILE_NOT_ALLOWED,
+                COST_TEMPLATE_FILE_NOT_ALLOWED_MESSAGE,
             )
 
     def _validate_profit_cost(self) -> None:

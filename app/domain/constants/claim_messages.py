@@ -25,3 +25,9 @@ MISSING_INQUEST_OUTCOMES_MESSAGE = (
 INQUEST_OUTCOMES_NOT_ALLOWED_MESSAGE = (
     "Inquest outcomes may only be provided for final bill and nil bill claims"
 )
+MISSING_COST_TEMPLATE_FILE_MESSAGE = (
+    "A cost template file is required for final bill and nil bill claims"
+)
+COST_TEMPLATE_FILE_NOT_ALLOWED_MESSAGE = (
+    "A cost template file may only be provided for final bill and nil bill claims"
+)

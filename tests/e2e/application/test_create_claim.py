@@ -9,6 +9,7 @@ from app.models.application.index import Application, Provider
 from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ClaimType
 from app.models.claim.index import (
     Claim,
+    ClaimCostTemplate,
     ClaimDecision,
     ClaimEvidence,
     ClaimInquestOutcome,
@@ -31,6 +32,13 @@ def _make_request_body(overrides=None):
     if overrides is not None:
         body.update(overrides)
     return body
+
+
+def _cost_template_file(file_id=None, file_name="claim_cost_template.xlsx"):
+    return {
+        "claimCostTemplateFileId": str(file_id or uuid.uuid4()),
+        "claimCostTemplateFileName": file_name,
+    }
 
 
 def _seed_approved_claim(
@@ -275,6 +283,7 @@ def test_201_create_claim_deducts_new_claim_amount_from_total_funds_available_wh
                 "poaTypeId": None,
                 "claimantId": "claimant@provider.com",
                 "inquestOutcomes": ["SUICIDE"],
+                "costTemplateFile": _cost_template_file(),
             }
         ),
         headers={
@@ -370,6 +379,7 @@ def test_201_create_claim_without_optional_fields(session, client, auth_token):
                 "poaTypeId": None,
                 "claimantId": "claimant@provider.com",
                 "inquestOutcomes": ["SUICIDE"],
+                "costTemplateFile": _cost_template_file(),
             }
         ),
         headers={
@@ -497,6 +507,7 @@ def test_201_create_final_bill_claim_persists_inquest_outcome_links(
                 "claimType": "FINAL_BILL",
                 "poaTypeId": None,
                 "inquestOutcomes": ["SUICIDE", "NATURAL_CAUSES"],
+                "costTemplateFile": _cost_template_file(),
             }
         ),
         headers={
@@ -529,6 +540,7 @@ def test_201_create_nil_bill_claim_persists_inquest_outcome_links(
                 "claimType": "NIL_BILL",
                 "poaTypeId": None,
                 "inquestOutcomes": ["OPEN_CONCLUSION"],
+                "costTemplateFile": _cost_template_file(),
             }
         ),
         headers={
@@ -559,6 +571,7 @@ def test_422_final_bill_claim_without_inquest_outcomes(session, client, auth_tok
                 "claimType": "FINAL_BILL",
                 "poaTypeId": None,
                 "inquestOutcomes": [],
+                "costTemplateFile": _cost_template_file(),
             }
         ),
         headers={
@@ -601,6 +614,7 @@ def test_422_create_claim_with_invalid_inquest_outcome_name(
                 "claimType": "FINAL_BILL",
                 "poaTypeId": None,
                 "inquestOutcomes": ["NOT_A_REAL_OUTCOME"],
+                "costTemplateFile": _cost_template_file(),
             }
         ),
         headers={
@@ -610,6 +624,116 @@ def test_422_create_claim_with_invalid_inquest_outcome_name(
     )
 
     assert response.status_code == 422
+
+
+def test_201_create_final_bill_claim_persists_cost_template_file(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    file_id = uuid.uuid4()
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "claimType": "FINAL_BILL",
+                "poaTypeId": None,
+                "inquestOutcomes": ["SUICIDE"],
+                "costTemplateFile": _cost_template_file(
+                    file_id=file_id, file_name="final_bill_costs.xlsx"
+                ),
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    claim_id = response.json()["claimId"]
+
+    stored = session.exec(
+        select(ClaimCostTemplate).where(ClaimCostTemplate.claim_id == claim_id)
+    ).all()
+    assert len(stored) == 1
+    assert stored[0].claim_cost_template_file_id == file_id
+    assert stored[0].claim_cost_template_file_name == "final_bill_costs.xlsx"
+
+
+def test_201_create_nil_bill_claim_persists_cost_template_file(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    file_id = uuid.uuid4()
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "claimType": "NIL_BILL",
+                "poaTypeId": None,
+                "inquestOutcomes": ["OPEN_CONCLUSION"],
+                "costTemplateFile": _cost_template_file(
+                    file_id=file_id, file_name="nil_bill_costs.xls"
+                ),
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    claim_id = response.json()["claimId"]
+
+    stored = session.exec(
+        select(ClaimCostTemplate).where(ClaimCostTemplate.claim_id == claim_id)
+    ).all()
+    assert len(stored) == 1
+    assert stored[0].claim_cost_template_file_id == file_id
+    assert stored[0].claim_cost_template_file_name == "nil_bill_costs.xls"
+
+
+def test_422_final_bill_claim_without_cost_template_file(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "claimType": "FINAL_BILL",
+                "poaTypeId": None,
+                "inquestOutcomes": ["SUICIDE"],
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "MISSING_COST_TEMPLATE_FILE"
+
+
+def test_422_payment_on_account_claim_with_cost_template_file(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body({"costTemplateFile": _cost_template_file()}),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "COST_TEMPLATE_FILE_NOT_ALLOWED"
 
 
 def test_422_profit_cost_with_no_cost_fields(session, client, auth_token):

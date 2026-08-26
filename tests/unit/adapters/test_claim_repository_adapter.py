@@ -17,6 +17,7 @@ from app.models.claim.enums import (
 )
 from app.models.claim.index import (
     Claim,
+    ClaimCostTemplate,
     ClaimDecision,
     ClaimEvidence,
     ClaimInquestOutcome,
@@ -97,6 +98,8 @@ def test_create_claim_persists_optional_fields_as_none_when_omitted(session):
                 "claim_type": ClaimType.FINAL_BILL,
                 "poa_type": None,
                 "inquest_outcomes": (InquestOutcomeId.SUICIDE,),
+                "cost_template_file_id": uuid.uuid4(),
+                "cost_template_file_name": "costs.xlsx",
             }
         ),
         None,
@@ -116,6 +119,8 @@ def test_link_inquest_outcomes_to_claim_persists_link_rows(session):
                 "claim_type": ClaimType.FINAL_BILL,
                 "poa_type": None,
                 "inquest_outcomes": (InquestOutcomeId.SUICIDE,),
+                "cost_template_file_id": uuid.uuid4(),
+                "cost_template_file_name": "costs.xlsx",
             }
         ),
         None,
@@ -136,6 +141,37 @@ def test_link_inquest_outcomes_to_claim_persists_link_rows(session):
         InquestOutcomeId.SUICIDE,
         InquestOutcomeId.NATURAL_CAUSES,
     }
+
+
+def test_link_cost_template_to_claim_persists_row(session):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    adapter = ClaimRepositoryAdapter(session)
+    created = adapter.create_claim(
+        str(laa_reference),
+        _make_domain_claim(
+            {
+                "claim_type": ClaimType.FINAL_BILL,
+                "poa_type": None,
+                "inquest_outcomes": (InquestOutcomeId.SUICIDE,),
+                "cost_template_file_id": uuid.uuid4(),
+                "cost_template_file_name": "costs.xlsx",
+            }
+        ),
+        None,
+    )
+    file_id = uuid.uuid4()
+
+    adapter.link_cost_template_to_claim(
+        created.claim_id, file_id, "final_bill_costs.xlsx"
+    )
+    adapter.commit()
+
+    stored = session.exec(
+        select(ClaimCostTemplate).where(ClaimCostTemplate.claim_id == created.claim_id)
+    ).all()
+    assert len(stored) == 1
+    assert stored[0].claim_cost_template_file_id == file_id
+    assert stored[0].claim_cost_template_file_name == "final_bill_costs.xlsx"
 
 
 def test_get_claims_by_laa_reference_returns_claims_for_application(session):

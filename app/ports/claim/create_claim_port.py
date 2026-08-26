@@ -35,6 +35,14 @@ class CreateClaimPort(ABC):
     ) -> None: ...
 
     @abstractmethod
+    def link_cost_template_to_claim(
+        self,
+        claim_id: int,
+        file_id: uuid.UUID,
+        file_name: str,
+    ) -> None: ...
+
+    @abstractmethod
     def commit(self) -> None: ...
 
     @abstractmethod

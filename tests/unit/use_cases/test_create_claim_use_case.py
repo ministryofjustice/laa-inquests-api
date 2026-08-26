@@ -235,6 +235,8 @@ def test_execute_links_inquest_outcomes_to_created_claim():
             "claim_type": ClaimType.FINAL_BILL,
             "poa_type": None,
             "inquest_outcomes": [InquestOutcomeId.SUICIDE],
+            "cost_template_file_id": uuid.uuid4(),
+            "cost_template_file_name": "costs.xlsx",
         }
     )
     claim = _make_claim()
@@ -251,6 +253,49 @@ def test_execute_links_inquest_outcomes_to_created_claim():
     create_claim_port.link_inquest_outcomes_to_claim.assert_called_once_with(
         claim.claim_id, command.inquest_outcomes
     )
+
+
+def test_execute_links_cost_template_to_created_claim():
+    file_id = uuid.uuid4()
+    command = _make_command(
+        {
+            "claim_type": ClaimType.FINAL_BILL,
+            "poa_type": None,
+            "inquest_outcomes": [InquestOutcomeId.SUICIDE],
+            "cost_template_file_id": file_id,
+            "cost_template_file_name": "final_bill_costs.xlsx",
+        }
+    )
+    claim = _make_claim()
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+
+    use_case = _make_use_case(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(),
+        get_claims_for_application_port=_make_get_claims_port(),
+    )
+    use_case.execute(command)
+
+    create_claim_port.link_cost_template_to_claim.assert_called_once_with(
+        claim.claim_id, file_id, "final_bill_costs.xlsx"
+    )
+
+
+def test_execute_does_not_link_cost_template_for_payment_on_account():
+    command = _make_command()
+    claim = _make_claim()
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+
+    use_case = _make_use_case(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(),
+        get_claims_for_application_port=_make_get_claims_port(),
+    )
+    use_case.execute(command)
+
+    create_claim_port.link_cost_template_to_claim.assert_not_called()
 
 
 def test_execute_returns_created_claim():
@@ -619,6 +664,8 @@ def test_execute_does_not_raise_for_non_profit_cost_without_costs():
             "gross": None,
             "vat_zero_total": None,
             "inquest_outcomes": [InquestOutcomeId.SUICIDE],
+            "cost_template_file_id": uuid.uuid4(),
+            "cost_template_file_name": "costs.xlsx",
         }
     )
     port = MagicMock(spec=CreateClaimPort)
@@ -1151,6 +1198,8 @@ def test_execute_does_not_auto_approve_non_payment_on_account_claim():
             "net": Decimal("50000.00"),
             "gross": Decimal("50000.00"),
             "inquest_outcomes": [InquestOutcomeId.SUICIDE],
+            "cost_template_file_id": uuid.uuid4(),
+            "cost_template_file_name": "costs.xlsx",
         }
     )
     claim = _make_claim()
