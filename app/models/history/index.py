@@ -1,7 +1,8 @@
 from datetime import UTC, datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, field_serializer
+from pydantic import BaseModel, ConfigDict, field_serializer, field_validator
+from pydantic import Field as PydanticField
 from pydantic.alias_generators import to_camel
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
@@ -22,6 +23,23 @@ class HistoryEvent(SQLModel, table=True):
     entra_user_object_id: str | None = Field(default=None, nullable=True)
     event_data: dict | None = Field(default=None, sa_column=Column(JSON, nullable=True))
     laa_reference: int = Field(foreign_key="application.laa_reference", nullable=False)
+
+
+class CreateNoteRequest(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+
+    note_text: str = PydanticField(min_length=1, max_length=10_000)
+
+    @field_validator("note_text")
+    @classmethod
+    def validate_note_contains_text(cls, note_text: str) -> str:
+        if not note_text.strip():
+            raise ValueError("Note must contain at least one visible character")
+        return note_text
 
 
 class HistoryEventResponse(BaseModel):
