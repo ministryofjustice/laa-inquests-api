@@ -283,7 +283,7 @@ def test_201_create_claim_deducts_new_claim_amount_from_total_funds_available_wh
                 "poaTypeId": None,
                 "claimantId": "claimant@provider.com",
                 "inquestOutcomes": ["SUICIDE"],
-                "costTemplateFile": _cost_template_file(),
+                "claimCostTemplateFile": _cost_template_file(),
             }
         ),
         headers={
@@ -379,7 +379,7 @@ def test_201_create_claim_without_optional_fields(session, client, auth_token):
                 "poaTypeId": None,
                 "claimantId": "claimant@provider.com",
                 "inquestOutcomes": ["SUICIDE"],
-                "costTemplateFile": _cost_template_file(),
+                "claimCostTemplateFile": _cost_template_file(),
             }
         ),
         headers={
@@ -507,7 +507,7 @@ def test_201_create_final_bill_claim_persists_inquest_outcome_links(
                 "claimType": "FINAL_BILL",
                 "poaTypeId": None,
                 "inquestOutcomes": ["SUICIDE", "NATURAL_CAUSES"],
-                "costTemplateFile": _cost_template_file(),
+                "claimCostTemplateFile": _cost_template_file(),
             }
         ),
         headers={
@@ -540,7 +540,7 @@ def test_201_create_nil_bill_claim_persists_inquest_outcome_links(
                 "claimType": "NIL_BILL",
                 "poaTypeId": None,
                 "inquestOutcomes": ["OPEN_CONCLUSION"],
-                "costTemplateFile": _cost_template_file(),
+                "claimCostTemplateFile": _cost_template_file(),
             }
         ),
         headers={
@@ -571,7 +571,7 @@ def test_422_final_bill_claim_without_inquest_outcomes(session, client, auth_tok
                 "claimType": "FINAL_BILL",
                 "poaTypeId": None,
                 "inquestOutcomes": [],
-                "costTemplateFile": _cost_template_file(),
+                "claimCostTemplateFile": _cost_template_file(),
             }
         ),
         headers={
@@ -614,7 +614,7 @@ def test_422_create_claim_with_invalid_inquest_outcome_name(
                 "claimType": "FINAL_BILL",
                 "poaTypeId": None,
                 "inquestOutcomes": ["NOT_A_REAL_OUTCOME"],
-                "costTemplateFile": _cost_template_file(),
+                "claimCostTemplateFile": _cost_template_file(),
             }
         ),
         headers={
@@ -639,7 +639,7 @@ def test_201_create_final_bill_claim_persists_cost_template_file(
                 "claimType": "FINAL_BILL",
                 "poaTypeId": None,
                 "inquestOutcomes": ["SUICIDE"],
-                "costTemplateFile": _cost_template_file(
+                "claimCostTemplateFile": _cost_template_file(
                     file_id=file_id, file_name="final_bill_costs.xlsx"
                 ),
             }
@@ -674,7 +674,7 @@ def test_201_create_nil_bill_claim_persists_cost_template_file(
                 "claimType": "NIL_BILL",
                 "poaTypeId": None,
                 "inquestOutcomes": ["OPEN_CONCLUSION"],
-                "costTemplateFile": _cost_template_file(
+                "claimCostTemplateFile": _cost_template_file(
                     file_id=file_id, file_name="nil_bill_costs.xls"
                 ),
             }
@@ -725,7 +725,7 @@ def test_422_payment_on_account_claim_with_cost_template_file(
 
     response = client.post(
         f"/applications/{laa_reference}/claim",
-        json=_make_request_body({"costTemplateFile": _cost_template_file()}),
+        json=_make_request_body({"claimCostTemplateFile": _cost_template_file()}),
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {auth_token}",

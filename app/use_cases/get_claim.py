@@ -41,7 +41,7 @@ class GetClaimUseCase:
             response.claim_decision = ClaimDecisionResponse.model_validate(decision)
 
         if claim.claim_cost_template is not None:
-            response.cost_template_file = CostTemplateFileResponse.model_validate(
+            response.claim_cost_template_file = CostTemplateFileResponse.model_validate(
                 claim.claim_cost_template
             )
 

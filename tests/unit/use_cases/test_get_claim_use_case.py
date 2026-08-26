@@ -171,10 +171,10 @@ def test_cost_template_file_is_populated_when_present():
 
     result = use_case.execute("1", 1)
 
-    assert result.cost_template_file is not None
-    assert result.cost_template_file.claim_cost_template_file_id == file_id
+    assert result.claim_cost_template_file is not None
+    assert result.claim_cost_template_file.claim_cost_template_file_id == file_id
     assert (
-        result.cost_template_file.claim_cost_template_file_name
+        result.claim_cost_template_file.claim_cost_template_file_name
         == "final_bill_costs.xlsx"
     )
 
@@ -184,7 +184,7 @@ def test_cost_template_file_is_none_when_absent():
 
     result = use_case.execute("1", 1)
 
-    assert result.cost_template_file is None
+    assert result.claim_cost_template_file is None
 
 
 def test_returns_stored_total_funds_remaining_from_claim():

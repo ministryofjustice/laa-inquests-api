@@ -681,13 +681,13 @@ def create_claim(
             claim_evidence_ids=request.claim_evidence_ids,
             inquest_outcomes=request.inquest_outcomes,
             cost_template_file_id=(
-                request.cost_template_file.claim_cost_template_file_id
-                if request.cost_template_file is not None
+                request.claim_cost_template_file.claim_cost_template_file_id
+                if request.claim_cost_template_file is not None
                 else None
             ),
             cost_template_file_name=(
-                request.cost_template_file.claim_cost_template_file_name
-                if request.cost_template_file is not None
+                request.claim_cost_template_file.claim_cost_template_file_name
+                if request.claim_cost_template_file is not None
                 else None
             ),
         )

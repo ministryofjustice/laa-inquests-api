@@ -113,7 +113,7 @@ def test_200_get_claim_by_id_returns_expected_base_properties(
         "claimEvidence",
         "claimDecision",
         "inquestOutcomes",
-        "costTemplateFile",
+        "claimCostTemplateFile",
     }
 
 
@@ -299,9 +299,11 @@ def test_200_get_claim_by_id_includes_cost_template_file(session, client, auth_t
     )
 
     assert response.status_code == 200
-    cost_template_file = response.json()["costTemplateFile"]
-    assert cost_template_file["claimCostTemplateFileId"] == str(file_id)
-    assert cost_template_file["claimCostTemplateFileName"] == "final_bill_costs.xlsx"
+    claim_cost_template_file = response.json()["claimCostTemplateFile"]
+    assert claim_cost_template_file["claimCostTemplateFileId"] == str(file_id)
+    assert (
+        claim_cost_template_file["claimCostTemplateFileName"] == "final_bill_costs.xlsx"
+    )
 
 
 def test_200_get_claim_by_id_returns_null_cost_template_file_when_none_linked(
@@ -316,7 +318,7 @@ def test_200_get_claim_by_id_returns_null_cost_template_file_when_none_linked(
     )
 
     assert response.status_code == 200
-    assert response.json()["costTemplateFile"] is None
+    assert response.json()["claimCostTemplateFile"] is None
 
 
 def test_404_when_claim_does_not_exist(session, client, auth_token):

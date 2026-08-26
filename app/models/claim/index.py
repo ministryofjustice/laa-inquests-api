@@ -171,7 +171,7 @@ class ClaimCreate(BaseModel):
         default_factory=list,
         examples=[["ACCIDENT_OR_MISADVENTURE"]],
     )
-    cost_template_file: ClaimCostTemplateFile | None = PydanticField(default=None)
+    claim_cost_template_file: ClaimCostTemplateFile | None = PydanticField(default=None)
 
     @field_validator("inquest_outcomes", mode="before")
     @classmethod
@@ -279,7 +279,7 @@ class ClaimByIdResponse(ClaimSummaryBase):
     claim_evidence: list[ClaimEvidenceResponse] = []
     claim_decision: ClaimDecisionResponse | None = None
     inquest_outcomes: list[InquestOutcomeId] = []
-    cost_template_file: CostTemplateFileResponse | None = None
+    claim_cost_template_file: CostTemplateFileResponse | None = None
 
     @field_serializer("inquest_outcomes")
     def _serialize_inquest_outcomes(self, value: list[InquestOutcomeId]) -> list[str]:
