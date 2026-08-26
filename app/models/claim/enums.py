@@ -21,6 +21,17 @@ class POAType(str, enum.Enum):
     NON_EXPERT_DISBURSEMENT = "NON_EXPERT_DISBURSEMENT"
 
 
+class NumberOfCounselInstructed(str, enum.Enum):
+    ZERO = "0"
+    ONE = "1"
+    TWO = "2"
+    THREE = "3"
+    FOUR = "4"
+    FIVE = "5"
+    SIX = "6"
+    MORE_THAN_6 = "MORE_THAN_6"
+
+
 class ClaimDecisionStatus(str, enum.Enum):
     REJECT = "REJECT"
     GRANT = "GRANT"

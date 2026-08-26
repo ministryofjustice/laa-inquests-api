@@ -76,6 +76,17 @@ class ClaimRepositoryAdapter(
             total_funds_remaining_after_claim=total_funds_remaining_after_claim,
             poa_type_id=claim.poa_type,
             claimant_id=claimant_id,
+            has_counsel_been_paid=claim.has_counsel_been_paid,
+            has_alternative_funding=claim.has_alternative_funding,
+            has_recovery_costs_awarded=claim.has_recovery_costs_awarded,
+            financial_recovery_previous_pre_certificate_costs=(
+                claim.financial_recovery_previous_pre_certificate_costs
+            ),
+            financial_recovery_cost=claim.financial_recovery_cost,
+            financial_recovery_damages=claim.financial_recovery_damages,
+            financial_recovery_interest=claim.financial_recovery_interest,
+            paying_party=claim.paying_party,
+            number_of_counsel_instructed=claim.number_of_counsel_instructed,
         )
         self.session.add(new_claim)
         self.session.flush()

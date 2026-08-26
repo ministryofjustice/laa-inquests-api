@@ -13,6 +13,7 @@ from app.models.claim.enums import (
     ClaimStatus,
     ClaimType,
     InquestOutcomeId,
+    NumberOfCounselInstructed,
     POAType,
     ReasonCode,
 )
@@ -237,6 +238,15 @@ def test_execute_links_inquest_outcomes_to_created_claim():
             "inquest_outcomes": [InquestOutcomeId.SUICIDE],
             "cost_template_file_id": uuid.uuid4(),
             "cost_template_file_name": "costs.xlsx",
+            "has_counsel_been_paid": True,
+            "has_alternative_funding": False,
+            "has_recovery_costs_awarded": True,
+            "financial_recovery_previous_pre_certificate_costs": Decimal("100.00"),
+            "financial_recovery_cost": Decimal("200.00"),
+            "financial_recovery_damages": Decimal("300.00"),
+            "financial_recovery_interest": Decimal("50.00"),
+            "paying_party": "Some Council",
+            "number_of_counsel_instructed": NumberOfCounselInstructed.TWO,
         }
     )
     claim = _make_claim()
@@ -264,6 +274,15 @@ def test_execute_links_cost_template_to_created_claim():
             "inquest_outcomes": [InquestOutcomeId.SUICIDE],
             "cost_template_file_id": file_id,
             "cost_template_file_name": "final_bill_costs.xlsx",
+            "has_counsel_been_paid": True,
+            "has_alternative_funding": False,
+            "has_recovery_costs_awarded": True,
+            "financial_recovery_previous_pre_certificate_costs": Decimal("100.00"),
+            "financial_recovery_cost": Decimal("200.00"),
+            "financial_recovery_damages": Decimal("300.00"),
+            "financial_recovery_interest": Decimal("50.00"),
+            "paying_party": "Some Council",
+            "number_of_counsel_instructed": NumberOfCounselInstructed.TWO,
         }
     )
     claim = _make_claim()
@@ -666,6 +685,15 @@ def test_execute_does_not_raise_for_non_profit_cost_without_costs():
             "inquest_outcomes": [InquestOutcomeId.SUICIDE],
             "cost_template_file_id": uuid.uuid4(),
             "cost_template_file_name": "costs.xlsx",
+            "has_counsel_been_paid": True,
+            "has_alternative_funding": False,
+            "has_recovery_costs_awarded": True,
+            "financial_recovery_previous_pre_certificate_costs": Decimal("100.00"),
+            "financial_recovery_cost": Decimal("200.00"),
+            "financial_recovery_damages": Decimal("300.00"),
+            "financial_recovery_interest": Decimal("50.00"),
+            "paying_party": "Some Council",
+            "number_of_counsel_instructed": NumberOfCounselInstructed.TWO,
         }
     )
     port = MagicMock(spec=CreateClaimPort)
@@ -1200,6 +1228,15 @@ def test_execute_does_not_auto_approve_non_payment_on_account_claim():
             "inquest_outcomes": [InquestOutcomeId.SUICIDE],
             "cost_template_file_id": uuid.uuid4(),
             "cost_template_file_name": "costs.xlsx",
+            "has_counsel_been_paid": True,
+            "has_alternative_funding": False,
+            "has_recovery_costs_awarded": True,
+            "financial_recovery_previous_pre_certificate_costs": Decimal("100.00"),
+            "financial_recovery_cost": Decimal("200.00"),
+            "financial_recovery_damages": Decimal("300.00"),
+            "financial_recovery_interest": Decimal("50.00"),
+            "paying_party": "Some Council",
+            "number_of_counsel_instructed": NumberOfCounselInstructed.TWO,
         }
     )
     claim = _make_claim()

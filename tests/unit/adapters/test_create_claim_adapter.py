@@ -6,7 +6,13 @@ from sqlmodel import select
 from app.adapters.claim_repository_adapter import ClaimRepositoryAdapter
 from app.domain.claim import Claim as DomainClaim
 from app.models.application.index import Application
-from app.models.claim.enums import ClaimStatus, ClaimType, InquestOutcomeId, POAType
+from app.models.claim.enums import (
+    ClaimStatus,
+    ClaimType,
+    InquestOutcomeId,
+    NumberOfCounselInstructed,
+    POAType,
+)
 from app.models.claim.index import Claim
 
 
@@ -101,12 +107,62 @@ def test_create_claim_defaults_optional_fields_to_none_when_omitted(session):
             "inquest_outcomes": (InquestOutcomeId.SUICIDE,),
             "cost_template_file_id": uuid.uuid4(),
             "cost_template_file_name": "costs.xlsx",
+            "has_counsel_been_paid": True,
+            "has_alternative_funding": False,
+            "has_recovery_costs_awarded": True,
+            "financial_recovery_previous_pre_certificate_costs": Decimal("100.00"),
+            "financial_recovery_cost": Decimal("200.00"),
+            "financial_recovery_damages": Decimal("300.00"),
+            "financial_recovery_interest": Decimal("50.00"),
+            "paying_party": "Some Council",
+            "number_of_counsel_instructed": NumberOfCounselInstructed.TWO,
         }
     )
     created_claim = adapter.create_claim(str(laa_reference), claim, None)
 
     assert created_claim.poa_type_id is None
     assert created_claim.claimant_id is None
+
+
+def test_create_claim_persists_final_bill_details(session):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    adapter = ClaimRepositoryAdapter(session)
+
+    claim = _make_domain_claim(
+        {
+            "claim_type": ClaimType.FINAL_BILL,
+            "poa_type": None,
+            "net": None,
+            "gross": None,
+            "vat_zero_total": None,
+            "inquest_outcomes": (InquestOutcomeId.SUICIDE,),
+            "cost_template_file_id": uuid.uuid4(),
+            "cost_template_file_name": "costs.xlsx",
+            "has_counsel_been_paid": True,
+            "has_alternative_funding": False,
+            "has_recovery_costs_awarded": True,
+            "financial_recovery_previous_pre_certificate_costs": Decimal("100.00"),
+            "financial_recovery_cost": Decimal("200.00"),
+            "financial_recovery_damages": Decimal("300.00"),
+            "financial_recovery_interest": Decimal("50.00"),
+            "paying_party": "Some Council",
+            "number_of_counsel_instructed": NumberOfCounselInstructed.TWO,
+        }
+    )
+    created_claim = adapter.create_claim(str(laa_reference), claim, None)
+    stored_claim = session.get(Claim, created_claim.claim_id)
+
+    assert stored_claim.has_counsel_been_paid is True
+    assert stored_claim.has_alternative_funding is False
+    assert stored_claim.has_recovery_costs_awarded is True
+    assert stored_claim.financial_recovery_previous_pre_certificate_costs == Decimal(
+        "100.00"
+    )
+    assert stored_claim.financial_recovery_cost == Decimal("200.00")
+    assert stored_claim.financial_recovery_damages == Decimal("300.00")
+    assert stored_claim.financial_recovery_interest == Decimal("50.00")
+    assert stored_claim.paying_party == "Some Council"
+    assert stored_claim.number_of_counsel_instructed == NumberOfCounselInstructed.TWO
 
 
 def test_get_claims_by_laa_reference_returns_all_claims_regardless_of_status(session):

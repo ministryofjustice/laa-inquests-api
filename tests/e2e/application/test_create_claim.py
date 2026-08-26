@@ -6,7 +6,12 @@ from sqlmodel import select
 
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application, Provider
-from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ClaimType
+from app.models.claim.enums import (
+    ClaimDecisionStatus,
+    ClaimStatus,
+    ClaimType,
+    NumberOfCounselInstructed,
+)
 from app.models.claim.index import (
     Claim,
     ClaimCostTemplate,
@@ -39,6 +44,23 @@ def _cost_template_file(file_id=None, file_name="claim_cost_template.xlsx"):
         "claimCostTemplateFileId": str(file_id or uuid.uuid4()),
         "claimCostTemplateFileName": file_name,
     }
+
+
+def _final_bill_details(overrides=None):
+    details = {
+        "hasCounselBeenPaid": True,
+        "hasAlternativeFunding": False,
+        "hasRecoveryCostsAwarded": True,
+        "financialRecoveryPreviousPreCertificateCosts": 100.00,
+        "financialRecoveryCost": 200.00,
+        "financialRecoveryDamages": 300.00,
+        "financialRecoveryInterest": 50.00,
+        "payingParty": "Some Council",
+        "numberOfCounselInstructed": "2",
+    }
+    if overrides is not None:
+        details.update(overrides)
+    return details
 
 
 def _seed_approved_claim(
@@ -284,6 +306,7 @@ def test_201_create_claim_deducts_new_claim_amount_from_total_funds_available_wh
                 "claimantId": "claimant@provider.com",
                 "inquestOutcomes": ["SUICIDE"],
                 "claimCostTemplateFile": _cost_template_file(),
+                **_final_bill_details(),
             }
         ),
         headers={
@@ -380,6 +403,7 @@ def test_201_create_claim_without_optional_fields(session, client, auth_token):
                 "claimantId": "claimant@provider.com",
                 "inquestOutcomes": ["SUICIDE"],
                 "claimCostTemplateFile": _cost_template_file(),
+                **_final_bill_details(),
             }
         ),
         headers={
@@ -508,6 +532,7 @@ def test_201_create_final_bill_claim_persists_inquest_outcome_links(
                 "poaTypeId": None,
                 "inquestOutcomes": ["SUICIDE", "NATURAL_CAUSES"],
                 "claimCostTemplateFile": _cost_template_file(),
+                **_final_bill_details(),
             }
         ),
         headers={
@@ -541,6 +566,7 @@ def test_201_create_nil_bill_claim_persists_inquest_outcome_links(
                 "poaTypeId": None,
                 "inquestOutcomes": ["OPEN_CONCLUSION"],
                 "claimCostTemplateFile": _cost_template_file(),
+                **_final_bill_details(),
             }
         ),
         headers={
@@ -642,6 +668,7 @@ def test_201_create_final_bill_claim_persists_cost_template_file(
                 "claimCostTemplateFile": _cost_template_file(
                     file_id=file_id, file_name="final_bill_costs.xlsx"
                 ),
+                **_final_bill_details(),
             }
         ),
         headers={
@@ -677,6 +704,7 @@ def test_201_create_nil_bill_claim_persists_cost_template_file(
                 "claimCostTemplateFile": _cost_template_file(
                     file_id=file_id, file_name="nil_bill_costs.xls"
                 ),
+                **_final_bill_details(),
             }
         ),
         headers={
@@ -756,6 +784,84 @@ def test_422_profit_cost_with_no_cost_fields(session, client, auth_token):
 
     assert response.status_code == 422
     assert response.json()["detail"]["errorCode"] == "MISSING_TOTAL_CLAIM_COST"
+
+
+def test_201_create_final_bill_claim_persists_final_bill_details(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "claimType": "FINAL_BILL",
+                "poaTypeId": None,
+                "inquestOutcomes": ["SUICIDE"],
+                "claimCostTemplateFile": _cost_template_file(),
+                **_final_bill_details(),
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    claim_id = response.json()["claimId"]
+
+    stored = session.get(Claim, claim_id)
+    assert stored.has_counsel_been_paid is True
+    assert stored.has_alternative_funding is False
+    assert stored.has_recovery_costs_awarded is True
+    assert stored.financial_recovery_previous_pre_certificate_costs == Decimal("100.00")
+    assert stored.financial_recovery_cost == Decimal("200.00")
+    assert stored.financial_recovery_damages == Decimal("300.00")
+    assert stored.financial_recovery_interest == Decimal("50.00")
+    assert stored.paying_party == "Some Council"
+    assert stored.number_of_counsel_instructed == NumberOfCounselInstructed.TWO
+
+
+def test_422_final_bill_claim_without_final_bill_details(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "claimType": "FINAL_BILL",
+                "poaTypeId": None,
+                "inquestOutcomes": ["SUICIDE"],
+                "claimCostTemplateFile": _cost_template_file(),
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "MISSING_FINAL_BILL_DETAILS"
+
+
+def test_422_payment_on_account_claim_with_final_bill_details(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(_final_bill_details()),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "FINAL_BILL_DETAILS_NOT_ALLOWED"
 
 
 def test_422_profit_cost_with_net_higher_than_gross(session, client, auth_token):

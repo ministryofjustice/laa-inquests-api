@@ -11,6 +11,7 @@ from app.models.claim.enums import (
     ClaimStatus,
     ClaimType,
     InquestOutcomeId,
+    NumberOfCounselInstructed,
     POAType,
     ReasonCode,
 )
@@ -114,7 +115,55 @@ def test_200_get_claim_by_id_returns_expected_base_properties(
         "claimDecision",
         "inquestOutcomes",
         "claimCostTemplateFile",
+        "hasCounselBeenPaid",
+        "hasAlternativeFunding",
+        "hasRecoveryCostsAwarded",
+        "financialRecoveryPreviousPreCertificateCosts",
+        "financialRecoveryCost",
+        "financialRecoveryDamages",
+        "financialRecoveryInterest",
+        "payingParty",
+        "numberOfCounselInstructed",
     }
+
+
+def test_200_get_claim_by_id_returns_final_bill_details(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    claim = Claim(
+        laa_reference=laa_reference,
+        claim_type_id=ClaimType.FINAL_BILL,
+        status_id=ClaimStatus.SUBMITTED,
+        submission_date=datetime.now(UTC),
+        has_counsel_been_paid=True,
+        has_alternative_funding=False,
+        has_recovery_costs_awarded=True,
+        financial_recovery_previous_pre_certificate_costs=Decimal("100.00"),
+        financial_recovery_cost=Decimal("200.00"),
+        financial_recovery_damages=Decimal("300.00"),
+        financial_recovery_interest=Decimal("50.00"),
+        paying_party="Some Council",
+        number_of_counsel_instructed=NumberOfCounselInstructed.TWO,
+    )
+    session.add(claim)
+    session.commit()
+    session.refresh(claim)
+
+    response = client.get(
+        f"/applications/{laa_reference}/claims/{claim.claim_id}",
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["hasCounselBeenPaid"] is True
+    assert body["hasAlternativeFunding"] is False
+    assert body["hasRecoveryCostsAwarded"] is True
+    assert body["financialRecoveryPreviousPreCertificateCosts"] == "100.00"
+    assert body["financialRecoveryCost"] == "200.00"
+    assert body["financialRecoveryDamages"] == "300.00"
+    assert body["financialRecoveryInterest"] == "50.00"
+    assert body["payingParty"] == "Some Council"
+    assert body["numberOfCounselInstructed"] == "2"
 
 
 def test_200_get_claim_by_id_includes_substantive_cost_limitation(

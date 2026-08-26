@@ -21,6 +21,7 @@ from app.models.claim.enums import (
     ClaimStatus,
     ClaimType,
     InquestOutcomeId,
+    NumberOfCounselInstructed,
     POAType,
     ReasonCode,
 )
@@ -57,6 +58,15 @@ class CreateClaimCommand:
     inquest_outcomes: list[InquestOutcomeId] = field(default_factory=list)
     cost_template_file_id: uuid.UUID | None = None
     cost_template_file_name: str | None = None
+    has_counsel_been_paid: bool | None = None
+    has_alternative_funding: bool | None = None
+    has_recovery_costs_awarded: bool | None = None
+    financial_recovery_previous_pre_certificate_costs: Decimal | None = None
+    financial_recovery_cost: Decimal | None = None
+    financial_recovery_damages: Decimal | None = None
+    financial_recovery_interest: Decimal | None = None
+    paying_party: str | None = None
+    number_of_counsel_instructed: NumberOfCounselInstructed | None = None
 
 
 @dataclass(frozen=True)
@@ -120,6 +130,17 @@ class CreateClaimUseCase:
                 inquest_outcomes=tuple(command.inquest_outcomes),
                 cost_template_file_id=command.cost_template_file_id,
                 cost_template_file_name=command.cost_template_file_name,
+                has_counsel_been_paid=command.has_counsel_been_paid,
+                has_alternative_funding=command.has_alternative_funding,
+                has_recovery_costs_awarded=command.has_recovery_costs_awarded,
+                financial_recovery_previous_pre_certificate_costs=(
+                    command.financial_recovery_previous_pre_certificate_costs
+                ),
+                financial_recovery_cost=command.financial_recovery_cost,
+                financial_recovery_damages=command.financial_recovery_damages,
+                financial_recovery_interest=command.financial_recovery_interest,
+                paying_party=command.paying_party,
+                number_of_counsel_instructed=command.number_of_counsel_instructed,
             )
             validated_claim.validate_total_claim_cost()
         except ClaimValidationError as e:

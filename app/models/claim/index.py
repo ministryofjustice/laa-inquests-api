@@ -8,7 +8,7 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, field_serializer, field_validator
 from pydantic import Field as PydanticField
 from pydantic.alias_generators import to_camel
-from sqlalchemy import Column, Numeric
+from sqlalchemy import Boolean, Column, Numeric
 from sqlmodel import Enum, Field, Relationship, SQLModel
 
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
@@ -18,6 +18,7 @@ from app.models.claim.enums import (
     ClaimStatus,
     ClaimType,
     InquestOutcomeId,
+    NumberOfCounselInstructed,
     POAType,
     ReasonCode,
 )
@@ -50,6 +51,31 @@ class ClaimBase(SQLModel):
     claimant_id: str | None = None
     poa_type_id: POAType | None = Field(
         default=None, sa_column=Column(Enum(POAType), nullable=True)
+    )
+    has_counsel_been_paid: bool | None = Field(
+        default=None, sa_column=Column(Boolean, nullable=True)
+    )
+    has_alternative_funding: bool | None = Field(
+        default=None, sa_column=Column(Boolean, nullable=True)
+    )
+    has_recovery_costs_awarded: bool | None = Field(
+        default=None, sa_column=Column(Boolean, nullable=True)
+    )
+    financial_recovery_previous_pre_certificate_costs: Decimal | None = Field(
+        default=None, sa_column=Column(Numeric(10, 2), nullable=True)
+    )
+    financial_recovery_cost: Decimal | None = Field(
+        default=None, sa_column=Column(Numeric(10, 2), nullable=True)
+    )
+    financial_recovery_damages: Decimal | None = Field(
+        default=None, sa_column=Column(Numeric(10, 2), nullable=True)
+    )
+    financial_recovery_interest: Decimal | None = Field(
+        default=None, sa_column=Column(Numeric(10, 2), nullable=True)
+    )
+    paying_party: str | None = None
+    number_of_counsel_instructed: NumberOfCounselInstructed | None = Field(
+        default=None, sa_column=Column(Enum(NumberOfCounselInstructed), nullable=True)
     )
 
 
@@ -172,6 +198,27 @@ class ClaimCreate(BaseModel):
         examples=[["ACCIDENT_OR_MISADVENTURE"]],
     )
     claim_cost_template_file: ClaimCostTemplateFile | None = PydanticField(default=None)
+    has_counsel_been_paid: bool | None = PydanticField(default=None, examples=[True])
+    has_alternative_funding: bool | None = PydanticField(default=None, examples=[False])
+    has_recovery_costs_awarded: bool | None = PydanticField(
+        default=None, examples=[True]
+    )
+    financial_recovery_previous_pre_certificate_costs: Decimal | None = PydanticField(
+        default=None, examples=["100.00"]
+    )
+    financial_recovery_cost: Decimal | None = PydanticField(
+        default=None, examples=["200.00"]
+    )
+    financial_recovery_damages: Decimal | None = PydanticField(
+        default=None, examples=["300.00"]
+    )
+    financial_recovery_interest: Decimal | None = PydanticField(
+        default=None, examples=["50.00"]
+    )
+    paying_party: str | None = PydanticField(default=None, examples=["Some Council"])
+    number_of_counsel_instructed: NumberOfCounselInstructed | None = PydanticField(
+        default=None, examples=["2"]
+    )
 
     @field_validator("inquest_outcomes", mode="before")
     @classmethod
@@ -280,6 +327,15 @@ class ClaimByIdResponse(ClaimSummaryBase):
     claim_decision: ClaimDecisionResponse | None = None
     inquest_outcomes: list[InquestOutcomeId] = []
     claim_cost_template_file: CostTemplateFileResponse | None = None
+    has_counsel_been_paid: bool | None = None
+    has_alternative_funding: bool | None = None
+    has_recovery_costs_awarded: bool | None = None
+    financial_recovery_previous_pre_certificate_costs: Decimal | None = None
+    financial_recovery_cost: Decimal | None = None
+    financial_recovery_damages: Decimal | None = None
+    financial_recovery_interest: Decimal | None = None
+    paying_party: str | None = None
+    number_of_counsel_instructed: NumberOfCounselInstructed | None = None
 
     @field_serializer("inquest_outcomes")
     def _serialize_inquest_outcomes(self, value: list[InquestOutcomeId]) -> list[str]:

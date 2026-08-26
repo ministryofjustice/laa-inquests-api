@@ -31,3 +31,9 @@ MISSING_COST_TEMPLATE_FILE_MESSAGE = (
 COST_TEMPLATE_FILE_NOT_ALLOWED_MESSAGE = (
     "A cost template file may only be provided for final bill and nil bill claims"
 )
+MISSING_FINAL_BILL_DETAILS_MESSAGE = (
+    "All final bill details are required for final bill and nil bill claims"
+)
+FINAL_BILL_DETAILS_NOT_ALLOWED_MESSAGE = (
+    "Final bill details may only be provided for final bill and nil bill claims"
+)

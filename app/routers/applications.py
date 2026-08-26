@@ -690,6 +690,17 @@ def create_claim(
                 if request.claim_cost_template_file is not None
                 else None
             ),
+            has_counsel_been_paid=request.has_counsel_been_paid,
+            has_alternative_funding=request.has_alternative_funding,
+            has_recovery_costs_awarded=request.has_recovery_costs_awarded,
+            financial_recovery_previous_pre_certificate_costs=(
+                request.financial_recovery_previous_pre_certificate_costs
+            ),
+            financial_recovery_cost=request.financial_recovery_cost,
+            financial_recovery_damages=request.financial_recovery_damages,
+            financial_recovery_interest=request.financial_recovery_interest,
+            paying_party=request.paying_party,
+            number_of_counsel_instructed=request.number_of_counsel_instructed,
         )
         result = use_case.execute(command)
         response = ClaimResponse(claim_id=result.claim.claim_id)
