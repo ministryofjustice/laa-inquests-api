@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.contexts.user import set_entra_user_context
-from app.models.application.enums import PublicBodyId
+from app.models.application.enums import MeritsDecision, PublicBodyId
 from app.models.application.index import (
     Application,
 )
@@ -11,7 +11,10 @@ from app.models.history.enums import ActorType, HistoryEventReference
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.update_application_public_bodies_port import ApplicationPublicBodiesPort
-from app.use_cases.exceptions import ApplicationNotFoundError
+from app.use_cases.exceptions import (
+    ApplicationNotFoundError,
+    ApplicationNotGrantedError,
+)
 from app.use_cases.update_public_bodies import UpdatePublicBodiesUseCase
 from tests.unit.factories import create_base_application
 
@@ -23,7 +26,9 @@ def entra_user_context() -> None:
 
 @pytest.fixture
 def application() -> Application:
-    return create_base_application()
+    application = create_base_application()
+    application.proceeding.merits_decision = MeritsDecision.GRANTED
+    return application
 
 
 @pytest.fixture
@@ -74,6 +79,29 @@ def test_update_public_bodies_calls_ports_and_commits(
         public_body_ids=public_body_ids,
     )
     use_case.update_public_bodies_port.commit.assert_called_once()
+    use_case.update_public_bodies_port.rollback.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "merits_decision", [MeritsDecision.PENDING, MeritsDecision.REFUSED]
+)
+def test_update_public_bodies_raises_exception_when_application_not_granted(
+    use_case,
+    application,
+    merits_decision,
+):
+    application.proceeding.merits_decision = merits_decision
+    public_body_ids = [PublicBodyId.MINISTRY_OF_DEFENCE]
+
+    with pytest.raises(
+        ApplicationNotGrantedError,
+        match=f"Application {application.laa_reference} is not granted",
+    ):
+        use_case.execute(application.laa_reference, public_body_ids)
+
+    use_case.update_public_bodies_port.update_public_bodies.assert_not_called()
+    use_case.create_history_event_port.create_history_event.assert_not_called()
+    use_case.update_public_bodies_port.commit.assert_not_called()
     use_case.update_public_bodies_port.rollback.assert_not_called()
 
 

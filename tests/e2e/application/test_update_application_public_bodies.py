@@ -1,6 +1,6 @@
 from sqlmodel import select
 
-from app.models.application.enums import PublicBodyId
+from app.models.application.enums import MeritsDecision, PublicBodyId
 from app.models.application.index import Application
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
@@ -63,6 +63,48 @@ def test_204_update_application_public_bodies_creates_history_event(
         "old_public_bodies": [PublicBodyId.DEPARTMENT_FOR_TRANSPORT],
         "new_public_bodies": [PublicBodyId.MINISTRY_OF_DEFENCE],
     }
+
+
+def test_422_update_application_public_bodies_when_application_not_granted(
+    session, client, auth_token
+):
+    application = session.exec(select(Application)).first()
+    original_public_body_ids = [
+        public_body.public_body_id for public_body in application.public_bodies
+    ]
+    application.proceeding.merits_decision = MeritsDecision.PENDING
+    session.add(application.proceeding)
+    session.commit()
+
+    response = client.patch(
+        f"/applications/{application.laa_reference}/public-bodies",
+        json={"publicBodies": [PublicBodyId.MINISTRY_OF_DEFENCE]},
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": "Application is not granted"}
+
+    updated_application = session.get(Application, application.laa_reference)
+    assert updated_application is not None
+    assert [
+        public_body.public_body_id for public_body in updated_application.public_bodies
+    ] == original_public_body_ids
+    assert (
+        session.exec(
+            select(HistoryEvent).where(
+                (HistoryEvent.laa_reference == application.laa_reference)
+                & (
+                    HistoryEvent.event_reference
+                    == HistoryEventReference.INTERESTED_PARTY_UPDATED
+                )
+            )
+        ).all()
+        == []
+    )
 
 
 def test_404_update_application_public_bodies_returns_not_found_for_not_found_application(
