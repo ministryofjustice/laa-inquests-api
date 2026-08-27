@@ -35,7 +35,7 @@ from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
     ClaimType,
-    InquestOutcomeId,
+    InquestOutcomeCode,
     NumberOfCounselInstructed,
     POAType,
 )
@@ -119,7 +119,7 @@ class Claim:
     net: Decimal | None
     gross: Decimal | None
     vat_zero_total: Decimal | None
-    inquest_outcomes: tuple[InquestOutcomeId, ...] = ()
+    inquest_outcomes: tuple[InquestOutcomeCode, ...] = ()
     cost_template_file_id: uuid.UUID | None = None
     cost_template_file_name: str | None = None
     has_counsel_been_paid: bool | None = None

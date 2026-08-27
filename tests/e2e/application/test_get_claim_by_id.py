@@ -10,7 +10,7 @@ from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
     ClaimType,
-    InquestOutcomeId,
+    InquestOutcomeCode,
     NumberOfCounselInstructed,
     POAType,
     ReasonCode,
@@ -141,7 +141,7 @@ def test_200_get_claim_by_id_returns_final_bill_details(session, client, auth_to
         financial_recovery_cost=Decimal("200.00"),
         financial_recovery_damages=Decimal("300.00"),
         financial_recovery_interest=Decimal("50.00"),
-        paying_party="Some Council",
+        paying_party="Test Council",
         number_of_counsel_instructed=NumberOfCounselInstructed.TWO,
     )
     session.add(claim)
@@ -162,7 +162,7 @@ def test_200_get_claim_by_id_returns_final_bill_details(session, client, auth_to
     assert body["financialRecoveryCost"] == "200.00"
     assert body["financialRecoveryDamages"] == "300.00"
     assert body["financialRecoveryInterest"] == "50.00"
-    assert body["payingParty"] == "Some Council"
+    assert body["payingParty"] == "Test Council"
     assert body["numberOfCounselInstructed"] == "2"
 
 
@@ -295,11 +295,11 @@ def test_200_get_claim_by_id_includes_inquest_outcomes_as_enum_names(
         [
             ClaimInquestOutcome(
                 claim_id=claim.claim_id,
-                inquest_outcome_id=InquestOutcomeId.SUICIDE,
+                inquest_outcome_id=InquestOutcomeCode.NARRATIVE_CONCLUSION,
             ),
             ClaimInquestOutcome(
                 claim_id=claim.claim_id,
-                inquest_outcome_id=InquestOutcomeId.NATURAL_CAUSES,
+                inquest_outcome_id=InquestOutcomeCode.NATURAL_CAUSES,
             ),
         ]
     )
@@ -311,7 +311,10 @@ def test_200_get_claim_by_id_includes_inquest_outcomes_as_enum_names(
     )
 
     assert response.status_code == 200
-    assert set(response.json()["inquestOutcomes"]) == {"SUICIDE", "NATURAL_CAUSES"}
+    assert set(response.json()["inquestOutcomes"]) == {
+        "NARRATIVE_CONCLUSION",
+        "NATURAL_CAUSES",
+    }
 
 
 def test_200_get_claim_by_id_returns_empty_inquest_outcomes_when_none_linked(

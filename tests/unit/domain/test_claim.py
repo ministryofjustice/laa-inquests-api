@@ -13,7 +13,7 @@ from app.models.application.index import Application
 from app.models.claim.enums import (
     ClaimStatus,
     ClaimType,
-    InquestOutcomeId,
+    InquestOutcomeCode,
     NumberOfCounselInstructed,
     POAType,
 )
@@ -196,7 +196,7 @@ def test_no_validation_when_poa_type_is_none():
         net=None,
         gross=None,
         vat_zero_total=None,
-        inquest_outcomes=(InquestOutcomeId.SUICIDE,),
+        inquest_outcomes=(InquestOutcomeCode.NATURAL_CAUSES,),
         cost_template_file_id=uuid.uuid4(),
         cost_template_file_name="costs.xlsx",
         has_counsel_been_paid=True,
@@ -206,7 +206,7 @@ def test_no_validation_when_poa_type_is_none():
         financial_recovery_cost=Decimal("200.00"),
         financial_recovery_damages=Decimal("300.00"),
         financial_recovery_interest=Decimal("50.00"),
-        paying_party="Some Council",
+        paying_party="Test Council",
         number_of_counsel_instructed=NumberOfCounselInstructed.TWO,
     )
     claim.validate_total_claim_cost()
@@ -271,7 +271,7 @@ def test_raises_when_payment_on_account_has_inquest_outcomes():
             net=None,
             gross=None,
             vat_zero_total=None,
-            inquest_outcomes=(InquestOutcomeId.SUICIDE,),
+            inquest_outcomes=(InquestOutcomeCode.NATURAL_CAUSES,),
         )
     assert exc_info.value.code == ClaimErrorCode.INQUEST_OUTCOMES_NOT_ALLOWED
 
@@ -284,8 +284,8 @@ def test_valid_final_bill_with_multiple_inquest_outcomes():
         gross=None,
         vat_zero_total=None,
         inquest_outcomes=(
-            InquestOutcomeId.SUICIDE,
-            InquestOutcomeId.NATURAL_CAUSES,
+            InquestOutcomeCode.NARRATIVE_CONCLUSION,
+            InquestOutcomeCode.NATURAL_CAUSES,
         ),
         cost_template_file_id=uuid.uuid4(),
         cost_template_file_name="costs.xlsx",
@@ -296,7 +296,7 @@ def test_valid_final_bill_with_multiple_inquest_outcomes():
         financial_recovery_cost=Decimal("200.00"),
         financial_recovery_damages=Decimal("300.00"),
         financial_recovery_interest=Decimal("50.00"),
-        paying_party="Some Council",
+        paying_party="Test Council",
         number_of_counsel_instructed=NumberOfCounselInstructed.TWO,
     )
     claim.validate_total_claim_cost()
@@ -310,7 +310,7 @@ def test_raises_when_final_bill_has_no_cost_template_file():
             net=None,
             gross=None,
             vat_zero_total=None,
-            inquest_outcomes=(InquestOutcomeId.SUICIDE,),
+            inquest_outcomes=(InquestOutcomeCode.NATURAL_CAUSES,),
         )
     assert exc_info.value.code == ClaimErrorCode.MISSING_COST_TEMPLATE_FILE
 
@@ -323,7 +323,7 @@ def test_raises_when_nil_bill_has_no_cost_template_file():
             net=None,
             gross=None,
             vat_zero_total=None,
-            inquest_outcomes=(InquestOutcomeId.OPEN_CONCLUSION,),
+            inquest_outcomes=(InquestOutcomeCode.OPEN_CONCLUSION,),
         )
     assert exc_info.value.code == ClaimErrorCode.MISSING_COST_TEMPLATE_FILE
 
@@ -350,7 +350,7 @@ def test_raises_when_final_bill_has_only_cost_template_file_name():
             net=None,
             gross=None,
             vat_zero_total=None,
-            inquest_outcomes=(InquestOutcomeId.SUICIDE,),
+            inquest_outcomes=(InquestOutcomeCode.NATURAL_CAUSES,),
             cost_template_file_id=None,
             cost_template_file_name="costs.xlsx",
         )
@@ -365,7 +365,7 @@ def test_raises_when_final_bill_missing_final_bill_details():
             net=None,
             gross=None,
             vat_zero_total=None,
-            inquest_outcomes=(InquestOutcomeId.SUICIDE,),
+            inquest_outcomes=(InquestOutcomeCode.NATURAL_CAUSES,),
             cost_template_file_id=uuid.uuid4(),
             cost_template_file_name="costs.xlsx",
         )
@@ -380,7 +380,7 @@ def test_raises_when_nil_bill_missing_final_bill_details():
             net=None,
             gross=None,
             vat_zero_total=None,
-            inquest_outcomes=(InquestOutcomeId.OPEN_CONCLUSION,),
+            inquest_outcomes=(InquestOutcomeCode.OPEN_CONCLUSION,),
             cost_template_file_id=uuid.uuid4(),
             cost_template_file_name="costs.xlsx",
         )
@@ -402,7 +402,7 @@ def test_raises_when_payment_on_account_has_final_bill_details():
             financial_recovery_cost=Decimal("200.00"),
             financial_recovery_damages=Decimal("300.00"),
             financial_recovery_interest=Decimal("50.00"),
-            paying_party="Some Council",
+            paying_party="Test Council",
             number_of_counsel_instructed=NumberOfCounselInstructed.TWO,
         )
     assert exc_info.value.code == ClaimErrorCode.FINAL_BILL_DETAILS_NOT_ALLOWED
@@ -415,7 +415,7 @@ def test_valid_final_bill_with_final_bill_details():
         net=None,
         gross=None,
         vat_zero_total=None,
-        inquest_outcomes=(InquestOutcomeId.SUICIDE,),
+        inquest_outcomes=(InquestOutcomeCode.NATURAL_CAUSES,),
         cost_template_file_id=uuid.uuid4(),
         cost_template_file_name="costs.xlsx",
         has_counsel_been_paid=True,
@@ -425,7 +425,7 @@ def test_valid_final_bill_with_final_bill_details():
         financial_recovery_cost=Decimal("200.00"),
         financial_recovery_damages=Decimal("300.00"),
         financial_recovery_interest=Decimal("50.00"),
-        paying_party="Some Council",
+        paying_party="Test Council",
         number_of_counsel_instructed=NumberOfCounselInstructed.TWO,
     )
     claim.validate_total_claim_cost()
@@ -1048,7 +1048,7 @@ def test_is_not_eligible_for_auto_approval_when_claim_is_not_payment_on_account(
         net=Decimal("50000.00"),
         gross=Decimal("50000.00"),
         vat_zero_total=None,
-        inquest_outcomes=(InquestOutcomeId.SUICIDE,),
+        inquest_outcomes=(InquestOutcomeCode.NATURAL_CAUSES,),
         cost_template_file_id=uuid.uuid4(),
         cost_template_file_name="costs.xlsx",
         has_counsel_been_paid=True,
@@ -1058,7 +1058,7 @@ def test_is_not_eligible_for_auto_approval_when_claim_is_not_payment_on_account(
         financial_recovery_cost=Decimal("200.00"),
         financial_recovery_damages=Decimal("300.00"),
         financial_recovery_interest=Decimal("50.00"),
-        paying_party="Some Council",
+        paying_party="Test Council",
         number_of_counsel_instructed=NumberOfCounselInstructed.TWO,
     )
     application = _make_application_with_certificate(start=None)

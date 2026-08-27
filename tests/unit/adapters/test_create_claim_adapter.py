@@ -9,7 +9,7 @@ from app.models.application.index import Application
 from app.models.claim.enums import (
     ClaimStatus,
     ClaimType,
-    InquestOutcomeId,
+    InquestOutcomeCode,
     NumberOfCounselInstructed,
     POAType,
 )
@@ -104,7 +104,7 @@ def test_create_claim_defaults_optional_fields_to_none_when_omitted(session):
         {
             "claim_type": ClaimType.FINAL_BILL,
             "poa_type": None,
-            "inquest_outcomes": (InquestOutcomeId.SUICIDE,),
+            "inquest_outcomes": (InquestOutcomeCode.NATURAL_CAUSES,),
             "cost_template_file_id": uuid.uuid4(),
             "cost_template_file_name": "costs.xlsx",
             "has_counsel_been_paid": True,
@@ -114,7 +114,7 @@ def test_create_claim_defaults_optional_fields_to_none_when_omitted(session):
             "financial_recovery_cost": Decimal("200.00"),
             "financial_recovery_damages": Decimal("300.00"),
             "financial_recovery_interest": Decimal("50.00"),
-            "paying_party": "Some Council",
+            "paying_party": "Test Council",
             "number_of_counsel_instructed": NumberOfCounselInstructed.TWO,
         }
     )
@@ -135,7 +135,7 @@ def test_create_claim_persists_final_bill_details(session):
             "net": None,
             "gross": None,
             "vat_zero_total": None,
-            "inquest_outcomes": (InquestOutcomeId.SUICIDE,),
+            "inquest_outcomes": (InquestOutcomeCode.NATURAL_CAUSES,),
             "cost_template_file_id": uuid.uuid4(),
             "cost_template_file_name": "costs.xlsx",
             "has_counsel_been_paid": True,
@@ -145,7 +145,7 @@ def test_create_claim_persists_final_bill_details(session):
             "financial_recovery_cost": Decimal("200.00"),
             "financial_recovery_damages": Decimal("300.00"),
             "financial_recovery_interest": Decimal("50.00"),
-            "paying_party": "Some Council",
+            "paying_party": "Test Council",
             "number_of_counsel_instructed": NumberOfCounselInstructed.TWO,
         }
     )
@@ -161,7 +161,7 @@ def test_create_claim_persists_final_bill_details(session):
     assert stored_claim.financial_recovery_cost == Decimal("200.00")
     assert stored_claim.financial_recovery_damages == Decimal("300.00")
     assert stored_claim.financial_recovery_interest == Decimal("50.00")
-    assert stored_claim.paying_party == "Some Council"
+    assert stored_claim.paying_party == "Test Council"
     assert stored_claim.number_of_counsel_instructed == NumberOfCounselInstructed.TWO
 
 

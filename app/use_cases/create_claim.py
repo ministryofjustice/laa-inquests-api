@@ -20,7 +20,7 @@ from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
     ClaimType,
-    InquestOutcomeId,
+    InquestOutcomeCode,
     NumberOfCounselInstructed,
     POAType,
     ReasonCode,
@@ -55,7 +55,7 @@ class CreateClaimCommand:
     vat_zero_total: Decimal | None
     claimant_id: str | None
     claim_evidence_ids: list[uuid.UUID]
-    inquest_outcomes: list[InquestOutcomeId] = field(default_factory=list)
+    inquest_outcomes: list[InquestOutcomeCode] = field(default_factory=list)
     cost_template_file_id: uuid.UUID | None = None
     cost_template_file_name: str | None = None
     has_counsel_been_paid: bool | None = None

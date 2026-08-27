@@ -11,7 +11,7 @@ from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
     ClaimType,
-    InquestOutcomeId,
+    InquestOutcomeCode,
     NumberOfCounselInstructed,
     POAType,
     ReasonCode,
@@ -98,7 +98,7 @@ def test_create_claim_persists_optional_fields_as_none_when_omitted(session):
             {
                 "claim_type": ClaimType.FINAL_BILL,
                 "poa_type": None,
-                "inquest_outcomes": (InquestOutcomeId.SUICIDE,),
+                "inquest_outcomes": (InquestOutcomeCode.NATURAL_CAUSES,),
                 "cost_template_file_id": uuid.uuid4(),
                 "cost_template_file_name": "costs.xlsx",
                 "has_counsel_been_paid": True,
@@ -108,7 +108,7 @@ def test_create_claim_persists_optional_fields_as_none_when_omitted(session):
                 "financial_recovery_cost": Decimal("200.00"),
                 "financial_recovery_damages": Decimal("300.00"),
                 "financial_recovery_interest": Decimal("50.00"),
-                "paying_party": "Some Council",
+                "paying_party": "Test Council",
                 "number_of_counsel_instructed": NumberOfCounselInstructed.TWO,
             }
         ),
@@ -128,7 +128,7 @@ def test_link_inquest_outcomes_to_claim_persists_link_rows(session):
             {
                 "claim_type": ClaimType.FINAL_BILL,
                 "poa_type": None,
-                "inquest_outcomes": (InquestOutcomeId.SUICIDE,),
+                "inquest_outcomes": (InquestOutcomeCode.NATURAL_CAUSES,),
                 "cost_template_file_id": uuid.uuid4(),
                 "cost_template_file_name": "costs.xlsx",
                 "has_counsel_been_paid": True,
@@ -138,7 +138,7 @@ def test_link_inquest_outcomes_to_claim_persists_link_rows(session):
                 "financial_recovery_cost": Decimal("200.00"),
                 "financial_recovery_damages": Decimal("300.00"),
                 "financial_recovery_interest": Decimal("50.00"),
-                "paying_party": "Some Council",
+                "paying_party": "Test Council",
                 "number_of_counsel_instructed": NumberOfCounselInstructed.TWO,
             }
         ),
@@ -147,7 +147,7 @@ def test_link_inquest_outcomes_to_claim_persists_link_rows(session):
 
     adapter.link_inquest_outcomes_to_claim(
         created.claim_id,
-        [InquestOutcomeId.SUICIDE, InquestOutcomeId.NATURAL_CAUSES],
+        [InquestOutcomeCode.NARRATIVE_CONCLUSION, InquestOutcomeCode.NATURAL_CAUSES],
     )
     adapter.commit()
 
@@ -157,8 +157,8 @@ def test_link_inquest_outcomes_to_claim_persists_link_rows(session):
         )
     ).all()
     assert {row.inquest_outcome_id for row in stored} == {
-        InquestOutcomeId.SUICIDE,
-        InquestOutcomeId.NATURAL_CAUSES,
+        InquestOutcomeCode.NARRATIVE_CONCLUSION,
+        InquestOutcomeCode.NATURAL_CAUSES,
     }
 
 
@@ -171,7 +171,7 @@ def test_link_cost_template_to_claim_persists_row(session):
             {
                 "claim_type": ClaimType.FINAL_BILL,
                 "poa_type": None,
-                "inquest_outcomes": (InquestOutcomeId.SUICIDE,),
+                "inquest_outcomes": (InquestOutcomeCode.NATURAL_CAUSES,),
                 "cost_template_file_id": uuid.uuid4(),
                 "cost_template_file_name": "costs.xlsx",
                 "has_counsel_been_paid": True,
@@ -181,7 +181,7 @@ def test_link_cost_template_to_claim_persists_row(session):
                 "financial_recovery_cost": Decimal("200.00"),
                 "financial_recovery_damages": Decimal("300.00"),
                 "financial_recovery_interest": Decimal("50.00"),
-                "paying_party": "Some Council",
+                "paying_party": "Test Council",
                 "number_of_counsel_instructed": NumberOfCounselInstructed.TWO,
             }
         ),

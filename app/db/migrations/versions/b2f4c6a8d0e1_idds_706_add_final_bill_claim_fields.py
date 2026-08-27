@@ -20,13 +20,13 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 number_of_counsel_instructed_enum = sa.Enum(
-    "ZERO",
-    "ONE",
-    "TWO",
-    "THREE",
-    "FOUR",
-    "FIVE",
-    "SIX",
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
     "MORE_THAN_6",
     name="numberofcounselinstructed",
 )

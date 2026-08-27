@@ -12,7 +12,7 @@ from app.models.application.index import Application
 from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
-    InquestOutcomeId,
+    InquestOutcomeCode,
     ReasonCode,
 )
 from app.models.claim.index import (
@@ -124,7 +124,7 @@ class ClaimRepositoryAdapter(
     def link_inquest_outcomes_to_claim(
         self,
         claim_id: int,
-        inquest_outcomes: list[InquestOutcomeId],
+        inquest_outcomes: list[InquestOutcomeCode],
     ) -> None:
         for inquest_outcome in inquest_outcomes:
             self.session.add(

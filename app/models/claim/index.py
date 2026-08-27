@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, field_serializer, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 from pydantic import Field as PydanticField
 from pydantic.alias_generators import to_camel
 from sqlalchemy import Boolean, Column, Numeric
@@ -17,7 +17,7 @@ from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
     ClaimType,
-    InquestOutcomeId,
+    InquestOutcomeCode,
     NumberOfCounselInstructed,
     POAType,
     ReasonCode,
@@ -75,7 +75,14 @@ class ClaimBase(SQLModel):
     )
     paying_party: str | None = None
     number_of_counsel_instructed: NumberOfCounselInstructed | None = Field(
-        default=None, sa_column=Column(Enum(NumberOfCounselInstructed), nullable=True)
+        default=None,
+        sa_column=Column(
+            Enum(
+                NumberOfCounselInstructed,
+                values_callable=lambda enum: [member.value for member in enum],
+            ),
+            nullable=True,
+        ),
     )
 
 
@@ -95,7 +102,7 @@ class Claim(ClaimBase, table=True):
     )
 
     @property
-    def inquest_outcomes(self) -> list[InquestOutcomeId]:
+    def inquest_outcomes(self) -> list[InquestOutcomeCode]:
         return [link.inquest_outcome_id for link in self.claim_inquest_outcomes]
 
 
@@ -112,8 +119,8 @@ class ClaimInquestOutcome(SQLModel, table=True):
     __tablename__ = "claim_inquest_outcome"
     claim_inquest_outcome_id: int | None = Field(default=None, primary_key=True)
     claim_id: int = Field(foreign_key="claim.claim_id")
-    inquest_outcome_id: InquestOutcomeId = Field(
-        sa_column=Column(Enum(InquestOutcomeId), nullable=False)
+    inquest_outcome_id: InquestOutcomeCode = Field(
+        sa_column=Column(Enum(InquestOutcomeCode), nullable=False)
     )
     claim: "Claim" = Relationship(back_populates="claim_inquest_outcomes")
 
@@ -193,7 +200,7 @@ class ClaimCreate(BaseModel):
         default_factory=list,
         examples=[["3fa85f64-5717-4562-b3fc-2c963f66afa6"]],
     )
-    inquest_outcomes: list[InquestOutcomeId] = PydanticField(
+    inquest_outcomes: list[InquestOutcomeCode] = PydanticField(
         default_factory=list,
         examples=[["ACCIDENT_OR_MISADVENTURE"]],
     )
@@ -222,17 +229,17 @@ class ClaimCreate(BaseModel):
 
     @field_validator("inquest_outcomes", mode="before")
     @classmethod
-    def _parse_inquest_outcomes(cls, value: object) -> list[InquestOutcomeId]:
+    def _parse_inquest_outcomes(cls, value: object) -> list[InquestOutcomeCode]:
         if not value:
             return []
         if not isinstance(value, list):
             raise TypeError("inquest_outcomes must be a list")
-        parsed: list[InquestOutcomeId] = []
+        parsed: list[InquestOutcomeCode] = []
         for item in value:
-            if isinstance(item, InquestOutcomeId):
+            if isinstance(item, InquestOutcomeCode):
                 parsed.append(item)
-            elif isinstance(item, str) and item in InquestOutcomeId.__members__:
-                parsed.append(InquestOutcomeId[item])
+            elif isinstance(item, str) and item in InquestOutcomeCode.__members__:
+                parsed.append(InquestOutcomeCode[item])
             else:
                 raise ValueError(f"Invalid inquest outcome: {item!r}")
         return parsed
@@ -325,7 +332,7 @@ class ClaimByIdResponse(ClaimSummaryBase):
     substantive_cost_limitation: int | None = None
     claim_evidence: list[ClaimEvidenceResponse] = []
     claim_decision: ClaimDecisionResponse | None = None
-    inquest_outcomes: list[InquestOutcomeId] = []
+    inquest_outcomes: list[InquestOutcomeCode] = []
     claim_cost_template_file: CostTemplateFileResponse | None = None
     has_counsel_been_paid: bool | None = None
     has_alternative_funding: bool | None = None
@@ -336,10 +343,6 @@ class ClaimByIdResponse(ClaimSummaryBase):
     financial_recovery_interest: Decimal | None = None
     paying_party: str | None = None
     number_of_counsel_instructed: NumberOfCounselInstructed | None = None
-
-    @field_serializer("inquest_outcomes")
-    def _serialize_inquest_outcomes(self, value: list[InquestOutcomeId]) -> list[str]:
-        return [outcome.name for outcome in value]
 
 
 class UploadClaimEvidenceResponse(BaseModel):

@@ -39,30 +39,6 @@ def _make_request_body(overrides=None):
     return body
 
 
-def _cost_template_file(file_id=None, file_name="claim_cost_template.xlsx"):
-    return {
-        "claimCostTemplateFileId": str(file_id or uuid.uuid4()),
-        "claimCostTemplateFileName": file_name,
-    }
-
-
-def _final_bill_details(overrides=None):
-    details = {
-        "hasCounselBeenPaid": True,
-        "hasAlternativeFunding": False,
-        "hasRecoveryCostsAwarded": True,
-        "financialRecoveryPreviousPreCertificateCosts": 100.00,
-        "financialRecoveryCost": 200.00,
-        "financialRecoveryDamages": 300.00,
-        "financialRecoveryInterest": 50.00,
-        "payingParty": "Some Council",
-        "numberOfCounselInstructed": "2",
-    }
-    if overrides is not None:
-        details.update(overrides)
-    return details
-
-
 def _seed_approved_claim(
     session,
     laa_reference: int,
@@ -304,9 +280,20 @@ def test_201_create_claim_deducts_new_claim_amount_from_total_funds_available_wh
                 "claimType": "FINAL_BILL",
                 "poaTypeId": None,
                 "claimantId": "claimant@provider.com",
-                "inquestOutcomes": ["SUICIDE"],
-                "claimCostTemplateFile": _cost_template_file(),
-                **_final_bill_details(),
+                "inquestOutcomes": ["NATURAL_CAUSES"],
+                "claimCostTemplateFile": {
+                    "claimCostTemplateFileId": str(uuid.uuid4()),
+                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                },
+                "hasCounselBeenPaid": True,
+                "hasAlternativeFunding": False,
+                "hasRecoveryCostsAwarded": True,
+                "financialRecoveryPreviousPreCertificateCosts": 100.00,
+                "financialRecoveryCost": 200.00,
+                "financialRecoveryDamages": 300.00,
+                "financialRecoveryInterest": 50.00,
+                "payingParty": "Test Council",
+                "numberOfCounselInstructed": "2",
             }
         ),
         headers={
@@ -401,9 +388,20 @@ def test_201_create_claim_without_optional_fields(session, client, auth_token):
                 "claimType": "FINAL_BILL",
                 "poaTypeId": None,
                 "claimantId": "claimant@provider.com",
-                "inquestOutcomes": ["SUICIDE"],
-                "claimCostTemplateFile": _cost_template_file(),
-                **_final_bill_details(),
+                "inquestOutcomes": ["NATURAL_CAUSES"],
+                "claimCostTemplateFile": {
+                    "claimCostTemplateFileId": str(uuid.uuid4()),
+                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                },
+                "hasCounselBeenPaid": True,
+                "hasAlternativeFunding": False,
+                "hasRecoveryCostsAwarded": True,
+                "financialRecoveryPreviousPreCertificateCosts": 100.00,
+                "financialRecoveryCost": 200.00,
+                "financialRecoveryDamages": 300.00,
+                "financialRecoveryInterest": 50.00,
+                "payingParty": "Test Council",
+                "numberOfCounselInstructed": "2",
             }
         ),
         headers={
@@ -530,9 +528,20 @@ def test_201_create_final_bill_claim_persists_inquest_outcome_links(
             {
                 "claimType": "FINAL_BILL",
                 "poaTypeId": None,
-                "inquestOutcomes": ["SUICIDE", "NATURAL_CAUSES"],
-                "claimCostTemplateFile": _cost_template_file(),
-                **_final_bill_details(),
+                "inquestOutcomes": ["NARRATIVE_CONCLUSION", "NATURAL_CAUSES"],
+                "claimCostTemplateFile": {
+                    "claimCostTemplateFileId": str(uuid.uuid4()),
+                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                },
+                "hasCounselBeenPaid": True,
+                "hasAlternativeFunding": False,
+                "hasRecoveryCostsAwarded": True,
+                "financialRecoveryPreviousPreCertificateCosts": 100.00,
+                "financialRecoveryCost": 200.00,
+                "financialRecoveryDamages": 300.00,
+                "financialRecoveryInterest": 50.00,
+                "payingParty": "Test Council",
+                "numberOfCounselInstructed": "2",
             }
         ),
         headers={
@@ -548,7 +557,7 @@ def test_201_create_final_bill_claim_persists_inquest_outcome_links(
         select(ClaimInquestOutcome).where(ClaimInquestOutcome.claim_id == claim_id)
     ).all()
     assert {row.inquest_outcome_id.name for row in stored} == {
-        "SUICIDE",
+        "NARRATIVE_CONCLUSION",
         "NATURAL_CAUSES",
     }
 
@@ -565,8 +574,19 @@ def test_201_create_nil_bill_claim_persists_inquest_outcome_links(
                 "claimType": "NIL_BILL",
                 "poaTypeId": None,
                 "inquestOutcomes": ["OPEN_CONCLUSION"],
-                "claimCostTemplateFile": _cost_template_file(),
-                **_final_bill_details(),
+                "claimCostTemplateFile": {
+                    "claimCostTemplateFileId": str(uuid.uuid4()),
+                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                },
+                "hasCounselBeenPaid": True,
+                "hasAlternativeFunding": False,
+                "hasRecoveryCostsAwarded": True,
+                "financialRecoveryPreviousPreCertificateCosts": 100.00,
+                "financialRecoveryCost": 200.00,
+                "financialRecoveryDamages": 300.00,
+                "financialRecoveryInterest": 50.00,
+                "payingParty": "Test Council",
+                "numberOfCounselInstructed": "2",
             }
         ),
         headers={
@@ -597,7 +617,10 @@ def test_422_final_bill_claim_without_inquest_outcomes(session, client, auth_tok
                 "claimType": "FINAL_BILL",
                 "poaTypeId": None,
                 "inquestOutcomes": [],
-                "claimCostTemplateFile": _cost_template_file(),
+                "claimCostTemplateFile": {
+                    "claimCostTemplateFileId": str(uuid.uuid4()),
+                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                },
             }
         ),
         headers={
@@ -617,7 +640,7 @@ def test_422_payment_on_account_claim_with_inquest_outcomes(
 
     response = client.post(
         f"/applications/{laa_reference}/claim",
-        json=_make_request_body({"inquestOutcomes": ["SUICIDE"]}),
+        json=_make_request_body({"inquestOutcomes": ["NATURAL_CAUSES"]}),
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {auth_token}",
@@ -640,7 +663,10 @@ def test_422_create_claim_with_invalid_inquest_outcome_name(
                 "claimType": "FINAL_BILL",
                 "poaTypeId": None,
                 "inquestOutcomes": ["NOT_A_REAL_OUTCOME"],
-                "claimCostTemplateFile": _cost_template_file(),
+                "claimCostTemplateFile": {
+                    "claimCostTemplateFileId": str(uuid.uuid4()),
+                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                },
             }
         ),
         headers={
@@ -664,11 +690,20 @@ def test_201_create_final_bill_claim_persists_cost_template_file(
             {
                 "claimType": "FINAL_BILL",
                 "poaTypeId": None,
-                "inquestOutcomes": ["SUICIDE"],
-                "claimCostTemplateFile": _cost_template_file(
-                    file_id=file_id, file_name="final_bill_costs.xlsx"
-                ),
-                **_final_bill_details(),
+                "inquestOutcomes": ["NATURAL_CAUSES"],
+                "claimCostTemplateFile": {
+                    "claimCostTemplateFileId": str(file_id),
+                    "claimCostTemplateFileName": "final_bill_costs.xlsx",
+                },
+                "hasCounselBeenPaid": True,
+                "hasAlternativeFunding": False,
+                "hasRecoveryCostsAwarded": True,
+                "financialRecoveryPreviousPreCertificateCosts": 100.00,
+                "financialRecoveryCost": 200.00,
+                "financialRecoveryDamages": 300.00,
+                "financialRecoveryInterest": 50.00,
+                "payingParty": "Test Council",
+                "numberOfCounselInstructed": "2",
             }
         ),
         headers={
@@ -701,10 +736,19 @@ def test_201_create_nil_bill_claim_persists_cost_template_file(
                 "claimType": "NIL_BILL",
                 "poaTypeId": None,
                 "inquestOutcomes": ["OPEN_CONCLUSION"],
-                "claimCostTemplateFile": _cost_template_file(
-                    file_id=file_id, file_name="nil_bill_costs.xls"
-                ),
-                **_final_bill_details(),
+                "claimCostTemplateFile": {
+                    "claimCostTemplateFileId": str(file_id),
+                    "claimCostTemplateFileName": "nil_bill_costs.xls",
+                },
+                "hasCounselBeenPaid": True,
+                "hasAlternativeFunding": False,
+                "hasRecoveryCostsAwarded": True,
+                "financialRecoveryPreviousPreCertificateCosts": 100.00,
+                "financialRecoveryCost": 200.00,
+                "financialRecoveryDamages": 300.00,
+                "financialRecoveryInterest": 50.00,
+                "payingParty": "Test Council",
+                "numberOfCounselInstructed": "2",
             }
         ),
         headers={
@@ -733,7 +777,7 @@ def test_422_final_bill_claim_without_cost_template_file(session, client, auth_t
             {
                 "claimType": "FINAL_BILL",
                 "poaTypeId": None,
-                "inquestOutcomes": ["SUICIDE"],
+                "inquestOutcomes": ["NATURAL_CAUSES"],
             }
         ),
         headers={
@@ -753,7 +797,14 @@ def test_422_payment_on_account_claim_with_cost_template_file(
 
     response = client.post(
         f"/applications/{laa_reference}/claim",
-        json=_make_request_body({"claimCostTemplateFile": _cost_template_file()}),
+        json=_make_request_body(
+            {
+                "claimCostTemplateFile": {
+                    "claimCostTemplateFileId": str(uuid.uuid4()),
+                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                }
+            }
+        ),
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {auth_token}",
@@ -797,9 +848,20 @@ def test_201_create_final_bill_claim_persists_final_bill_details(
             {
                 "claimType": "FINAL_BILL",
                 "poaTypeId": None,
-                "inquestOutcomes": ["SUICIDE"],
-                "claimCostTemplateFile": _cost_template_file(),
-                **_final_bill_details(),
+                "inquestOutcomes": ["NATURAL_CAUSES"],
+                "claimCostTemplateFile": {
+                    "claimCostTemplateFileId": str(uuid.uuid4()),
+                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                },
+                "hasCounselBeenPaid": True,
+                "hasAlternativeFunding": False,
+                "hasRecoveryCostsAwarded": True,
+                "financialRecoveryPreviousPreCertificateCosts": 100.00,
+                "financialRecoveryCost": 200.00,
+                "financialRecoveryDamages": 300.00,
+                "financialRecoveryInterest": 50.00,
+                "payingParty": "Test Council",
+                "numberOfCounselInstructed": "2",
             }
         ),
         headers={
@@ -819,7 +881,7 @@ def test_201_create_final_bill_claim_persists_final_bill_details(
     assert stored.financial_recovery_cost == Decimal("200.00")
     assert stored.financial_recovery_damages == Decimal("300.00")
     assert stored.financial_recovery_interest == Decimal("50.00")
-    assert stored.paying_party == "Some Council"
+    assert stored.paying_party == "Test Council"
     assert stored.number_of_counsel_instructed == NumberOfCounselInstructed.TWO
 
 
@@ -832,8 +894,11 @@ def test_422_final_bill_claim_without_final_bill_details(session, client, auth_t
             {
                 "claimType": "FINAL_BILL",
                 "poaTypeId": None,
-                "inquestOutcomes": ["SUICIDE"],
-                "claimCostTemplateFile": _cost_template_file(),
+                "inquestOutcomes": ["NATURAL_CAUSES"],
+                "claimCostTemplateFile": {
+                    "claimCostTemplateFileId": str(uuid.uuid4()),
+                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                },
             }
         ),
         headers={
@@ -853,7 +918,19 @@ def test_422_payment_on_account_claim_with_final_bill_details(
 
     response = client.post(
         f"/applications/{laa_reference}/claim",
-        json=_make_request_body(_final_bill_details()),
+        json=_make_request_body(
+            {
+                "hasCounselBeenPaid": True,
+                "hasAlternativeFunding": False,
+                "hasRecoveryCostsAwarded": True,
+                "financialRecoveryPreviousPreCertificateCosts": 100.00,
+                "financialRecoveryCost": 200.00,
+                "financialRecoveryDamages": 300.00,
+                "financialRecoveryInterest": 50.00,
+                "payingParty": "Test Council",
+                "numberOfCounselInstructed": "2",
+            }
+        ),
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {auth_token}",
