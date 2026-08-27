@@ -34,7 +34,7 @@ def test_create_note_creates_caseworker_history_event_and_commits():
         laa_reference=application.laa_reference,
         event_data={"note_text": "Case note"},
     )
-    create_history_event_port.commit.assert_called_once_with()
+    create_history_event_port.commit.assert_called_once()
     create_history_event_port.rollback.assert_not_called()
 
 
@@ -81,7 +81,7 @@ def test_create_note_rolls_back_when_history_event_creation_fails():
         use_case.execute(str(application.laa_reference), "Case note")
 
     create_history_event_port.commit.assert_not_called()
-    create_history_event_port.rollback.assert_called_once_with()
+    create_history_event_port.rollback.assert_called_once()
 
 
 def test_create_note_rolls_back_when_commit_fails():
@@ -99,5 +99,5 @@ def test_create_note_rolls_back_when_commit_fails():
         use_case.execute(str(application.laa_reference), "Case note")
 
     create_history_event_port.create_history_event.assert_called_once()
-    create_history_event_port.commit.assert_called_once_with()
-    create_history_event_port.rollback.assert_called_once_with()
+    create_history_event_port.commit.assert_called_once()
+    create_history_event_port.rollback.assert_called_once()
