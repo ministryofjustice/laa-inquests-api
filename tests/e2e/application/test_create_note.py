@@ -27,7 +27,7 @@ def test_204_create_note_adds_caseworker_history_event(
     note_text = "Case note with useful information."
 
     response = client.post(
-        f"/applications/{application.laa_reference}/history/note",
+        f"/applications/{application.laa_reference}/note",
         json={"noteText": note_text},
         headers=_caseworker_headers(auth_token),
     )
@@ -56,7 +56,7 @@ def test_204_create_note_accepts_10_000_characters(
     note_text = "a" * 10_000
 
     response = client.post(
-        f"/applications/{application.laa_reference}/history/note",
+        f"/applications/{application.laa_reference}/note",
         json={"noteText": note_text},
         headers=_caseworker_headers(auth_token),
     )
@@ -83,7 +83,7 @@ def test_422_create_note_rejects_invalid_note_text(
     client, auth_token, application, request_body
 ):
     response = client.post(
-        f"/applications/{application.laa_reference}/history/note",
+        f"/applications/{application.laa_reference}/note",
         json=request_body,
         headers=_caseworker_headers(auth_token),
     )
@@ -93,7 +93,7 @@ def test_422_create_note_rejects_invalid_note_text(
 
 def test_404_create_note_returns_not_found_for_missing_application(client, auth_token):
     response = client.post(
-        "/applications/99999/history/note",
+        "/applications/99999/note",
         json={"noteText": "Case note"},
         headers=_caseworker_headers(auth_token),
     )
@@ -104,7 +104,7 @@ def test_404_create_note_returns_not_found_for_missing_application(client, auth_
 
 def test_401_create_note_requires_authorization(entra_auth_client, application):
     response = entra_auth_client.post(
-        f"/applications/{application.laa_reference}/history/note",
+        f"/applications/{application.laa_reference}/note",
         json={"noteText": "Case note"},
         headers={"Content-Type": "application/json"},
     )
@@ -114,7 +114,7 @@ def test_401_create_note_requires_authorization(entra_auth_client, application):
 
 def test_403_create_note_rejects_provider_token(entra_auth_client, application):
     response = entra_auth_client.post(
-        f"/applications/{application.laa_reference}/history/note",
+        f"/applications/{application.laa_reference}/note",
         json={"noteText": "Case note"},
         headers={
             "Content-Type": "application/json",
@@ -134,7 +134,7 @@ def test_500_create_note_returns_generic_error_when_history_event_cannot_be_save
         side_effect=Exception("History event persistence failed"),
     ):
         response = client.post(
-            f"/applications/{application.laa_reference}/history/note",
+            f"/applications/{application.laa_reference}/note",
             json={"noteText": "Case note"},
             headers=_caseworker_headers(auth_token),
         )

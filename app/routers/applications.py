@@ -599,7 +599,7 @@ def get_application_history(
         raise HTTPException(status_code=404, detail="Application not found")
 
 
-@router.post("/{laa_reference}/history/note", status_code=204)
+@router.post("/{laa_reference}/note", status_code=204)
 def create_note(
     laa_reference: str,
     request: CreateNoteRequest,
