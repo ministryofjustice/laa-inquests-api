@@ -599,22 +599,6 @@ def get_application_history(
         raise HTTPException(status_code=404, detail="Application not found")
 
 
-@router.post("/{laa_reference}/note", status_code=204)
-def create_note(
-    laa_reference: str,
-    request: CreateNoteRequest,
-    use_case: CreateNoteUseCase = Depends(get_create_note_use_case),
-    _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
-) -> Response:
-    """Add a caseworker note to an application's history."""
-    try:
-        use_case.execute(laa_reference, request.note_text)
-    except ApplicationNotFoundError:
-        raise HTTPException(status_code=404, detail="Application not found")
-
-    return Response(status_code=204)
-
-
 @router.get("/")
 async def read_all_applications(
     use_case: ListApplicationsUseCase = Depends(get_list_applications_use_case),
@@ -730,6 +714,22 @@ def create_claim(
         raise HTTPException(
             status_code=422, detail={"errorCode": e.code, "message": e.message}
         )
+
+
+@router.post("/{laa_reference}/note", status_code=204)
+def create_note(
+    laa_reference: str,
+    request: CreateNoteRequest,
+    use_case: CreateNoteUseCase = Depends(get_create_note_use_case),
+    _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
+) -> Response:
+    """Add a caseworker note to an application's history."""
+    try:
+        use_case.execute(laa_reference, request.note_text)
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    return Response(status_code=204)
 
 
 @router.patch("/{laa_reference}/public-bodies", status_code=204)
