@@ -45,7 +45,7 @@ from app.models.claim.index import (
     ClaimSummaryResponse,
     RejectClaimRequest,
 )
-from app.models.history.index import HistoryEventResponse
+from app.models.history.index import CreateNoteRequest, HistoryEventResponse
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
@@ -82,6 +82,7 @@ from app.routers.dependencies import (
 from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
 from app.use_cases.create_claim import CreateClaimCommand, CreateClaimUseCase
+from app.use_cases.create_note import CreateNoteUseCase
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
     ApplicationNotGrantedError,
@@ -191,6 +192,20 @@ def get_application_history_use_case(
     return GetApplicationHistoryUseCase(
         get_application_history_port=get_application_history_port,
         get_application_port=get_application_port,
+    )
+
+
+def get_create_note_use_case(
+    application_lookup_port: ApplicationLookupPort = Depends(
+        get_application_db_adapter
+    ),
+    create_history_event_port: CreateHistoryEventPort = Depends(
+        get_history_event_adapter
+    ),
+) -> CreateNoteUseCase:
+    return CreateNoteUseCase(
+        application_lookup_port=application_lookup_port,
+        create_history_event_port=create_history_event_port,
     )
 
 
@@ -723,6 +738,22 @@ def create_claim(
         )
 
 
+@router.post("/{laa_reference}/note", status_code=204)
+def create_note(
+    laa_reference: str,
+    request: CreateNoteRequest,
+    use_case: CreateNoteUseCase = Depends(get_create_note_use_case),
+    _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
+) -> Response:
+    """Add a caseworker note to an application's history."""
+    try:
+        use_case.execute(laa_reference, request.note_text)
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    return Response(status_code=204)
+
+
 @router.patch("/{laa_reference}/public-bodies", status_code=204)
 def update_application_public_bodies(
     laa_reference: str,
@@ -737,6 +768,8 @@ def update_application_public_bodies(
         use_case.execute(laa_reference, request.public_bodies)
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
+    except ApplicationNotGrantedError:
+        raise HTTPException(status_code=422, detail="Application is not granted")
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 

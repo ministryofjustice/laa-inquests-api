@@ -8,6 +8,9 @@ class ActorType(StrEnum):
 
 
 class HistoryEventReference(StrEnum):
+    # Cross-functional events EVT-BUS-X-
+    CASE_NOTE_ADDED = "EVT-BUS-X-001"
+
     # Application events EVT-BUS-APP-
     APPLICATION_SUBMITTED = "EVT-BUS-APP-001"
     APPLICATION_ASSESSMENT_COMPLETED = "EVT-BUS-APP-002"
