@@ -12,6 +12,8 @@ from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
     ClaimType,
+    InquestOutcomeCode,
+    NumberOfCounselInstructed,
     POAType,
     ReasonCode,
 )
@@ -226,6 +228,93 @@ def test_execute_links_claim_evidence_to_created_claim():
     create_claim_port.link_evidence_to_claim.assert_called_once_with(
         claim.claim_id, command.claim_evidence_ids
     )
+
+
+def test_execute_links_inquest_outcomes_to_created_claim():
+    command = _make_command(
+        {
+            "claim_type": ClaimType.FINAL_BILL,
+            "poa_type": None,
+            "inquest_outcomes": [InquestOutcomeCode.NATURAL_CAUSES],
+            "cost_template_file_id": uuid.uuid4(),
+            "cost_template_file_name": "costs.xlsx",
+            "has_counsel_been_paid": True,
+            "has_alternative_funding": False,
+            "has_recovery_costs_awarded": True,
+            "financial_recovery_previous_pre_certificate_costs": Decimal("100.00"),
+            "financial_recovery_cost": Decimal("200.00"),
+            "financial_recovery_damages": Decimal("300.00"),
+            "financial_recovery_interest": Decimal("50.00"),
+            "paying_party": "Test Council",
+            "number_of_counsel_instructed": NumberOfCounselInstructed.TWO,
+        }
+    )
+    claim = _make_claim()
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+
+    use_case = _make_use_case(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(),
+        get_claims_for_application_port=_make_get_claims_port(),
+    )
+    use_case.execute(command)
+
+    create_claim_port.link_inquest_outcomes_to_claim.assert_called_once_with(
+        claim.claim_id, command.inquest_outcomes
+    )
+
+
+def test_execute_links_cost_template_to_created_claim():
+    file_id = uuid.uuid4()
+    command = _make_command(
+        {
+            "claim_type": ClaimType.FINAL_BILL,
+            "poa_type": None,
+            "inquest_outcomes": [InquestOutcomeCode.NATURAL_CAUSES],
+            "cost_template_file_id": file_id,
+            "cost_template_file_name": "final_bill_costs.xlsx",
+            "has_counsel_been_paid": True,
+            "has_alternative_funding": False,
+            "has_recovery_costs_awarded": True,
+            "financial_recovery_previous_pre_certificate_costs": Decimal("100.00"),
+            "financial_recovery_cost": Decimal("200.00"),
+            "financial_recovery_damages": Decimal("300.00"),
+            "financial_recovery_interest": Decimal("50.00"),
+            "paying_party": "Test Council",
+            "number_of_counsel_instructed": NumberOfCounselInstructed.TWO,
+        }
+    )
+    claim = _make_claim()
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+
+    use_case = _make_use_case(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(),
+        get_claims_for_application_port=_make_get_claims_port(),
+    )
+    use_case.execute(command)
+
+    create_claim_port.link_cost_template_to_claim.assert_called_once_with(
+        claim.claim_id, file_id, "final_bill_costs.xlsx"
+    )
+
+
+def test_execute_does_not_link_cost_template_for_payment_on_account():
+    command = _make_command()
+    claim = _make_claim()
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+
+    use_case = _make_use_case(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(),
+        get_claims_for_application_port=_make_get_claims_port(),
+    )
+    use_case.execute(command)
+
+    create_claim_port.link_cost_template_to_claim.assert_not_called()
 
 
 def test_execute_returns_created_claim():
@@ -593,6 +682,18 @@ def test_execute_does_not_raise_for_non_profit_cost_without_costs():
             "net": None,
             "gross": None,
             "vat_zero_total": None,
+            "inquest_outcomes": [InquestOutcomeCode.NATURAL_CAUSES],
+            "cost_template_file_id": uuid.uuid4(),
+            "cost_template_file_name": "costs.xlsx",
+            "has_counsel_been_paid": True,
+            "has_alternative_funding": False,
+            "has_recovery_costs_awarded": True,
+            "financial_recovery_previous_pre_certificate_costs": Decimal("100.00"),
+            "financial_recovery_cost": Decimal("200.00"),
+            "financial_recovery_damages": Decimal("300.00"),
+            "financial_recovery_interest": Decimal("50.00"),
+            "paying_party": "Test Council",
+            "number_of_counsel_instructed": NumberOfCounselInstructed.TWO,
         }
     )
     port = MagicMock(spec=CreateClaimPort)
@@ -1124,6 +1225,18 @@ def test_execute_does_not_auto_approve_non_payment_on_account_claim():
             "poa_type": None,
             "net": Decimal("50000.00"),
             "gross": Decimal("50000.00"),
+            "inquest_outcomes": [InquestOutcomeCode.NATURAL_CAUSES],
+            "cost_template_file_id": uuid.uuid4(),
+            "cost_template_file_name": "costs.xlsx",
+            "has_counsel_been_paid": True,
+            "has_alternative_funding": False,
+            "has_recovery_costs_awarded": True,
+            "financial_recovery_previous_pre_certificate_costs": Decimal("100.00"),
+            "financial_recovery_cost": Decimal("200.00"),
+            "financial_recovery_damages": Decimal("300.00"),
+            "financial_recovery_interest": Decimal("50.00"),
+            "paying_party": "Test Council",
+            "number_of_counsel_instructed": NumberOfCounselInstructed.TWO,
         }
     )
     claim = _make_claim()

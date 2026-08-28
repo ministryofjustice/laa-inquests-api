@@ -1,3 +1,4 @@
+import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -9,13 +10,17 @@ from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
     ClaimType,
+    InquestOutcomeCode,
+    NumberOfCounselInstructed,
     POAType,
     ReasonCode,
 )
 from app.models.claim.index import (
     Claim,
+    ClaimCostTemplate,
     ClaimDecision,
     ClaimEvidence,
+    ClaimInquestOutcome,
     DecisionReason,
 )
 
@@ -108,7 +113,57 @@ def test_200_get_claim_by_id_returns_expected_base_properties(
         "totalFundsRemainingAfterClaim",
         "claimEvidence",
         "claimDecision",
+        "inquestOutcomes",
+        "claimCostTemplateFile",
+        "hasCounselBeenPaid",
+        "hasAlternativeFunding",
+        "hasRecoveryCostsAwarded",
+        "financialRecoveryPreviousPreCertificateCosts",
+        "financialRecoveryCost",
+        "financialRecoveryDamages",
+        "financialRecoveryInterest",
+        "payingParty",
+        "numberOfCounselInstructed",
     }
+
+
+def test_200_get_claim_by_id_returns_final_bill_details(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    claim = Claim(
+        laa_reference=laa_reference,
+        claim_type_id=ClaimType.FINAL_BILL,
+        status_id=ClaimStatus.SUBMITTED,
+        submission_date=datetime.now(UTC),
+        has_counsel_been_paid=True,
+        has_alternative_funding=False,
+        has_recovery_costs_awarded=True,
+        financial_recovery_previous_pre_certificate_costs=Decimal("100.00"),
+        financial_recovery_cost=Decimal("200.00"),
+        financial_recovery_damages=Decimal("300.00"),
+        financial_recovery_interest=Decimal("50.00"),
+        paying_party="Test Council",
+        number_of_counsel_instructed=NumberOfCounselInstructed.TWO,
+    )
+    session.add(claim)
+    session.commit()
+    session.refresh(claim)
+
+    response = client.get(
+        f"/applications/{laa_reference}/claims/{claim.claim_id}",
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["hasCounselBeenPaid"] is True
+    assert body["hasAlternativeFunding"] is False
+    assert body["hasRecoveryCostsAwarded"] is True
+    assert body["financialRecoveryPreviousPreCertificateCosts"] == "100.00"
+    assert body["financialRecoveryCost"] == "200.00"
+    assert body["financialRecoveryDamages"] == "300.00"
+    assert body["financialRecoveryInterest"] == "50.00"
+    assert body["payingParty"] == "Test Council"
+    assert body["numberOfCounselInstructed"] == "2"
 
 
 def test_200_get_claim_by_id_includes_substantive_cost_limitation(
@@ -229,6 +284,93 @@ def test_200_get_claim_by_id_claim_decision_is_null_when_none_exists(
 
     assert response.status_code == 200
     assert response.json()["claimDecision"] is None
+
+
+def test_200_get_claim_by_id_includes_inquest_outcomes_as_enum_names(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    claim = _seed_claim(session, laa_reference, claim_type=ClaimType.FINAL_BILL)
+    session.add_all(
+        [
+            ClaimInquestOutcome(
+                claim_id=claim.claim_id,
+                inquest_outcome_id=InquestOutcomeCode.NARRATIVE_CONCLUSION,
+            ),
+            ClaimInquestOutcome(
+                claim_id=claim.claim_id,
+                inquest_outcome_id=InquestOutcomeCode.NATURAL_CAUSES,
+            ),
+        ]
+    )
+    session.commit()
+
+    response = client.get(
+        f"/applications/{laa_reference}/claims/{claim.claim_id}",
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+
+    assert response.status_code == 200
+    assert set(response.json()["inquestOutcomes"]) == {
+        "NARRATIVE_CONCLUSION",
+        "NATURAL_CAUSES",
+    }
+
+
+def test_200_get_claim_by_id_returns_empty_inquest_outcomes_when_none_linked(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    claim = _seed_claim(session, laa_reference)
+
+    response = client.get(
+        f"/applications/{laa_reference}/claims/{claim.claim_id}",
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["inquestOutcomes"] == []
+
+
+def test_200_get_claim_by_id_includes_cost_template_file(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    claim = _seed_claim(session, laa_reference, claim_type=ClaimType.FINAL_BILL)
+    file_id = uuid.uuid4()
+    session.add(
+        ClaimCostTemplate(
+            claim_id=claim.claim_id,
+            claim_cost_template_file_id=file_id,
+            claim_cost_template_file_name="final_bill_costs.xlsx",
+        )
+    )
+    session.commit()
+
+    response = client.get(
+        f"/applications/{laa_reference}/claims/{claim.claim_id}",
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+
+    assert response.status_code == 200
+    claim_cost_template_file = response.json()["claimCostTemplateFile"]
+    assert claim_cost_template_file["claimCostTemplateFileId"] == str(file_id)
+    assert (
+        claim_cost_template_file["claimCostTemplateFileName"] == "final_bill_costs.xlsx"
+    )
+
+
+def test_200_get_claim_by_id_returns_null_cost_template_file_when_none_linked(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    claim = _seed_claim(session, laa_reference)
+
+    response = client.get(
+        f"/applications/{laa_reference}/claims/{claim.claim_id}",
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["claimCostTemplateFile"] is None
 
 
 def test_404_when_claim_does_not_exist(session, client, auth_token):

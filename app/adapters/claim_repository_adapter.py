@@ -9,10 +9,17 @@ from app.domain.claim_evidence import ClaimEvidence as DomainClaimEvidence
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
 from app.logging_utils import build_log_extra
 from app.models.application.index import Application
-from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ReasonCode
+from app.models.claim.enums import (
+    ClaimDecisionStatus,
+    ClaimStatus,
+    InquestOutcomeCode,
+    ReasonCode,
+)
 from app.models.claim.index import (
     Claim,
+    ClaimCostTemplate,
     ClaimDecision,
+    ClaimInquestOutcome,
     DecisionReason,
 )
 from app.models.claim.index import (
@@ -69,6 +76,17 @@ class ClaimRepositoryAdapter(
             total_funds_remaining_after_claim=total_funds_remaining_after_claim,
             poa_type_id=claim.poa_type,
             claimant_id=claimant_id,
+            has_counsel_been_paid=claim.has_counsel_been_paid,
+            has_alternative_funding=claim.has_alternative_funding,
+            has_recovery_costs_awarded=claim.has_recovery_costs_awarded,
+            financial_recovery_previous_pre_certificate_costs=(
+                claim.financial_recovery_previous_pre_certificate_costs
+            ),
+            financial_recovery_cost=claim.financial_recovery_cost,
+            financial_recovery_damages=claim.financial_recovery_damages,
+            financial_recovery_interest=claim.financial_recovery_interest,
+            paying_party=claim.paying_party,
+            number_of_counsel_instructed=claim.number_of_counsel_instructed,
         )
         self.session.add(new_claim)
         self.session.flush()
@@ -100,6 +118,50 @@ class ClaimRepositoryAdapter(
                 event="claim_repository_evidence_link_completed",
                 claim_id=claim_id,
                 evidence_count=len(evidence_ids),
+            ),
+        )
+
+    def link_inquest_outcomes_to_claim(
+        self,
+        claim_id: int,
+        inquest_outcomes: list[InquestOutcomeCode],
+    ) -> None:
+        for inquest_outcome in inquest_outcomes:
+            self.session.add(
+                ClaimInquestOutcome(
+                    claim_id=claim_id,
+                    inquest_outcome_id=inquest_outcome,
+                )
+            )
+        self.session.flush()
+        logger.info(
+            "Claim inquest outcomes linked in repository",
+            extra=build_log_extra(
+                event="claim_repository_inquest_outcome_link_completed",
+                claim_id=claim_id,
+                inquest_outcome_count=len(inquest_outcomes),
+            ),
+        )
+
+    def link_cost_template_to_claim(
+        self,
+        claim_id: int,
+        file_id: uuid.UUID,
+        file_name: str,
+    ) -> None:
+        self.session.add(
+            ClaimCostTemplate(
+                claim_id=claim_id,
+                claim_cost_template_file_id=file_id,
+                claim_cost_template_file_name=file_name,
+            )
+        )
+        self.session.flush()
+        logger.info(
+            "Claim cost template linked in repository",
+            extra=build_log_extra(
+                event="claim_repository_cost_template_link_completed",
+                claim_id=claim_id,
             ),
         )
 

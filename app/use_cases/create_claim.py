@@ -1,6 +1,6 @@
 import logging
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -20,6 +20,8 @@ from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
     ClaimType,
+    InquestOutcomeCode,
+    NumberOfCounselInstructed,
     POAType,
     ReasonCode,
 )
@@ -53,6 +55,18 @@ class CreateClaimCommand:
     vat_zero_total: Decimal | None
     claimant_id: str | None
     claim_evidence_ids: list[uuid.UUID]
+    inquest_outcomes: list[InquestOutcomeCode] = field(default_factory=list)
+    cost_template_file_id: uuid.UUID | None = None
+    cost_template_file_name: str | None = None
+    has_counsel_been_paid: bool | None = None
+    has_alternative_funding: bool | None = None
+    has_recovery_costs_awarded: bool | None = None
+    financial_recovery_previous_pre_certificate_costs: Decimal | None = None
+    financial_recovery_cost: Decimal | None = None
+    financial_recovery_damages: Decimal | None = None
+    financial_recovery_interest: Decimal | None = None
+    paying_party: str | None = None
+    number_of_counsel_instructed: NumberOfCounselInstructed | None = None
 
 
 @dataclass(frozen=True)
@@ -113,6 +127,20 @@ class CreateClaimUseCase:
                 net=command.net,
                 gross=command.gross,
                 vat_zero_total=command.vat_zero_total,
+                inquest_outcomes=tuple(command.inquest_outcomes),
+                cost_template_file_id=command.cost_template_file_id,
+                cost_template_file_name=command.cost_template_file_name,
+                has_counsel_been_paid=command.has_counsel_been_paid,
+                has_alternative_funding=command.has_alternative_funding,
+                has_recovery_costs_awarded=command.has_recovery_costs_awarded,
+                financial_recovery_previous_pre_certificate_costs=(
+                    command.financial_recovery_previous_pre_certificate_costs
+                ),
+                financial_recovery_cost=command.financial_recovery_cost,
+                financial_recovery_damages=command.financial_recovery_damages,
+                financial_recovery_interest=command.financial_recovery_interest,
+                paying_party=command.paying_party,
+                number_of_counsel_instructed=command.number_of_counsel_instructed,
             )
             validated_claim.validate_total_claim_cost()
         except ClaimValidationError as e:
@@ -138,6 +166,20 @@ class CreateClaimUseCase:
             self.create_claim_port.link_evidence_to_claim(
                 claim.claim_id, command.claim_evidence_ids
             )
+
+            self.create_claim_port.link_inquest_outcomes_to_claim(
+                claim.claim_id, command.inquest_outcomes
+            )
+
+            if (
+                command.cost_template_file_id is not None
+                and command.cost_template_file_name is not None
+            ):
+                self.create_claim_port.link_cost_template_to_claim(
+                    claim.claim_id,
+                    command.cost_template_file_id,
+                    command.cost_template_file_name,
+                )
 
             self.create_history_event_port.create_history_event(
                 event_reference=HistoryEventReference.CLAIM_SUBMITTED,

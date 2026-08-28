@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -7,7 +8,13 @@ from decimal import Decimal
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
 from app.domain.claim_rejection import ClaimRejection, ClaimRejectionReason
 from app.domain.constants.claim_messages import (
+    COST_TEMPLATE_FILE_NOT_ALLOWED_MESSAGE,
+    FINAL_BILL_DETAILS_NOT_ALLOWED_MESSAGE,
+    INQUEST_OUTCOMES_NOT_ALLOWED_MESSAGE,
+    MISSING_COST_TEMPLATE_FILE_MESSAGE,
+    MISSING_FINAL_BILL_DETAILS_MESSAGE,
     MISSING_GROSS_MESSAGE,
+    MISSING_INQUEST_OUTCOMES_MESSAGE,
     MISSING_NON_PROFIT_COST_TOTAL_MESSAGE,
     MISSING_POA_TYPE_MESSAGE,
     MISSING_TOTAL_MESSAGE,
@@ -28,8 +35,12 @@ from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
     ClaimType,
+    InquestOutcomeCode,
+    NumberOfCounselInstructed,
     POAType,
 )
+
+INQUEST_OUTCOME_CLAIM_TYPES = frozenset({ClaimType.FINAL_BILL, ClaimType.NIL_BILL})
 
 
 def _as_utc(dt: datetime) -> datetime:
@@ -108,9 +119,24 @@ class Claim:
     net: Decimal | None
     gross: Decimal | None
     vat_zero_total: Decimal | None
+    inquest_outcomes: tuple[InquestOutcomeCode, ...] = ()
+    cost_template_file_id: uuid.UUID | None = None
+    cost_template_file_name: str | None = None
+    has_counsel_been_paid: bool | None = None
+    has_alternative_funding: bool | None = None
+    has_recovery_costs_awarded: bool | None = None
+    financial_recovery_previous_pre_certificate_costs: Decimal | None = None
+    financial_recovery_cost: Decimal | None = None
+    financial_recovery_damages: Decimal | None = None
+    financial_recovery_interest: Decimal | None = None
+    paying_party: str | None = None
+    number_of_counsel_instructed: NumberOfCounselInstructed | None = None
 
     def __post_init__(self) -> None:
         self._validate_claim_type_poa_combination()
+        self._validate_inquest_outcomes()
+        self._validate_cost_template_file()
+        self._validate_final_bill_details()
 
     def validate_total_claim_cost(self) -> None:
         self._validate_totals_consistency()
@@ -312,6 +338,72 @@ class Claim:
             raise ClaimValidationError(
                 ClaimErrorCode.POA_TYPE_NOT_ALLOWED_FOR_NON_PAYMENT_ON_ACCOUNT,
                 POA_NOT_ALLOWED_MESSAGE,
+            )
+
+    def _validate_inquest_outcomes(self) -> None:
+        requires_inquest_outcomes = self.claim_type in INQUEST_OUTCOME_CLAIM_TYPES
+
+        if requires_inquest_outcomes and not self.inquest_outcomes:
+            raise ClaimValidationError(
+                ClaimErrorCode.MISSING_INQUEST_OUTCOMES,
+                MISSING_INQUEST_OUTCOMES_MESSAGE,
+            )
+
+        if not requires_inquest_outcomes and self.inquest_outcomes:
+            raise ClaimValidationError(
+                ClaimErrorCode.INQUEST_OUTCOMES_NOT_ALLOWED,
+                INQUEST_OUTCOMES_NOT_ALLOWED_MESSAGE,
+            )
+
+    def _validate_cost_template_file(self) -> None:
+        requires_cost_template_file = self.claim_type in INQUEST_OUTCOME_CLAIM_TYPES
+        has_cost_template_file = (
+            self.cost_template_file_id is not None
+            and self.cost_template_file_name is not None
+        )
+
+        if requires_cost_template_file and not has_cost_template_file:
+            raise ClaimValidationError(
+                ClaimErrorCode.MISSING_COST_TEMPLATE_FILE,
+                MISSING_COST_TEMPLATE_FILE_MESSAGE,
+            )
+
+        if not requires_cost_template_file and has_cost_template_file:
+            raise ClaimValidationError(
+                ClaimErrorCode.COST_TEMPLATE_FILE_NOT_ALLOWED,
+                COST_TEMPLATE_FILE_NOT_ALLOWED_MESSAGE,
+            )
+
+    def _validate_final_bill_details(self) -> None:
+        requires_final_bill_details = self.claim_type in INQUEST_OUTCOME_CLAIM_TYPES
+        final_bill_detail_values = (
+            self.has_counsel_been_paid,
+            self.has_alternative_funding,
+            self.has_recovery_costs_awarded,
+            self.financial_recovery_previous_pre_certificate_costs,
+            self.financial_recovery_cost,
+            self.financial_recovery_damages,
+            self.financial_recovery_interest,
+            self.paying_party,
+            self.number_of_counsel_instructed,
+        )
+        has_any_final_bill_detail = any(
+            value is not None for value in final_bill_detail_values
+        )
+        has_all_final_bill_details = all(
+            value is not None for value in final_bill_detail_values
+        )
+
+        if requires_final_bill_details and not has_all_final_bill_details:
+            raise ClaimValidationError(
+                ClaimErrorCode.MISSING_FINAL_BILL_DETAILS,
+                MISSING_FINAL_BILL_DETAILS_MESSAGE,
+            )
+
+        if not requires_final_bill_details and has_any_final_bill_detail:
+            raise ClaimValidationError(
+                ClaimErrorCode.FINAL_BILL_DETAILS_NOT_ALLOWED,
+                FINAL_BILL_DETAILS_NOT_ALLOWED_MESSAGE,
             )
 
     def _validate_profit_cost(self) -> None:

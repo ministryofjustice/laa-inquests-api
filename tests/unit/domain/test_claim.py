@@ -1,3 +1,4 @@
+import uuid
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import MagicMock
@@ -9,7 +10,13 @@ from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
 from app.domain.claim_rejection import ClaimRejectionReason
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
-from app.models.claim.enums import ClaimStatus, ClaimType, POAType
+from app.models.claim.enums import (
+    ClaimStatus,
+    ClaimType,
+    InquestOutcomeCode,
+    NumberOfCounselInstructed,
+    POAType,
+)
 
 
 def test_total_claim_amount_returns_vat_zero_when_present():
@@ -189,6 +196,18 @@ def test_no_validation_when_poa_type_is_none():
         net=None,
         gross=None,
         vat_zero_total=None,
+        inquest_outcomes=(InquestOutcomeCode.NATURAL_CAUSES,),
+        cost_template_file_id=uuid.uuid4(),
+        cost_template_file_name="costs.xlsx",
+        has_counsel_been_paid=True,
+        has_alternative_funding=False,
+        has_recovery_costs_awarded=True,
+        financial_recovery_previous_pre_certificate_costs=Decimal("100.00"),
+        financial_recovery_cost=Decimal("200.00"),
+        financial_recovery_damages=Decimal("300.00"),
+        financial_recovery_interest=Decimal("50.00"),
+        paying_party="Test Council",
+        number_of_counsel_instructed=NumberOfCounselInstructed.TWO,
     )
     claim.validate_total_claim_cost()
 
@@ -218,6 +237,198 @@ def test_raises_when_non_payment_on_account_with_poa_type():
         exc_info.value.code
         == ClaimErrorCode.POA_TYPE_NOT_ALLOWED_FOR_NON_PAYMENT_ON_ACCOUNT
     )
+
+
+def test_raises_when_final_bill_has_no_inquest_outcomes():
+    with pytest.raises(ClaimValidationError) as exc_info:
+        Claim(
+            claim_type=ClaimType.FINAL_BILL,
+            poa_type=None,
+            net=None,
+            gross=None,
+            vat_zero_total=None,
+        )
+    assert exc_info.value.code == ClaimErrorCode.MISSING_INQUEST_OUTCOMES
+
+
+def test_raises_when_nil_bill_has_no_inquest_outcomes():
+    with pytest.raises(ClaimValidationError) as exc_info:
+        Claim(
+            claim_type=ClaimType.NIL_BILL,
+            poa_type=None,
+            net=None,
+            gross=None,
+            vat_zero_total=None,
+        )
+    assert exc_info.value.code == ClaimErrorCode.MISSING_INQUEST_OUTCOMES
+
+
+def test_raises_when_payment_on_account_has_inquest_outcomes():
+    with pytest.raises(ClaimValidationError) as exc_info:
+        Claim(
+            claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+            poa_type=POAType.PROFIT_COST,
+            net=None,
+            gross=None,
+            vat_zero_total=None,
+            inquest_outcomes=(InquestOutcomeCode.NATURAL_CAUSES,),
+        )
+    assert exc_info.value.code == ClaimErrorCode.INQUEST_OUTCOMES_NOT_ALLOWED
+
+
+def test_valid_final_bill_with_multiple_inquest_outcomes():
+    claim = Claim(
+        claim_type=ClaimType.NIL_BILL,
+        poa_type=None,
+        net=None,
+        gross=None,
+        vat_zero_total=None,
+        inquest_outcomes=(
+            InquestOutcomeCode.NARRATIVE_CONCLUSION,
+            InquestOutcomeCode.NATURAL_CAUSES,
+        ),
+        cost_template_file_id=uuid.uuid4(),
+        cost_template_file_name="costs.xlsx",
+        has_counsel_been_paid=True,
+        has_alternative_funding=False,
+        has_recovery_costs_awarded=True,
+        financial_recovery_previous_pre_certificate_costs=Decimal("100.00"),
+        financial_recovery_cost=Decimal("200.00"),
+        financial_recovery_damages=Decimal("300.00"),
+        financial_recovery_interest=Decimal("50.00"),
+        paying_party="Test Council",
+        number_of_counsel_instructed=NumberOfCounselInstructed.TWO,
+    )
+    claim.validate_total_claim_cost()
+
+
+def test_raises_when_final_bill_has_no_cost_template_file():
+    with pytest.raises(ClaimValidationError) as exc_info:
+        Claim(
+            claim_type=ClaimType.FINAL_BILL,
+            poa_type=None,
+            net=None,
+            gross=None,
+            vat_zero_total=None,
+            inquest_outcomes=(InquestOutcomeCode.NATURAL_CAUSES,),
+        )
+    assert exc_info.value.code == ClaimErrorCode.MISSING_COST_TEMPLATE_FILE
+
+
+def test_raises_when_nil_bill_has_no_cost_template_file():
+    with pytest.raises(ClaimValidationError) as exc_info:
+        Claim(
+            claim_type=ClaimType.NIL_BILL,
+            poa_type=None,
+            net=None,
+            gross=None,
+            vat_zero_total=None,
+            inquest_outcomes=(InquestOutcomeCode.OPEN_CONCLUSION,),
+        )
+    assert exc_info.value.code == ClaimErrorCode.MISSING_COST_TEMPLATE_FILE
+
+
+def test_raises_when_payment_on_account_has_cost_template_file():
+    with pytest.raises(ClaimValidationError) as exc_info:
+        Claim(
+            claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+            poa_type=POAType.PROFIT_COST,
+            net=None,
+            gross=None,
+            vat_zero_total=None,
+            cost_template_file_id=uuid.uuid4(),
+            cost_template_file_name="costs.xlsx",
+        )
+    assert exc_info.value.code == ClaimErrorCode.COST_TEMPLATE_FILE_NOT_ALLOWED
+
+
+def test_raises_when_final_bill_has_only_cost_template_file_name():
+    with pytest.raises(ClaimValidationError) as exc_info:
+        Claim(
+            claim_type=ClaimType.FINAL_BILL,
+            poa_type=None,
+            net=None,
+            gross=None,
+            vat_zero_total=None,
+            inquest_outcomes=(InquestOutcomeCode.NATURAL_CAUSES,),
+            cost_template_file_id=None,
+            cost_template_file_name="costs.xlsx",
+        )
+    assert exc_info.value.code == ClaimErrorCode.MISSING_COST_TEMPLATE_FILE
+
+
+def test_raises_when_final_bill_missing_final_bill_details():
+    with pytest.raises(ClaimValidationError) as exc_info:
+        Claim(
+            claim_type=ClaimType.FINAL_BILL,
+            poa_type=None,
+            net=None,
+            gross=None,
+            vat_zero_total=None,
+            inquest_outcomes=(InquestOutcomeCode.NATURAL_CAUSES,),
+            cost_template_file_id=uuid.uuid4(),
+            cost_template_file_name="costs.xlsx",
+        )
+    assert exc_info.value.code == ClaimErrorCode.MISSING_FINAL_BILL_DETAILS
+
+
+def test_raises_when_nil_bill_missing_final_bill_details():
+    with pytest.raises(ClaimValidationError) as exc_info:
+        Claim(
+            claim_type=ClaimType.NIL_BILL,
+            poa_type=None,
+            net=None,
+            gross=None,
+            vat_zero_total=None,
+            inquest_outcomes=(InquestOutcomeCode.OPEN_CONCLUSION,),
+            cost_template_file_id=uuid.uuid4(),
+            cost_template_file_name="costs.xlsx",
+        )
+    assert exc_info.value.code == ClaimErrorCode.MISSING_FINAL_BILL_DETAILS
+
+
+def test_raises_when_payment_on_account_has_final_bill_details():
+    with pytest.raises(ClaimValidationError) as exc_info:
+        Claim(
+            claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+            poa_type=POAType.PROFIT_COST,
+            net=None,
+            gross=None,
+            vat_zero_total=None,
+            has_counsel_been_paid=True,
+            has_alternative_funding=False,
+            has_recovery_costs_awarded=True,
+            financial_recovery_previous_pre_certificate_costs=Decimal("100.00"),
+            financial_recovery_cost=Decimal("200.00"),
+            financial_recovery_damages=Decimal("300.00"),
+            financial_recovery_interest=Decimal("50.00"),
+            paying_party="Test Council",
+            number_of_counsel_instructed=NumberOfCounselInstructed.TWO,
+        )
+    assert exc_info.value.code == ClaimErrorCode.FINAL_BILL_DETAILS_NOT_ALLOWED
+
+
+def test_valid_final_bill_with_final_bill_details():
+    claim = Claim(
+        claim_type=ClaimType.FINAL_BILL,
+        poa_type=None,
+        net=None,
+        gross=None,
+        vat_zero_total=None,
+        inquest_outcomes=(InquestOutcomeCode.NATURAL_CAUSES,),
+        cost_template_file_id=uuid.uuid4(),
+        cost_template_file_name="costs.xlsx",
+        has_counsel_been_paid=True,
+        has_alternative_funding=False,
+        has_recovery_costs_awarded=True,
+        financial_recovery_previous_pre_certificate_costs=Decimal("100.00"),
+        financial_recovery_cost=Decimal("200.00"),
+        financial_recovery_damages=Decimal("300.00"),
+        financial_recovery_interest=Decimal("50.00"),
+        paying_party="Test Council",
+        number_of_counsel_instructed=NumberOfCounselInstructed.TWO,
+    )
+    claim.validate_total_claim_cost()
 
 
 def test_should_auto_reject_for_limit_when_total_exceeds_limit():
@@ -837,6 +1048,18 @@ def test_is_not_eligible_for_auto_approval_when_claim_is_not_payment_on_account(
         net=Decimal("50000.00"),
         gross=Decimal("50000.00"),
         vat_zero_total=None,
+        inquest_outcomes=(InquestOutcomeCode.NATURAL_CAUSES,),
+        cost_template_file_id=uuid.uuid4(),
+        cost_template_file_name="costs.xlsx",
+        has_counsel_been_paid=True,
+        has_alternative_funding=False,
+        has_recovery_costs_awarded=True,
+        financial_recovery_previous_pre_certificate_costs=Decimal("100.00"),
+        financial_recovery_cost=Decimal("200.00"),
+        financial_recovery_damages=Decimal("300.00"),
+        financial_recovery_interest=Decimal("50.00"),
+        paying_party="Test Council",
+        number_of_counsel_instructed=NumberOfCounselInstructed.TWO,
     )
     application = _make_application_with_certificate(start=None)
     application.status = "LIVE"

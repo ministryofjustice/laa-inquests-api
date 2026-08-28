@@ -19,3 +19,21 @@ MAX_POA_CLAIMS_EXCEEDED_MESSAGE = "Maximum number of POA claims exceeded"
 APPLICATION_NOT_GRANTED_MESSAGE = (
     "Claims may only be submitted for applications that have been granted"
 )
+MISSING_INQUEST_OUTCOMES_MESSAGE = (
+    "At least one inquest outcome is required for final bill and nil bill claims"
+)
+INQUEST_OUTCOMES_NOT_ALLOWED_MESSAGE = (
+    "Inquest outcomes may only be provided for final bill and nil bill claims"
+)
+MISSING_COST_TEMPLATE_FILE_MESSAGE = (
+    "A cost template file is required for final bill and nil bill claims"
+)
+COST_TEMPLATE_FILE_NOT_ALLOWED_MESSAGE = (
+    "A cost template file may only be provided for final bill and nil bill claims"
+)
+MISSING_FINAL_BILL_DETAILS_MESSAGE = (
+    "All final bill details are required for final bill and nil bill claims"
+)
+FINAL_BILL_DETAILS_NOT_ALLOWED_MESSAGE = (
+    "Final bill details may only be provided for final bill and nil bill claims"
+)

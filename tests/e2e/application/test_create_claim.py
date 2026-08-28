@@ -6,8 +6,20 @@ from sqlmodel import select
 
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application, Provider
-from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ClaimType
-from app.models.claim.index import Claim, ClaimDecision, ClaimEvidence, DecisionReason
+from app.models.claim.enums import (
+    ClaimDecisionStatus,
+    ClaimStatus,
+    ClaimType,
+    NumberOfCounselInstructed,
+)
+from app.models.claim.index import (
+    Claim,
+    ClaimCostTemplate,
+    ClaimDecision,
+    ClaimEvidence,
+    ClaimInquestOutcome,
+    DecisionReason,
+)
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.models.notifications.enums import NotificationType
@@ -268,6 +280,20 @@ def test_201_create_claim_deducts_new_claim_amount_from_total_funds_available_wh
                 "claimType": "FINAL_BILL",
                 "poaTypeId": None,
                 "claimantId": "claimant@provider.com",
+                "inquestOutcomes": ["NATURAL_CAUSES"],
+                "claimCostTemplateFile": {
+                    "claimCostTemplateFileId": str(uuid.uuid4()),
+                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                },
+                "hasCounselBeenPaid": True,
+                "hasAlternativeFunding": False,
+                "hasRecoveryCostsAwarded": True,
+                "financialRecoveryPreviousPreCertificateCosts": 100.00,
+                "financialRecoveryCost": 200.00,
+                "financialRecoveryDamages": 300.00,
+                "financialRecoveryInterest": 50.00,
+                "payingParty": "Test Council",
+                "numberOfCounselInstructed": "2",
             }
         ),
         headers={
@@ -362,6 +388,20 @@ def test_201_create_claim_without_optional_fields(session, client, auth_token):
                 "claimType": "FINAL_BILL",
                 "poaTypeId": None,
                 "claimantId": "claimant@provider.com",
+                "inquestOutcomes": ["NATURAL_CAUSES"],
+                "claimCostTemplateFile": {
+                    "claimCostTemplateFileId": str(uuid.uuid4()),
+                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                },
+                "hasCounselBeenPaid": True,
+                "hasAlternativeFunding": False,
+                "hasRecoveryCostsAwarded": True,
+                "financialRecoveryPreviousPreCertificateCosts": 100.00,
+                "financialRecoveryCost": 200.00,
+                "financialRecoveryDamages": 300.00,
+                "financialRecoveryInterest": 50.00,
+                "payingParty": "Test Council",
+                "numberOfCounselInstructed": "2",
             }
         ),
         headers={
@@ -477,6 +517,304 @@ def test_422_non_payment_on_account_with_poa_type_id(session, client, auth_token
     )
 
 
+def test_201_create_final_bill_claim_persists_inquest_outcome_links(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "claimType": "FINAL_BILL",
+                "poaTypeId": None,
+                "inquestOutcomes": ["NARRATIVE_CONCLUSION", "NATURAL_CAUSES"],
+                "claimCostTemplateFile": {
+                    "claimCostTemplateFileId": str(uuid.uuid4()),
+                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                },
+                "hasCounselBeenPaid": True,
+                "hasAlternativeFunding": False,
+                "hasRecoveryCostsAwarded": True,
+                "financialRecoveryPreviousPreCertificateCosts": 100.00,
+                "financialRecoveryCost": 200.00,
+                "financialRecoveryDamages": 300.00,
+                "financialRecoveryInterest": 50.00,
+                "payingParty": "Test Council",
+                "numberOfCounselInstructed": "2",
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    claim_id = response.json()["claimId"]
+
+    stored = session.exec(
+        select(ClaimInquestOutcome).where(ClaimInquestOutcome.claim_id == claim_id)
+    ).all()
+    assert {row.inquest_outcome_id.name for row in stored} == {
+        "NARRATIVE_CONCLUSION",
+        "NATURAL_CAUSES",
+    }
+
+
+def test_201_create_nil_bill_claim_persists_inquest_outcome_links(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "claimType": "NIL_BILL",
+                "poaTypeId": None,
+                "inquestOutcomes": ["OPEN_CONCLUSION"],
+                "claimCostTemplateFile": {
+                    "claimCostTemplateFileId": str(uuid.uuid4()),
+                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                },
+                "hasCounselBeenPaid": True,
+                "hasAlternativeFunding": False,
+                "hasRecoveryCostsAwarded": True,
+                "financialRecoveryPreviousPreCertificateCosts": 100.00,
+                "financialRecoveryCost": 200.00,
+                "financialRecoveryDamages": 300.00,
+                "financialRecoveryInterest": 50.00,
+                "payingParty": "Test Council",
+                "numberOfCounselInstructed": "2",
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    claim_id = response.json()["claimId"]
+
+    stored_claim = session.get(Claim, claim_id)
+    assert stored_claim.claim_type_id == ClaimType.NIL_BILL
+
+    stored = session.exec(
+        select(ClaimInquestOutcome).where(ClaimInquestOutcome.claim_id == claim_id)
+    ).all()
+    assert {row.inquest_outcome_id.name for row in stored} == {"OPEN_CONCLUSION"}
+
+
+def test_422_final_bill_claim_without_inquest_outcomes(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "claimType": "FINAL_BILL",
+                "poaTypeId": None,
+                "inquestOutcomes": [],
+                "claimCostTemplateFile": {
+                    "claimCostTemplateFileId": str(uuid.uuid4()),
+                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                },
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "MISSING_INQUEST_OUTCOMES"
+
+
+def test_422_payment_on_account_claim_with_inquest_outcomes(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body({"inquestOutcomes": ["NATURAL_CAUSES"]}),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "INQUEST_OUTCOMES_NOT_ALLOWED"
+
+
+def test_422_create_claim_with_invalid_inquest_outcome_name(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "claimType": "FINAL_BILL",
+                "poaTypeId": None,
+                "inquestOutcomes": ["NOT_A_REAL_OUTCOME"],
+                "claimCostTemplateFile": {
+                    "claimCostTemplateFileId": str(uuid.uuid4()),
+                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                },
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_201_create_final_bill_claim_persists_cost_template_file(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    file_id = uuid.uuid4()
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "claimType": "FINAL_BILL",
+                "poaTypeId": None,
+                "inquestOutcomes": ["NATURAL_CAUSES"],
+                "claimCostTemplateFile": {
+                    "claimCostTemplateFileId": str(file_id),
+                    "claimCostTemplateFileName": "final_bill_costs.xlsx",
+                },
+                "hasCounselBeenPaid": True,
+                "hasAlternativeFunding": False,
+                "hasRecoveryCostsAwarded": True,
+                "financialRecoveryPreviousPreCertificateCosts": 100.00,
+                "financialRecoveryCost": 200.00,
+                "financialRecoveryDamages": 300.00,
+                "financialRecoveryInterest": 50.00,
+                "payingParty": "Test Council",
+                "numberOfCounselInstructed": "2",
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    claim_id = response.json()["claimId"]
+
+    stored = session.exec(
+        select(ClaimCostTemplate).where(ClaimCostTemplate.claim_id == claim_id)
+    ).all()
+    assert len(stored) == 1
+    assert stored[0].claim_cost_template_file_id == file_id
+    assert stored[0].claim_cost_template_file_name == "final_bill_costs.xlsx"
+
+
+def test_201_create_nil_bill_claim_persists_cost_template_file(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    file_id = uuid.uuid4()
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "claimType": "NIL_BILL",
+                "poaTypeId": None,
+                "inquestOutcomes": ["OPEN_CONCLUSION"],
+                "claimCostTemplateFile": {
+                    "claimCostTemplateFileId": str(file_id),
+                    "claimCostTemplateFileName": "nil_bill_costs.xls",
+                },
+                "hasCounselBeenPaid": True,
+                "hasAlternativeFunding": False,
+                "hasRecoveryCostsAwarded": True,
+                "financialRecoveryPreviousPreCertificateCosts": 100.00,
+                "financialRecoveryCost": 200.00,
+                "financialRecoveryDamages": 300.00,
+                "financialRecoveryInterest": 50.00,
+                "payingParty": "Test Council",
+                "numberOfCounselInstructed": "2",
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    claim_id = response.json()["claimId"]
+
+    stored = session.exec(
+        select(ClaimCostTemplate).where(ClaimCostTemplate.claim_id == claim_id)
+    ).all()
+    assert len(stored) == 1
+    assert stored[0].claim_cost_template_file_id == file_id
+    assert stored[0].claim_cost_template_file_name == "nil_bill_costs.xls"
+
+
+def test_422_final_bill_claim_without_cost_template_file(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "claimType": "FINAL_BILL",
+                "poaTypeId": None,
+                "inquestOutcomes": ["NATURAL_CAUSES"],
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "MISSING_COST_TEMPLATE_FILE"
+
+
+def test_422_payment_on_account_claim_with_cost_template_file(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "claimCostTemplateFile": {
+                    "claimCostTemplateFileId": str(uuid.uuid4()),
+                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                }
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "COST_TEMPLATE_FILE_NOT_ALLOWED"
+
+
 def test_422_profit_cost_with_no_cost_fields(session, client, auth_token):
     laa_reference = session.exec(select(Application)).first().laa_reference
 
@@ -497,6 +835,110 @@ def test_422_profit_cost_with_no_cost_fields(session, client, auth_token):
 
     assert response.status_code == 422
     assert response.json()["detail"]["errorCode"] == "MISSING_TOTAL_CLAIM_COST"
+
+
+def test_201_create_final_bill_claim_persists_final_bill_details(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "claimType": "FINAL_BILL",
+                "poaTypeId": None,
+                "inquestOutcomes": ["NATURAL_CAUSES"],
+                "claimCostTemplateFile": {
+                    "claimCostTemplateFileId": str(uuid.uuid4()),
+                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                },
+                "hasCounselBeenPaid": True,
+                "hasAlternativeFunding": False,
+                "hasRecoveryCostsAwarded": True,
+                "financialRecoveryPreviousPreCertificateCosts": 100.00,
+                "financialRecoveryCost": 200.00,
+                "financialRecoveryDamages": 300.00,
+                "financialRecoveryInterest": 50.00,
+                "payingParty": "Test Council",
+                "numberOfCounselInstructed": "2",
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    claim_id = response.json()["claimId"]
+
+    stored = session.get(Claim, claim_id)
+    assert stored.has_counsel_been_paid is True
+    assert stored.has_alternative_funding is False
+    assert stored.has_recovery_costs_awarded is True
+    assert stored.financial_recovery_previous_pre_certificate_costs == Decimal("100.00")
+    assert stored.financial_recovery_cost == Decimal("200.00")
+    assert stored.financial_recovery_damages == Decimal("300.00")
+    assert stored.financial_recovery_interest == Decimal("50.00")
+    assert stored.paying_party == "Test Council"
+    assert stored.number_of_counsel_instructed == NumberOfCounselInstructed.TWO
+
+
+def test_422_final_bill_claim_without_final_bill_details(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "claimType": "FINAL_BILL",
+                "poaTypeId": None,
+                "inquestOutcomes": ["NATURAL_CAUSES"],
+                "claimCostTemplateFile": {
+                    "claimCostTemplateFileId": str(uuid.uuid4()),
+                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                },
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "MISSING_FINAL_BILL_DETAILS"
+
+
+def test_422_payment_on_account_claim_with_final_bill_details(
+    session, client, auth_token
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "hasCounselBeenPaid": True,
+                "hasAlternativeFunding": False,
+                "hasRecoveryCostsAwarded": True,
+                "financialRecoveryPreviousPreCertificateCosts": 100.00,
+                "financialRecoveryCost": 200.00,
+                "financialRecoveryDamages": 300.00,
+                "financialRecoveryInterest": 50.00,
+                "payingParty": "Test Council",
+                "numberOfCounselInstructed": "2",
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "FINAL_BILL_DETAILS_NOT_ALLOWED"
 
 
 def test_422_profit_cost_with_net_higher_than_gross(session, client, auth_token):
