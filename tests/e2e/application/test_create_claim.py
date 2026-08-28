@@ -39,6 +39,57 @@ def _make_request_body(overrides=None):
     return body
 
 
+def _make_final_bill_body(overrides=None):
+    body = _make_request_body(
+        {
+            "claimType": "FINAL_BILL",
+            "poaTypeId": None,
+            "totalProfitCostNet": None,
+            "totalProfitCostGross": 1200,
+            "inquestOutcomes": ["NATURAL_CAUSES"],
+            "claimCostTemplateFile": {
+                "claimCostTemplateFileId": str(uuid.uuid4()),
+                "claimCostTemplateFileName": "final_bill_costs.xlsx",
+            },
+            "hasCounselBeenPaid": True,
+            "hasAlternativeFunding": False,
+            "hasRecoveryCostsAwarded": True,
+            "financialRecoveryPreviousPreCertificateCosts": 100.00,
+            "financialRecoveryCost": 200.00,
+            "financialRecoveryDamages": 300.00,
+            "financialRecoveryInterest": 50.00,
+            "payingParty": "Test Council",
+            "numberOfCounselInstructed": "2",
+        }
+    )
+    if overrides is not None:
+        body.update(overrides)
+    return body
+
+
+def _make_nil_bill_body(overrides=None):
+    body = _make_request_body(
+        {
+            "claimType": "NIL_BILL",
+            "poaTypeId": None,
+            "totalProfitCostNet": None,
+            "totalProfitCostGross": 0,
+            "inquestOutcomes": ["OPEN_CONCLUSION"],
+            "hasAlternativeFunding": False,
+            "hasRecoveryCostsAwarded": True,
+            "financialRecoveryPreviousPreCertificateCosts": 100.00,
+            "financialRecoveryCost": 200.00,
+            "financialRecoveryDamages": 300.00,
+            "financialRecoveryInterest": 50.00,
+            "payingParty": "Test Council",
+        }
+    )
+    del body["claimEvidenceIds"]
+    if overrides is not None:
+        body.update(overrides)
+    return body
+
+
 def _seed_approved_claim(
     session,
     laa_reference: int,
@@ -280,6 +331,7 @@ def test_201_create_claim_deducts_new_claim_amount_from_total_funds_available_wh
                 "claimType": "FINAL_BILL",
                 "poaTypeId": None,
                 "claimantId": "claimant@provider.com",
+                "totalProfitCostNet": None,
                 "inquestOutcomes": ["NATURAL_CAUSES"],
                 "claimCostTemplateFile": {
                     "claimCostTemplateFileId": str(uuid.uuid4()),
@@ -388,6 +440,7 @@ def test_201_create_claim_without_optional_fields(session, client, auth_token):
                 "claimType": "FINAL_BILL",
                 "poaTypeId": None,
                 "claimantId": "claimant@provider.com",
+                "totalProfitCostNet": None,
                 "inquestOutcomes": ["NATURAL_CAUSES"],
                 "claimCostTemplateFile": {
                     "claimCostTemplateFileId": str(uuid.uuid4()),
@@ -528,6 +581,7 @@ def test_201_create_final_bill_claim_persists_inquest_outcome_links(
             {
                 "claimType": "FINAL_BILL",
                 "poaTypeId": None,
+                "totalProfitCostNet": None,
                 "inquestOutcomes": ["NARRATIVE_CONCLUSION", "NATURAL_CAUSES"],
                 "claimCostTemplateFile": {
                     "claimCostTemplateFileId": str(uuid.uuid4()),
@@ -571,6 +625,8 @@ def test_201_create_nil_bill_claim_persists_inquest_outcome_links(
         {
             "claimType": "NIL_BILL",
             "poaTypeId": None,
+            "totalProfitCostNet": None,
+            "totalProfitCostGross": 0,
             "inquestOutcomes": ["OPEN_CONCLUSION"],
             "hasAlternativeFunding": False,
             "hasRecoveryCostsAwarded": True,
@@ -687,6 +743,7 @@ def test_201_create_final_bill_claim_persists_cost_template_file(
             {
                 "claimType": "FINAL_BILL",
                 "poaTypeId": None,
+                "totalProfitCostNet": None,
                 "inquestOutcomes": ["NATURAL_CAUSES"],
                 "claimCostTemplateFile": {
                     "claimCostTemplateFileId": str(file_id),
@@ -900,6 +957,7 @@ def test_201_create_final_bill_claim_persists_final_bill_details(
             {
                 "claimType": "FINAL_BILL",
                 "poaTypeId": None,
+                "totalProfitCostNet": None,
                 "inquestOutcomes": ["NATURAL_CAUSES"],
                 "claimCostTemplateFile": {
                     "claimCostTemplateFileId": str(uuid.uuid4()),
@@ -1010,6 +1068,140 @@ def test_422_payment_on_account_claim_with_counsel_details(session, client, auth
 
     assert response.status_code == 422
     assert response.json()["detail"]["errorCode"] == "COUNSEL_DETAILS_NOT_ALLOWED"
+
+
+def test_422_final_bill_claim_with_net_total(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_final_bill_body({"totalProfitCostNet": 100}),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "NET_TOTAL_NOT_ALLOWED_FOR_BILL"
+
+
+def test_422_nil_bill_claim_with_net_total(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_nil_bill_body({"totalProfitCostNet": 0}),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "NET_TOTAL_NOT_ALLOWED_FOR_BILL"
+
+
+def test_422_final_bill_claim_with_vat_zero_total(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_final_bill_body({"totalProfitCostVatZero": 100}),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert (
+        response.json()["detail"]["errorCode"] == "VAT_ZERO_TOTAL_NOT_ALLOWED_FOR_BILL"
+    )
+
+
+def test_422_final_bill_claim_without_gross_total(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_final_bill_body({"totalProfitCostGross": None}),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "MISSING_GROSS_TOTAL_FOR_BILL"
+
+
+def test_422_final_bill_claim_with_zero_gross_total(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_final_bill_body({"totalProfitCostGross": 0}),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "FINAL_BILL_GROSS_MUST_BE_POSITIVE"
+
+
+def test_422_nil_bill_claim_with_non_zero_gross_total(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_nil_bill_body({"totalProfitCostGross": 100}),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "NIL_BILL_GROSS_MUST_BE_ZERO"
+
+
+def test_201_final_bill_claim_with_positive_gross_only(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_final_bill_body(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    stored_claim = session.get(Claim, response.json()["claimId"])
+    assert stored_claim.total_profit_cost_net is None
+    assert stored_claim.total_profit_cost_gross == Decimal("1200.00")
+
+
+def test_201_nil_bill_claim_with_zero_gross_only(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_nil_bill_body(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    stored_claim = session.get(Claim, response.json()["claimId"])
+    assert stored_claim.total_profit_cost_net is None
+    assert stored_claim.total_profit_cost_gross == Decimal("0.00")
 
 
 def test_422_profit_cost_with_net_higher_than_gross(session, client, auth_token):

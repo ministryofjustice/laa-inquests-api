@@ -235,6 +235,7 @@ def test_execute_links_inquest_outcomes_to_created_claim():
         {
             "claim_type": ClaimType.FINAL_BILL,
             "poa_type": None,
+            "net": None,
             "inquest_outcomes": [InquestOutcomeCode.NATURAL_CAUSES],
             "cost_template_file_id": uuid.uuid4(),
             "cost_template_file_name": "costs.xlsx",
@@ -271,6 +272,7 @@ def test_execute_links_cost_template_to_created_claim():
         {
             "claim_type": ClaimType.FINAL_BILL,
             "poa_type": None,
+            "net": None,
             "inquest_outcomes": [InquestOutcomeCode.NATURAL_CAUSES],
             "cost_template_file_id": file_id,
             "cost_template_file_name": "final_bill_costs.xlsx",
@@ -674,13 +676,13 @@ def test_execute_raises_invalid_claim_error_when_mixing_vat_rates():
     assert exc_info.value.code == ClaimErrorCode.PROFIT_COST_MIXED_VAT
 
 
-def test_execute_does_not_raise_for_non_profit_cost_without_costs():
+def test_execute_does_not_raise_for_final_bill_with_gross_only():
     command = _make_command(
         {
             "claim_type": ClaimType.FINAL_BILL,
             "poa_type": None,
             "net": None,
-            "gross": None,
+            "gross": Decimal("100.00"),
             "vat_zero_total": None,
             "inquest_outcomes": [InquestOutcomeCode.NATURAL_CAUSES],
             "cost_template_file_id": uuid.uuid4(),
@@ -1223,7 +1225,7 @@ def test_execute_does_not_auto_approve_non_payment_on_account_claim():
         {
             "claim_type": ClaimType.FINAL_BILL,
             "poa_type": None,
-            "net": Decimal("50000.00"),
+            "net": None,
             "gross": Decimal("50000.00"),
             "inquest_outcomes": [InquestOutcomeCode.NATURAL_CAUSES],
             "cost_template_file_id": uuid.uuid4(),

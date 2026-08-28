@@ -194,7 +194,7 @@ def test_no_validation_when_poa_type_is_none():
         claim_type=ClaimType.FINAL_BILL,
         poa_type=None,
         net=None,
-        gross=None,
+        gross=Decimal("100.00"),
         vat_zero_total=None,
         inquest_outcomes=(InquestOutcomeCode.NATURAL_CAUSES,),
         cost_template_file_id=uuid.uuid4(),
@@ -281,7 +281,7 @@ def test_valid_nil_bill_with_multiple_inquest_outcomes():
         claim_type=ClaimType.NIL_BILL,
         poa_type=None,
         net=None,
-        gross=None,
+        gross=Decimal("0.00"),
         vat_zero_total=None,
         inquest_outcomes=(
             InquestOutcomeCode.NARRATIVE_CONCLUSION,
@@ -453,7 +453,7 @@ def test_valid_final_bill_with_final_bill_details():
         claim_type=ClaimType.FINAL_BILL,
         poa_type=None,
         net=None,
-        gross=None,
+        gross=Decimal("100.00"),
         vat_zero_total=None,
         inquest_outcomes=(InquestOutcomeCode.NATURAL_CAUSES,),
         cost_template_file_id=uuid.uuid4(),
@@ -469,6 +469,116 @@ def test_valid_final_bill_with_final_bill_details():
         number_of_counsel_instructed=NumberOfCounselInstructed.TWO,
     )
     claim.validate_total_claim_cost()
+
+
+def _final_bill_claim(overrides: dict | None = None) -> Claim:
+    kwargs = {
+        "claim_type": ClaimType.FINAL_BILL,
+        "poa_type": None,
+        "net": None,
+        "gross": Decimal("100.00"),
+        "vat_zero_total": None,
+        "inquest_outcomes": (InquestOutcomeCode.NATURAL_CAUSES,),
+        "cost_template_file_id": uuid.uuid4(),
+        "cost_template_file_name": "costs.xlsx",
+        "has_counsel_been_paid": True,
+        "has_alternative_funding": False,
+        "has_recovery_costs_awarded": True,
+        "financial_recovery_previous_pre_certificate_costs": Decimal("100.00"),
+        "financial_recovery_cost": Decimal("200.00"),
+        "financial_recovery_damages": Decimal("300.00"),
+        "financial_recovery_interest": Decimal("50.00"),
+        "paying_party": "Test Council",
+        "number_of_counsel_instructed": NumberOfCounselInstructed.TWO,
+    }
+    if overrides is not None:
+        kwargs.update(overrides)
+    return Claim(**kwargs)
+
+
+def _nil_bill_claim(overrides: dict | None = None) -> Claim:
+    kwargs = {
+        "claim_type": ClaimType.NIL_BILL,
+        "poa_type": None,
+        "net": None,
+        "gross": Decimal("0.00"),
+        "vat_zero_total": None,
+        "inquest_outcomes": (InquestOutcomeCode.OPEN_CONCLUSION,),
+        "has_alternative_funding": False,
+        "has_recovery_costs_awarded": True,
+        "financial_recovery_previous_pre_certificate_costs": Decimal("100.00"),
+        "financial_recovery_cost": Decimal("200.00"),
+        "financial_recovery_damages": Decimal("300.00"),
+        "financial_recovery_interest": Decimal("50.00"),
+        "paying_party": "Test Council",
+    }
+    if overrides is not None:
+        kwargs.update(overrides)
+    return Claim(**kwargs)
+
+
+def test_raises_when_final_bill_has_net_total():
+    claim = _final_bill_claim({"net": Decimal("100.00")})
+    with pytest.raises(ClaimValidationError) as exc_info:
+        claim.validate_total_claim_cost()
+    assert exc_info.value.code == ClaimErrorCode.NET_TOTAL_NOT_ALLOWED_FOR_BILL
+
+
+def test_raises_when_nil_bill_has_net_total():
+    claim = _nil_bill_claim({"net": Decimal("0.00")})
+    with pytest.raises(ClaimValidationError) as exc_info:
+        claim.validate_total_claim_cost()
+    assert exc_info.value.code == ClaimErrorCode.NET_TOTAL_NOT_ALLOWED_FOR_BILL
+
+
+def test_raises_when_final_bill_has_vat_zero_total():
+    claim = _final_bill_claim({"vat_zero_total": Decimal("100.00")})
+    with pytest.raises(ClaimValidationError) as exc_info:
+        claim.validate_total_claim_cost()
+    assert exc_info.value.code == ClaimErrorCode.VAT_ZERO_TOTAL_NOT_ALLOWED_FOR_BILL
+
+
+def test_raises_when_nil_bill_has_vat_zero_total():
+    claim = _nil_bill_claim({"vat_zero_total": Decimal("0.00")})
+    with pytest.raises(ClaimValidationError) as exc_info:
+        claim.validate_total_claim_cost()
+    assert exc_info.value.code == ClaimErrorCode.VAT_ZERO_TOTAL_NOT_ALLOWED_FOR_BILL
+
+
+def test_raises_when_final_bill_missing_gross_total():
+    claim = _final_bill_claim({"gross": None})
+    with pytest.raises(ClaimValidationError) as exc_info:
+        claim.validate_total_claim_cost()
+    assert exc_info.value.code == ClaimErrorCode.MISSING_GROSS_TOTAL_FOR_BILL
+
+
+def test_raises_when_nil_bill_missing_gross_total():
+    claim = _nil_bill_claim({"gross": None})
+    with pytest.raises(ClaimValidationError) as exc_info:
+        claim.validate_total_claim_cost()
+    assert exc_info.value.code == ClaimErrorCode.MISSING_GROSS_TOTAL_FOR_BILL
+
+
+def test_raises_when_final_bill_gross_is_zero():
+    claim = _final_bill_claim({"gross": Decimal("0.00")})
+    with pytest.raises(ClaimValidationError) as exc_info:
+        claim.validate_total_claim_cost()
+    assert exc_info.value.code == ClaimErrorCode.FINAL_BILL_GROSS_MUST_BE_POSITIVE
+
+
+def test_raises_when_nil_bill_gross_is_not_zero():
+    claim = _nil_bill_claim({"gross": Decimal("100.00")})
+    with pytest.raises(ClaimValidationError) as exc_info:
+        claim.validate_total_claim_cost()
+    assert exc_info.value.code == ClaimErrorCode.NIL_BILL_GROSS_MUST_BE_ZERO
+
+
+def test_valid_final_bill_with_positive_gross_only():
+    _final_bill_claim().validate_total_claim_cost()
+
+
+def test_valid_nil_bill_with_zero_gross_only():
+    _nil_bill_claim().validate_total_claim_cost()
 
 
 def test_should_auto_reject_for_limit_when_total_exceeds_limit():

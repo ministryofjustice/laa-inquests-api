@@ -41,6 +41,19 @@ MISSING_COUNSEL_DETAILS_MESSAGE = "Counsel details are required for final bill c
 COUNSEL_DETAILS_NOT_ALLOWED_MESSAGE = (
     "Counsel details may only be provided for final bill claims"
 )
+NET_TOTAL_NOT_ALLOWED_FOR_BILL_MESSAGE = (
+    "A net total may not be provided for final bill and nil bill claims"
+)
+VAT_ZERO_TOTAL_NOT_ALLOWED_FOR_BILL_MESSAGE = (
+    "A zero-rated VAT total may not be provided for final bill and nil bill claims"
+)
+MISSING_GROSS_TOTAL_FOR_BILL_MESSAGE = (
+    "A gross total is required for final bill and nil bill claims"
+)
+FINAL_BILL_GROSS_MUST_BE_POSITIVE_MESSAGE = (
+    "The gross total must be greater than zero for final bill claims"
+)
+NIL_BILL_GROSS_MUST_BE_ZERO_MESSAGE = "The gross total must be zero for nil bill claims"
 CLAIM_EVIDENCE_NOT_ALLOWED_MESSAGE = (
     "Claim evidence may only be provided for payment on account and final bill claims"
 )

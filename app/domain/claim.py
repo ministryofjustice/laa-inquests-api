@@ -11,11 +11,13 @@ from app.domain.constants.claim_messages import (
     COST_TEMPLATE_FILE_NOT_ALLOWED_MESSAGE,
     COUNSEL_DETAILS_NOT_ALLOWED_MESSAGE,
     FINAL_BILL_DETAILS_NOT_ALLOWED_MESSAGE,
+    FINAL_BILL_GROSS_MUST_BE_POSITIVE_MESSAGE,
     INQUEST_OUTCOMES_NOT_ALLOWED_MESSAGE,
     MISSING_COST_TEMPLATE_FILE_MESSAGE,
     MISSING_COUNSEL_DETAILS_MESSAGE,
     MISSING_FINAL_BILL_DETAILS_MESSAGE,
     MISSING_GROSS_MESSAGE,
+    MISSING_GROSS_TOTAL_FOR_BILL_MESSAGE,
     MISSING_INQUEST_OUTCOMES_MESSAGE,
     MISSING_NON_PROFIT_COST_TOTAL_MESSAGE,
     MISSING_POA_TYPE_MESSAGE,
@@ -23,7 +25,10 @@ from app.domain.constants.claim_messages import (
     MIXED_VAT_MESSAGE,
     NEGATIVE_NET_MESSAGE,
     NET_GT_GROSS_MESSAGE,
+    NET_TOTAL_NOT_ALLOWED_FOR_BILL_MESSAGE,
+    NIL_BILL_GROSS_MUST_BE_ZERO_MESSAGE,
     POA_NOT_ALLOWED_MESSAGE,
+    VAT_ZERO_TOTAL_NOT_ALLOWED_FOR_BILL_MESSAGE,
 )
 from app.domain.constants.claims import (
     AUTO_APPROVAL_MAX_TOTAL,
@@ -144,6 +149,10 @@ class Claim:
         self._validate_counsel_details()
 
     def validate_total_claim_cost(self) -> None:
+        if self.claim_type in INQUEST_OUTCOME_CLAIM_TYPES:
+            self._validate_bill_totals()
+            return
+
         self._validate_totals_consistency()
 
         if (
@@ -454,6 +463,37 @@ class Claim:
             raise ClaimValidationError(
                 ClaimErrorCode.MISSING_TOTAL_CLAIM_COST,
                 MISSING_TOTAL_MESSAGE,
+            )
+
+    def _validate_bill_totals(self) -> None:
+        if self.net is not None:
+            raise ClaimValidationError(
+                ClaimErrorCode.NET_TOTAL_NOT_ALLOWED_FOR_BILL,
+                NET_TOTAL_NOT_ALLOWED_FOR_BILL_MESSAGE,
+            )
+
+        if self.vat_zero_total is not None:
+            raise ClaimValidationError(
+                ClaimErrorCode.VAT_ZERO_TOTAL_NOT_ALLOWED_FOR_BILL,
+                VAT_ZERO_TOTAL_NOT_ALLOWED_FOR_BILL_MESSAGE,
+            )
+
+        if self.gross is None:
+            raise ClaimValidationError(
+                ClaimErrorCode.MISSING_GROSS_TOTAL_FOR_BILL,
+                MISSING_GROSS_TOTAL_FOR_BILL_MESSAGE,
+            )
+
+        if self.claim_type == ClaimType.NIL_BILL and self.gross != 0:
+            raise ClaimValidationError(
+                ClaimErrorCode.NIL_BILL_GROSS_MUST_BE_ZERO,
+                NIL_BILL_GROSS_MUST_BE_ZERO_MESSAGE,
+            )
+
+        if self.claim_type == ClaimType.FINAL_BILL and self.gross <= 0:
+            raise ClaimValidationError(
+                ClaimErrorCode.FINAL_BILL_GROSS_MUST_BE_POSITIVE,
+                FINAL_BILL_GROSS_MUST_BE_POSITIVE_MESSAGE,
             )
 
     def _validate_totals_consistency(self) -> None:
