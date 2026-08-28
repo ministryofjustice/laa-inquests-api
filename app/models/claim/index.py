@@ -196,8 +196,8 @@ class ClaimCreate(BaseModel):
     )
     poa_type_id: POAType | None = PydanticField(default=None, examples=["PROFIT_COST"])
     claimant_id: str = PydanticField(examples=["claimant-123@provider.co.uk"])
-    claim_evidence_ids: list[uuid.UUID] = PydanticField(
-        default_factory=list,
+    claim_evidence_ids: list[uuid.UUID] | None = PydanticField(
+        default=None,
         examples=[["3fa85f64-5717-4562-b3fc-2c963f66afa6"]],
     )
     inquest_outcomes: list[InquestOutcomeCode] = PydanticField(

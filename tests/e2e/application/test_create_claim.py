@@ -567,28 +567,25 @@ def test_201_create_nil_bill_claim_persists_inquest_outcome_links(
 ):
     laa_reference = session.exec(select(Application)).first().laa_reference
 
+    body = _make_request_body(
+        {
+            "claimType": "NIL_BILL",
+            "poaTypeId": None,
+            "inquestOutcomes": ["OPEN_CONCLUSION"],
+            "hasAlternativeFunding": False,
+            "hasRecoveryCostsAwarded": True,
+            "financialRecoveryPreviousPreCertificateCosts": 100.00,
+            "financialRecoveryCost": 200.00,
+            "financialRecoveryDamages": 300.00,
+            "financialRecoveryInterest": 50.00,
+            "payingParty": "Test Council",
+        }
+    )
+    del body["claimEvidenceIds"]
+
     response = client.post(
         f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {
-                "claimType": "NIL_BILL",
-                "poaTypeId": None,
-                "inquestOutcomes": ["OPEN_CONCLUSION"],
-                "claimCostTemplateFile": {
-                    "claimCostTemplateFileId": str(uuid.uuid4()),
-                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
-                },
-                "hasCounselBeenPaid": True,
-                "hasAlternativeFunding": False,
-                "hasRecoveryCostsAwarded": True,
-                "financialRecoveryPreviousPreCertificateCosts": 100.00,
-                "financialRecoveryCost": 200.00,
-                "financialRecoveryDamages": 300.00,
-                "financialRecoveryInterest": 50.00,
-                "payingParty": "Test Council",
-                "numberOfCounselInstructed": "2",
-            }
-        ),
+        json=body,
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {auth_token}",
@@ -723,11 +720,44 @@ def test_201_create_final_bill_claim_persists_cost_template_file(
     assert stored[0].claim_cost_template_file_name == "final_bill_costs.xlsx"
 
 
-def test_201_create_nil_bill_claim_persists_cost_template_file(
-    session, client, auth_token
-):
+def test_422_nil_bill_claim_with_cost_template_file(session, client, auth_token):
     laa_reference = session.exec(select(Application)).first().laa_reference
-    file_id = uuid.uuid4()
+
+    body = _make_request_body(
+        {
+            "claimType": "NIL_BILL",
+            "poaTypeId": None,
+            "inquestOutcomes": ["OPEN_CONCLUSION"],
+            "claimCostTemplateFile": {
+                "claimCostTemplateFileId": str(uuid.uuid4()),
+                "claimCostTemplateFileName": "nil_bill_costs.xls",
+            },
+            "hasAlternativeFunding": False,
+            "hasRecoveryCostsAwarded": True,
+            "financialRecoveryPreviousPreCertificateCosts": 100.00,
+            "financialRecoveryCost": 200.00,
+            "financialRecoveryDamages": 300.00,
+            "financialRecoveryInterest": 50.00,
+            "payingParty": "Test Council",
+        }
+    )
+    del body["claimEvidenceIds"]
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "COST_TEMPLATE_FILE_NOT_ALLOWED"
+
+
+def test_422_nil_bill_claim_with_claim_evidence(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
 
     response = client.post(
         f"/applications/{laa_reference}/claim",
@@ -735,12 +765,8 @@ def test_201_create_nil_bill_claim_persists_cost_template_file(
             {
                 "claimType": "NIL_BILL",
                 "poaTypeId": None,
+                "claimEvidenceIds": [],
                 "inquestOutcomes": ["OPEN_CONCLUSION"],
-                "claimCostTemplateFile": {
-                    "claimCostTemplateFileId": str(file_id),
-                    "claimCostTemplateFileName": "nil_bill_costs.xls",
-                },
-                "hasCounselBeenPaid": True,
                 "hasAlternativeFunding": False,
                 "hasRecoveryCostsAwarded": True,
                 "financialRecoveryPreviousPreCertificateCosts": 100.00,
@@ -748,7 +774,6 @@ def test_201_create_nil_bill_claim_persists_cost_template_file(
                 "financialRecoveryDamages": 300.00,
                 "financialRecoveryInterest": 50.00,
                 "payingParty": "Test Council",
-                "numberOfCounselInstructed": "2",
             }
         ),
         headers={
@@ -757,15 +782,42 @@ def test_201_create_nil_bill_claim_persists_cost_template_file(
         },
     )
 
-    assert response.status_code == 201
-    claim_id = response.json()["claimId"]
+    assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "CLAIM_EVIDENCE_NOT_ALLOWED"
 
-    stored = session.exec(
-        select(ClaimCostTemplate).where(ClaimCostTemplate.claim_id == claim_id)
-    ).all()
-    assert len(stored) == 1
-    assert stored[0].claim_cost_template_file_id == file_id
-    assert stored[0].claim_cost_template_file_name == "nil_bill_costs.xls"
+
+def test_422_nil_bill_claim_with_counsel_details(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    body = _make_request_body(
+        {
+            "claimType": "NIL_BILL",
+            "poaTypeId": None,
+            "inquestOutcomes": ["OPEN_CONCLUSION"],
+            "hasAlternativeFunding": False,
+            "hasRecoveryCostsAwarded": True,
+            "financialRecoveryPreviousPreCertificateCosts": 100.00,
+            "financialRecoveryCost": 200.00,
+            "financialRecoveryDamages": 300.00,
+            "financialRecoveryInterest": 50.00,
+            "payingParty": "Test Council",
+            "hasCounselBeenPaid": True,
+            "numberOfCounselInstructed": "2",
+        }
+    )
+    del body["claimEvidenceIds"]
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "COUNSEL_DETAILS_NOT_ALLOWED"
 
 
 def test_422_final_bill_claim_without_cost_template_file(session, client, auth_token):
@@ -920,7 +972,6 @@ def test_422_payment_on_account_claim_with_final_bill_details(
         f"/applications/{laa_reference}/claim",
         json=_make_request_body(
             {
-                "hasCounselBeenPaid": True,
                 "hasAlternativeFunding": False,
                 "hasRecoveryCostsAwarded": True,
                 "financialRecoveryPreviousPreCertificateCosts": 100.00,
@@ -928,7 +979,6 @@ def test_422_payment_on_account_claim_with_final_bill_details(
                 "financialRecoveryDamages": 300.00,
                 "financialRecoveryInterest": 50.00,
                 "payingParty": "Test Council",
-                "numberOfCounselInstructed": "2",
             }
         ),
         headers={
@@ -939,6 +989,27 @@ def test_422_payment_on_account_claim_with_final_bill_details(
 
     assert response.status_code == 422
     assert response.json()["detail"]["errorCode"] == "FINAL_BILL_DETAILS_NOT_ALLOWED"
+
+
+def test_422_payment_on_account_claim_with_counsel_details(session, client, auth_token):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {
+                "hasCounselBeenPaid": True,
+                "numberOfCounselInstructed": "2",
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["errorCode"] == "COUNSEL_DETAILS_NOT_ALLOWED"
 
 
 def test_422_profit_cost_with_net_higher_than_gross(session, client, auth_token):

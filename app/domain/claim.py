@@ -9,9 +9,11 @@ from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
 from app.domain.claim_rejection import ClaimRejection, ClaimRejectionReason
 from app.domain.constants.claim_messages import (
     COST_TEMPLATE_FILE_NOT_ALLOWED_MESSAGE,
+    COUNSEL_DETAILS_NOT_ALLOWED_MESSAGE,
     FINAL_BILL_DETAILS_NOT_ALLOWED_MESSAGE,
     INQUEST_OUTCOMES_NOT_ALLOWED_MESSAGE,
     MISSING_COST_TEMPLATE_FILE_MESSAGE,
+    MISSING_COUNSEL_DETAILS_MESSAGE,
     MISSING_FINAL_BILL_DETAILS_MESSAGE,
     MISSING_GROSS_MESSAGE,
     MISSING_INQUEST_OUTCOMES_MESSAGE,
@@ -41,6 +43,8 @@ from app.models.claim.enums import (
 )
 
 INQUEST_OUTCOME_CLAIM_TYPES = frozenset({ClaimType.FINAL_BILL, ClaimType.NIL_BILL})
+COST_TEMPLATE_CLAIM_TYPES = frozenset({ClaimType.FINAL_BILL})
+COUNSEL_DETAIL_CLAIM_TYPES = frozenset({ClaimType.FINAL_BILL})
 
 
 def _as_utc(dt: datetime) -> datetime:
@@ -136,7 +140,8 @@ class Claim:
         self._validate_claim_type_poa_combination()
         self._validate_inquest_outcomes()
         self._validate_cost_template_file()
-        self._validate_final_bill_details()
+        self._validate_recovery_details()
+        self._validate_counsel_details()
 
     def validate_total_claim_cost(self) -> None:
         self._validate_totals_consistency()
@@ -356,7 +361,7 @@ class Claim:
             )
 
     def _validate_cost_template_file(self) -> None:
-        requires_cost_template_file = self.claim_type in INQUEST_OUTCOME_CLAIM_TYPES
+        requires_cost_template_file = self.claim_type in COST_TEMPLATE_CLAIM_TYPES
         has_cost_template_file = (
             self.cost_template_file_id is not None
             and self.cost_template_file_name is not None
@@ -374,10 +379,9 @@ class Claim:
                 COST_TEMPLATE_FILE_NOT_ALLOWED_MESSAGE,
             )
 
-    def _validate_final_bill_details(self) -> None:
-        requires_final_bill_details = self.claim_type in INQUEST_OUTCOME_CLAIM_TYPES
-        final_bill_detail_values = (
-            self.has_counsel_been_paid,
+    def _validate_recovery_details(self) -> None:
+        requires_recovery_details = self.claim_type in INQUEST_OUTCOME_CLAIM_TYPES
+        recovery_detail_values = (
             self.has_alternative_funding,
             self.has_recovery_costs_awarded,
             self.financial_recovery_previous_pre_certificate_costs,
@@ -385,25 +389,49 @@ class Claim:
             self.financial_recovery_damages,
             self.financial_recovery_interest,
             self.paying_party,
-            self.number_of_counsel_instructed,
         )
-        has_any_final_bill_detail = any(
-            value is not None for value in final_bill_detail_values
+        has_any_recovery_detail = any(
+            value is not None for value in recovery_detail_values
         )
-        has_all_final_bill_details = all(
-            value is not None for value in final_bill_detail_values
+        has_all_recovery_details = all(
+            value is not None for value in recovery_detail_values
         )
 
-        if requires_final_bill_details and not has_all_final_bill_details:
+        if requires_recovery_details and not has_all_recovery_details:
             raise ClaimValidationError(
                 ClaimErrorCode.MISSING_FINAL_BILL_DETAILS,
                 MISSING_FINAL_BILL_DETAILS_MESSAGE,
             )
 
-        if not requires_final_bill_details and has_any_final_bill_detail:
+        if not requires_recovery_details and has_any_recovery_detail:
             raise ClaimValidationError(
                 ClaimErrorCode.FINAL_BILL_DETAILS_NOT_ALLOWED,
                 FINAL_BILL_DETAILS_NOT_ALLOWED_MESSAGE,
+            )
+
+    def _validate_counsel_details(self) -> None:
+        requires_counsel_details = self.claim_type in COUNSEL_DETAIL_CLAIM_TYPES
+        counsel_detail_values = (
+            self.has_counsel_been_paid,
+            self.number_of_counsel_instructed,
+        )
+        has_any_counsel_detail = any(
+            value is not None for value in counsel_detail_values
+        )
+        has_all_counsel_details = all(
+            value is not None for value in counsel_detail_values
+        )
+
+        if requires_counsel_details and not has_all_counsel_details:
+            raise ClaimValidationError(
+                ClaimErrorCode.MISSING_COUNSEL_DETAILS,
+                MISSING_COUNSEL_DETAILS_MESSAGE,
+            )
+
+        if not requires_counsel_details and has_any_counsel_detail:
+            raise ClaimValidationError(
+                ClaimErrorCode.COUNSEL_DETAILS_NOT_ALLOWED,
+                COUNSEL_DETAILS_NOT_ALLOWED_MESSAGE,
             )
 
     def _validate_profit_cost(self) -> None:
