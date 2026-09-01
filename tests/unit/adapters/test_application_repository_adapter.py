@@ -2,6 +2,7 @@ import uuid
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, call
 
+import pytest
 from sqlmodel import select
 
 from app.adapters.application_repository_adapter import ApplicationRepositoryAdapter
@@ -21,6 +22,7 @@ from app.models.application.index import (
 from app.models.application.index import (
     CoronersLetter as CoronersLetterModel,
 )
+from tests.e2e.factories import create_application_in_db
 
 
 def _make_request(with_addresses: bool = True) -> ApplicationCreate:
@@ -277,6 +279,88 @@ def test_search_applications_returns_empty_list_for_unknown_reference(session):
     result = adapter.search_applications("99999", "0A123B")
 
     assert result == []
+
+
+def test_generate_laa_reference_returns_unique_reference(session):
+    adapter = ApplicationRepositoryAdapter(session)
+
+    reference1 = adapter._generate_laa_reference()
+    reference2 = adapter._generate_laa_reference()
+
+    assert reference1 != reference2
+    assert isinstance(reference1, str)
+    assert isinstance(reference2, str)
+
+
+def test_generate_laa_reference_does_not_return_ambiguous_characters(session):
+    adapter = ApplicationRepositoryAdapter(session)
+
+    # Generate multiple references to check for ambiguous characters, due to probabilties.
+    # 10 attempts should give >99% chance of catching any issues with ambiguous characters.
+
+    for _ in range(10):
+        reference = adapter._generate_laa_reference()
+        # Ignore the first 4 characters (INQ-) and check the rest for ambiguous characters
+        assert all(char not in reference[4:] for char in "B8G6I10OQDS5Z2")
+
+
+def test_get_laa_reference_does_not_contain_banned_words(session):
+    adapter = ApplicationRepositoryAdapter(session)
+
+    adapter._generate_laa_reference = MagicMock(
+        side_effect=["INQ-XXY-YYY", "INQ-YYY-YYY"]
+    )  # First call returns a bad reference, second call returns a good one
+    reference = adapter._get_laa_reference()
+    assert reference == "INQ-YYY-YYY"
+    assert (
+        adapter._generate_laa_reference.call_count == 2
+    )  # Ensure that it retried after getting a bad reference
+
+
+def test_get_laa_reference_does_not_contain_banned_words_across_hyphens(session):
+    adapter = ApplicationRepositoryAdapter(session)
+
+    adapter._generate_laa_reference = MagicMock(
+        side_effect=["INQ-YYX-XYY", "INQ-YYY-YYY"]
+    )  # First call returns a bad reference, second call returns a good one
+    reference = adapter._get_laa_reference()
+    assert reference == "INQ-YYY-YYY"
+    assert (
+        adapter._generate_laa_reference.call_count == 2
+    )  # Ensure that it retried after getting a bad reference
+
+
+def test_get_laa_reference_does_not_return_existing_reference(session):
+    adapter = ApplicationRepositoryAdapter(session)
+
+    # Create an application with a specific reference to simulate an existing reference
+    existing_reference = "INQ-AAA-AAA"
+    create_application_in_db(
+        session,
+        new_laa_reference=existing_reference,
+    )
+
+    adapter._generate_laa_reference = MagicMock(
+        side_effect=[existing_reference, "INQ-YYY-YYY"]
+    )  # First call returns an existing reference, second call returns a new one
+    reference = adapter._get_laa_reference()
+    assert reference == "INQ-YYY-YYY"
+    assert (
+        adapter._generate_laa_reference.call_count == 2
+    )  # Ensure that it retried after getting an existing reference
+
+
+def test_get_laa_reference_raises_error_after_max_attempts(session):
+    adapter = ApplicationRepositoryAdapter(session)
+
+    # Mock _generate_laa_reference to always return a banned word
+    adapter._generate_laa_reference = MagicMock(return_value="INQ-XXX-XXX")
+
+    with pytest.raises(RuntimeError) as exc_info:
+        adapter._get_laa_reference()
+    assert (
+        str(exc_info.value) == "Maximum attempts reached for generating LAA reference"
+    )
 
 
 class TestGetPendingApplications:

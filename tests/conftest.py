@@ -137,6 +137,7 @@ def session_fixture():
             deceased_id=new_deceased.deceased_id,
             public_bodies=application_public_bodies,
             provider_id=new_provider.provider_id,
+            new_laa_reference="INQ-123-456",
         )
 
         db_session.add(new_application)

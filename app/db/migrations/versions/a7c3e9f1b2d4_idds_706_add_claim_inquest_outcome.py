@@ -1,7 +1,7 @@
 """idds_706_add_claim_inquest_outcome
 
 Revision ID: a7c3e9f1b2d4
-Revises: 6001ea88742d
+Revises: fa5e3308e150
 Create Date: 2026-08-26 09:00:00.000000
 
 """
