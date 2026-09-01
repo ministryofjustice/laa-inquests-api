@@ -269,7 +269,7 @@ class ApplicationRepositoryAdapter(
         return f"INQ-{self._random_chars()}-{self._random_chars()}"
 
     def _random_chars(self):
-        return "".join(random.choice(self.laa_reference_chars) for _ in range(3))
+        return "".join(random.choice(self.laa_reference_chars) for _ in range(3))  # nosec: Not used for cryptographic purposes
 
     def commit(self) -> None:
         self.session.commit()
