@@ -1,7 +1,7 @@
 """Create new laa_reference field in application
 
 Revision ID: d2aca39c7115
-Revises: 6001ea88742d
+Revises: b2f4c6a8d0e1
 Create Date: 2026-08-24 12:15:04.719693
 
 """
@@ -18,7 +18,7 @@ from app.adapters.application_repository_adapter import ApplicationRepositoryAda
 
 # revision identifiers, used by Alembic.
 revision: str = 'd2aca39c7115'
-down_revision: Union[str, None] = '6001ea88742d'
+down_revision: Union[str, None] = 'b2f4c6a8d0e1'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
