@@ -54,11 +54,15 @@ class ApplicationRepositoryAdapter(
     ApplicationBacklogPort,
 ):
     GENERATE_LAA_REFERENCE_ATTEMPTS = 10
+    AMBIGUOUS_CHARACTERS = "B8G6I10OQDS5Z2"
 
-    def __init__(self, session: Session) -> None:
+    def __init__(
+        self,
+        session: Session,
+        banned_words_file_path: str = Config.BANNED_WORDS_FILE_PATH,
+    ) -> None:
         self.session = session
-        # TODO: Dependency injection of reading whole banned words file into memory so it is done only once.
-        with open(Config.BANNED_WORDS_FILE_PATH, "r") as banned_word_file:
+        with open(banned_words_file_path, "r") as banned_word_file:
             banned_words = [
                 base64.b64decode(line.strip()).decode("utf-8")
                 for line in banned_word_file
@@ -68,7 +72,8 @@ class ApplicationRepositoryAdapter(
             word.upper()
             for word in banned_words
             if re.match(
-                r"^(?:Q[^B8G6I10OQDS5Z2]{0,8}|[^B8G6I10OQDS5Z2]{1,9})$", word.upper()
+                rf"^(?:Q[^{self.AMBIGUOUS_CHARACTERS}]{{0,8}}|[^{self.AMBIGUOUS_CHARACTERS}]{{1,9}})$",
+                word.upper(),
             )
         ]
         self.banned_words_pattern = re.compile(
@@ -76,6 +81,11 @@ class ApplicationRepositoryAdapter(
             + "|".join(re.escape(word) for word in self.banned_words)
             + ")"
         )
+        self.laa_reference_chars = [
+            c
+            for c in string.ascii_uppercase + string.digits
+            if c not in self.AMBIGUOUS_CHARACTERS
+        ]
 
     def get_application_by_laa_reference(
         self, laa_reference: str
@@ -256,15 +266,10 @@ class ApplicationRepositoryAdapter(
         """
         # [A-Z0-9]{3}-[A-Z0-9]{3} where each X is a random uppercase letter or digit.
         # Exclude ambiguous characters like I, O, 0, 1 to avoid confusion.
-        return f"INQ-{''.join(self._random_char() for _ in range(3))}-{''.join(self._random_char() for _ in range(3))}"
+        return f"INQ-{self._random_chars()}-{self._random_chars()}"
 
-    def _random_char(self):
-        chars = [
-            c
-            for c in string.ascii_uppercase + string.digits
-            if c not in "B8G6I10OQDS5Z2"
-        ]
-        return random.choice(chars)
+    def _random_chars(self):
+        return "".join(random.choice(self.laa_reference_chars) for _ in range(3))
 
     def commit(self) -> None:
         self.session.commit()
