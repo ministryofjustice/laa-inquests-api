@@ -35,16 +35,17 @@ def upgrade() -> None:
     adapter = ApplicationRepositoryAdapter(session)
     
     # Get all existing applications without a new_laa_reference
-    result = session.execute(text("SELECT laa_reference FROM application WHERE new_laa_reference IS NULL"))
-    applications = result.fetchall()
+    laa_references = session.scalars(
+        text("SELECT laa_reference FROM application WHERE new_laa_reference IS NULL")
+    ).all()
     
     # Update each application that doesn't have a new_laa_reference
-    for app in applications:
+    for laa_reference in laa_references:
         new_reference = adapter._get_laa_reference()
-        
+
         session.execute(
             text("UPDATE application SET new_laa_reference = :new_ref WHERE laa_reference = :laa_ref"),
-            {"new_ref": new_reference, "laa_ref": app[0]}
+            {"new_ref": new_reference, "laa_ref": laa_reference}
         )
     
     session.commit()
