@@ -145,7 +145,7 @@ class Provider(ProviderBase, table=True):
 
 class ApplicationBase(SQLModel):
     laa_reference: int | None = Field(default_factory=None, primary_key=True)
-    new_laa_reference: str = Field(unique=True)
+    new_laa_reference: str = Field(unique=True, min_length=11, max_length=11)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),

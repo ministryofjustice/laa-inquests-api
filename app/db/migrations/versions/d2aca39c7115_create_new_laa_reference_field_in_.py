@@ -25,7 +25,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # Step 1: Add the column as nullable
-    op.add_column('application', sa.Column('new_laa_reference', sqlmodel.sql.sqltypes.AutoString(), nullable=True))
+    op.add_column('application', sa.Column('new_laa_reference', sqlmodel.sql.sqltypes.AutoString(length=11), nullable=True))
     
     # Step 2: Populate new_laa_reference for existing applications
     bind = op.get_bind()
