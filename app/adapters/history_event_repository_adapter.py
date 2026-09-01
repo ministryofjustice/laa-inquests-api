@@ -83,7 +83,7 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
         self.session.add(new_event)
         self.session.flush()
         self.session.refresh(new_event)
-        logger.debug(
+        logger.info(
             "History event created",
             extra=build_log_extra(
                 event="history_event_created",
