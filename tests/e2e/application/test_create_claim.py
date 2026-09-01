@@ -1,7 +1,6 @@
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
-from app.models.history.enums import ActorType, HistoryEventReference
 
 from sqlmodel import select
 
@@ -21,6 +20,7 @@ from app.models.claim.index import (
     ClaimInquestOutcome,
     DecisionReason,
 )
+from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.models.notifications.enums import NotificationType
 from tests.e2e.factories import create_application_in_db

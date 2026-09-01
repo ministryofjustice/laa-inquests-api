@@ -9,7 +9,6 @@ from app.models.claim.index import Claim, ClaimDecision, DecisionReason
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.models.notifications.enums import NotificationType
-
 from tests.e2e.factories import create_application_in_db
 
 

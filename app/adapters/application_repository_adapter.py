@@ -1,6 +1,8 @@
 import base64
 import logging
+import random
 import re
+import string
 import uuid
 
 from sqlmodel import Session, exists, select
@@ -35,9 +37,6 @@ from app.ports.search_application_port import SearchApplicationPort
 from app.ports.update_application_public_bodies_port import ApplicationPublicBodiesPort
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
-
-import random
-import string
 
 logger = logging.getLogger(__name__)
 
@@ -250,11 +249,9 @@ class ApplicationRepositoryAdapter(
         if attempt >= self.GENERATE_LAA_REFERENCE_ATTEMPTS:
             raise RuntimeError("Maximum attempts reached for generating LAA reference")
         laa_reference = self._generate_laa_reference()
-        # Check if the generated reference contains any banned words
-        if self.banned_words_pattern.search(laa_reference.replace("-", "")):
-            return self._get_laa_reference(attempt + 1)
-        # Check if the generated reference already exists in the database
-        elif self.session.scalar(
+        if self.banned_words_pattern.search(
+            laa_reference.replace("-", "")
+        ) or self.session.scalar(
             select(exists().where(Application.new_laa_reference == laa_reference))
         ):
             return self._get_laa_reference(attempt + 1)

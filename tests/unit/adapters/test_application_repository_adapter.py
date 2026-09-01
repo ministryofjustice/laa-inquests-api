@@ -1,8 +1,8 @@
 import uuid
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, call
-import pytest
 
+import pytest
 from sqlmodel import select
 
 from app.adapters.application_repository_adapter import ApplicationRepositoryAdapter

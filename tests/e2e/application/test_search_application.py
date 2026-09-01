@@ -2,7 +2,6 @@ from sqlmodel import select
 
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
-
 from tests.e2e.factories import create_application_in_db
 
 

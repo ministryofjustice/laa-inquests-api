@@ -35,7 +35,6 @@ from app.routers.applications import (
 )
 from app.routers.dependencies import get_entra_auth_port
 
-
 SECRET_KEY = "TEST_KEY"
 
 

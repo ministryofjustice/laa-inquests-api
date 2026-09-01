@@ -23,7 +23,6 @@ from app.models.claim.index import (
     ClaimInquestOutcome,
     DecisionReason,
 )
-
 from tests.e2e.factories import create_application_in_db
 
 

@@ -1,7 +1,7 @@
 """Shared factories for E2E tests that need DB-persisted records."""
 
-from datetime import UTC, datetime
 import uuid
+from datetime import UTC, datetime
 
 from sqlmodel import Session
 
