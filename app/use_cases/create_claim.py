@@ -14,7 +14,10 @@ from app.domain.claim import (
     Claim as DomainClaim,
 )
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
-from app.domain.constants.claim_messages import APPLICATION_NOT_GRANTED_MESSAGE
+from app.domain.constants.claim_messages import (
+    APPLICATION_NOT_GRANTED_MESSAGE,
+    CLAIM_EVIDENCE_NOT_ALLOWED_MESSAGE,
+)
 from app.logging_utils import build_log_extra
 from app.models.claim.enums import (
     ClaimDecisionStatus,
@@ -54,7 +57,7 @@ class CreateClaimCommand:
     gross: Decimal | None
     vat_zero_total: Decimal | None
     claimant_id: str | None
-    claim_evidence_ids: list[uuid.UUID]
+    claim_evidence_ids: list[uuid.UUID] | None
     inquest_outcomes: list[InquestOutcomeCode] = field(default_factory=list)
     cost_template_file_id: uuid.UUID | None = None
     cost_template_file_name: str | None = None
@@ -99,7 +102,13 @@ class CreateClaimUseCase:
         self.get_claim_decision_port = get_claim_decision_port
 
     def execute(self, command: CreateClaimCommand) -> CreateClaimResult:
-        if not command.claim_evidence_ids:
+        if command.claim_type == ClaimType.NIL_BILL:
+            if command.claim_evidence_ids is not None:
+                raise InvalidClaimError(
+                    code=ClaimErrorCode.CLAIM_EVIDENCE_NOT_ALLOWED,
+                    message=CLAIM_EVIDENCE_NOT_ALLOWED_MESSAGE,
+                )
+        elif not command.claim_evidence_ids:
             raise InvalidClaimError(
                 code=ClaimErrorCode.MISSING_CLAIM_EVIDENCE,
                 message="Claim evidence is required",
@@ -163,9 +172,10 @@ class CreateClaimUseCase:
                 claimant_id=command.claimant_id,
                 total_funds_remaining_after_claim=total_funds_remaining_after_claim,
             )
-            self.create_claim_port.link_evidence_to_claim(
-                claim.claim_id, command.claim_evidence_ids
-            )
+            if command.claim_evidence_ids is not None:
+                self.create_claim_port.link_evidence_to_claim(
+                    claim.claim_id, command.claim_evidence_ids
+                )
 
             self.create_claim_port.link_inquest_outcomes_to_claim(
                 claim.claim_id, command.inquest_outcomes
@@ -199,7 +209,9 @@ class CreateClaimUseCase:
                     event="claim_created",
                     laa_reference=command.laa_reference,
                     claim_id=claim.claim_id,
-                    evidence_count=len(command.claim_evidence_ids),
+                    evidence_count=len(command.claim_evidence_ids)
+                    if command.claim_evidence_ids is not None
+                    else 0,
                 ),
             )
 
