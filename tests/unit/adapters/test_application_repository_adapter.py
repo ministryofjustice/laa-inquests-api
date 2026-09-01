@@ -1,6 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, call
+import pytest
 
 from sqlmodel import select
 
@@ -347,6 +348,19 @@ def test_get_laa_reference_does_not_return_existing_reference(session):
     assert (
         adapter._generate_laa_reference.call_count == 2
     )  # Ensure that it retried after getting an existing reference
+
+
+def test_get_laa_reference_raises_error_after_max_attempts(session):
+    adapter = ApplicationRepositoryAdapter(session)
+
+    # Mock _generate_laa_reference to always return a banned word
+    adapter._generate_laa_reference = MagicMock(return_value="INQ-XXX-XXX")
+
+    with pytest.raises(RuntimeError) as exc_info:
+        adapter._get_laa_reference()
+    assert (
+        str(exc_info.value) == "Maximum attempts reached for generating LAA reference"
+    )
 
 
 class TestGetPendingApplications:

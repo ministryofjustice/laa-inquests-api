@@ -53,6 +53,8 @@ class ApplicationRepositoryAdapter(
     UploadCoronersLetterPort,
     ApplicationBacklogPort,
 ):
+    GENERATE_LAA_REFERENCE_ATTEMPTS = 10
+
     def __init__(self, session: Session) -> None:
         self.session = session
         # TODO: Dependency injection of reading whole banned words file into memory so it is done only once.
@@ -234,17 +236,18 @@ class ApplicationRepositoryAdapter(
         )
         return new_application
 
-    def _get_laa_reference(self) -> str:
-        # TODO: Set maximum number of attempts to avoid infinite loop
+    def _get_laa_reference(self, attempt: int = 0) -> str:
+        if attempt >= self.GENERATE_LAA_REFERENCE_ATTEMPTS:
+            raise RuntimeError("Maximum attempts reached for generating LAA reference")
         laa_reference = self._generate_laa_reference()
         # Check if the generated reference contains any banned words
         if self.banned_words_pattern.search(laa_reference.replace("-", "")):
-            return self._get_laa_reference()
+            return self._get_laa_reference(attempt + 1)
         # Check if the generated reference already exists in the database
         elif self.session.scalar(
             select(exists().where(Application.new_laa_reference == laa_reference))
         ):
-            return self._get_laa_reference()
+            return self._get_laa_reference(attempt + 1)
         return laa_reference
 
     def _generate_laa_reference(self) -> str:
