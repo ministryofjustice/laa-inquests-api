@@ -34,13 +34,12 @@ class RetrieveCoronersLetterUseCase:
         try:
             content = self.sds_port.retrieve_coroners_letter(sds_file_name)
         except Exception as exception:
-            logger.error(
+            logger.exception(
                 "Coroners letter retrieval failed",
                 extra=build_log_extra(
                     event="coroners_letter_retrieval_failed",
                     laa_reference=laa_reference,
                 ),
-                exc_info=True,
             )
             raise CoronersLetterRetrievalError(
                 "Failed to retrieve coroners letter"

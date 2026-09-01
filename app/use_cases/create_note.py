@@ -50,13 +50,12 @@ class CreateNoteUseCase:
                 ),
             )
         except Exception:
-            logger.error(
+            logger.exception(
                 "Create note failed",
                 extra=build_log_extra(
                     event="create_note_failed",
                     laa_reference=application.laa_reference,
                 ),
-                exc_info=True,
             )
             self.create_history_event_port.rollback()
             raise

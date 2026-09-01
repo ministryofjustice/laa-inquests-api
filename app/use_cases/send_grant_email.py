@@ -43,12 +43,11 @@ class SendGrantEmailUseCase:
                 ),
             )
         except Exception:
-            logger.error(
+            logger.exception(
                 "Grant email send failed",
                 extra=build_log_extra(
                     event="grant_email_send_failed",
                     laa_reference=application.laa_reference,
                 ),
-                exc_info=True,
             )
             raise
