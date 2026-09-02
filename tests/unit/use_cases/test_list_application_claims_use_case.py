@@ -16,7 +16,7 @@ from app.use_cases.list_application_claims import ListApplicationClaimsUseCase
 def _claim(claim_id: int, status: ClaimStatus) -> Claim:
     return Claim(
         claim_id=claim_id,
-        laa_reference=1,
+        application_id=1,
         claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
         status_id=status,
     )

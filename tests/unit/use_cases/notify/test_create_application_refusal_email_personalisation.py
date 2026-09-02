@@ -23,7 +23,7 @@ def _create_test_application_and_proceeding(laa_reference: int = 12345):
     )
 
     application = Application(
-        laa_reference=laa_reference,
+        application_id=laa_reference,
         created_at=datetime(2026, 6, 18, 14, 3, tzinfo=UTC),
         client_id=1,
         client=client,
@@ -33,7 +33,7 @@ def _create_test_application_and_proceeding(laa_reference: int = 12345):
 
     proceeding = ApplicationProceeding(
         application_proceeding_id=1,
-        laa_reference=laa_reference,
+        application_id=laa_reference,
         proceeding_id=ProceedingId.IQOT,
         merits_decision=MeritsDecision.REFUSED,
         reason_for_refusal="NOT_IN_SCOPE",

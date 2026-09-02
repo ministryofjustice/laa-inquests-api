@@ -72,7 +72,7 @@ def test_200_retrieve_claim_evidence_returns_file_content_after_linked_to_claim(
 ):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = Claim(
-        laa_reference=laa_reference,
+        application_id=laa_reference,
         claim_type_id="PAYMENT_ON_ACCOUNT",
     )
     session.add(claim)

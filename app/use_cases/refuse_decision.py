@@ -46,7 +46,7 @@ class RefuseDecisionUseCase:
             event_reference=HistoryEventReference.APPLICATION_ASSESSMENT_COMPLETED,
             actor=get_entra_user_name(),
             actor_type=ActorType.CASEWORKER,
-            laa_reference=application.laa_reference,
+            laa_reference=application.application_id,
             event_data={
                 "merits_decision": "Refused",
                 "refusal_reason": request.reason_for_refusal.value,
@@ -64,7 +64,7 @@ class RefuseDecisionUseCase:
                 event_reference=HistoryEventReference.APPLICATION_REFUSED,
                 actor="System",
                 actor_type=ActorType.SYSTEM,
-                laa_reference=application.laa_reference,
+                laa_reference=application.application_id,
                 event_data={
                     "recipient": application.provider.email_address,
                     "channel": NotificationType.EMAIL,

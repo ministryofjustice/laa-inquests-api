@@ -26,7 +26,7 @@ def _seed_claim(
     claimant_id: str | None = "claimant-123@provider.co.uk",
 ) -> Claim:
     claim = Claim(
-        laa_reference=laa_reference,
+        application_id=laa_reference,
         claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
         status_id=status,
         submission_date=datetime.now(UTC),
@@ -210,7 +210,7 @@ def test_204_reject_claim_creates_history_event(session, client, auth_token):
 
     history_event = session.exec(
         select(HistoryEvent).where(
-            (HistoryEvent.laa_reference == laa_reference)
+            (HistoryEvent.application_id == laa_reference)
             & (
                 HistoryEvent.event_reference
                 == HistoryEventReference.CLAIM_REJECTED_EMAIL

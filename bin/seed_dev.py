@@ -134,7 +134,7 @@ def seed_dev():
         db_session.flush()
 
         claim = Claim(
-            laa_reference=application.laa_reference,
+            application_id=application.application_id,
             claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
             status_id=ClaimStatus.SUBMITTED,
             total_profit_cost_net=Decimal("1000.00"),

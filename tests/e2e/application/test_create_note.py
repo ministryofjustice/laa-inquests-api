@@ -37,7 +37,7 @@ def test_204_create_note_adds_caseworker_history_event(
 
     history_events = session.exec(
         select(HistoryEvent).where(
-            HistoryEvent.laa_reference == application.laa_reference
+            HistoryEvent.application_id == application.application_id
         )
     ).all()
     history_event = next(
@@ -64,7 +64,7 @@ def test_204_create_note_accepts_10_000_characters(
     assert response.status_code == 204
     history_events = session.exec(
         select(HistoryEvent).where(
-            HistoryEvent.laa_reference == application.laa_reference
+            HistoryEvent.application_id == application.application_id
         )
     ).all()
     assert any(event.event_data == {"note_text": note_text} for event in history_events)
@@ -144,7 +144,7 @@ def test_500_create_note_returns_generic_error_when_history_event_cannot_be_save
     assert (
         session.exec(
             select(HistoryEvent).where(
-                HistoryEvent.laa_reference == application.laa_reference
+                HistoryEvent.application_id == application.application_id
             )
         ).all()
         == []

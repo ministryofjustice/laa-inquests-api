@@ -282,7 +282,7 @@ def test_populate_certificate_context_populates_identifiers_and_dates():
 
     issue_date = datetime(2026, 7, 15, tzinfo=UTC)
     application = create_base_application(
-        laa_reference=98765,
+        application_id=98765,
         proceeding=create_base_application_proceeding(
             certificate_issue_date=issue_date
         ),

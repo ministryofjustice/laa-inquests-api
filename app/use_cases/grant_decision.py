@@ -57,7 +57,7 @@ class GrantDecisionUseCase:
             event_reference=HistoryEventReference.APPLICATION_ASSESSMENT_COMPLETED,
             actor=get_entra_user_name(),
             actor_type=ActorType.CASEWORKER,
-            laa_reference=application.laa_reference,
+            laa_reference=application.application_id,
             event_data={"merits_decision": "Granted"},
         )
 
@@ -81,9 +81,9 @@ class GrantDecisionUseCase:
                 event_reference=HistoryEventReference.CERTIFICATE_CREATED,
                 actor=get_entra_user_name(),
                 actor_type=ActorType.CASEWORKER,
-                laa_reference=application.laa_reference,
+                laa_reference=application.application_id,
                 event_data={
-                    "laa_reference": application.laa_reference,
+                    "laa_reference": application.application_id,
                 },
             )
 
@@ -91,7 +91,7 @@ class GrantDecisionUseCase:
                 event_reference=HistoryEventReference.APPLICATION_GRANTED_EMAIL,
                 actor="System",
                 actor_type=ActorType.SYSTEM,
-                laa_reference=application.laa_reference,
+                laa_reference=application.application_id,
                 event_data={
                     "recipient": application.provider.email_address,
                     "channel": NotificationType.EMAIL,
@@ -104,7 +104,7 @@ class GrantDecisionUseCase:
                 event_reference=HistoryEventReference.APPLICATION_GRANTED_LETTER,
                 actor="System",
                 actor_type=ActorType.SYSTEM,
-                laa_reference=application.laa_reference,
+                laa_reference=application.application_id,
                 event_data={
                     "recipient": certificate_context.client_address.model_dump(),
                     "channel": NotificationType.LETTER,
@@ -118,7 +118,7 @@ class GrantDecisionUseCase:
                 "Failed to grant application",
                 extra=build_log_extra(
                     event="grant_decision_failed",
-                    laa_reference=application.laa_reference,
+                    laa_reference=application.application_id,
                 ),
                 exc_info=True,
             )

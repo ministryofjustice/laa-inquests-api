@@ -123,9 +123,9 @@ class ApplicationRepositoryAdapter(
             .join(Provider, Application.provider_id == Provider.provider_id)
             .join(
                 ApplicationProceeding,
-                Application.laa_reference == ApplicationProceeding.laa_reference,
+                Application.application_id == ApplicationProceeding.application_id,
             )
-            .where(Application.laa_reference == laa_reference_int)
+            .where(Application.application_id == laa_reference_int)
             .where(Provider.firm_code == firm_code)
         )
 
@@ -334,7 +334,7 @@ class ApplicationRepositoryAdapter(
             select(Application)
             .join(
                 ApplicationProceeding,
-                Application.laa_reference == ApplicationProceeding.laa_reference,
+                Application.application_id == ApplicationProceeding.application_id,
             )
             .where(ApplicationProceeding.merits_decision == "PENDING")
             .order_by(Application.created_at.asc())

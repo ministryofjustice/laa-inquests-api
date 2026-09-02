@@ -22,7 +22,7 @@ def test_204_update_application_public_bodies_updates_the_application_public_bod
 
     assert response.status_code == 204
 
-    updated_application = session.get(Application, application.laa_reference)
+    updated_application = session.get(Application, application.application_id)
     assert updated_application is not None
     assert len(updated_application.public_bodies) == 1
     assert (
@@ -49,7 +49,7 @@ def test_204_update_application_public_bodies_creates_history_event(
 
     history_event = session.exec(
         select(HistoryEvent).where(
-            (HistoryEvent.laa_reference == application.laa_reference)
+            (HistoryEvent.application_id == application.application_id)
             & (
                 HistoryEvent.event_reference
                 == HistoryEventReference.INTERESTED_PARTY_UPDATED
@@ -88,7 +88,7 @@ def test_422_update_application_public_bodies_when_application_not_granted(
     assert response.status_code == 422
     assert response.json() == {"detail": "Application is not granted"}
 
-    updated_application = session.get(Application, application.laa_reference)
+    updated_application = session.get(Application, application.application_id)
     assert updated_application is not None
     assert [
         public_body.public_body_id for public_body in updated_application.public_bodies
@@ -96,7 +96,7 @@ def test_422_update_application_public_bodies_when_application_not_granted(
     assert (
         session.exec(
             select(HistoryEvent).where(
-                (HistoryEvent.laa_reference == application.laa_reference)
+                (HistoryEvent.application_id == application.application_id)
                 & (
                     HistoryEvent.event_reference
                     == HistoryEventReference.INTERESTED_PARTY_UPDATED

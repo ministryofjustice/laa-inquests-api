@@ -35,7 +35,7 @@ def _claim(
 ) -> Claim:
     return Claim(
         claim_id=claim_id,
-        laa_reference=laa_reference,
+        application_id=laa_reference,
         claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
         status_id=ClaimStatus.SUBMITTED,
         submission_date=datetime.now(UTC),
@@ -49,7 +49,7 @@ def _claim(
 
 def _application(laa_reference: int = 1, substantive_cost_limitation: int = 10000):
     application = MagicMock()
-    application.laa_reference = laa_reference
+    application.application_id = laa_reference
     application.proceeding.substantive_cost_limitation = substantive_cost_limitation
     return application
 

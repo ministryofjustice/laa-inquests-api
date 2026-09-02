@@ -103,7 +103,7 @@ def test_gov_notify_adapter_sends_claim_submit_confirmation_email_successfully()
     application, _ = _create_test_application_and_proceeding()
     claim = Claim(
         claim_id=1,
-        laa_reference=12345,
+        application_id=12345,
         claim_type_id="PAYMENT_ON_ACCOUNT",
         submission_date=datetime(2026, 6, 18, 14, 3, tzinfo=ZoneInfo("UTC")),
         total_profit_cost_net=1000,
@@ -146,7 +146,7 @@ def test_gov_notify_adapter_sends_claim_rejected_decision_email_successfully():
     application, _ = _create_test_application_and_proceeding()
     claim = Claim(
         claim_id=7,
-        laa_reference=12345,
+        application_id=12345,
         claim_type_id="PAYMENT_ON_ACCOUNT",
         submission_date=datetime(2026, 6, 18, 14, 3, tzinfo=ZoneInfo("UTC")),
         total_profit_cost_net=1000,

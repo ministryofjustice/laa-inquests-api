@@ -31,7 +31,7 @@ def test_create_note_creates_caseworker_history_event_and_commits():
         event_reference=HistoryEventReference.CASE_NOTE_ADDED,
         actor="Caseworker Name",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=application.laa_reference,
+        laa_reference=application.application_id,
         event_data={"note_text": "Case note"},
     )
     create_history_event_port.commit.assert_called_once()

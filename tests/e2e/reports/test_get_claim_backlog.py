@@ -28,7 +28,7 @@ class TestGetClaimBacklogReport:
         application = session.exec(select(Application)).first()
         claim = create_claim_in_db(
             session,
-            laa_reference=application.laa_reference,
+            application_id=application.application_id,
             status=ClaimStatus.SUBMITTED,
             submission_date=datetime(2026, 1, 1, tzinfo=UTC),
         )
@@ -62,19 +62,19 @@ class TestGetClaimBacklogReport:
 
         create_claim_in_db(
             session,
-            laa_reference=application.laa_reference,
+            application_id=application.application_id,
             status=ClaimStatus.SUBMITTED,
             submission_date=datetime(2026, 4, 2, tzinfo=UTC),
         )
         create_claim_in_db(
             session,
-            laa_reference=application.laa_reference,
+            application_id=application.application_id,
             status=ClaimStatus.REJECTED,
             submission_date=datetime(2026, 4, 2, tzinfo=UTC),
         )
         create_claim_in_db(
             session,
-            laa_reference=application.laa_reference,
+            application_id=application.application_id,
             status=ClaimStatus.SUBMITTED,
             submission_date=datetime(2026, 4, 1, tzinfo=UTC),
         )

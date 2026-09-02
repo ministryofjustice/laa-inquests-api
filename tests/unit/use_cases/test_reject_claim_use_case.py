@@ -30,7 +30,7 @@ from app.use_cases.reject_claim import RejectClaimCommand, RejectClaimUseCase
 def _claim(claim_id: int = 1, laa_reference: int = 1) -> Claim:
     return Claim(
         claim_id=claim_id,
-        laa_reference=laa_reference,
+        application_id=laa_reference,
         claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
         status_id=ClaimStatus.SUBMITTED,
         submission_date=datetime.now(UTC),
@@ -44,7 +44,8 @@ def _claim(claim_id: int = 1, laa_reference: int = 1) -> Claim:
 
 def _application(laa_reference: int = 1):
     application = MagicMock()
-    application.laa_reference = laa_reference
+    application.application_id = laa_reference
+    application.laa_reference = str(laa_reference)
     application.provider.firm_code = "ABC123"
     return application
 
@@ -166,7 +167,7 @@ def test_creates_reject_decision_reason_updates_status_and_commits():
                 event_reference=HistoryEventReference.CLAIM_REJECTED_EMAIL,
                 actor=ActorType.SYSTEM,
                 actor_type=ActorType.SYSTEM,
-                laa_reference="1",
+                laa_reference=1,
                 event_data={
                     "recipient": application.provider.email_address,
                     "channel": NotificationType.EMAIL,

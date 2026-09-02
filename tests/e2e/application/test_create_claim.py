@@ -99,7 +99,7 @@ def _seed_approved_claim(
     vat_zero: Decimal | None = None,
 ) -> Claim:
     claim = Claim(
-        laa_reference=laa_reference,
+        application_id=laa_reference,
         claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
         status_id=ClaimStatus.PAY_IN_FULL,
         submission_date=datetime.now(UTC),
@@ -206,7 +206,7 @@ def test_201_create_claim_creates_submission_confirmation_comms_history_event(
 
     history_event = session.exec(
         select(HistoryEvent).where(
-            (HistoryEvent.laa_reference == laa_reference)
+            (HistoryEvent.application_id == laa_reference)
             & (
                 HistoryEvent.event_reference
                 == HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION
@@ -247,7 +247,7 @@ def test_201_create_claim_creates_claim_submitted_history_event(
 
     history_event = session.exec(
         select(HistoryEvent).where(
-            (HistoryEvent.laa_reference == laa_reference)
+            (HistoryEvent.application_id == laa_reference)
             & (HistoryEvent.event_reference == HistoryEventReference.CLAIM_SUBMITTED)
         )
     ).one()
@@ -1619,7 +1619,7 @@ def test_422_create_claim_when_application_not_granted(session, client, auth_tok
     assert response.json()["detail"]["errorCode"] == "APPLICATION_NOT_GRANTED"
 
     stored_claims = session.exec(
-        select(Claim).where(Claim.laa_reference == application.laa_reference)
+        select(Claim).where(Claim.application_id == application.application_id)
     ).all()
     assert stored_claims == []
 
@@ -1651,7 +1651,7 @@ def test_201_create_claim_auto_reject_returns_multiple_reasons_for_rejection_whe
         assert set(seed_response.json().keys()) == {"claimId"}
 
     application = session.exec(
-        select(Application).where(Application.laa_reference == laa_reference)
+        select(Application).where(Application.application_id == int(laa_reference))
     ).first()
     application_proceeding = application.proceeding
     application_proceeding.proceeding.substantive_cost_limitation = 5

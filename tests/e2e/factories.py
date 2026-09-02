@@ -113,7 +113,7 @@ def create_application_in_db(
 def create_claim_in_db(
     session: Session,
     *,
-    laa_reference: int,
+    application_id: int,
     status: ClaimStatus = ClaimStatus.SUBMITTED,
     submission_date: datetime | None = None,
     total_profit_cost_vat_zero: str = "0.00",
@@ -123,7 +123,7 @@ def create_claim_in_db(
 ) -> Claim:
     """Persist a claim with optional field overrides."""
     claim = Claim(
-        laa_reference=laa_reference,
+        application_id=application_id,
         claim_type_id=claim_type,
         status_id=status,
         submission_date=submission_date or datetime.now(UTC),

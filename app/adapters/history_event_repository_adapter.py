@@ -39,7 +39,7 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
         event_reference: HistoryEventReference,
         actor: str,
         actor_type: ActorType,
-        laa_reference: int,
+        laa_reference: int,  # TODO: rename to application_id
         event_data: dict | None = None,
     ) -> HistoryEvent:
         """
@@ -77,7 +77,7 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
             actor=actor,
             actor_type=actor_type,
             entra_user_object_id=entra_user_object_id,
-            laa_reference=laa_reference,
+            application_id=laa_reference,
             event_data=event_data,
         )
         self.session.add(new_event)
@@ -112,6 +112,6 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
         """
         return self.session.exec(
             select(HistoryEvent)
-            .where(HistoryEvent.laa_reference == laa_reference)
+            .where(HistoryEvent.application_id == laa_reference)
             .order_by(HistoryEvent.timestamp.desc())
         ).all()

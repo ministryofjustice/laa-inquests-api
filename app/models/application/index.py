@@ -144,7 +144,7 @@ class Provider(ProviderBase, table=True):
 
 
 class ApplicationBase(SQLModel):
-    laa_reference: int | None = Field(default_factory=None, primary_key=True)
+    application_id: int | None = Field(default_factory=None, primary_key=True)
     new_laa_reference: str = Field(unique=True, min_length=11, max_length=11)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(
@@ -204,18 +204,29 @@ class Application(ApplicationBase, table=True):
         """Calculate overall_decision from the proceeding's merits_decision."""
         return self.proceeding.merits_decision
 
+    @computed_field
+    @property
+    def laa_reference(self) -> str | None:
+        """Compatibility alias exposing application_id as a string."""
+        return str(self.application_id) if self.application_id is not None else None
+
 
 class ApplicationPublicBody(SQLModel, table=True):
     __tablename__ = "application_public_body"
     application_public_body_id: int | None = Field(default=None, primary_key=True)
     public_body_id: PublicBodyId = Field(foreign_key="public_body.public_body_id")
-    laa_reference: int = Field(foreign_key="application.laa_reference")
+    application_id: int = Field(foreign_key="application.application_id")
     public_body: PublicBody = Relationship(back_populates="application_public_body")
     application: Application = Relationship(back_populates="public_bodies")
 
     @property
     def public_body_description(self):
         return self.public_body.public_body_description
+
+    @property
+    def laa_reference(self) -> str:
+        """Compatibility alias exposing application_id as a string."""
+        return str(self.application_id)
 
 
 class ApplicationProceeding(SQLModel, table=True):
@@ -225,7 +236,7 @@ class ApplicationProceeding(SQLModel, table=True):
     merits_decision: str = MeritsDecision.PENDING
     reason_for_refusal: str | None = None
     justification: str | None = None
-    laa_reference: int = Field(foreign_key="application.laa_reference")
+    application_id: int = Field(foreign_key="application.application_id")
     proceeding_id: ProceedingId = Field(foreign_key="proceeding.proceeding_id")
     proceeding: Proceeding = Relationship(back_populates="application_proceeding")
     substantive_cost_limitation_effective_date: date = Field(
@@ -273,6 +284,11 @@ class ApplicationProceeding(SQLModel, table=True):
         if self.merits_decision != MeritsDecision.GRANTED:
             return UNGRANTED_SUBSTANTIVE_COST_LIMITATION
         return self.proceeding.substantive_cost_limitation
+
+    @property
+    def laa_reference(self) -> str:
+        """Compatibility alias exposing application_id as a string."""
+        return str(self.application_id)
 
 
 # REQUEST BODY -- Create
@@ -604,13 +620,6 @@ class ApplicationResponse(BaseModel):
     provider: ProviderResponse
     coroners_letter: CoronersLetterResponse | None = None
 
-    # Temporary fix to convert int to string for laa_reference
-    @field_validator("laa_reference", mode="before")
-    @classmethod
-    def convert_laa_reference_to_string(cls, v):
-        """Convert int laa_reference from DB to string for API response."""
-        return str(v) if isinstance(v, int) else v
-
 
 # Use case models
 class ApplicationSearchResponse(BaseModel):
@@ -619,7 +628,7 @@ class ApplicationSearchResponse(BaseModel):
         from_attributes=True,
         populate_by_name=True,
     )
-    laa_reference: int
+    laa_reference: str
     client_first_name: str
     client_last_name: str
     client_date_of_birth: str

@@ -124,7 +124,7 @@ def test_update_public_bodies_creates_history_event(
         event_reference=HistoryEventReference.INTERESTED_PARTY_UPDATED,
         actor="Caseworker",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=application.laa_reference,
+        laa_reference=application.application_id,
         event_data={
             "old_public_bodies": [PublicBodyId.DEPARTMENT_FOR_TRANSPORT],
             "new_public_bodies": public_body_ids,
