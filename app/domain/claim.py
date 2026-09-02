@@ -166,9 +166,6 @@ class Claim:
         if self.poa_type == POAType.PROFIT_COST:
             self._validate_profit_cost()
 
-    def total_claim_cost_for_limit_check(self) -> Decimal | None:
-        return self.net if self.net is not None else self.vat_zero_total
-
     def gross_or_vat_zero_cost(self) -> Decimal | None:
         return self.gross if self.gross is not None else self.vat_zero_total
 
@@ -176,11 +173,10 @@ class Claim:
         if self.claim_type != ClaimType.PAYMENT_ON_ACCOUNT:
             return False
 
-        total = self.total_claim_cost_for_limit_check()
-        if total is None:
+        if self.gross_or_vat_zero_cost() is None:
             return False
 
-        if total > AUTO_APPROVAL_MAX_TOTAL:
+        if self._exceeds_hard_poa_limit():
             return False
 
         if application.status == "WITHDRAWN":
@@ -211,6 +207,12 @@ class Claim:
     def should_auto_reject_for_limit(
         self, application: Application
     ) -> ClaimRejectionReason | None:
+        if self.claim_type != ClaimType.PAYMENT_ON_ACCOUNT:
+            return None
+
+        if self._exceeds_hard_poa_limit():
+            return None
+
         total = self.gross_or_vat_zero_cost()
         if total is None:
             return None
@@ -226,18 +228,21 @@ class Claim:
             else None
         )
 
-    def should_auto_reject_for_application_total_limit(
+    def exceeds_aggregate_cost_limit(
         self,
         application: Application,
         existing_claims: list[ExistingClaimSummary],
-    ) -> ClaimRejectionReason | None:
+    ) -> bool:
+        if self.claim_type != ClaimType.PAYMENT_ON_ACCOUNT:
+            return False
+
         new_claim_cost = self.gross_or_vat_zero_cost()
         if new_claim_cost is None:
-            return None
+            return False
 
         limit = self._get_substantive_cost_limit(application)
         if limit is None:
-            return None
+            return False
 
         approved_claims = [
             c for c in existing_claims if c.status == ClaimStatus.PAY_IN_FULL
@@ -247,12 +252,26 @@ class Claim:
             for c in approved_claims
         )
         total = existing_total + new_claim_cost
-        exceeds_limit = total > limit
-        return (
-            ClaimRejectionReason.APPLICATION_CLAIMS_EXCEED_COST_LIMIT
-            if exceeds_limit
-            else None
+        return total > limit
+
+    def requires_manual_review(
+        self,
+        application: Application,
+        existing_claims: list[ExistingClaimSummary],
+    ) -> bool:
+        """POA claims over the hard limit or aggregating over the case cost limit
+        are held for a caseworker rather than auto-rejected or auto-approved."""
+        if self.claim_type != ClaimType.PAYMENT_ON_ACCOUNT:
+            return False
+        return self._exceeds_hard_poa_limit() or self.exceeds_aggregate_cost_limit(
+            application, existing_claims
         )
+
+    def _exceeds_hard_poa_limit(self) -> bool:
+        if self.claim_type != ClaimType.PAYMENT_ON_ACCOUNT:
+            return False
+        total = self.gross_or_vat_zero_cost()
+        return total is not None and total > AUTO_APPROVAL_MAX_TOTAL
 
     def should_auto_reject(
         self,
@@ -271,12 +290,6 @@ class Claim:
         limit_reason = self.should_auto_reject_for_limit(application)
         if limit_reason:
             reasons.append(limit_reason)
-
-        app_total_reason = self.should_auto_reject_for_application_total_limit(
-            application, existing_claims
-        )
-        if app_total_reason:
-            reasons.append(app_total_reason)
 
         early_poa_reason = self.should_auto_reject_for_early_profit_cost_poa(
             application, reference_date

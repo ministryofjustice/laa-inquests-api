@@ -703,7 +703,7 @@ def _make_existing_claim(
     )
 
 
-def test_should_auto_reject_for_application_total_limit_when_sum_exceeds_limit():
+def test_exceeds_aggregate_cost_limit_when_sum_exceeds_limit():
     claim = _make_domain_claim(gross=Decimal("600.00"))  # net defaults to 400.00
     existing = [
         _make_existing_claim(
@@ -712,14 +712,12 @@ def test_should_auto_reject_for_application_total_limit_when_sum_exceeds_limit()
             status=ClaimStatus.PAY_IN_FULL,
         )
     ]
-    reason = claim.should_auto_reject_for_application_total_limit(
-        _make_application(limit=1000), existing
-    )
+    result = claim.exceeds_aggregate_cost_limit(_make_application(limit=1000), existing)
 
-    assert reason is ClaimRejectionReason.APPLICATION_CLAIMS_EXCEED_COST_LIMIT
+    assert result is True
 
 
-def test_should_not_auto_reject_for_application_total_limit_when_sum_within_limit():
+def test_exceeds_aggregate_cost_limit_when_sum_within_limit():
     claim = _make_domain_claim(gross=Decimal("400.00"))
     existing = [
         _make_existing_claim(
@@ -728,56 +726,48 @@ def test_should_not_auto_reject_for_application_total_limit_when_sum_within_limi
             status=ClaimStatus.PAY_IN_FULL,
         )
     ]
-    reason = claim.should_auto_reject_for_application_total_limit(
-        _make_application(limit=1000), existing
-    )
+    result = claim.exceeds_aggregate_cost_limit(_make_application(limit=1000), existing)
 
-    assert reason is None
+    assert result is False
 
 
-def test_should_not_auto_reject_for_application_total_limit_when_limit_is_none():
+def test_exceeds_aggregate_cost_limit_when_limit_is_none():
     claim = _make_domain_claim(gross=Decimal("900.00"))
     application = MagicMock(spec=Application)
     application.proceeding = MagicMock()
     application.proceeding.substantive_cost_limitation = None
-    reason = claim.should_auto_reject_for_application_total_limit(application, [])
+    result = claim.exceeds_aggregate_cost_limit(application, [])
 
-    assert reason is None
+    assert result is False
 
 
-def test_should_not_auto_reject_for_application_total_limit_when_gross_is_none():
+def test_exceeds_aggregate_cost_limit_when_gross_is_none():
     claim = _make_domain_claim(net=None, gross=None)
-    reason = claim.should_auto_reject_for_application_total_limit(
-        _make_application(limit=1000), []
-    )
+    result = claim.exceeds_aggregate_cost_limit(_make_application(limit=1000), [])
 
-    assert reason is None
+    assert result is False
 
 
-def test_should_not_auto_reject_for_application_total_limit_when_no_existing_claims():
+def test_exceeds_aggregate_cost_limit_when_no_existing_claims():
     claim = _make_domain_claim(gross=Decimal("900.00"))
-    reason = claim.should_auto_reject_for_application_total_limit(
-        _make_application(limit=1000), []
-    )
+    result = claim.exceeds_aggregate_cost_limit(_make_application(limit=1000), [])
 
-    assert reason is None
+    assert result is False
 
 
-def test_should_auto_reject_for_application_total_limit_excludes_rejected_claims():
+def test_exceeds_aggregate_cost_limit_excludes_rejected_claims():
     claim = _make_domain_claim(gross=Decimal("600.00"))
     existing = [
         _make_existing_claim(
             net=Decimal("500.00"), gross=Decimal("600.00"), status=ClaimStatus.REJECTED
         )
     ]
-    reason = claim.should_auto_reject_for_application_total_limit(
-        _make_application(limit=1000), existing
-    )
+    result = claim.exceeds_aggregate_cost_limit(_make_application(limit=1000), existing)
 
-    assert reason is None
+    assert result is False
 
 
-def test_should_auto_reject_for_application_total_limit_excludes_rejected_with_amendment_claims():
+def test_exceeds_aggregate_cost_limit_excludes_rejected_with_amendment_claims():
     claim = _make_domain_claim(gross=Decimal("600.00"))
     existing = [
         _make_existing_claim(
@@ -786,14 +776,12 @@ def test_should_auto_reject_for_application_total_limit_excludes_rejected_with_a
             status=ClaimStatus.REJECTED_WITH_AMENDMENT,
         )
     ]
-    reason = claim.should_auto_reject_for_application_total_limit(
-        _make_application(limit=1000), existing
-    )
+    result = claim.exceeds_aggregate_cost_limit(_make_application(limit=1000), existing)
 
-    assert reason is None
+    assert result is False
 
 
-def test_should_auto_reject_for_application_total_limit_when_new_claim_has_only_vat_zero_total_and_sum_exceeds_limit():
+def test_exceeds_aggregate_cost_limit_when_new_claim_has_only_vat_zero_total_and_sum_exceeds_limit():
     claim = Claim(
         claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
         poa_type=POAType.PROFIT_COST,
@@ -812,14 +800,12 @@ def test_should_auto_reject_for_application_total_limit_when_new_claim_has_only_
         )
     ]
     # new vat_zero (600) + approved vat_zero (500) = 1100 > 1000
-    reason = claim.should_auto_reject_for_application_total_limit(
-        _make_application(limit=1000), existing
-    )
+    result = claim.exceeds_aggregate_cost_limit(_make_application(limit=1000), existing)
 
-    assert reason is ClaimRejectionReason.APPLICATION_CLAIMS_EXCEED_COST_LIMIT
+    assert result is True
 
 
-def test_should_not_auto_reject_for_application_total_limit_when_prior_claim_not_yet_approved():
+def test_exceeds_aggregate_cost_limit_when_prior_claim_not_yet_approved():
     claim = _make_domain_claim(gross=Decimal("600.00"))
     existing = [
         _make_existing_claim(
@@ -828,14 +814,12 @@ def test_should_not_auto_reject_for_application_total_limit_when_prior_claim_not
             status=ClaimStatus.SUBMITTED,
         )
     ]
-    reason = claim.should_auto_reject_for_application_total_limit(
-        _make_application(limit=1000), existing
-    )
+    result = claim.exceeds_aggregate_cost_limit(_make_application(limit=1000), existing)
 
-    assert reason is None
+    assert result is False
 
 
-def test_should_not_auto_reject_for_application_total_limit_when_prior_claim_rejected_for_exceeding():
+def test_exceeds_aggregate_cost_limit_when_prior_claim_rejected_for_exceeding():
     claim = _make_domain_claim(gross=Decimal("600.00"))
     existing = [
         _make_existing_claim(
@@ -844,14 +828,12 @@ def test_should_not_auto_reject_for_application_total_limit_when_prior_claim_rej
             status=ClaimStatus.REJECTED,
         )
     ]
-    reason = claim.should_auto_reject_for_application_total_limit(
-        _make_application(limit=1000), existing
-    )
+    result = claim.exceeds_aggregate_cost_limit(_make_application(limit=1000), existing)
 
-    assert reason is None
+    assert result is False
 
 
-def test_should_auto_reject_for_application_total_limit_uses_gross_of_approved_claims():
+def test_exceeds_aggregate_cost_limit_uses_gross_of_approved_claims():
     claim = _make_domain_claim(gross=Decimal("300.00"))
     existing = [
         _make_existing_claim(
@@ -860,11 +842,9 @@ def test_should_auto_reject_for_application_total_limit_uses_gross_of_approved_c
             status=ClaimStatus.PAY_IN_FULL,
         )
     ]
-    reason = claim.should_auto_reject_for_application_total_limit(
-        _make_application(limit=1000), existing
-    )
+    result = claim.exceeds_aggregate_cost_limit(_make_application(limit=1000), existing)
 
-    assert reason is ClaimRejectionReason.APPLICATION_CLAIMS_EXCEED_COST_LIMIT
+    assert result is True
 
 
 def test_should_auto_reject_returns_per_claim_rejection_when_single_claim_exceeds_limit():
@@ -877,7 +857,7 @@ def test_should_auto_reject_returns_per_claim_rejection_when_single_claim_exceed
     )
 
 
-def test_should_auto_reject_returns_application_total_rejection_when_total_exceeds_but_single_claim_does_not():
+def test_should_auto_reject_does_not_reject_when_only_aggregate_exceeds_limit():
     claim = _make_domain_claim(gross=Decimal("600.00"))  # net defaults to 400.00
     existing = [
         _make_existing_claim(
@@ -886,12 +866,11 @@ def test_should_auto_reject_returns_application_total_rejection_when_total_excee
             status=ClaimStatus.PAY_IN_FULL,
         )
     ]
-    rejection = claim.should_auto_reject(_make_application(limit=1000), existing)
+    application = _make_application(limit=1000)
+    rejection = claim.should_auto_reject(application, existing)
 
-    assert rejection.is_rejected is True
-    assert (
-        ClaimRejectionReason.APPLICATION_CLAIMS_EXCEED_COST_LIMIT in rejection.reasons
-    )
+    assert rejection.is_rejected is False
+    assert claim.requires_manual_review(application, existing) is True
 
 
 def test_should_auto_reject_returns_no_rejection_when_neither_check_fails():
@@ -901,6 +880,90 @@ def test_should_auto_reject_returns_no_rejection_when_neither_check_fails():
 
     assert rejection.is_rejected is False
     assert rejection.reasons == []
+
+
+def test_should_not_auto_reject_for_limit_when_non_poa_claim_type():
+    claim = _final_bill_claim({"gross": Decimal("2000.00")})
+    reason = claim.should_auto_reject_for_limit(_make_application(limit=1000))
+
+    assert reason is None
+
+
+def test_should_not_auto_reject_for_limit_when_over_hard_poa_limit():
+    claim = Claim(
+        claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+        poa_type=POAType.PROFIT_COST,
+        net=Decimal("60000.00"),
+        gross=Decimal("60000.00"),
+        vat_zero_total=None,
+    )
+    reason = claim.should_auto_reject_for_limit(_make_application(limit=10000))
+
+    assert reason is None
+
+
+def test_should_not_auto_reject_for_limit_when_gross_over_hard_limit_but_net_under():
+    claim = Claim(
+        claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+        poa_type=POAType.PROFIT_COST,
+        net=Decimal("45000.00"),
+        gross=Decimal("55000.00"),
+        vat_zero_total=None,
+    )
+    application = _make_application(limit=10000)
+
+    assert claim.should_auto_reject_for_limit(application) is None
+    assert claim.requires_manual_review(application, []) is True
+
+
+def test_exceeds_aggregate_cost_limit_when_non_poa_claim_type():
+    claim = _final_bill_claim({"gross": Decimal("2000.00")})
+    existing = [
+        _make_existing_claim(gross=Decimal("900.00"), status=ClaimStatus.PAY_IN_FULL)
+    ]
+    result = claim.exceeds_aggregate_cost_limit(_make_application(limit=1000), existing)
+
+    assert result is False
+
+
+def test_requires_manual_review_when_over_hard_poa_limit():
+    claim = Claim(
+        claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+        poa_type=POAType.PROFIT_COST,
+        net=Decimal("60000.00"),
+        gross=Decimal("60000.00"),
+        vat_zero_total=None,
+    )
+
+    assert claim.requires_manual_review(_make_application(limit=10000), []) is True
+
+
+def test_requires_manual_review_when_aggregate_exceeds_limit():
+    claim = _make_domain_claim(gross=Decimal("600.00"))
+    existing = [
+        _make_existing_claim(
+            net=Decimal("700.00"),
+            gross=Decimal("800.00"),
+            status=ClaimStatus.PAY_IN_FULL,
+        )
+    ]
+
+    assert claim.requires_manual_review(_make_application(limit=1000), existing) is True
+
+
+def test_requires_manual_review_false_when_within_limits():
+    claim = _make_domain_claim(gross=Decimal("400.00"))
+    existing = [_make_existing_claim(net=Decimal("500.00"), gross=Decimal("500.00"))]
+
+    assert (
+        claim.requires_manual_review(_make_application(limit=1000), existing) is False
+    )
+
+
+def test_requires_manual_review_false_for_non_poa_claim_type():
+    claim = _final_bill_claim({"gross": Decimal("60000.00")})
+
+    assert claim.requires_manual_review(_make_application(limit=1000), []) is False
 
 
 def _make_existing_profit_cost_poa(
@@ -1057,9 +1120,6 @@ def test_should_auto_reject_returns_all_applicable_reasons_when_multiple_conditi
     assert (
         ClaimRejectionReason.CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT in rejection.reasons
     )
-    assert (
-        ClaimRejectionReason.APPLICATION_CLAIMS_EXCEED_COST_LIMIT in rejection.reasons
-    )
 
 
 def _make_application_with_certificate(start: date | None, limit=1000000):
@@ -1152,6 +1212,21 @@ def test_is_not_eligible_for_auto_approval_when_total_exceeds_50000():
         poa_type=POAType.PROFIT_COST,
         net=Decimal("50000.01"),
         gross=Decimal("50000.01"),
+        vat_zero_total=None,
+    )
+    application = _make_application_with_certificate(start=None)
+    application.status = "LIVE"
+    application.overall_decision = MeritsDecision.GRANTED
+
+    assert claim.is_eligible_for_auto_approval(application) is False
+
+
+def test_is_not_eligible_for_auto_approval_when_gross_exceeds_50000_even_if_net_under():
+    claim = Claim(
+        claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+        poa_type=POAType.PROFIT_COST,
+        net=Decimal("45000.00"),
+        gross=Decimal("55000.00"),
         vat_zero_total=None,
     )
     application = _make_application_with_certificate(start=None)
