@@ -1682,11 +1682,10 @@ def test_201_create_claim_auto_reject_returns_multiple_reasons_for_rejection_whe
     expected_reasons = {
         "MAX_POA_CLAIMS_EXCEEDED",
         "CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT",
-        "APPLICATION_CLAIMS_EXCEED_COST_LIMIT",
         "PROFIT_COST_POA_CLAIM_SUBMITTED_TOO_EARLY",
     }
     assert set(claim["rejectionReasons"]) == expected_reasons
-    assert len(claim["rejectionReasons"]) == 4
+    assert len(claim["rejectionReasons"]) == 3
 
     claim_id = claim["claimId"]
     decision = session.exec(
@@ -1700,7 +1699,7 @@ def test_201_create_claim_auto_reject_returns_multiple_reasons_for_rejection_whe
             DecisionReason.claim_decision_id == decision.claim_decision_id
         )
     ).all()
-    assert len(decision_reasons) == 4
+    assert len(decision_reasons) == 3
     assert {r.reason_code for r in decision_reasons} == expected_reasons
 
 
@@ -1748,7 +1747,7 @@ def test_201_create_claim_auto_approves_subsequent_claim_after_one_is_rejected(
     assert approved_stored.status_id == "PAY_IN_FULL"
 
 
-def test_201_create_claim_rejects_when_cumulative_approved_claims_exceed_limit(
+def test_201_create_claim_holds_for_manual_review_when_cumulative_approved_claims_exceed_limit(
     session, client, auth_token
 ):
     application = session.exec(select(Application)).first()
@@ -1784,7 +1783,144 @@ def test_201_create_claim_rejects_when_cumulative_approved_claims_exceed_limit(
 
     assert response.status_code == 201
     claim = response.json()
-    assert "APPLICATION_CLAIMS_EXCEED_COST_LIMIT" in claim["rejectionReasons"]
+    assert set(claim.keys()) == {"claimId"}
+
+    stored_claim = session.get(Claim, claim["claimId"])
+    assert stored_claim is not None
+    assert stored_claim.status_id == "SUBMITTED"
+
+    decision = session.exec(
+        select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
+    ).first()
+    assert decision is None
+
+
+def test_201_create_claim_rejects_when_single_poa_exceeds_cost_limit_even_over_50000(
+    session, client, auth_token
+):
+    application = session.exec(select(Application)).first()
+    application_proceeding = application.proceeding
+    application_proceeding.proceeding.substantive_cost_limitation = 10000
+    application_proceeding.certificate_start_date = datetime(2000, 1, 1, tzinfo=UTC)
+    application_proceeding.merits_decision = MeritsDecision.GRANTED
+    session.add(application_proceeding.proceeding)
+    session.add(application_proceeding)
+    session.commit()
+
+    response = client.post(
+        f"/applications/{application.laa_reference}/claim",
+        json=_make_request_body(
+            {"totalProfitCostNet": 60000, "totalProfitCostGross": 60000}
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    claim = response.json()
+    assert set(claim.keys()) == {"claimId", "rejectionReasons"}
+    assert claim["rejectionReasons"] == ["CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT"]
+
+    stored_claim = session.get(Claim, claim["claimId"])
+    assert stored_claim is not None
+    assert stored_claim.status_id == "REJECTED"
+
+    decision = session.exec(
+        select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
+    ).first()
+    assert decision is not None
+    assert decision.decision == "REJECT"
+
+
+def test_201_create_claim_holds_for_manual_review_when_poa_over_50000_within_cost_limit(
+    session, client, auth_token
+):
+    application = session.exec(select(Application)).first()
+    application_proceeding = application.proceeding
+    application_proceeding.proceeding.substantive_cost_limitation = 100000
+    application_proceeding.certificate_start_date = datetime(2000, 1, 1, tzinfo=UTC)
+    application_proceeding.merits_decision = MeritsDecision.GRANTED
+    session.add(application_proceeding.proceeding)
+    session.add(application_proceeding)
+    session.commit()
+
+    response = client.post(
+        f"/applications/{application.laa_reference}/claim",
+        json=_make_request_body(
+            {"totalProfitCostNet": 60000, "totalProfitCostGross": 60000}
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    claim = response.json()
+    assert set(claim.keys()) == {"claimId"}
+
+    stored_claim = session.get(Claim, claim["claimId"])
+    assert stored_claim is not None
+    assert stored_claim.status_id == "SUBMITTED"
+
+    decision = session.exec(
+        select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
+    ).first()
+    assert decision is None
+
+
+def test_201_create_claim_still_rejects_profit_cost_poa_over_50000_when_max_poa_count_exceeded(
+    session, client, auth_token
+):
+    application = session.exec(select(Application)).first()
+    laa_reference = application.laa_reference
+    application_proceeding = application.proceeding
+    application_proceeding.proceeding.substantive_cost_limitation = 100000
+    application_proceeding.certificate_start_date = datetime(2000, 1, 1, tzinfo=UTC)
+    application_proceeding.merits_decision = MeritsDecision.GRANTED
+    session.add(application_proceeding.proceeding)
+    session.add(application_proceeding)
+    session.commit()
+
+    for _ in range(4):
+        seed_response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {"totalProfitCostNet": 1, "totalProfitCostGross": 1}
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+        assert seed_response.status_code == 201
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=_make_request_body(
+            {"totalProfitCostNet": 60000, "totalProfitCostGross": 60000}
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    claim = response.json()
+    assert set(claim.keys()) == {"claimId", "rejectionReasons"}
+    assert claim["rejectionReasons"] == ["MAX_POA_CLAIMS_EXCEEDED"]
+
+    stored_claim = session.get(Claim, claim["claimId"])
+    assert stored_claim.status_id == "REJECTED"
+
+    decision = session.exec(
+        select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
+    ).first()
+    assert decision is not None
+    assert decision.decision == "REJECT"
 
 
 def test_create_claim_with_missing_claimant_id_returns_422(

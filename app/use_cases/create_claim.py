@@ -276,6 +276,9 @@ class CreateClaimUseCase:
             rejection = validated_claim.should_auto_reject(
                 application, existing_summaries, reference_date
             )
+            needs_manual_review = validated_claim.requires_manual_review(
+                application, existing_summaries
+            )
 
             if (
                 rejection.is_rejected
@@ -328,6 +331,7 @@ class CreateClaimUseCase:
 
             if (
                 not rejection.is_rejected
+                and not needs_manual_review
                 and validated_claim.is_eligible_for_auto_approval(application)
                 and self.create_claim_decision_port is not None
                 and self.update_claim_status_port is not None
