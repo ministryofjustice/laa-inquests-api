@@ -889,7 +889,7 @@ def test_should_not_auto_reject_for_limit_when_non_poa_claim_type():
     assert reason is None
 
 
-def test_should_not_auto_reject_for_limit_when_over_hard_poa_limit():
+def test_should_auto_reject_for_limit_takes_precedence_over_hard_poa_limit():
     claim = Claim(
         claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
         poa_type=POAType.PROFIT_COST,
@@ -899,10 +899,10 @@ def test_should_not_auto_reject_for_limit_when_over_hard_poa_limit():
     )
     reason = claim.should_auto_reject_for_limit(_make_application(limit=10000))
 
-    assert reason is None
+    assert reason == ClaimRejectionReason.CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT
 
 
-def test_should_not_auto_reject_for_limit_when_gross_over_hard_limit_but_net_under():
+def test_should_auto_reject_for_limit_when_gross_over_hard_limit_but_net_under():
     claim = Claim(
         claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
         poa_type=POAType.PROFIT_COST,
@@ -912,7 +912,27 @@ def test_should_not_auto_reject_for_limit_when_gross_over_hard_limit_but_net_und
     )
     application = _make_application(limit=10000)
 
-    assert claim.should_auto_reject_for_limit(application) is None
+    reason = claim.should_auto_reject_for_limit(application)
+
+    assert reason == ClaimRejectionReason.CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT
+
+
+def test_should_auto_reject_takes_precedence_when_single_claim_also_over_hard_limit():
+    claim = Claim(
+        claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+        poa_type=POAType.PROFIT_COST,
+        net=Decimal("60000.00"),
+        gross=Decimal("60000.00"),
+        vat_zero_total=None,
+    )
+    application = _make_application(limit=10000)
+
+    rejection = claim.should_auto_reject(application, [])
+
+    assert rejection.is_rejected is True
+    assert (
+        ClaimRejectionReason.CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT in rejection.reasons
+    )
     assert claim.requires_manual_review(application, []) is True
 
 

@@ -210,9 +210,6 @@ class Claim:
         if self.claim_type != ClaimType.PAYMENT_ON_ACCOUNT:
             return None
 
-        if self._exceeds_hard_poa_limit():
-            return None
-
         total = self.gross_or_vat_zero_cost()
         if total is None:
             return None

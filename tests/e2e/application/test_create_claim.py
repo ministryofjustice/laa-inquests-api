@@ -1795,12 +1795,51 @@ def test_201_create_claim_holds_for_manual_review_when_cumulative_approved_claim
     assert decision is None
 
 
-def test_201_create_claim_holds_for_manual_review_when_poa_exceeds_50000_hard_limit(
+def test_201_create_claim_rejects_when_single_poa_exceeds_cost_limit_even_over_50000(
     session, client, auth_token
 ):
     application = session.exec(select(Application)).first()
     application_proceeding = application.proceeding
     application_proceeding.proceeding.substantive_cost_limitation = 10000
+    application_proceeding.certificate_start_date = datetime(2000, 1, 1, tzinfo=UTC)
+    application_proceeding.merits_decision = MeritsDecision.GRANTED
+    session.add(application_proceeding.proceeding)
+    session.add(application_proceeding)
+    session.commit()
+
+    response = client.post(
+        f"/applications/{application.laa_reference}/claim",
+        json=_make_request_body(
+            {"totalProfitCostNet": 60000, "totalProfitCostGross": 60000}
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 201
+    claim = response.json()
+    assert set(claim.keys()) == {"claimId", "rejectionReasons"}
+    assert claim["rejectionReasons"] == ["CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT"]
+
+    stored_claim = session.get(Claim, claim["claimId"])
+    assert stored_claim is not None
+    assert stored_claim.status_id == "REJECTED"
+
+    decision = session.exec(
+        select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
+    ).first()
+    assert decision is not None
+    assert decision.decision == "REJECT"
+
+
+def test_201_create_claim_holds_for_manual_review_when_poa_over_50000_within_cost_limit(
+    session, client, auth_token
+):
+    application = session.exec(select(Application)).first()
+    application_proceeding = application.proceeding
+    application_proceeding.proceeding.substantive_cost_limitation = 100000
     application_proceeding.certificate_start_date = datetime(2000, 1, 1, tzinfo=UTC)
     application_proceeding.merits_decision = MeritsDecision.GRANTED
     session.add(application_proceeding.proceeding)
@@ -1838,7 +1877,7 @@ def test_201_create_claim_still_rejects_profit_cost_poa_over_50000_when_max_poa_
     application = session.exec(select(Application)).first()
     laa_reference = application.laa_reference
     application_proceeding = application.proceeding
-    application_proceeding.proceeding.substantive_cost_limitation = 10000
+    application_proceeding.proceeding.substantive_cost_limitation = 100000
     application_proceeding.certificate_start_date = datetime(2000, 1, 1, tzinfo=UTC)
     application_proceeding.merits_decision = MeritsDecision.GRANTED
     session.add(application_proceeding.proceeding)
