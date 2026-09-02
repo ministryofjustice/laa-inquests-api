@@ -1,4 +1,5 @@
 import logging
+import uuid
 from collections.abc import Sequence
 from mimetypes import guess_type
 from typing import Annotated
@@ -58,9 +59,11 @@ from app.ports.claim.update_claim_status_port import (
 )
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
+from app.ports.delete_coroners_letter_port import DeleteCoronersLetterPort
 from app.ports.entra_auth_port import AuthenticatedUser
 from app.ports.get_application_history_port import GetApplicationHistoryPort
 from app.ports.get_application_port import GetApplicationPort
+from app.ports.get_coroners_letter_port import GetCoronersLetterPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.list_applications_port import ListApplicationsPort
 from app.ports.list_public_bodies_port import ListPublicBodiesPort
@@ -83,10 +86,12 @@ from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
 from app.use_cases.create_claim import CreateClaimCommand, CreateClaimUseCase
 from app.use_cases.create_note import CreateNoteUseCase
+from app.use_cases.delete_coroners_letter import DeleteCoronersLetterUseCase
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
     ApplicationNotGrantedError,
     ClaimNotFoundError,
+    CoronersLetterDeleteError,
     CoronersLetterNotFoundError,
     CoronersLetterRetrievalError,
     CoronersLetterUploadError,
@@ -415,6 +420,22 @@ def get_upload_coroners_letter_use_case(
     )
 
 
+def get_delete_coroners_letter_use_case(
+    get_coroners_letter_port: GetCoronersLetterPort = Depends(
+        get_application_db_adapter
+    ),
+    delete_coroners_letter_port: DeleteCoronersLetterPort = Depends(
+        get_application_db_adapter
+    ),
+    sds_port: SdsPort = Depends(get_sds_port),
+) -> DeleteCoronersLetterUseCase:
+    return DeleteCoronersLetterUseCase(
+        get_coroners_letter_port=get_coroners_letter_port,
+        delete_coroners_letter_port=delete_coroners_letter_port,
+        sds_port=sds_port,
+    )
+
+
 @router.get("/search", response_model=list[ApplicationSearchResponse])
 async def search_application(
     laa_reference: str,
@@ -658,6 +679,46 @@ async def upload_coroners_letter(
     return UploadCoronersLetterResponse(
         coroners_letter_id=coroners_letter_id, coroners_letter_file_name=file_name
     )
+
+
+@router.delete("/coroners-letter/{coroners_letter_id}", status_code=204)
+def delete_coroners_letter(
+    coroners_letter_id: uuid.UUID,
+    use_case: DeleteCoronersLetterUseCase = Depends(
+        get_delete_coroners_letter_use_case
+    ),
+    request: Request = None,
+    _: None = Depends(verify_entra_provider_token),
+) -> Response:
+    """Delete an uploaded coroner's letter from document storage and the database."""
+    try:
+        use_case.execute(coroners_letter_id)
+    except CoronersLetterNotFoundError:
+        logger.warning(
+            "Coroners letter delete failed: not found",
+            extra=build_log_extra(
+                event="coroners_letter_deleted_failed",
+                route=_route(request),
+                method=_method(request),
+                status_code=404,
+                coroners_letter_id=str(coroners_letter_id),
+            ),
+        )
+        raise HTTPException(status_code=404, detail="Coroners letter not found")
+    except CoronersLetterDeleteError:
+        logger.warning(
+            "Coroners letter delete failed",
+            extra=build_log_extra(
+                event="coroners_letter_deleted_failed",
+                route=_route(request),
+                method=_method(request),
+                status_code=500,
+                coroners_letter_id=str(coroners_letter_id),
+            ),
+        )
+        raise HTTPException(status_code=500, detail="Failed to delete coroners letter")
+
+    return Response(status_code=204)
 
 
 @router.post("/", response_model=ApplicationResponse, status_code=201)

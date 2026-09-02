@@ -16,6 +16,7 @@ from app.ports.sds_port import SdsPort
 from app.use_cases.exceptions import (
     ClaimEvidenceDeleteError,
     ClaimEvidenceUploadError,
+    CoronersLetterDeleteError,
     CoronersLetterUploadError,
     InvalidClaimEvidenceDocumentIdError,
     InvalidCoronersLetterDocumentIdError,
@@ -413,6 +414,39 @@ class SdsAdapter(SdsPort):
             "SDS claim evidence deleted",
             extra=build_log_extra(
                 event="sds_claim_evidence_deleted_success",
+                route="sds:delete_files",
+                method="DELETE",
+                status_code=response.status_code,
+                duration_ms=duration_ms(started_at),
+            ),
+        )
+
+    def delete_coroners_letter(self, file_name: str) -> None:
+        started_at = time.perf_counter()
+        if not file_name or not file_name.strip():
+            raise InvalidCoronersLetterDocumentIdError(
+                "file_name must be a non-empty string"
+            )
+        token = self._get_token()
+        response = httpx.delete(
+            f"{self.base_url}/delete_files",
+            params={"file_keys": [file_name]},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        if response.status_code != 200:
+            raise CoronersLetterDeleteError(
+                f"SDS returned {response.status_code} while deleting coroners letter for file key {file_name}"
+            )
+
+        delete_status_code = _extract_delete_status_code(response.json(), file_name)
+        if delete_status_code != 204:
+            raise CoronersLetterDeleteError(
+                f"SDS returned {delete_status_code} while deleting coroners letter for file key {file_name}"
+            )
+        logger.info(
+            "SDS coroners letter deleted",
+            extra=build_log_extra(
+                event="sds_coroners_letter_deleted_success",
                 route="sds:delete_files",
                 method="DELETE",
                 status_code=response.status_code,
