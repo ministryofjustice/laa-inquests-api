@@ -142,7 +142,25 @@ def test_403_create_application_returns_403_when_caseworker_token(
     assert response.status_code == 403
 
 
-def test_201_upload_coroners_letter_returns_201_when_provider_token(
+def test_201_upload_coroners_letter_returns_201_when_provider_application_user_token(
+    entra_auth_client,
+):
+    response = entra_auth_client.post(
+        "/applications/upload-coroners-letter",
+        files={
+            "file": (
+                "coroners_letter.pdf",
+                io.BytesIO(b"test content"),
+                "application/pdf",
+            )
+        },
+        headers={"Authorization": "Bearer valid-provider-application-user-token"},
+    )
+
+    assert response.status_code == 201
+
+
+def test_403_upload_coroners_letter_returns_403_when_provider_token_missing_permission(
     entra_auth_client,
 ):
     response = entra_auth_client.post(
@@ -157,7 +175,7 @@ def test_201_upload_coroners_letter_returns_201_when_provider_token(
         headers={"Authorization": "Bearer valid-provider-entra-token"},
     )
 
-    assert response.status_code == 201
+    assert response.status_code == 403
 
 
 def test_403_upload_coroners_letter_returns_403_when_caseworker_token(

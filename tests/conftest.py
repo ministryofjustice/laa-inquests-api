@@ -201,7 +201,14 @@ def client_fixture(session: Session):
         mock_auth = MagicMock()
         mock_auth.verify_token.return_value = AuthenticatedUser(
             firm_code="0A123B",
-            scopes=frozenset({"User.Provider", "User.Caseworker"}),
+            scopes=frozenset(
+                {
+                    "User.Provider",
+                    "User.Caseworker",
+                    "Provider.ApplicationUser",
+                    "Provider.ClaimsUser",
+                }
+            ),
             name="Test Name",
             entra_object_id="some-entra-object-id",
         )
@@ -270,6 +277,10 @@ def entra_auth_client_fixture(session: Session):
         token_scopes = {
             "valid-provider-entra-token": {"User.Provider"},
             "valid-caseworker-entra-token": {"User.Caseworker"},
+            "valid-provider-application-user-token": {
+                "User.Provider",
+                "Provider.ApplicationUser",
+            },
             # Backward compatible alias for existing tests that used one generic token.
             "valid-entra-token": {"User.Provider"},
         }

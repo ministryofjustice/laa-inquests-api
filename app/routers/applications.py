@@ -21,6 +21,7 @@ from app.adapters.gov_notify import GovNotifyAdapter
 from app.adapters.history_event_repository_adapter import HistoryEventRepositoryAdapter
 from app.adapters.pdf_generator_adapter import PdfGeneratorAdapter
 from app.adapters.provider_details_adapter import ProviderDetailsAdapter
+from app.auth.rbac import Permission, require_permission
 from app.config import Config
 from app.db import get_session
 from app.logging_utils import build_log_extra
@@ -77,7 +78,6 @@ from app.routers.dependencies import (
     get_sds_port,
     verify_entra_caseworker_token,
     verify_entra_provider_or_caseworker_token,
-    verify_entra_provider_token,
 )
 from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
@@ -620,7 +620,7 @@ async def upload_coroners_letter(
         get_upload_coroners_letter_use_case
     ),
     request: Request = None,
-    _: None = Depends(verify_entra_provider_token),
+    _: None = Depends(require_permission(Permission.CORONERS_LETTER_UPLOAD)),
 ) -> UploadCoronersLetterResponse:
     """Upload a coroner's letter to document storage and return its file ID."""
     contents = await file.read()
