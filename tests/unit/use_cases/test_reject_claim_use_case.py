@@ -27,10 +27,10 @@ from app.use_cases.exceptions import ApplicationNotFoundError, ClaimNotFoundErro
 from app.use_cases.reject_claim import RejectClaimCommand, RejectClaimUseCase
 
 
-def _claim(claim_id: int = 1, laa_reference: int = 1) -> Claim:
+def _claim(claim_id: int = 1, application_id: int = 1) -> Claim:
     return Claim(
         claim_id=claim_id,
-        application_id=laa_reference,
+        application_id=application_id,
         claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
         status_id=ClaimStatus.SUBMITTED,
         submission_date=datetime.now(UTC),
@@ -42,10 +42,10 @@ def _claim(claim_id: int = 1, laa_reference: int = 1) -> Claim:
     )
 
 
-def _application(laa_reference: int = 1):
+def _application(application_id: int = 1):
     application = MagicMock()
-    application.application_id = laa_reference
-    application.laa_reference = str(laa_reference)
+    application.application_id = application_id
+    application.laa_reference = str(application_id)
     application.provider.firm_code = "ABC123"
     return application
 
@@ -113,8 +113,8 @@ def test_raises_claim_not_found_when_claim_missing():
 
 def test_raises_claim_not_found_when_claim_belongs_to_another_application():
     use_case, *_ = _build_use_case(
-        claim=_claim(claim_id=1, laa_reference=1),
-        application=_application(laa_reference=2),
+        claim=_claim(claim_id=1, application_id=1),
+        application=_application(application_id=2),
     )
 
     with pytest.raises(ClaimNotFoundError):

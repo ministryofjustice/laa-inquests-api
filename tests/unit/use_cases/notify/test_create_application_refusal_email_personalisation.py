@@ -13,7 +13,7 @@ from app.use_cases.notify.create_application_refusal_email_personalisation impor
 )
 
 
-def _create_test_application_and_proceeding(laa_reference: int = 12345):
+def _create_test_application_and_proceeding(application_id: int = 12345):
     client = Client(
         client_id=1,
         client_first_name="Jane",
@@ -23,7 +23,7 @@ def _create_test_application_and_proceeding(laa_reference: int = 12345):
     )
 
     application = Application(
-        application_id=laa_reference,
+        application_id=application_id,
         created_at=datetime(2026, 6, 18, 14, 3, tzinfo=UTC),
         client_id=1,
         client=client,
@@ -33,7 +33,7 @@ def _create_test_application_and_proceeding(laa_reference: int = 12345):
 
     proceeding = ApplicationProceeding(
         application_proceeding_id=1,
-        application_id=laa_reference,
+        application_id=application_id,
         proceeding_id=ProceedingId.IQOT,
         merits_decision=MeritsDecision.REFUSED,
         reason_for_refusal="NOT_IN_SCOPE",
@@ -45,7 +45,7 @@ def _create_test_application_and_proceeding(laa_reference: int = 12345):
 
 def test_create_application_refusal_email_personalisation_returns_all_required_fields():
     application, proceeding = _create_test_application_and_proceeding(
-        laa_reference=12345
+        application_id=12345
     )
 
     result = create_application_refusal_email_personalisation(application, proceeding)

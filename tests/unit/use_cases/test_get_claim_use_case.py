@@ -28,14 +28,14 @@ from app.use_cases.get_claim import GetClaimUseCase
 
 def _claim(
     claim_id: int = 1,
-    laa_reference: int = 1,
+    application_id: int = 1,
     total_funds_remaining_after_claim: Decimal = Decimal(
         SUBSTANTIVE_CERTIFICATE_AMOUNT
     ),
 ) -> Claim:
     return Claim(
         claim_id=claim_id,
-        application_id=laa_reference,
+        application_id=application_id,
         claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
         status_id=ClaimStatus.SUBMITTED,
         submission_date=datetime.now(UTC),
@@ -47,9 +47,9 @@ def _claim(
     )
 
 
-def _application(laa_reference: int = 1, substantive_cost_limitation: int = 10000):
+def _application(application_id: int = 1, substantive_cost_limitation: int = 10000):
     application = MagicMock()
-    application.application_id = laa_reference
+    application.application_id = application_id
     application.proceeding.substantive_cost_limitation = substantive_cost_limitation
     return application
 
@@ -101,8 +101,8 @@ def test_raises_claim_not_found_when_claim_missing():
 
 def test_raises_claim_not_found_when_claim_belongs_to_another_application():
     use_case = _build_use_case(
-        claim=_claim(claim_id=1, laa_reference=1),
-        application=_application(laa_reference=2),
+        claim=_claim(claim_id=1, application_id=1),
+        application=_application(application_id=2),
     )
 
     with pytest.raises(ClaimNotFoundError):
