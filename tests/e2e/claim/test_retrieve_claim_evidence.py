@@ -70,9 +70,9 @@ def test_200_retrieve_claim_evidence_supports_attachment_disposition(
 def test_200_retrieve_claim_evidence_returns_file_content_after_linked_to_claim(
     session, client, auth_token
 ):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application = session.exec(select(Application)).first()
     claim = Claim(
-        application_id=laa_reference,
+        application_id=application.application_id,
         claim_type_id="PAYMENT_ON_ACCOUNT",
     )
     session.add(claim)
