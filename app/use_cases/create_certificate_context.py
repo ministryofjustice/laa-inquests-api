@@ -83,7 +83,7 @@ class CreateCertificateContextUseCase:
             opponent_details=opponent_details,
             firm_name=firm_name,
             office_address=office_address,
-            laa_reference=str(application.laa_reference),
+            laa_reference=application.laa_reference,
             date_created=proceeding.certificate_issue_date
             or datetime.now(tz=UTC).date(),
             certificate_type=certificate_type,
