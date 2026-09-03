@@ -1,8 +1,13 @@
+import logging
+
 from app.contexts.user import get_entra_user_name
+from app.logging_utils import build_log_extra
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.use_cases.exceptions import ApplicationNotFoundError
+
+logger = logging.getLogger(__name__)
 
 
 class CreateNoteUseCase:
@@ -19,6 +24,13 @@ class CreateNoteUseCase:
             laa_reference
         )
         if application is None:
+            logger.error(
+                "Create note failed: application not found",
+                extra=build_log_extra(
+                    event="create_note_failed",
+                    laa_reference=laa_reference,
+                ),
+            )
             raise ApplicationNotFoundError(f"Application {laa_reference} not found")
 
         try:
@@ -30,6 +42,20 @@ class CreateNoteUseCase:
                 event_data={"note_text": note_text},
             )
             self.create_history_event_port.commit()
+            logger.info(
+                "Case note created",
+                extra=build_log_extra(
+                    event="create_note_completed",
+                    laa_reference=application.laa_reference,
+                ),
+            )
         except Exception:
+            logger.exception(
+                "Create note failed",
+                extra=build_log_extra(
+                    event="create_note_failed",
+                    laa_reference=application.laa_reference,
+                ),
+            )
             self.create_history_event_port.rollback()
             raise
