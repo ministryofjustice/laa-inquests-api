@@ -156,7 +156,7 @@ def test_creates_reject_decision_reason_updates_status_and_commits():
                 event_reference=HistoryEventReference.CLAIM_ASSESSMENT_COMPLETED,
                 actor="Caseworker",
                 actor_type=ActorType.CASEWORKER,
-                laa_reference=1,
+                application_id=1,
                 event_data={
                     "claim_type": ClaimType.PAYMENT_ON_ACCOUNT,
                     "claim_decision": ClaimStatus.REJECTED,
@@ -167,7 +167,7 @@ def test_creates_reject_decision_reason_updates_status_and_commits():
                 event_reference=HistoryEventReference.CLAIM_REJECTED_EMAIL,
                 actor=ActorType.SYSTEM,
                 actor_type=ActorType.SYSTEM,
-                laa_reference=1,
+                application_id=1,
                 event_data={
                     "recipient": application.provider.email_address,
                     "channel": NotificationType.EMAIL,
@@ -247,7 +247,7 @@ def test_reject_claim_not_committed_when_create_history_event_fails():
         event_reference=HistoryEventReference.CLAIM_ASSESSMENT_COMPLETED,
         actor="Caseworker",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=1,
+        application_id=1,
         event_data={
             "claim_type": ClaimType.PAYMENT_ON_ACCOUNT,
             "claim_decision": ClaimStatus.REJECTED,

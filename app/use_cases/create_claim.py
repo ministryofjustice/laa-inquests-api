@@ -195,7 +195,7 @@ class CreateClaimUseCase:
                 event_reference=HistoryEventReference.CLAIM_SUBMITTED,
                 actor=command.claimant_id,
                 actor_type=ActorType.PROVIDER,
-                laa_reference=application.application_id,
+                application_id=application.application_id,
                 event_data={"claim_type": command.claim_type},
             )
 
@@ -233,7 +233,7 @@ class CreateClaimUseCase:
                     event_reference=HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION,
                     actor=ActorType.SYSTEM,
                     actor_type=ActorType.SYSTEM,
-                    laa_reference=application.application_id,
+                    application_id=application.application_id,
                     event_data={
                         "recipient": application.provider.email_address,
                         "channel": NotificationType.EMAIL,
@@ -310,7 +310,7 @@ class CreateClaimUseCase:
                         event_reference=HistoryEventReference.POA_AUTO_REJECTED,
                         actor=ActorType.SYSTEM,
                         actor_type=ActorType.SYSTEM,
-                        laa_reference=application.application_id,
+                        application_id=application.application_id,
                         event_data={"claim_reference": claim.claim_id},
                     )
                     self.create_claim_port.commit()
@@ -350,7 +350,7 @@ class CreateClaimUseCase:
                         event_reference=HistoryEventReference.POA_AUTO_APPROVED,
                         actor=ActorType.SYSTEM,
                         actor_type=ActorType.SYSTEM,
-                        laa_reference=application.application_id,
+                        application_id=application.application_id,
                         event_data={"claim_reference": claim.claim_id},
                     )
 
@@ -358,7 +358,7 @@ class CreateClaimUseCase:
                         event_reference=HistoryEventReference.CLAIM_APPROVED_EMAIL,
                         actor=ActorType.SYSTEM,
                         actor_type=ActorType.SYSTEM,
-                        laa_reference=application.application_id,
+                        application_id=application.application_id,
                         event_data={
                             "recipient": application.provider.email_address,
                             "channel": NotificationType.EMAIL,

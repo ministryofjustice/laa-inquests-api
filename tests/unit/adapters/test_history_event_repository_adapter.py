@@ -22,7 +22,7 @@ def test_create_history_event_persists_event_with_expected_values(session):
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=laa_reference,
+        application_id=laa_reference,
         event_data={"context": "Additional context data", "related_link": None},
     )
 
@@ -48,7 +48,7 @@ def test_create_history_event_sets_timestamp_automatically(session):
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=laa_reference,
+        application_id=laa_reference,
     )
     after_creation = datetime.now(UTC)
 
@@ -69,7 +69,7 @@ def test_create_history_event_handles_none_event_data(session):
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=laa_reference,
+        application_id=laa_reference,
         event_data=None,
     )
 
@@ -88,7 +88,7 @@ def test_create_history_raises_exception_for_missing_event_reference(session):
             event_reference=None,
             actor="test_user@example.com",
             actor_type=ActorType.PROVIDER,
-            laa_reference=laa_reference,
+            application_id=laa_reference,
         )
 
 
@@ -101,7 +101,7 @@ def test_create_history_raises_exception_for_missing_actor(session):
             event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
             actor=None,
             actor_type=ActorType.PROVIDER,
-            laa_reference=laa_reference,
+            application_id=laa_reference,
         )
 
 
@@ -114,7 +114,7 @@ def test_create_history_raises_exception_for_empty_actor(session):
             event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
             actor="",
             actor_type=ActorType.PROVIDER,
-            laa_reference=laa_reference,
+            application_id=laa_reference,
         )
 
 
@@ -127,7 +127,7 @@ def test_create_history_raises_exception_for_missing_actor_type(session):
             event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
             actor="test_user@example.com",
             actor_type=None,
-            laa_reference=laa_reference,
+            application_id=laa_reference,
         )
 
 
@@ -139,7 +139,7 @@ def test_create_history_raises_exception_for_missing_laa_reference(session):
             event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
             actor="test_user@example.com",
             actor_type=ActorType.PROVIDER,
-            laa_reference=None,
+            application_id=None,
         )
 
 
@@ -151,7 +151,7 @@ def test_commits_transaction(session):
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=laa_reference,
+        application_id=laa_reference,
     )
     adapter.commit()
 
@@ -168,7 +168,7 @@ def test_rollback_discards_uncommitted_event(session):
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=laa_reference,
+        application_id=laa_reference,
     )
     event_id = created.id
     adapter.rollback()
@@ -185,14 +185,14 @@ def test_get_application_history_returns_correct_events(session):
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=laa_reference,
+        application_id=laa_reference,
     )
 
     event2 = adapter.create_history_event(
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=laa_reference,
+        application_id=laa_reference,
     )
 
     history = adapter.get_application_history(laa_reference)
@@ -228,14 +228,14 @@ def test_get_application_history_does_not_return_events_for_other_applications(s
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=laa_reference1,
+        application_id=laa_reference1,
     )
 
     event2 = adapter.create_history_event(
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=laa_reference2,
+        application_id=laa_reference2,
     )
 
     history1 = adapter.get_application_history(laa_reference1)
@@ -254,14 +254,14 @@ def test_get_application_history_returns_event_list_in_reverse_chronological_ord
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=laa_reference,
+        application_id=laa_reference,
     )
 
     event2 = adapter.create_history_event(
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=laa_reference,
+        application_id=laa_reference,
     )
 
     history = adapter.get_application_history(laa_reference)
@@ -278,7 +278,7 @@ def test_create_history_event_does_not_store_entra_object_id_for_system_actor(se
             event_reference=HistoryEventReference.APPLICATION_SUBMISSION_CONFIRMATION,
             actor=ActorType.SYSTEM,
             actor_type=ActorType.SYSTEM,
-            laa_reference=laa_reference,
+            application_id=laa_reference,
         )
     finally:
         clear_entra_user_context()
@@ -298,7 +298,7 @@ def test_create_history_event_stores_entra_object_id_for_non_system_actor(sessio
             event_reference=HistoryEventReference.APPLICATION_ASSESSMENT_COMPLETED,
             actor="caseworker@example.com",
             actor_type=ActorType.CASEWORKER,
-            laa_reference=laa_reference,
+            application_id=laa_reference,
         )
     finally:
         clear_entra_user_context()

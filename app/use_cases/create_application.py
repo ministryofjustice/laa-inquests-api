@@ -43,7 +43,7 @@ class CreateApplicationUseCase:
                 event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
                 actor=request.provider.email_address,
                 actor_type=ActorType.PROVIDER,
-                laa_reference=application.application_id,
+                application_id=application.application_id,
                 event_data=None,
             )
             self.gov_notify_port.send_application_submit_confirmation_email(
@@ -54,7 +54,7 @@ class CreateApplicationUseCase:
                 event_reference=HistoryEventReference.APPLICATION_SUBMISSION_CONFIRMATION,
                 actor="System",
                 actor_type=ActorType.SYSTEM,
-                laa_reference=application.application_id,
+                application_id=application.application_id,
                 event_data={
                     "recipient": request.provider.email_address,
                     "channel": NotificationType.EMAIL,

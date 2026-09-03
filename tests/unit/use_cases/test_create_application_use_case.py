@@ -84,14 +84,14 @@ def test_execute_creates_application_sends_confirmation_email_and_commits():
                 event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
                 actor="provider@example.com",
                 actor_type=ActorType.PROVIDER,
-                laa_reference=application.application_id,
+                application_id=application.application_id,
                 event_data=None,
             ),
             call(
                 event_reference=HistoryEventReference.APPLICATION_SUBMISSION_CONFIRMATION,
                 actor="System",
                 actor_type=ActorType.SYSTEM,
-                laa_reference=application.application_id,
+                application_id=application.application_id,
                 event_data={
                     "recipient": "provider@example.com",
                     "channel": NotificationType.EMAIL,

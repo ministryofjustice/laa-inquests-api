@@ -116,7 +116,7 @@ def test_refuse_decision_creates_required_history_events(
                 event_reference=HistoryEventReference.APPLICATION_ASSESSMENT_COMPLETED,
                 actor="Caseworker",
                 actor_type=ActorType.CASEWORKER,
-                laa_reference=application.application_id,
+                application_id=application.application_id,
                 event_data={
                     "merits_decision": "Refused",
                     "refusal_reason": "NOT_IN_SCOPE",
@@ -127,7 +127,7 @@ def test_refuse_decision_creates_required_history_events(
                 event_reference=HistoryEventReference.APPLICATION_REFUSED,
                 actor="System",
                 actor_type=ActorType.SYSTEM,
-                laa_reference=application.application_id,
+                application_id=application.application_id,
                 event_data={
                     "recipient": application.provider.email_address,
                     "channel": NotificationType.EMAIL,

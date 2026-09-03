@@ -390,7 +390,7 @@ def test_execute_creates_submission_confirmation_history_event_when_notify_succe
         event_reference=HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION,
         actor=ActorType.SYSTEM,
         actor_type=ActorType.SYSTEM,
-        laa_reference=application.application_id,
+        application_id=application.application_id,
         event_data={
             "recipient": application.provider.email_address,
             "channel": NotificationType.EMAIL,
@@ -449,7 +449,7 @@ def test_execute_creates_claim_approved_history_event_when_notify_succeeds():
         event_reference=HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION,
         actor=ActorType.SYSTEM,
         actor_type=ActorType.SYSTEM,
-        laa_reference=application.application_id,
+        application_id=application.application_id,
         event_data={
             "recipient": application.provider.email_address,
             "channel": NotificationType.EMAIL,
@@ -533,7 +533,7 @@ def test_execute_creates_claim_submitted_history_event_when_submission_succeeds(
         event_reference=HistoryEventReference.CLAIM_SUBMITTED,
         actor=command.claimant_id,
         actor_type=ActorType.PROVIDER,
-        laa_reference=application.application_id,
+        application_id=application.application_id,
         event_data={"claim_type": command.claim_type},
     )
     create_claim_port.commit.assert_called_once_with()
@@ -892,7 +892,7 @@ def test_execute_persists_auto_reject_and_returns_rejection_reasons_and_creates_
         event_reference=HistoryEventReference.POA_AUTO_REJECTED,
         actor=ActorType.SYSTEM,
         actor_type=ActorType.SYSTEM,
-        laa_reference=application.application_id,
+        application_id=application.application_id,
         event_data={"claim_reference": 1},
     )
     assert create_claim_port.commit.call_count == 2
@@ -952,7 +952,7 @@ def test_execute_returns_submitted_claim_when_auto_reject_persistence_fails_and_
             event_reference=HistoryEventReference.POA_AUTO_REJECTED,
             actor=ActorType.SYSTEM,
             actor_type=ActorType.SYSTEM,
-            laa_reference=application.application_id,
+            application_id=application.application_id,
             event_data={"claim_reference": 1},
         )
         not in create_history_event_port.create_history_event.mock_calls
@@ -1023,7 +1023,7 @@ def test_execute_auto_reject_does_not_persist_when_auto_reject_create_history_ev
         event_reference=HistoryEventReference.POA_AUTO_REJECTED,
         actor=ActorType.SYSTEM,
         actor_type=ActorType.SYSTEM,
-        laa_reference=application.application_id,
+        application_id=application.application_id,
         event_data={"claim_reference": 1},
     )
     assert create_claim_port.commit.call_count == 1  # This commit is for create claim
@@ -1074,7 +1074,7 @@ def test_execute_auto_approves_eligible_payment_on_account_claim():
         event_reference=HistoryEventReference.POA_AUTO_APPROVED,
         actor=ActorType.SYSTEM,
         actor_type=ActorType.SYSTEM,
-        laa_reference=application.application_id,
+        application_id=application.application_id,
         event_data={"claim_reference": 1},
     )
     assert create_claim_port.commit.call_count == 2
@@ -1126,7 +1126,7 @@ def test_execute_does_not_create_history_event_if_auto_approve_eligible_update_c
             event_reference=HistoryEventReference.POA_AUTO_APPROVED,
             actor=ActorType.SYSTEM,
             actor_type=ActorType.SYSTEM,
-            laa_reference=application.application_id,
+            application_id=application.application_id,
             event_data={"claim_reference": 1},
         )
         not in create_history_event_port.create_history_event.mock_calls
@@ -1181,7 +1181,7 @@ def test_execute_does_not_auto_approve_if_create_history_event_fails():
         event_reference=HistoryEventReference.POA_AUTO_APPROVED,
         actor=ActorType.SYSTEM,
         actor_type=ActorType.SYSTEM,
-        laa_reference=application.application_id,
+        application_id=application.application_id,
         event_data={"claim_reference": 1},
     )
     assert create_claim_port.commit.call_count == 1

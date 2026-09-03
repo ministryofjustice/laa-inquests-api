@@ -38,7 +38,7 @@ class CreateNoteUseCase:
                 event_reference=HistoryEventReference.CASE_NOTE_ADDED,
                 actor=get_entra_user_name(),
                 actor_type=ActorType.CASEWORKER,
-                laa_reference=application.application_id,
+                application_id=application.application_id,
                 event_data={"note_text": note_text},
             )
             self.create_history_event_port.commit()
