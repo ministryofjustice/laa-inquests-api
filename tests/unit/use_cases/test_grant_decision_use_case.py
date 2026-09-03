@@ -131,7 +131,7 @@ def test_grant_decision_creates_required_history_events(
                 actor_type=ActorType.CASEWORKER,
                 application_id=application.application_id,
                 event_data={
-                    "laa_reference": application.application_id,
+                    "laa_reference": application.laa_reference,
                 },
             ),
             call(
