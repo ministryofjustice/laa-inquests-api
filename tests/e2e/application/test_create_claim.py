@@ -1650,13 +1650,9 @@ def test_201_create_claim_auto_reject_returns_multiple_reasons_for_rejection_whe
         assert seed_response.status_code == 201
         assert set(seed_response.json().keys()) == {"claimId"}
 
-    application = session.exec(
-        select(Application).where(Application.application_id == int(laa_reference))
-    ).first()
     application_proceeding = application.proceeding
     application_proceeding.proceeding.substantive_cost_limitation = 5
     application_proceeding.certificate_start_date = datetime.now(tz=UTC).date()
-    application_proceeding.merits_decision = MeritsDecision.GRANTED
     session.add(application_proceeding.proceeding)
     session.add(application_proceeding)
     session.commit()
