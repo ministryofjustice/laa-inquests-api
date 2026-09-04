@@ -39,19 +39,27 @@ def _make_domain_claim(overrides=None) -> DomainClaim:
     return DomainClaim(**payload)
 
 
+# TODO: Look into this
 def _create_claim(session, laa_reference) -> Claim:
+    application_id = (
+        session.exec(
+            select(Application).where(Application.laa_reference == laa_reference)
+        )
+        .one()
+        .application_id
+    )
     adapter = ClaimRepositoryAdapter(session)
     return adapter.create_claim(
-        str(laa_reference), _make_domain_claim(), "claimant@example.com"
+        application_id, _make_domain_claim(), "claimant@example.com"
     )
 
 
 def test_create_claim_persists_claim_with_expected_values(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application_id = session.exec(select(Application)).first().application_id
     adapter = ClaimRepositoryAdapter(session)
 
     created = adapter.create_claim(
-        str(laa_reference),
+        application_id,
         _make_domain_claim(
             {"poa_type": POAType.EXPERT_COST, "vat_zero_total": Decimal("150.00")}
         ),
@@ -61,7 +69,7 @@ def test_create_claim_persists_claim_with_expected_values(session):
 
     assert created.claim_id is not None
     assert stored is not None
-    assert stored.laa_reference == laa_reference
+    assert stored.application_id == application_id
     assert stored.claim_type_id == ClaimType.PAYMENT_ON_ACCOUNT
     assert stored.total_profit_cost_net == Decimal("1000.00")
     assert stored.total_profit_cost_gross == Decimal("1200.00")
@@ -202,23 +210,24 @@ def test_link_cost_template_to_claim_persists_row(session):
     assert stored[0].claim_cost_template_file_name == "final_bill_costs.xlsx"
 
 
-def test_get_claims_by_laa_reference_returns_claims_for_application(session):
+def test_get_claims_by_application_id_returns_claims_for_application(session):
     laa_reference = session.exec(select(Application)).first().laa_reference
     adapter = ClaimRepositoryAdapter(session)
     _create_claim(session, laa_reference)
     _create_claim(session, laa_reference)
 
-    results = adapter.get_claims_by_laa_reference(str(laa_reference))
+    application_id = session.exec(select(Application)).first().application_id
+    results = adapter.get_claims_by_application_id(application_id)
 
     assert len(results) == 2
-    assert all(c.laa_reference == laa_reference for c in results)
+    assert all(c.application_id == application_id for c in results)
 
 
-def test_get_claims_by_laa_reference_returns_empty_list_when_no_claims(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+def test_get_claims_by_application_id_returns_empty_list_when_no_claims(session):
     adapter = ClaimRepositoryAdapter(session)
 
-    results = adapter.get_claims_by_laa_reference(str(laa_reference))
+    application_id = session.exec(select(Application)).first().application_id
+    results = adapter.get_claims_by_application_id(application_id)
 
     assert results == []
 
@@ -248,7 +257,7 @@ def test_get_open_claims_returned_claims_have_matching_application(session):
     results = adapter.get_open_claims()
 
     for claim in results:
-        assert claim.application.laa_reference == claim.laa_reference
+        assert claim.application_id == claim.application.application_id
 
 
 def test_get_open_claims_orders_by_submission_date_ascending(session):

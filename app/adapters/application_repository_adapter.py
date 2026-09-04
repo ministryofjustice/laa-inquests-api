@@ -93,12 +93,16 @@ class ApplicationRepositoryAdapter(
     def get_application_by_laa_reference(
         self, laa_reference: str
     ) -> Application | None:
-        application = self.session.get(Application, int(laa_reference))
+        # TODO: Rename variable
+        normalised_reference = laa_reference.strip().upper()
+        application = self.session.exec(
+            select(Application).where(Application.laa_reference == normalised_reference)
+        ).first()
         logger.info(
             "Application lookup completed",
             extra=build_log_extra(
                 event="application_repository_get_completed",
-                laa_reference=laa_reference,
+                laa_reference=normalised_reference,
                 found=application is not None,
             ),
         )
@@ -116,10 +120,8 @@ class ApplicationRepositoryAdapter(
         firm_code: str,
         merits_decision: MeritsDecision | None = None,
     ) -> list[Application]:
-        try:
-            laa_reference_int = int(laa_reference)
-        except ValueError:
-            return []
+        # TODO: Rename variable
+        normalised_reference = laa_reference.strip().upper()
 
         statement = (
             select(Application)
@@ -129,7 +131,7 @@ class ApplicationRepositoryAdapter(
                 ApplicationProceeding,
                 Application.application_id == ApplicationProceeding.application_id,
             )
-            .where(Application.application_id == laa_reference_int)
+            .where(Application.laa_reference == normalised_reference)
             .where(Provider.firm_code == firm_code)
         )
 
@@ -234,7 +236,7 @@ class ApplicationRepositoryAdapter(
             public_bodies=public_bodies_to_add,
             provider_id=new_provider.provider_id,
             coroners_letter_id=request.coroners_letter_id,
-            new_laa_reference=self._get_laa_reference(),
+            laa_reference=self._get_laa_reference(),
         )
         self.session.add(new_application)
         self.session.flush()
@@ -256,7 +258,7 @@ class ApplicationRepositoryAdapter(
         if self.banned_words_pattern.search(
             laa_reference.replace("-", "")
         ) or self.session.scalar(
-            select(exists().where(Application.new_laa_reference == laa_reference))
+            select(exists().where(Application.laa_reference == laa_reference))
         ):
             return self._get_laa_reference(attempt + 1)
         return laa_reference
@@ -353,7 +355,7 @@ class ApplicationRepositoryAdapter(
             "Application decision updated",
             extra=build_log_extra(
                 event="application_repository_update_decision_completed",
-                laa_reference=proceeding.laa_reference,
+                application_id=proceeding.application_id,
                 merits_decision=proceeding.merits_decision,
             ),
         )

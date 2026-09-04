@@ -5,25 +5,25 @@ from tests.unit.factories import (
 )
 
 
-def test_application_laa_reference_returns_string_of_application_id():
-    application = create_base_application(application_id=12345)
+def test_application_laa_reference_is_external_reference():
+    application = create_base_application(laa_reference="INQ-YYY-YYY")
 
-    assert application.laa_reference == "12345"
+    assert application.laa_reference == "INQ-YYY-YYY"
 
 
-def test_application_laa_reference_is_none_when_application_id_not_set():
+def test_application_application_id_is_independent_of_laa_reference():
     application = create_base_application(application_id=None)
 
-    assert application.laa_reference is None
+    assert application.laa_reference == "INQ-YYY-YYY"
 
 
-def test_application_proceeding_laa_reference_returns_string_of_application_id():
+def test_application_proceeding_keeps_internal_application_id():
     application_proceeding = create_base_application_proceeding(application_id=12345)
 
-    assert application_proceeding.laa_reference == "12345"
+    assert application_proceeding.application_id == 12345
 
 
-def test_application_public_body_laa_reference_returns_string_of_application_id():
+def test_application_public_body_keeps_internal_application_id():
     application_public_body = create_base_application_public_body(application_id=12345)
 
-    assert application_public_body.laa_reference == "12345"
+    assert application_public_body.application_id == 12345

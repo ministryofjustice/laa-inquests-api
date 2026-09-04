@@ -12,9 +12,7 @@ def test_200_read_application_by_reference_returns_expected_application(
     session, client, auth_token
 ):
     first_application_row = session.exec(select(Application)).first()
-    first_application_laa_reference = int(
-        first_application_row.__dict__["application_id"]
-    )
+    first_application_laa_reference = first_application_row.laa_reference
 
     response = client.get(
         f"/applications/{first_application_laa_reference}",
@@ -25,14 +23,14 @@ def test_200_read_application_by_reference_returns_expected_application(
     )
 
     requested_application = response.json()
-    assert requested_application["laaReference"] == "1"
+    assert requested_application["laaReference"] == first_application_laa_reference
 
 
 def test_200_proceeding_details_included_on_application_response(
     session, client, auth_token
 ):
     first_application_row = session.exec(select(Application)).first()
-    first_application_laa_reference = first_application_row.__dict__["application_id"]
+    first_application_laa_reference = first_application_row.laa_reference
 
     response = client.get(
         f"/applications/{first_application_laa_reference}",
@@ -53,7 +51,7 @@ def test_200_client_addresses_included_on_application_response(
     session, client, auth_token
 ):
     first_application_row = session.exec(select(Application)).first()
-    first_application_laa_reference = first_application_row.__dict__["application_id"]
+    first_application_laa_reference = first_application_row.laa_reference
 
     response = client.get(
         f"/applications/{first_application_laa_reference}",
@@ -80,7 +78,7 @@ def test_200_returns_client_correspondence_recipient_flag_when_client_is_recipie
     session, client, auth_token
 ):
     first_application_row = session.exec(select(Application)).first()
-    first_application_laa_reference = first_application_row.__dict__["application_id"]
+    first_application_laa_reference = first_application_row.laa_reference
 
     response = client.get(
         f"/applications/{first_application_laa_reference}",
@@ -180,7 +178,7 @@ def test_404_read_application_returns_404_when_not_found(client, auth_token):
 
 def test_200_get_application_includes_provider_email(session, client, auth_token):
     first_application_row = session.exec(select(Application)).first()
-    laa_reference = first_application_row.__dict__["application_id"]
+    laa_reference = first_application_row.laa_reference
 
     response = client.get(
         f"/applications/{laa_reference}",
@@ -198,7 +196,7 @@ def test_200_provider_details_included_on_application_response(
     session, client, auth_token
 ):
     first_application_row = session.exec(select(Application)).first()
-    first_application_laa_reference = first_application_row.__dict__["application_id"]
+    first_application_laa_reference = first_application_row.laa_reference
 
     response = client.get(
         f"/applications/{first_application_laa_reference}",
@@ -251,7 +249,7 @@ def test_200_read_application_response_coroners_letter_is_none_when_no_letter_ex
     session, client, auth_token
 ):
     first_application_row = session.exec(select(Application)).first()
-    laa_reference = first_application_row.__dict__["application_id"]
+    laa_reference = first_application_row.laa_reference
 
     response = client.get(
         f"/applications/{laa_reference}",
@@ -269,7 +267,7 @@ def test_200_read_application_response_includes_coroners_letter_file_name(
     session, client, auth_token
 ):
     first_application_row = session.exec(select(Application)).first()
-    laa_reference = first_application_row.__dict__["application_id"]
+    laa_reference = first_application_row.laa_reference
 
     coroners_letter = CoronersLetter(
         sds_file_name="sds-abc123.pdf",

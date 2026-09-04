@@ -24,6 +24,7 @@ def _create_test_application_and_proceeding(application_id: int = 12345):
 
     application = Application(
         application_id=application_id,
+        laa_reference="INQ-YYY-YYY",
         created_at=datetime(2026, 6, 18, 14, 3, tzinfo=UTC),
         client_id=1,
         client=client,
@@ -53,7 +54,7 @@ def test_create_application_refusal_email_personalisation_returns_all_required_f
     assert isinstance(result, NotifyApplicationRefuseTemplatePersonalisation)
     assert result.client_first_name == "Jane"
     assert result.client_last_name == "Doe"
-    assert result.laa_reference == "12345"
+    assert result.laa_reference == "INQ-YYY-YYY"
     assert result.application_submitted_at == "18 June 2026 14:03 UTC"
     assert result.reason_for_refusal == "NOT_IN_SCOPE"
     assert result.justification == "The matter does not meet scope requirements."

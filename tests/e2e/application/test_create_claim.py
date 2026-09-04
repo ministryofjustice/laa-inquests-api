@@ -98,8 +98,15 @@ def _seed_approved_claim(
     gross: Decimal | None = None,
     vat_zero: Decimal | None = None,
 ) -> Claim:
+    application_id = (
+        session.exec(
+            select(Application).where(Application.laa_reference == laa_reference)
+        )
+        .one()
+        .application_id
+    )
     claim = Claim(
-        application_id=laa_reference,
+        application_id=application_id,
         claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
         status_id=ClaimStatus.PAY_IN_FULL,
         submission_date=datetime.now(UTC),
@@ -182,7 +189,7 @@ def test_201_create_claim_sends_submission_confirmation_email_to_provider(
     claim = call_kwargs["claim"]
     application = call_kwargs["application"]
     recipient_email = call_kwargs["recipient_email"]
-    assert claim.laa_reference == laa_reference
+    assert claim.application_id == application.application_id
     assert application.laa_reference == laa_reference
     assert recipient_email == application.provider.email_address
 
@@ -206,7 +213,7 @@ def test_201_create_claim_creates_submission_confirmation_comms_history_event(
 
     history_event = session.exec(
         select(HistoryEvent).where(
-            (HistoryEvent.application_id == laa_reference)
+            (HistoryEvent.application_id == application.application_id)
             & (
                 HistoryEvent.event_reference
                 == HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION
@@ -224,7 +231,7 @@ def test_201_create_claim_creates_submission_confirmation_comms_history_event(
         "recipient": application.provider.email_address,
         "channel": NotificationType.EMAIL,
     }
-    assert history_event.laa_reference == laa_reference
+    assert history_event.application_id == application.application_id
 
 
 def test_201_create_claim_creates_claim_submitted_history_event(
@@ -247,7 +254,7 @@ def test_201_create_claim_creates_claim_submitted_history_event(
 
     history_event = session.exec(
         select(HistoryEvent).where(
-            (HistoryEvent.application_id == laa_reference)
+            (HistoryEvent.application_id == application.application_id)
             & (HistoryEvent.event_reference == HistoryEventReference.CLAIM_SUBMITTED)
         )
     ).one()
@@ -256,7 +263,7 @@ def test_201_create_claim_creates_claim_submitted_history_event(
     assert history_event.actor == request_body["claimantId"]
     assert history_event.actor_type == ActorType.PROVIDER
     assert history_event.event_data == {"claim_type": request_body["claimType"]}
-    assert history_event.laa_reference == laa_reference
+    assert history_event.application_id == application.application_id
 
 
 def test_201_create_claim_auto_approves_payment_on_account_when_eligible(
@@ -460,7 +467,8 @@ def test_201_create_claim_without_optional_fields(session, client, auth_token):
 
 
 def test_201_create_claim_persists_claim_to_database(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application = session.exec(select(Application)).first()
+    laa_reference = application.laa_reference
 
     response = client.post(
         f"/applications/{laa_reference}/claim",
@@ -474,7 +482,7 @@ def test_201_create_claim_persists_claim_to_database(session, client, auth_token
     claim_id = response.json()["claimId"]
     stored_claim = session.get(Claim, claim_id)
     assert stored_claim is not None
-    assert stored_claim.laa_reference == laa_reference
+    assert stored_claim.application_id == application.application_id
 
 
 def test_201_create_claim_links_provided_evidence_ids_to_claim(

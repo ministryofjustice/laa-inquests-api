@@ -101,7 +101,7 @@ def test_create_application_persists_application_and_nested_data(session):
 
     initial_count = len(session.exec(select(Application)).all())
     created_application = adapter.create_application(request, "0A123B")
-    stored_application = session.get(Application, created_application.laa_reference)
+    stored_application = session.get(Application, created_application.application_id)
 
     assert created_application.laa_reference is not None
     assert len(session.exec(select(Application)).all()) == initial_count + 1
@@ -137,7 +137,7 @@ def test_create_application_handles_request_without_home_or_correspondence_addre
     adapter = ApplicationRepositoryAdapter(session)
 
     created_application = adapter.create_application(request, "0A123B")
-    stored_application = session.get(Application, created_application.laa_reference)
+    stored_application = session.get(Application, created_application.application_id)
 
     assert stored_application is not None
     assert (
@@ -189,7 +189,9 @@ def test_save_uploaded_coroners_letter_persists_and_commits():
 def test_update_decision_adds_entities_and_commits():
     mock_session = MagicMock()
     adapter = ApplicationRepositoryAdapter(mock_session)
-    proceeding = ApplicationProceeding(laa_reference=1, proceeding_id=ProceedingId.IQOT)
+    proceeding = ApplicationProceeding(
+        application_id=1, proceeding_id=ProceedingId.IQOT
+    )
 
     adapter.update_decision(proceeding)
 
@@ -337,7 +339,7 @@ def test_get_laa_reference_does_not_return_existing_reference(session):
     existing_reference = "INQ-AAA-AAA"
     create_application_in_db(
         session,
-        new_laa_reference=existing_reference,
+        laa_reference=existing_reference,
     )
 
     adapter._generate_laa_reference = MagicMock(
@@ -430,7 +432,7 @@ class TestUpdateApplicationPublicBodies:
         new_public_bodies = [PublicBodyId.MINISTRY_OF_DEFENCE]
         adapter.update_public_bodies(application, new_public_bodies)
 
-        updated_app = session.get(Application, application.laa_reference)
+        updated_app = session.get(Application, application.application_id)
         assert len(updated_app.public_bodies) == 1
         assert (
             updated_app.public_bodies[0].public_body_id
@@ -444,7 +446,7 @@ class TestUpdateApplicationPublicBodies:
         new_public_bodies = [PublicBodyId.DEPARTMENT_FOR_TRANSPORT]
         adapter.update_public_bodies(application, new_public_bodies)
 
-        updated_app = session.get(Application, application.laa_reference)
+        updated_app = session.get(Application, application.application_id)
         assert len(updated_app.public_bodies) == 1
         assert (
             updated_app.public_bodies[0].public_body_id
@@ -461,7 +463,7 @@ class TestUpdateApplicationPublicBodies:
         ]
         adapter.update_public_bodies(application, new_public_bodies)
 
-        updated_app = session.get(Application, application.laa_reference)
+        updated_app = session.get(Application, application.application_id)
 
         assert len(updated_app.public_bodies) == 2
         assert {pb.public_body_id for pb in updated_app.public_bodies} == set(

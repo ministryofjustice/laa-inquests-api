@@ -91,10 +91,12 @@ def test_403_read_all_applications_returns_403_when_scope_is_not_provider(
 
 
 def test_200_read_application_by_id_returns_200_when_caseworker_token(
+    session,
     entra_auth_client,
 ):
+    application = session.exec(select(Application)).first()
     response = entra_auth_client.get(
-        "/applications/1",
+        f"/applications/{application.laa_reference}",
         headers={"Authorization": "Bearer valid-caseworker-entra-token"},
     )
 
@@ -179,10 +181,12 @@ def test_403_upload_coroners_letter_returns_403_when_caseworker_token(
 
 
 def test_204_refuse_decision_returns_204_when_caseworker_token(
+    session,
     entra_auth_client,
 ):
+    application = session.exec(select(Application)).first()
     response = entra_auth_client.patch(
-        "/applications/1/refuse-decision",
+        f"/applications/{application.laa_reference}/refuse-decision",
         json={
             "meritsDecision": MeritsDecision.REFUSED,
             "reasonForRefusal": "NOT_IN_SCOPE",
@@ -217,10 +221,12 @@ def test_403_refuse_decision_returns_403_when_provider_token(
 
 
 def test_204_grant_decision_returns_204_when_caseworker_token(
+    session,
     entra_auth_client,
 ):
+    application = session.exec(select(Application)).first()
     response = entra_auth_client.patch(
-        "/applications/1/grant-decision",
+        f"/applications/{application.laa_reference}/grant-decision",
         json={"certificateStartDate": "2000-01-01"},
         headers={
             "Content-Type": "application/json",

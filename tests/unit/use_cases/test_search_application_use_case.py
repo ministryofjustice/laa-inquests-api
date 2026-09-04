@@ -119,7 +119,7 @@ def test_execute_returns_response_with_all_required_fields():
 
     assert len(results) == 1
     result = results[0]
-    assert result.laa_reference == "1"
+    assert result.laa_reference == application.laa_reference
     assert result.client_first_name == "Jane"
     assert result.client_last_name == "Doe"
     assert result.client_date_of_birth == "15-06-1985"
