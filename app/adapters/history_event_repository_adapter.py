@@ -87,9 +87,9 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
             "History event created",
             extra=build_log_extra(
                 event="history_event_created",
-                laa_reference=application_id,
                 history_event_id=new_event.id,
                 event_reference=event_reference,
+                application_id=application_id,
             ),
         )
         return new_event

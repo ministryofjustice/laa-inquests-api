@@ -355,7 +355,7 @@ class ApplicationRepositoryAdapter(
             "Application decision updated",
             extra=build_log_extra(
                 event="application_repository_update_decision_completed",
-                application_id=proceeding.application_id,  # TODO: Should be laa_reference?
+                application_id=proceeding.application_id,
                 merits_decision=proceeding.merits_decision,
             ),
         )
