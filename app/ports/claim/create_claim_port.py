@@ -12,7 +12,7 @@ class CreateClaimPort(ABC):
     @abstractmethod
     def create_claim(
         self,
-        laa_reference: str,
+        application_id: int,
         claim: DomainClaim,
         claimant_id: str | None,
         total_funds_remaining_after_claim: Decimal = Decimal(

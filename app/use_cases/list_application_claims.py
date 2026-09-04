@@ -31,8 +31,8 @@ class ListApplicationClaimsUseCase:
         if application is None:
             raise ApplicationNotFoundError(laa_reference)
 
-        claims = self.get_claims_for_application_port.get_claims_by_laa_reference(
-            laa_reference
+        claims = self.get_claims_for_application_port.get_claims_by_application_id(
+            application.application_id
         )
         if assessed:
             claims = [c for c in claims if c.status_id != ClaimStatus.SUBMITTED]

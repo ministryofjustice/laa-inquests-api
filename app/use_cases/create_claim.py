@@ -156,8 +156,8 @@ class CreateClaimUseCase:
             raise InvalidClaimError(code=e.code, message=e.message) from e
 
         existing_claims = (
-            self.get_claims_for_application_port.get_claims_by_laa_reference(
-                command.laa_reference
+            self.get_claims_for_application_port.get_claims_by_application_id(
+                application.application_id
             )
         )
 
@@ -167,7 +167,7 @@ class CreateClaimUseCase:
 
         try:
             claim = self.create_claim_port.create_claim(
-                laa_reference=command.laa_reference,
+                application_id=application.application_id,
                 claim=validated_claim,
                 claimant_id=command.claimant_id,
                 total_funds_remaining_after_claim=total_funds_remaining_after_claim,

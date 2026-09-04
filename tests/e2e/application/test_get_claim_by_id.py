@@ -34,8 +34,15 @@ def _seed_claim(
         SUBSTANTIVE_CERTIFICATE_AMOUNT
     ),
 ) -> Claim:
+    application_id = (
+        session.exec(
+            select(Application).where(Application.laa_reference == laa_reference)
+        )
+        .one()
+        .application_id
+    )
     claim = Claim(
-        application_id=laa_reference,
+        application_id=application_id,
         claim_type_id=claim_type,
         status_id=ClaimStatus.SUBMITTED,
         submission_date=datetime.now(UTC),
@@ -131,7 +138,11 @@ def test_200_get_claim_by_id_returns_expected_base_properties(
 def test_200_get_claim_by_id_returns_final_bill_details(session, client, auth_token):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = Claim(
-        application_id=laa_reference,
+        application_id=session.exec(
+            select(Application).where(Application.laa_reference == laa_reference)
+        )
+        .one()
+        .application_id,
         claim_type_id=ClaimType.FINAL_BILL,
         status_id=ClaimStatus.SUBMITTED,
         submission_date=datetime.now(UTC),

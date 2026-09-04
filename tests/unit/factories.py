@@ -214,7 +214,7 @@ def create_base_application(
 
     defaults = {
         "application_id": 12345,
-        "new_laa_reference": "INQ-YYY-YYY",
+        "laa_reference": "INQ-YYY-YYY",
         "client_id": 1,
         "client": client,
         "deceased_id": 1,
@@ -224,10 +224,7 @@ def create_base_application(
         "proceeding": proceeding,
         "public_bodies": public_bodies,
     }
-    application_data = defaults | overrides
-    if "laa_reference" in application_data:
-        application_data["new_laa_reference"] = application_data.pop("laa_reference")
-    return Application(**application_data)
+    return Application(**(defaults | overrides))
 
 
 def create_base_claim(**overrides) -> Claim:

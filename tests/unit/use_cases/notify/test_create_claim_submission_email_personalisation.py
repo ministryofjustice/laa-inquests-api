@@ -24,6 +24,6 @@ def test_create_claim_submission_email_personalisation_returns_expected_data():
     result = create_claim_submission_email_personalisation(claim, application)
 
     assert isinstance(result, NotifyClaimSubmitTemplatePersonalisation)
-    assert result.laa_reference == "12345"
+    assert result.laa_reference == "INQ-YYY-YYY"
     assert result.client_name == "Jane Doe"
     assert result.submission_date == "28 July 2026"

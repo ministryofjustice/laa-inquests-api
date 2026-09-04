@@ -19,7 +19,7 @@ class GetApplicationHistoryUseCase:
         self.get_application_history_port = get_application_history_port
         self.get_application_port = get_application_port
 
-    def execute(self, laa_reference: int) -> list[HistoryEventResponse]:
+    def execute(self, laa_reference: str) -> list[HistoryEventResponse]:
         application = self.get_application_port.get_application_by_laa_reference(
             laa_reference
         )
@@ -29,7 +29,7 @@ class GetApplicationHistoryUseCase:
             )
 
         history_events = self.get_application_history_port.get_application_history(
-            laa_reference
+            application.application_id
         )
         response = [self._create_history_response(event) for event in history_events]
         logger.info(

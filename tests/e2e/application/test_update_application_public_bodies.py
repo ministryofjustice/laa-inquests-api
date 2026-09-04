@@ -124,10 +124,11 @@ def test_404_update_application_public_bodies_returns_not_found_for_not_found_ap
 
 
 def test_422_update_application_public_bodies_returns_unprocessable_entity_when_list_is_empty(
-    client, auth_token
+    session, client, auth_token
 ):
+    application = session.exec(select(Application)).first()
     response = client.patch(
-        "/applications/1/public-bodies",
+        f"/applications/{application.laa_reference}/public-bodies",
         json={"publicBodies": []},
         headers={
             "Content-Type": "application/json",
