@@ -30,7 +30,9 @@ from app.models.application.index import (
 )
 from app.ports.application_backlog_port import ApplicationBacklogPort
 from app.ports.create_application_port import CreateApplicationPort
+from app.ports.delete_coroners_letter_port import DeleteCoronersLetterPort
 from app.ports.get_application_port import GetApplicationPort
+from app.ports.get_coroners_letter_port import GetCoronersLetterPort
 from app.ports.list_applications_port import ListApplicationsPort
 from app.ports.list_public_bodies_port import ListPublicBodiesPort
 from app.ports.search_application_port import SearchApplicationPort
@@ -50,6 +52,8 @@ class ApplicationRepositoryAdapter(
     ApplicationPublicBodiesPort,
     SearchApplicationPort,
     UploadCoronersLetterPort,
+    GetCoronersLetterPort,
+    DeleteCoronersLetterPort,
     ApplicationBacklogPort,
 ):
     GENERATE_LAA_REFERENCE_ATTEMPTS = 10
@@ -296,6 +300,48 @@ class ApplicationRepositoryAdapter(
         )
 
         return coroners_letter_id
+
+    def get_coroners_letter_by_id(
+        self,
+        coroners_letter_id: uuid.UUID,
+    ) -> CoronersLetter | None:
+        coroners_letter_model = self.session.get(
+            CoronersLetterModel, coroners_letter_id
+        )
+        if coroners_letter_model is None:
+            return None
+        return CoronersLetter(
+            sds_file_name=coroners_letter_model.sds_file_name,
+            file_name=coroners_letter_model.file_name,
+        )
+
+    def delete_coroners_letter_by_id(
+        self,
+        coroners_letter_id: uuid.UUID,
+    ) -> bool:
+        coroners_letter_model = self.session.get(
+            CoronersLetterModel, coroners_letter_id
+        )
+        if coroners_letter_model is None:
+            logger.info(
+                "Coroners letter delete requested for missing id",
+                extra=build_log_extra(
+                    event="application_repository_coroners_letter_delete_not_found",
+                    coroners_letter_id=str(coroners_letter_id),
+                ),
+            )
+            return False
+        self.session.delete(coroners_letter_model)
+        self.session.flush()
+        self.session.commit()
+        logger.info(
+            "Coroners letter deleted in repository",
+            extra=build_log_extra(
+                event="application_repository_coroners_letter_delete_completed",
+                coroners_letter_id=str(coroners_letter_id),
+            ),
+        )
+        return True
 
     def update_decision(
         self,

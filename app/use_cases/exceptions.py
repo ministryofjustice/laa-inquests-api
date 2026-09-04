@@ -42,6 +42,10 @@ class InvalidCoronersLetterDocumentIdError(Exception):
     pass
 
 
+class CoronersLetterDeleteError(Exception):
+    pass
+
+
 class SDSLetterRetrievalError(Exception):
     pass
 
