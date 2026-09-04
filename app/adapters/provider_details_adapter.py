@@ -48,7 +48,6 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
                     method="GET",
                     duration_ms=duration_ms(started_at),
                     firm_code=firm_code,
-                    message=response.json()["message"],
                 ),
             )
             raise ProviderDetailsRetrievalError(
