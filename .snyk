@@ -25,3 +25,6 @@ ignore:
     "SNYK-DEBIAN13-UTILLINUX-19513292":
         - "*":
               reason: "There is no fixed version for Debian:13 util-linux"
+    "SNYK-DEBIAN13-ZLIB-19520500":
+        - "*":
+              reason: "There is no fixed version for Debian:13 zlib"
