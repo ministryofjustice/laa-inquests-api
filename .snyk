@@ -16,3 +16,12 @@ ignore:
     "snyk:lic:pip:pyphen:(GPL-2.0_OR_LGPL-2.0_OR_MPL-1.1)":
         - "*":
               reason: "Triple-licensed; project complies with LGPL-2.0 terms"
+    "SNYK-DEBIAN13-UTILLINUX-19513282":
+        - "*":
+              reason: "There is no fixed version for Debian:13 util-linux"
+    "SNYK-DEBIAN13-UTILLINUX-19513289":
+        - "*":
+              reason: "There is no fixed version for Debian:13 util-linux"
+    "SNYK-DEBIAN13-UTILLINUX-19513292":
+        - "*":
+              reason: "There is no fixed version for Debian:13 util-linux"
