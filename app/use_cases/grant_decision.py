@@ -118,7 +118,7 @@ class GrantDecisionUseCase:
                 "Failed to grant application",
                 extra=build_log_extra(
                     event="grant_decision_failed",
-                    laa_reference=application.application_id,
+                    laa_reference=application.laa_reference,
                 ),
                 exc_info=True,
             )
