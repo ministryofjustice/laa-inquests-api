@@ -27,10 +27,10 @@ from app.use_cases.exceptions import ApplicationNotFoundError, ClaimNotFoundErro
 from app.use_cases.reject_claim import RejectClaimCommand, RejectClaimUseCase
 
 
-def _claim(claim_id: int = 1, laa_reference: int = 1) -> Claim:
+def _claim(claim_id: int = 1, application_id: int = 1) -> Claim:
     return Claim(
         claim_id=claim_id,
-        laa_reference=laa_reference,
+        application_id=application_id,
         claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
         status_id=ClaimStatus.SUBMITTED,
         submission_date=datetime.now(UTC),
@@ -42,9 +42,10 @@ def _claim(claim_id: int = 1, laa_reference: int = 1) -> Claim:
     )
 
 
-def _application(laa_reference: int = 1):
+def _application(application_id: int = 1):
     application = MagicMock()
-    application.laa_reference = laa_reference
+    application.application_id = application_id
+    application.laa_reference = str(application_id)
     application.provider.firm_code = "ABC123"
     return application
 
@@ -112,8 +113,8 @@ def test_raises_claim_not_found_when_claim_missing():
 
 def test_raises_claim_not_found_when_claim_belongs_to_another_application():
     use_case, *_ = _build_use_case(
-        claim=_claim(claim_id=1, laa_reference=1),
-        application=_application(laa_reference=2),
+        claim=_claim(claim_id=1, application_id=1),
+        application=_application(application_id=2),
     )
 
     with pytest.raises(ClaimNotFoundError):
@@ -155,7 +156,7 @@ def test_creates_reject_decision_reason_updates_status_and_commits():
                 event_reference=HistoryEventReference.CLAIM_ASSESSMENT_COMPLETED,
                 actor="Caseworker",
                 actor_type=ActorType.CASEWORKER,
-                laa_reference=1,
+                application_id=1,
                 event_data={
                     "claim_type": ClaimType.PAYMENT_ON_ACCOUNT,
                     "claim_decision": ClaimStatus.REJECTED,
@@ -166,7 +167,7 @@ def test_creates_reject_decision_reason_updates_status_and_commits():
                 event_reference=HistoryEventReference.CLAIM_REJECTED_EMAIL,
                 actor=ActorType.SYSTEM,
                 actor_type=ActorType.SYSTEM,
-                laa_reference="1",
+                application_id=1,
                 event_data={
                     "recipient": application.provider.email_address,
                     "channel": NotificationType.EMAIL,
@@ -246,7 +247,7 @@ def test_reject_claim_not_committed_when_create_history_event_fails():
         event_reference=HistoryEventReference.CLAIM_ASSESSMENT_COMPLETED,
         actor="Caseworker",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=1,
+        application_id=1,
         event_data={
             "claim_type": ClaimType.PAYMENT_ON_ACCOUNT,
             "claim_decision": ClaimStatus.REJECTED,

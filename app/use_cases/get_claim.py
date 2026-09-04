@@ -41,7 +41,7 @@ class GetClaimUseCase:
             raise ApplicationNotFoundError(laa_reference)
 
         claim = self.get_claim_by_id_port.get_claim_by_id(claim_id)
-        if claim is None or claim.laa_reference != application.laa_reference:
+        if claim is None or claim.application_id != application.application_id:
             logger.warning(
                 "Get claim failed: claim not found",
                 extra=build_log_extra(

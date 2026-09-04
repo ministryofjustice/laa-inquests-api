@@ -39,7 +39,7 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
         event_reference: HistoryEventReference,
         actor: str,
         actor_type: ActorType,
-        laa_reference: int,
+        application_id: int,
         event_data: dict | None = None,
     ) -> HistoryEvent:
         """
@@ -48,7 +48,7 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
         Args:
             event_reference: Event identifier (e.g., "EVT-BUS-APP-001")
             actor: User or system that triggered the event
-            laa_reference: LAA reference number (as int)
+            application_id: Application ID
             event_data: Optional JSON data associated with the event
                        (e.g., {"related_link": "/path", "context": "text"})
 
@@ -63,9 +63,9 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
             raise ValueError("Actor must be provided for history event creation.")
         if actor_type is None:
             raise ValueError("Actor type must be provided for history event creation.")
-        if laa_reference is None:
+        if application_id is None:
             raise ValueError(
-                "LAA reference must be provided for history event creation."
+                "Application ID must be provided for history event creation."
             )
 
         entra_user_object_id = (
@@ -77,7 +77,7 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
             actor=actor,
             actor_type=actor_type,
             entra_user_object_id=entra_user_object_id,
-            laa_reference=laa_reference,
+            application_id=application_id,
             event_data=event_data,
         )
         self.session.add(new_event)
@@ -87,7 +87,7 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
             "History event created",
             extra=build_log_extra(
                 event="history_event_created",
-                laa_reference=laa_reference,
+                laa_reference=application_id,
                 history_event_id=new_event.id,
                 event_reference=event_reference,
             ),
@@ -112,6 +112,6 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
         """
         return self.session.exec(
             select(HistoryEvent)
-            .where(HistoryEvent.laa_reference == laa_reference)
+            .where(HistoryEvent.application_id == laa_reference)
             .order_by(HistoryEvent.timestamp.desc())
         ).all()

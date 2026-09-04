@@ -15,14 +15,14 @@ from app.models.history.index import HistoryEvent
 
 
 def test_create_history_event_persists_event_with_expected_values(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application = session.exec(select(Application)).first()
     adapter = HistoryEventRepositoryAdapter(session)
 
     created = adapter.create_history_event(
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=laa_reference,
+        application_id=application.application_id,
         event_data={"context": "Additional context data", "related_link": None},
     )
 
@@ -32,7 +32,7 @@ def test_create_history_event_persists_event_with_expected_values(session):
     assert stored is not None
     assert stored.event_reference == HistoryEventReference.APPLICATION_SUBMITTED
     assert stored.actor == "test_user@example.com"
-    assert stored.laa_reference == laa_reference
+    assert stored.application_id == application.application_id
     assert stored.event_data == {
         "context": "Additional context data",
         "related_link": None,
@@ -40,7 +40,7 @@ def test_create_history_event_persists_event_with_expected_values(session):
 
 
 def test_create_history_event_sets_timestamp_automatically(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application = session.exec(select(Application)).first()
     adapter = HistoryEventRepositoryAdapter(session)
 
     before_creation = datetime.now(UTC)
@@ -48,7 +48,7 @@ def test_create_history_event_sets_timestamp_automatically(session):
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=laa_reference,
+        application_id=application.application_id,
     )
     after_creation = datetime.now(UTC)
 
@@ -62,14 +62,14 @@ def test_create_history_event_sets_timestamp_automatically(session):
 
 
 def test_create_history_event_handles_none_event_data(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application = session.exec(select(Application)).first()
     adapter = HistoryEventRepositoryAdapter(session)
 
     created = adapter.create_history_event(
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=laa_reference,
+        application_id=application.application_id,
         event_data=None,
     )
 
@@ -80,7 +80,7 @@ def test_create_history_event_handles_none_event_data(session):
 
 
 def test_create_history_raises_exception_for_missing_event_reference(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application = session.exec(select(Application)).first()
     adapter = HistoryEventRepositoryAdapter(session)
 
     with pytest.raises(ValueError):
@@ -88,12 +88,12 @@ def test_create_history_raises_exception_for_missing_event_reference(session):
             event_reference=None,
             actor="test_user@example.com",
             actor_type=ActorType.PROVIDER,
-            laa_reference=laa_reference,
+            application_id=application.application_id,
         )
 
 
 def test_create_history_raises_exception_for_missing_actor(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application = session.exec(select(Application)).first()
     adapter = HistoryEventRepositoryAdapter(session)
 
     with pytest.raises(ValueError):
@@ -101,12 +101,12 @@ def test_create_history_raises_exception_for_missing_actor(session):
             event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
             actor=None,
             actor_type=ActorType.PROVIDER,
-            laa_reference=laa_reference,
+            application_id=application.application_id,
         )
 
 
 def test_create_history_raises_exception_for_empty_actor(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application = session.exec(select(Application)).first()
     adapter = HistoryEventRepositoryAdapter(session)
 
     with pytest.raises(ValueError):
@@ -114,12 +114,12 @@ def test_create_history_raises_exception_for_empty_actor(session):
             event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
             actor="",
             actor_type=ActorType.PROVIDER,
-            laa_reference=laa_reference,
+            application_id=application.application_id,
         )
 
 
 def test_create_history_raises_exception_for_missing_actor_type(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application = session.exec(select(Application)).first()
     adapter = HistoryEventRepositoryAdapter(session)
 
     with pytest.raises(ValueError):
@@ -127,7 +127,7 @@ def test_create_history_raises_exception_for_missing_actor_type(session):
             event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
             actor="test_user@example.com",
             actor_type=None,
-            laa_reference=laa_reference,
+            application_id=application.application_id,
         )
 
 
@@ -139,19 +139,19 @@ def test_create_history_raises_exception_for_missing_laa_reference(session):
             event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
             actor="test_user@example.com",
             actor_type=ActorType.PROVIDER,
-            laa_reference=None,
+            application_id=None,
         )
 
 
 def test_commits_transaction(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application = session.exec(select(Application)).first()
     adapter = HistoryEventRepositoryAdapter(session)
 
     created = adapter.create_history_event(
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=laa_reference,
+        application_id=application.application_id,
     )
     adapter.commit()
 
@@ -161,14 +161,14 @@ def test_commits_transaction(session):
 
 
 def test_rollback_discards_uncommitted_event(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application = session.exec(select(Application)).first()
     adapter = HistoryEventRepositoryAdapter(session)
 
     created = adapter.create_history_event(
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=laa_reference,
+        application_id=application.application_id,
     )
     event_id = created.id
     adapter.rollback()
@@ -178,31 +178,31 @@ def test_rollback_discards_uncommitted_event(session):
 
 
 def test_get_application_history_returns_correct_events(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application = session.exec(select(Application)).first()
     adapter = HistoryEventRepositoryAdapter(session)
 
     event1 = adapter.create_history_event(
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=laa_reference,
+        application_id=application.application_id,
     )
 
     event2 = adapter.create_history_event(
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=laa_reference,
+        application_id=application.application_id,
     )
 
-    history = adapter.get_application_history(laa_reference)
+    history = adapter.get_application_history(application.laa_reference)
     assert event1 in history
     assert event2 in history
 
 
 def test_get_application_history_does_not_return_events_for_other_applications(session):
     application1 = session.exec(select(Application)).first()
-    laa_reference1 = application1.laa_reference
+    application_id_1 = application1.application_id
 
     application2 = Application(
         proceeding=ApplicationProceeding(
@@ -220,7 +220,7 @@ def test_get_application_history_does_not_return_events_for_other_applications(s
     )
     session.add(application2)
     session.flush()
-    laa_reference2 = application2.laa_reference
+    application_id_2 = application2.application_id
 
     adapter = HistoryEventRepositoryAdapter(session)
 
@@ -228,18 +228,18 @@ def test_get_application_history_does_not_return_events_for_other_applications(s
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=laa_reference1,
+        application_id=application_id_1,
     )
 
     event2 = adapter.create_history_event(
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=laa_reference2,
+        application_id=application_id_2,
     )
 
-    history1 = adapter.get_application_history(laa_reference1)
-    history2 = adapter.get_application_history(laa_reference2)
+    history1 = adapter.get_application_history(application_id_1)
+    history2 = adapter.get_application_history(application_id_2)
     assert history1 == [event1]
     assert history2 == [event2]
 
@@ -247,29 +247,29 @@ def test_get_application_history_does_not_return_events_for_other_applications(s
 def test_get_application_history_returns_event_list_in_reverse_chronological_order(
     session,
 ):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application = session.exec(select(Application)).first()
     adapter = HistoryEventRepositoryAdapter(session)
 
     event1 = adapter.create_history_event(
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=laa_reference,
+        application_id=application.application_id,
     )
 
     event2 = adapter.create_history_event(
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         actor="test_user@example.com",
         actor_type=ActorType.CASEWORKER,
-        laa_reference=laa_reference,
+        application_id=application.application_id,
     )
 
-    history = adapter.get_application_history(laa_reference)
+    history = adapter.get_application_history(application.laa_reference)
     assert history == [event2, event1]
 
 
 def test_create_history_event_does_not_store_entra_object_id_for_system_actor(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application = session.exec(select(Application)).first()
     adapter = HistoryEventRepositoryAdapter(session)
 
     set_entra_user_context("entra-object-id-123", "Caseworker")
@@ -278,7 +278,7 @@ def test_create_history_event_does_not_store_entra_object_id_for_system_actor(se
             event_reference=HistoryEventReference.APPLICATION_SUBMISSION_CONFIRMATION,
             actor=ActorType.SYSTEM,
             actor_type=ActorType.SYSTEM,
-            laa_reference=laa_reference,
+            application_id=application.application_id,
         )
     finally:
         clear_entra_user_context()
@@ -289,7 +289,7 @@ def test_create_history_event_does_not_store_entra_object_id_for_system_actor(se
 
 
 def test_create_history_event_stores_entra_object_id_for_non_system_actor(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application = session.exec(select(Application)).first()
     adapter = HistoryEventRepositoryAdapter(session)
 
     set_entra_user_context("entra-object-id-123", "Caseworker")
@@ -298,7 +298,7 @@ def test_create_history_event_stores_entra_object_id_for_non_system_actor(sessio
             event_reference=HistoryEventReference.APPLICATION_ASSESSMENT_COMPLETED,
             actor="caseworker@example.com",
             actor_type=ActorType.CASEWORKER,
-            laa_reference=laa_reference,
+            application_id=application.application_id,
         )
     finally:
         clear_entra_user_context()

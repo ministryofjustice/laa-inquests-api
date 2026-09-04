@@ -25,7 +25,7 @@ from app.models.claim.enums import (
 
 
 class ClaimBase(SQLModel):
-    laa_reference: int = Field(foreign_key="application.laa_reference")
+    application_id: int = Field(foreign_key="application.application_id")
     claim_type_id: ClaimType = Field(sa_column=Column(Enum(ClaimType)))
     status_id: ClaimStatus = Field(
         default=ClaimStatus.SUBMITTED, sa_column=Column(Enum(ClaimStatus))
@@ -104,6 +104,11 @@ class Claim(ClaimBase, table=True):
     @property
     def inquest_outcomes(self) -> list[InquestOutcomeCode]:
         return [link.inquest_outcome_id for link in self.claim_inquest_outcomes]
+
+    @property
+    def laa_reference(self) -> str:
+        """Compatibility alias exposing application_id as a string."""
+        return str(self.application_id)
 
 
 class ClaimCostTemplate(SQLModel, table=True):

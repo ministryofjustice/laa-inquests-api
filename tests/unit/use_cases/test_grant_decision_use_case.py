@@ -120,7 +120,7 @@ def test_grant_decision_creates_required_history_events(
                 event_reference=HistoryEventReference.APPLICATION_ASSESSMENT_COMPLETED,
                 actor="Caseworker",
                 actor_type=ActorType.CASEWORKER,
-                laa_reference=application.laa_reference,
+                application_id=application.application_id,
                 event_data={
                     "merits_decision": "Granted",
                 },
@@ -129,7 +129,7 @@ def test_grant_decision_creates_required_history_events(
                 event_reference=HistoryEventReference.CERTIFICATE_CREATED,
                 actor="Caseworker",
                 actor_type=ActorType.CASEWORKER,
-                laa_reference=application.laa_reference,
+                application_id=application.application_id,
                 event_data={
                     "laa_reference": application.laa_reference,
                 },
@@ -138,7 +138,7 @@ def test_grant_decision_creates_required_history_events(
                 event_reference=HistoryEventReference.APPLICATION_GRANTED_EMAIL,
                 actor="System",
                 actor_type=ActorType.SYSTEM,
-                laa_reference=application.laa_reference,
+                application_id=application.application_id,
                 event_data={
                     "recipient": application.provider.email_address,
                     "channel": NotificationType.EMAIL,
@@ -148,7 +148,7 @@ def test_grant_decision_creates_required_history_events(
                 event_reference=HistoryEventReference.APPLICATION_GRANTED_LETTER,
                 actor="System",
                 actor_type=ActorType.SYSTEM,
-                laa_reference=application.laa_reference,
+                application_id=application.application_id,
                 event_data={
                     "recipient": create_certificate_context_use_case.prepare_context_for_display.return_value.client_address.model_dump(),
                     "channel": NotificationType.LETTER,

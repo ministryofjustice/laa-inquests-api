@@ -111,7 +111,7 @@ def test_execute_raises_provider_details_retrieval_error_when_get_firm_name_rais
 def test_execute_returns_response_with_all_required_fields():
     provider = create_base_provider(firm_code="0A123B")
     application = create_base_application(
-        laa_reference=1, provider=provider, status="LIVE"
+        application_id=1, provider=provider, status="LIVE"
     )
     use_case = _make_use_case(application=application, firm_name="My Firm")
 
@@ -119,7 +119,7 @@ def test_execute_returns_response_with_all_required_fields():
 
     assert len(results) == 1
     result = results[0]
-    assert result.laa_reference == 1
+    assert result.laa_reference == "1"
     assert result.client_first_name == "Jane"
     assert result.client_last_name == "Doe"
     assert result.client_date_of_birth == "15-06-1985"

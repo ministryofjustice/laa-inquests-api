@@ -50,7 +50,7 @@ def test_execute_returns_history_events_from_port():
         actor="provider@example.com",
         actor_type=ActorType.PROVIDER,
         event_data=None,
-        laa_reference=123456,
+        application_id=123456,
     )
     history_event_2 = HistoryEvent(
         id=2,
@@ -59,7 +59,7 @@ def test_execute_returns_history_events_from_port():
         actor="caseworker@justice.gov.uk",
         actor_type=ActorType.CASEWORKER,
         event_data={"context": "Test data", "related_link": "/get-certificate/123456"},
-        laa_reference=123456,
+        application_id=123456,
     )
     use_case = _make_use_case(
         application=MagicMock(), history_events=[history_event_1, history_event_2]
@@ -89,7 +89,7 @@ def test_execute_masks_provider_actor_as_provider():
         actor="provider@example.com",
         actor_type=ActorType.PROVIDER,
         event_data=None,
-        laa_reference=123456,
+        application_id=123456,
     )
     use_case = _make_use_case(application=MagicMock(), history_events=[history_event])
 
@@ -109,7 +109,7 @@ def test_execute_masks_recipient_in_event_data():
             "recipient": "recipient@example.com",
             "channel": NotificationType.EMAIL,
         },
-        laa_reference=123456,
+        application_id=123456,
     )
     use_case = _make_use_case(application=MagicMock(), history_events=[history_event])
 
@@ -127,7 +127,7 @@ def test_execute_preserves_non_provider_actor():
         actor="caseworker@justice.gov.uk",
         actor_type=ActorType.CASEWORKER,
         event_data=None,
-        laa_reference=123456,
+        application_id=123456,
     )
     use_case = _make_use_case(application=MagicMock(), history_events=[history_event])
 

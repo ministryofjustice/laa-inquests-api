@@ -146,7 +146,7 @@ def create_base_application_proceeding(proceeding=_NOT_PROVIDED, **overrides):
 
     defaults = {
         "application_proceeding_id": 1,
-        "laa_reference": 12345,
+        "application_id": 12345,
         "proceeding_id": ProceedingId.IQOT,
         "proceeding": proceeding,
         "certificate_start_date": datetime(2026, 6, 18, tzinfo=UTC),
@@ -174,7 +174,7 @@ def create_base_application_public_body(public_body=_NOT_PROVIDED, **overrides):
 
     defaults = {
         "application_public_body_id": 1,
-        "laa_reference": 12345,
+        "application_id": 12345,
         "public_body_id": PublicBodyId.DEPARTMENT_FOR_TRANSPORT,
         "public_body": public_body,
     }
@@ -213,7 +213,7 @@ def create_base_application(
         public_bodies = [create_base_application_public_body()]
 
     defaults = {
-        "laa_reference": 12345,
+        "application_id": 12345,
         "new_laa_reference": "INQ-YYY-YYY",
         "client_id": 1,
         "client": client,

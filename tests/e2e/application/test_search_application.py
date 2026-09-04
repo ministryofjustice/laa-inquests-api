@@ -31,7 +31,7 @@ def test_200_search_application_by_reference_returns_expected_fields(
     assert isinstance(body, list)
     assert len(body) == 1
     result = body[0]
-    assert result["laaReference"] == 1
+    assert result["laaReference"] == "1"
     assert result["clientFirstName"] == "Test"
     assert result["clientLastName"] == "Surname"
     assert result["clientDateOfBirth"] == "01-02-2003"
@@ -49,7 +49,7 @@ def test_200_search_application_trims_leading_and_trailing_spaces(client, auth_t
     )
 
     assert response.status_code == 200
-    assert response.json()[0]["laaReference"] == 1
+    assert response.json()[0]["laaReference"] == "1"
 
 
 def test_200_search_application_returns_empty_list_for_unknown_reference(

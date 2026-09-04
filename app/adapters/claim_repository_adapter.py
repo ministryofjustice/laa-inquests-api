@@ -68,7 +68,7 @@ class ClaimRepositoryAdapter(
         ),
     ) -> Claim:
         new_claim = Claim(
-            laa_reference=int(laa_reference),
+            application_id=int(laa_reference),
             claim_type_id=claim.claim_type,
             total_profit_cost_net=claim.net,
             total_profit_cost_gross=claim.gross,
@@ -172,7 +172,7 @@ class ClaimRepositoryAdapter(
         self.session.rollback()
 
     def get_claims_by_laa_reference(self, laa_reference: str) -> list[Claim]:
-        statement = select(Claim).where(Claim.laa_reference == int(laa_reference))
+        statement = select(Claim).where(Claim.application_id == int(laa_reference))
         return list(self.session.exec(statement).all())
 
     def get_claim_by_id(self, claim_id: int) -> Claim | None:
@@ -189,7 +189,7 @@ class ClaimRepositoryAdapter(
     def get_open_claims(self) -> list[Claim]:
         statement = (
             select(Claim)
-            .join(Application, Claim.laa_reference == Application.laa_reference)
+            .join(Application, Claim.application_id == Application.application_id)
             .where(Claim.status_id == ClaimStatus.SUBMITTED)
             .order_by(Claim.submission_date.asc())
         )

@@ -54,7 +54,7 @@ class RejectClaimUseCase:
             raise ApplicationNotFoundError(command.laa_reference)
 
         claim = self.get_claim_by_id_port.get_claim_by_id(command.claim_id)
-        if claim is None or claim.laa_reference != application.laa_reference:
+        if claim is None or claim.application_id != application.application_id:
             raise ClaimNotFoundError(command.claim_id)
 
         try:
@@ -76,7 +76,7 @@ class RejectClaimUseCase:
                 event_reference=HistoryEventReference.CLAIM_ASSESSMENT_COMPLETED,
                 actor=get_entra_user_name(),
                 actor_type=ActorType.CASEWORKER,
-                laa_reference=application.laa_reference,
+                application_id=application.application_id,
                 event_data={
                     "claim_type": claim.claim_type_id,
                     "claim_decision": ClaimStatus.REJECTED,
@@ -89,7 +89,7 @@ class RejectClaimUseCase:
                     event_reference=HistoryEventReference.CLAIM_REJECTED_EMAIL,
                     actor=ActorType.SYSTEM,
                     actor_type=ActorType.SYSTEM,
-                    laa_reference=command.laa_reference,
+                    application_id=application.application_id,
                     event_data={
                         "recipient": application.provider.email_address,
                         "channel": NotificationType.EMAIL,

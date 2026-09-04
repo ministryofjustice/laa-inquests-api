@@ -22,7 +22,14 @@ class HistoryEvent(SQLModel, table=True):
     actor_type: ActorType = Field(nullable=False)
     entra_user_object_id: str | None = Field(default=None, nullable=True)
     event_data: dict | None = Field(default=None, sa_column=Column(JSON, nullable=True))
-    laa_reference: int = Field(foreign_key="application.laa_reference", nullable=False)
+    application_id: int = Field(
+        foreign_key="application.application_id", nullable=False
+    )
+
+    @property
+    def laa_reference(self) -> str:
+        """Compatibility alias exposing application_id as a string."""
+        return str(self.application_id)
 
 
 class CreateNoteRequest(BaseModel):

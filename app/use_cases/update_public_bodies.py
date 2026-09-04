@@ -61,7 +61,7 @@ class UpdatePublicBodiesUseCase:
                 event_reference=HistoryEventReference.INTERESTED_PARTY_UPDATED,
                 actor=get_entra_user_name(),
                 actor_type=ActorType.CASEWORKER,
-                laa_reference=application.laa_reference,
+                application_id=application.application_id,
                 event_data={
                     "old_public_bodies": old_public_bodies,
                     "new_public_bodies": public_body_ids,

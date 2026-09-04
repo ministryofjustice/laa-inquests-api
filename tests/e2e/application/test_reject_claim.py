@@ -26,7 +26,7 @@ def _seed_claim(
     claimant_id: str | None = "claimant-123@provider.co.uk",
 ) -> Claim:
     claim = Claim(
-        laa_reference=laa_reference,
+        application_id=laa_reference,
         claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
         status_id=status,
         submission_date=datetime.now(UTC),
@@ -193,12 +193,12 @@ def test_422_reject_claim_when_justification_missing(session, client, auth_token
 
 
 def test_204_reject_claim_creates_history_event(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    claim = _seed_claim(session, laa_reference)
+    application = session.exec(select(Application)).first()
+    claim = _seed_claim(session, application.laa_reference)
     application = session.exec(select(Application)).first()
 
     response = client.patch(
-        f"/applications/{laa_reference}/claims/{claim.claim_id}/reject",
+        f"/applications/{application.laa_reference}/claims/{claim.claim_id}/reject",
         json=_reject_payload(),
         headers={
             "Content-Type": "application/json",
@@ -210,7 +210,7 @@ def test_204_reject_claim_creates_history_event(session, client, auth_token):
 
     history_event = session.exec(
         select(HistoryEvent).where(
-            (HistoryEvent.laa_reference == laa_reference)
+            (HistoryEvent.application_id == application.application_id)
             & (
                 HistoryEvent.event_reference
                 == HistoryEventReference.CLAIM_REJECTED_EMAIL
@@ -225,4 +225,3 @@ def test_204_reject_claim_creates_history_event(session, client, auth_token):
         "recipient": application.provider.email_address,
         "channel": NotificationType.EMAIL,
     }
-    assert history_event.laa_reference == laa_reference

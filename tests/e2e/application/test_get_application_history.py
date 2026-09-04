@@ -11,7 +11,7 @@ def test_401_get_application_history_returns_401_when_no_authorization_header(
     entra_auth_client, session
 ):
     first_application_row = session.exec(select(Application)).first()
-    laa_reference = first_application_row.__dict__["laa_reference"]
+    laa_reference = first_application_row.__dict__["application_id"]
 
     response = entra_auth_client.get(f"/applications/{laa_reference}/history")
 
@@ -22,7 +22,7 @@ def test_403_get_application_history_returns_403_when_provider_token(
     entra_auth_client, session
 ):
     first_application_row = session.exec(select(Application)).first()
-    laa_reference = first_application_row.__dict__["laa_reference"]
+    laa_reference = first_application_row.__dict__["application_id"]
 
     response = entra_auth_client.get(
         f"/applications/{laa_reference}/history",
@@ -36,7 +36,7 @@ def test_200_get_application_history_returns_events_for_application_that_exists(
     entra_auth_client, session
 ):
     first_application_row = session.exec(select(Application)).first()
-    laa_reference = first_application_row.__dict__["laa_reference"]
+    laa_reference = first_application_row.__dict__["application_id"]
 
     # Create a history event for the application
     history_event = HistoryEvent(
@@ -45,7 +45,7 @@ def test_200_get_application_history_returns_events_for_application_that_exists(
         actor="provider@example.com",
         actor_type=ActorType.PROVIDER,
         event_data=None,
-        laa_reference=laa_reference,
+        application_id=laa_reference,
     )
     session.add(history_event)
     session.commit()
@@ -79,7 +79,7 @@ def test_200_get_application_history_returns_empty_list_when_no_events_exist(
     entra_auth_client, session
 ):
     first_application_row = session.exec(select(Application)).first()
-    laa_reference = first_application_row.__dict__["laa_reference"]
+    laa_reference = first_application_row.__dict__["application_id"]
 
     response = entra_auth_client.get(
         f"/applications/{laa_reference}/history",
@@ -95,7 +95,7 @@ def test_200_get_application_history_returns_events_in_reverse_chronological_ord
     entra_auth_client, session
 ):
     first_application_row = session.exec(select(Application)).first()
-    laa_reference = first_application_row.__dict__["laa_reference"]
+    laa_reference = first_application_row.__dict__["application_id"]
 
     event1 = HistoryEvent(
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
@@ -103,7 +103,7 @@ def test_200_get_application_history_returns_events_in_reverse_chronological_ord
         actor="provider@example.com",
         actor_type=ActorType.PROVIDER,
         event_data=None,
-        laa_reference=laa_reference,
+        application_id=laa_reference,
     )
     session.add(event1)
     session.commit()
@@ -114,7 +114,7 @@ def test_200_get_application_history_returns_events_in_reverse_chronological_ord
         actor="caseworker@example.com",
         actor_type=ActorType.CASEWORKER,
         event_data={"decision": "granted", "related_link": "/certificate/123"},
-        laa_reference=laa_reference,
+        application_id=laa_reference,
     )
     session.add(event2)
     session.commit()
@@ -125,7 +125,7 @@ def test_200_get_application_history_returns_events_in_reverse_chronological_ord
         actor="System",
         actor_type=ActorType.SYSTEM,
         event_data=None,
-        laa_reference=laa_reference,
+        application_id=laa_reference,
     )
     session.add(event3)
     session.commit()

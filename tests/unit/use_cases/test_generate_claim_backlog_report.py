@@ -57,7 +57,7 @@ class TestGenerateClaimBacklogReportUseCase:
     def test_returns_csv_row_for_open_claim(self):
         claim = create_base_claim(
             claim_id=10,
-            laa_reference=12345,
+            application_id=12345,
             claim_type_id=ClaimType.FINAL_BILL,
             total_profit_cost_vat_zero=Decimal("0.00"),
             total_profit_cost_net=Decimal("100.00"),
@@ -84,7 +84,7 @@ class TestGenerateClaimBacklogReportUseCase:
         assert row["Claim type"] == "FINAL_BILL"
 
     def test_raises_error_when_firm_name_missing_for_firm_code(self):
-        claim = create_base_claim(claim_id=13, laa_reference=12345)
+        claim = create_base_claim(claim_id=13, application_id=12345)
         claim.application = create_base_application(
             provider=create_base_provider(firm_code="ABC123")
         )
@@ -94,7 +94,7 @@ class TestGenerateClaimBacklogReportUseCase:
             use_case.execute()
 
     def test_raises_error_when_firms_retrieval_fails(self):
-        claim = create_base_claim(claim_id=14, laa_reference=12345)
+        claim = create_base_claim(claim_id=14, application_id=12345)
         claim.application = create_base_application(
             provider=create_base_provider(firm_code="ABC123")
         )
@@ -118,7 +118,7 @@ class TestGenerateClaimBacklogReportUseCase:
     def test_deduplicates_firm_codes_before_calling_port(self):
         claim_1 = create_base_claim(
             claim_id=15,
-            laa_reference=100,
+            application_id=100,
             claim_type_id=ClaimType.FINAL_BILL,
             total_profit_cost_vat_zero=Decimal("0.00"),
             total_profit_cost_net=Decimal("100.00"),
@@ -126,7 +126,7 @@ class TestGenerateClaimBacklogReportUseCase:
         )
         claim_2 = create_base_claim(
             claim_id=16,
-            laa_reference=200,
+            application_id=200,
             claim_type_id=ClaimType.FINAL_BILL,
             total_profit_cost_vat_zero=Decimal("0.00"),
             total_profit_cost_net=Decimal("100.00"),

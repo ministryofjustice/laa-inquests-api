@@ -68,7 +68,7 @@ def test_201_create_application_response_contains_expected_base_properties(
     )
     assert response.status_code == 201
     new_application = response.json()
-    assert isinstance(new_application["laaReference"], int)
+    assert isinstance(new_application["laaReference"], str)
     assert isinstance(new_application["createdAt"], str)
     assert isinstance(new_application["updatedAt"], str)
     assert isinstance(new_application["status"], str)
@@ -156,7 +156,7 @@ def test_201_create_application_stores_authenticated_users_firm_code(
     assert response.status_code == 201
     laa_reference = response.json()["laaReference"]
     application = session.exec(
-        select(Application).where(Application.laa_reference == laa_reference)
+        select(Application).where(Application.application_id == int(laa_reference))
     ).one()
     assert application.provider.firm_code == "0A123B"
 
@@ -176,7 +176,7 @@ def test_201_create_application_creates_history_event(client, auth_token, sessio
 
     history_event = session.exec(
         select(HistoryEvent).where(
-            (HistoryEvent.laa_reference == laa_reference)
+            (HistoryEvent.application_id == int(laa_reference))
             & (
                 HistoryEvent.event_reference
                 == HistoryEventReference.APPLICATION_SUBMITTED

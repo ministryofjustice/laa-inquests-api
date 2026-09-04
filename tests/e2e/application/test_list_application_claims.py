@@ -15,7 +15,7 @@ def _seed_claim(
     claim_type: ClaimType = ClaimType.PAYMENT_ON_ACCOUNT,
 ) -> Claim:
     claim = Claim(
-        laa_reference=laa_reference,
+        application_id=laa_reference,
         claim_type_id=claim_type,
         status_id=status,
         submission_date=datetime.now(UTC),
