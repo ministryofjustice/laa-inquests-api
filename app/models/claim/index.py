@@ -105,11 +105,6 @@ class Claim(ClaimBase, table=True):
     def inquest_outcomes(self) -> list[InquestOutcomeCode]:
         return [link.inquest_outcome_id for link in self.claim_inquest_outcomes]
 
-    @property
-    def laa_reference(self) -> str:
-        """Compatibility alias exposing application_id as a string."""
-        return str(self.application_id)
-
 
 class ClaimCostTemplate(SQLModel, table=True):
     __tablename__ = "claim_cost_template"

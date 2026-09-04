@@ -16,7 +16,7 @@ from app.use_cases.retrieve_certificate import RetrieveCertificateUseCase
 
 def _make_application() -> Application:
     application = MagicMock(spec=Application)
-    application.laa_reference = 123
+    application.laa_reference = "INQ-123-REF"
     application.proceeding = MagicMock(spec=ApplicationProceeding)
     application.overall_decision = MeritsDecision.GRANTED
     return application

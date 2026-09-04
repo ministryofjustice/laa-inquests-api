@@ -45,7 +45,7 @@ def _claim(claim_id: int = 1, application_id: int = 1) -> Claim:
 def _application(application_id: int = 1):
     application = MagicMock()
     application.application_id = application_id
-    application.laa_reference = str(application_id)
+    application.laa_reference = f"INQ-{application_id:03d}-REF"
     application.provider.firm_code = "ABC123"
     return application
 

@@ -476,10 +476,15 @@ def list_public_bodies(
 
 
 def get_coroners_letter_use_case(
-    session: Session = Depends(get_session),
+    application_lookup_port: ApplicationLookupPort = Depends(
+        get_application_db_adapter
+    ),
     sds_port: SdsPort = Depends(get_sds_port),
 ) -> RetrieveCoronersLetterUseCase:
-    return RetrieveCoronersLetterUseCase(session=session, sds_port=sds_port)
+    return RetrieveCoronersLetterUseCase(
+        application_lookup_port=application_lookup_port,
+        sds_port=sds_port,
+    )
 
 
 @router.get(

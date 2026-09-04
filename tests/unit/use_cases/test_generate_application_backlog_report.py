@@ -128,8 +128,8 @@ class TestGenerateApplicationBacklogReportUseCase:
 
         assert len(rows) == 2
         refs = [row["Application / Case Reference Number"] for row in rows]
-        assert "100" in refs
-        assert "200" in refs
+        assert app1.laa_reference in refs
+        assert app2.laa_reference in refs
 
     def test_raises_exception_when_firms_retrieval_fails(self):
         provider = create_base_provider(firm_code="123")

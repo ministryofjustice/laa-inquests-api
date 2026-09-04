@@ -33,7 +33,7 @@ def test_create_application_grant_email_personalisation_returns_all_required_fie
     )
 
     assert isinstance(result, NotifyApplicationGrantTemplatePersonalisation)
-    assert result.laa_reference == "12345"
+    assert result.laa_reference == "INQ-YYY-YYY"
     assert result.issue_date == "18 June 2026"
     assert result.link_to_file == certificate_payload
 

@@ -156,7 +156,7 @@ def test_201_create_application_stores_authenticated_users_firm_code(
     assert response.status_code == 201
     laa_reference = response.json()["laaReference"]
     application = session.exec(
-        select(Application).where(Application.application_id == int(laa_reference))
+        select(Application).where(Application.laa_reference == laa_reference)
     ).one()
     assert application.provider.firm_code == "0A123B"
 
@@ -173,10 +173,13 @@ def test_201_create_application_creates_history_event(client, auth_token, sessio
 
     assert response.status_code == 201
     laa_reference = response.json()["laaReference"]
+    application = session.exec(
+        select(Application).where(Application.laa_reference == laa_reference)
+    ).one()
 
     history_event = session.exec(
         select(HistoryEvent).where(
-            (HistoryEvent.application_id == int(laa_reference))
+            (HistoryEvent.application_id == application.application_id)
             & (
                 HistoryEvent.event_reference
                 == HistoryEventReference.APPLICATION_SUBMITTED
@@ -188,7 +191,7 @@ def test_201_create_application_creates_history_event(client, auth_token, sessio
     assert history_event.actor == "provider@example.com"
     assert history_event.actor_type == ActorType.PROVIDER
     assert history_event.event_data is None
-    assert history_event.laa_reference == laa_reference
+    assert history_event.application_id == application.application_id
 
 
 def test_201_create_application_can_omit_correspondence_address(client, auth_token):

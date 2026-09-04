@@ -103,11 +103,7 @@ def create_application_in_db(
         "laa_reference": f"INQ-{uuid.uuid4().hex[:6].upper()}-{uuid.uuid4().hex[:6].upper()}",
     }
 
-    application_data = app_defaults | overrides
-    if "laa_reference" in application_data:
-        application_data["new_laa_reference"] = application_data.pop("laa_reference")
-
-    application = Application(**application_data)
+    application = Application(**(app_defaults | overrides))
     session.add(application)
     session.commit()
     session.refresh(application)

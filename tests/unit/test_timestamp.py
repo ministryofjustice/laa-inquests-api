@@ -24,11 +24,11 @@ def test_created_at():
 def test_created_at_read_from_db(session: Session):
     before_creation = datetime.now(UTC)
     original_application = Application(
-        deceased_id=1, provider_id=1, new_laa_reference="INQ-YYY-YYY"
+        deceased_id=1, provider_id=1, laa_reference="INQ-YYY-YYY"
     )
     session.add(original_application)
     session.commit()
-    application = session.get(Application, original_application.laa_reference)
+    application = session.get(Application, original_application.application_id)
     assert (
         before_creation
         <= application.created_at.replace(tzinfo=UTC)

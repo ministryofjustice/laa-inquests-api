@@ -15,7 +15,7 @@ def _create_base_history_event(**overrides) -> HistoryEvent:
     return HistoryEvent(**(defaults | overrides))
 
 
-def test_history_event_laa_reference_returns_string_of_application_id():
+def test_history_event_keeps_internal_application_id():
     history_event = _create_base_history_event(application_id=12345)
 
-    assert history_event.laa_reference == "12345"
+    assert history_event.application_id == 12345

@@ -26,11 +26,6 @@ class HistoryEvent(SQLModel, table=True):
         foreign_key="application.application_id", nullable=False
     )
 
-    @property
-    def laa_reference(self) -> str:
-        """Compatibility alias exposing application_id as a string."""
-        return str(self.application_id)
-
 
 class CreateNoteRequest(BaseModel):
     model_config = ConfigDict(

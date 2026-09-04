@@ -89,7 +89,7 @@ def _make_application_lookup_port(application: Application | None = _UNSET):
 
 def _make_get_claims_port(claims: list[Claim] | None = None):
     port = MagicMock(spec=GetClaimsForApplicationPort)
-    port.get_claims_by_laa_reference.return_value = claims or []
+    port.get_claims_by_application_id.return_value = claims or []
     return port
 
 
@@ -207,7 +207,13 @@ def test_execute_creates_claim_and_commits():
 
     create_claim_port.create_claim.assert_called_once()
     _, kwargs = create_claim_port.create_claim.call_args
-    assert kwargs["laa_reference"] == command.laa_reference
+    # TODO: Very weird inside a test
+    assert (
+        kwargs["application_id"]
+        == application_lookup_port.get_application_by_laa_reference(
+            command.laa_reference
+        ).application_id
+    )
     assert kwargs["claimant_id"] == command.claimant_id
     assert kwargs["claim"].claim_type == command.claim_type
     create_claim_port.commit.assert_called_once()
@@ -794,16 +800,20 @@ def test_execute_fetches_existing_claims_with_correct_laa_reference():
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = _make_claim()
     get_claims_port = _make_get_claims_port()
+    application_lookup_port = _make_application_lookup_port()
+    application = application_lookup_port.get_application_by_laa_reference(
+        command.laa_reference
+    )
 
     use_case = _make_use_case(
         create_claim_port=create_claim_port,
-        application_lookup_port=_make_application_lookup_port(),
+        application_lookup_port=application_lookup_port,
         get_claims_for_application_port=get_claims_port,
     )
     use_case.execute(command)
 
-    get_claims_port.get_claims_by_laa_reference.assert_called_once_with(
-        command.laa_reference
+    get_claims_port.get_claims_by_application_id.assert_called_once_with(
+        application.application_id
     )
 
 

@@ -145,7 +145,7 @@ class Provider(ProviderBase, table=True):
 
 class ApplicationBase(SQLModel):
     application_id: int | None = Field(default_factory=None, primary_key=True)
-    new_laa_reference: str = Field(unique=True, min_length=11, max_length=11)
+    laa_reference: str = Field(unique=True, min_length=11, max_length=11)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
@@ -204,12 +204,6 @@ class Application(ApplicationBase, table=True):
         """Calculate overall_decision from the proceeding's merits_decision."""
         return self.proceeding.merits_decision
 
-    @computed_field
-    @property
-    def laa_reference(self) -> str | None:
-        """Compatibility alias exposing application_id as a string."""
-        return str(self.application_id) if self.application_id is not None else None
-
 
 class ApplicationPublicBody(SQLModel, table=True):
     __tablename__ = "application_public_body"
@@ -222,11 +216,6 @@ class ApplicationPublicBody(SQLModel, table=True):
     @property
     def public_body_description(self):
         return self.public_body.public_body_description
-
-    @property
-    def laa_reference(self) -> str:
-        """Compatibility alias exposing application_id as a string."""
-        return str(self.application_id)
 
 
 class ApplicationProceeding(SQLModel, table=True):
@@ -284,11 +273,6 @@ class ApplicationProceeding(SQLModel, table=True):
         if self.merits_decision != MeritsDecision.GRANTED:
             return UNGRANTED_SUBSTANTIVE_COST_LIMITATION
         return self.proceeding.substantive_cost_limitation
-
-    @property
-    def laa_reference(self) -> str:
-        """Compatibility alias exposing application_id as a string."""
-        return str(self.application_id)
 
 
 # REQUEST BODY -- Create

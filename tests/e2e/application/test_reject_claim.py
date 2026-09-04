@@ -25,8 +25,15 @@ def _seed_claim(
     status: ClaimStatus = ClaimStatus.SUBMITTED,
     claimant_id: str | None = "claimant-123@provider.co.uk",
 ) -> Claim:
+    application_id = (
+        session.exec(
+            select(Application).where(Application.laa_reference == laa_reference)
+        )
+        .one()
+        .application_id
+    )
     claim = Claim(
-        application_id=laa_reference,
+        application_id=application_id,
         claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
         status_id=status,
         submission_date=datetime.now(UTC),
