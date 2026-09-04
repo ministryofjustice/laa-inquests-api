@@ -40,7 +40,7 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
             )
             return result
         except httpx.HTTPError as exc:
-            logger.error(
+            logger.exception(
                 "Provider firm name lookup failed",
                 extra=build_log_extra(
                     event="provider_details_firm_name_lookup_failed",
@@ -54,7 +54,7 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
                 f"HTTP error occurred while retrieving provider details: {exc}"
             ) from exc
         except (KeyError, ValueError) as exc:
-            logger.error(
+            logger.exception(
                 "Provider firm name lookup failed",
                 extra=build_log_extra(
                     event="provider_details_firm_name_lookup_failed",
