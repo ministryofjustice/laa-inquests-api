@@ -337,7 +337,7 @@ def test_get_laa_reference_does_not_return_existing_reference(session):
     existing_reference = "INQ-AAA-AAA"
     create_application_in_db(
         session,
-        new_laa_reference=existing_reference,
+        laa_reference=existing_reference,
     )
 
     adapter._generate_laa_reference = MagicMock(

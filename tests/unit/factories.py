@@ -224,7 +224,10 @@ def create_base_application(
         "proceeding": proceeding,
         "public_bodies": public_bodies,
     }
-    return Application(**(defaults | overrides))
+    application_data = defaults | overrides
+    if "laa_reference" in application_data:
+        application_data["new_laa_reference"] = application_data.pop("laa_reference")
+    return Application(**application_data)
 
 
 def create_base_claim(**overrides) -> Claim:
