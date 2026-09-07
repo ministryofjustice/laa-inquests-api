@@ -256,3 +256,75 @@ class TestDoesOfficeExist:
             assert adapter.does_office_exist("OFFICE123") is False
 
         assert "Provider office address lookup failed" in caplog.text
+
+
+class TestGetProviderOfficesByFirmId:
+    def test_returns_required_data_from_successful_api_response(self, adapter):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "offices": [
+                {
+                    "firmOfficeCode": "0A123A",
+                    "addressLine1": "1 Test Street",
+                    "addressLine2": "Suite 2",
+                    "city": "London",
+                    "county": "Greater London",
+                    "postCode": "SW1A 1AA",
+                }
+            ]
+        }
+
+        with patch("httpx.get", return_value=mock_response):
+            result = adapter.get_provider_offices_by_firm_id("0A123B")
+
+        assert result == [
+            {
+                "office_code": "0A123A",
+                "address": {
+                    "address_line_1": "1 Test Street",
+                    "address_line_2": "Suite 2",
+                    "town_or_city": "London",
+                    "county": "Greater London",
+                    "postcode": "SW1A 1AA",
+                },
+            }
+        ]
+
+    def test_calls_correct_provider_offices_url_with_api_key_header(self, adapter):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"offices": []}
+
+        with patch("httpx.get", return_value=mock_response) as mock_get:
+            adapter.get_provider_offices_by_firm_id("0A123B")
+
+        mock_get.assert_called_once_with(
+            "https://example.com/api/v1/provider-firms/0A123B/provider-offices",
+            headers={"X-Authorization": "test-key"},
+        )
+
+    def test_raises_provider_details_retrieval_error_on_http_error(self, adapter):
+        mock_response = MagicMock()
+        mock_response.raise_for_status.side_effect = _httpx.HTTPStatusError(
+            "error", request=MagicMock(), response=MagicMock()
+        )
+
+        with (
+            patch("httpx.get", return_value=mock_response),
+            pytest.raises(ProviderDetailsRetrievalError),
+        ):
+            adapter.get_provider_offices_by_firm_id("0A123B")
+
+    def test_raises_provider_details_retrieval_error_on_invalid_payload(self, adapter):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"unexpected": []}
+
+        with (
+            patch("httpx.get", return_value=mock_response),
+            pytest.raises(ProviderDetailsRetrievalError) as exc_info,
+        ):
+            adapter.get_provider_offices_by_firm_id("0A123B")
+
+        assert (
+            str(exc_info.value)
+            == "Unexpected provider-offices response for firm 0A123B"
+        )

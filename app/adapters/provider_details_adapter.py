@@ -173,3 +173,70 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
             raise ProviderDetailsRetrievalError(
                 f"Failed to retrieve firms from provider details API: #{exc}"
             ) from exc
+
+    def get_provider_offices_by_firm_id(self, firm_id: str) -> list[dict]:
+        started_at = time.perf_counter()
+        try:
+            url = f"{self.base_url}/api/v1/provider-firms/{firm_id}/provider-offices"
+            response = httpx.get(
+                url,
+                headers={"X-Authorization": self.api_key},
+            )
+            response.raise_for_status()
+
+            offices = response.json()["offices"]
+            result = [
+                {
+                    "office_code": office["firmOfficeCode"],
+                    "address": {
+                        "address_line_1": office.get("addressLine1", ""),
+                        "address_line_2": office.get("addressLine2", ""),
+                        "town_or_city": office.get("city", ""),
+                        "county": office.get("county", ""),
+                        "postcode": office.get("postCode", ""),
+                    },
+                }
+                for office in offices
+            ]
+
+            logger.info(
+                "Provider offices by firm lookup succeeded",
+                extra=build_log_extra(
+                    event="provider_details_provider_offices_lookup_success",
+                    route="provider-details:provider-firms:provider-offices",
+                    method="GET",
+                    status_code=response.status_code,
+                    duration_ms=duration_ms(started_at),
+                    firm_id=firm_id,
+                    result_count=len(result),
+                ),
+            )
+            return result
+        except httpx.HTTPError as exc:
+            logger.exception(
+                "Provider offices by firm lookup failed",
+                extra=build_log_extra(
+                    event="provider_details_provider_offices_lookup_failed",
+                    route="provider-details:provider-firms:provider-offices",
+                    method="GET",
+                    duration_ms=duration_ms(started_at),
+                    firm_id=firm_id,
+                ),
+            )
+            raise ProviderDetailsRetrievalError(
+                f"HTTP error occurred while retrieving provider details: {exc}"
+            ) from exc
+        except (KeyError, TypeError, ValueError) as exc:
+            logger.exception(
+                "Provider offices by firm lookup failed",
+                extra=build_log_extra(
+                    event="provider_details_provider_offices_lookup_failed",
+                    route="provider-details:provider-firms:provider-offices",
+                    method="GET",
+                    duration_ms=duration_ms(started_at),
+                    firm_id=firm_id,
+                ),
+            )
+            raise ProviderDetailsRetrievalError(
+                f"Unexpected provider-offices response for firm {firm_id}"
+            ) from exc

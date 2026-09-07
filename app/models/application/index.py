@@ -534,6 +534,15 @@ class PublicBodyResponse(BaseModel):
     public_body_description: str
 
 
+class ProviderOfficeResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+    office_code: str
+    address: AddressResponse
+
+
 class ProceedingResponse(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
