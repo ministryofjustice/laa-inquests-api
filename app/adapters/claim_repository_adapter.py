@@ -1,5 +1,6 @@
 import logging
 import uuid
+from datetime import datetime
 from decimal import Decimal
 
 from sqlmodel import Session, select
@@ -12,6 +13,7 @@ from app.models.application.index import Application
 from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
+    ClaimType,
     InquestOutcomeCode,
     ReasonCode,
 )
@@ -33,6 +35,9 @@ from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.ports.claim.get_claim_decision_port import GetClaimDecisionPort
 from app.ports.claim.get_claim_evidence_port import GetClaimEvidencePort
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
+from app.ports.claim.list_auto_approved_poa_claims_port import (
+    ListAutoApprovedPoaClaimsPort,
+)
 from app.ports.claim.update_claim_status_port import (
     UpdateClaimStatusPort,
 )
@@ -54,6 +59,7 @@ class ClaimRepositoryAdapter(
     UploadClaimEvidencePort,
     GetClaimEvidencePort,
     DeleteClaimEvidencePort,
+    ListAutoApprovedPoaClaimsPort,
 ):
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -177,6 +183,17 @@ class ClaimRepositoryAdapter(
 
     def get_claim_by_id(self, claim_id: int) -> Claim | None:
         return self.session.get(Claim, claim_id)
+
+    def list_auto_approved_poa_claims(
+        self, start: datetime, end: datetime
+    ) -> list[Claim]:
+        statement = select(Claim).where(
+            Claim.claim_type_id == ClaimType.PAYMENT_ON_ACCOUNT,
+            Claim.status_id == ClaimStatus.PAY_IN_FULL,
+            Claim.submission_date >= start,
+            Claim.submission_date < end,
+        )
+        return list(self.session.exec(statement).all())
 
     def get_claim_decision_by_claim_id(self, claim_id: int) -> ClaimDecision | None:
         statement = (

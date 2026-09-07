@@ -71,3 +71,84 @@ Create the name of the service account to use
   value: {{ $value | quote }}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Secret-backed environment variables shared by the app container and cronjobs.
+*/}}
+{{- define "laa-inquests-api.app.secrets" -}}
+- name: INQUESTS_API_CLIENT_ID
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.env.AWS_SECRETS_INQUESTS_API_ENTRA_CONFIG }}
+      key: INQUESTS_API_CLIENT_ID
+- name: INQUESTS_API_TENANT_ID
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.env.AWS_SECRETS_INQUESTS_API_ENTRA_CONFIG }}
+      key: INQUESTS_API_TENANT_ID
+- name: GOV_NOTIFY_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.env.AWS_SECRETS_GOV_NOTIFY_API_KEY }}
+      key: GOV_NOTIFY_API_KEY
+- name: GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.env.AWS_SECRETS_GOV_NOTIFY_TEMPLATE_IDS }}
+      key: GOV_NOTIFY_APPLICATION_SUBMIT_TEMPLATE_ID
+- name: GOV_NOTIFY_APPLICATION_REFUSE_TEMPLATE_ID
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.env.AWS_SECRETS_GOV_NOTIFY_TEMPLATE_IDS }}
+      key: GOV_NOTIFY_APPLICATION_REFUSE_TEMPLATE_ID
+- name: GOV_NOTIFY_APPLICATION_GRANT_TEMPLATE_ID
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.env.AWS_SECRETS_GOV_NOTIFY_TEMPLATE_IDS }}
+      key: GOV_NOTIFY_APPLICATION_GRANT_TEMPLATE_ID
+- name: GOV_NOTIFY_CLAIM_SUBMIT_TEMPLATE_ID
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.env.AWS_SECRETS_GOV_NOTIFY_TEMPLATE_IDS }}
+      key: GOV_NOTIFY_CLAIM_SUBMIT_TEMPLATE_ID
+- name: GOV_NOTIFY_CLAIM_REJECT_TEMPLATE_ID
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.env.AWS_SECRETS_GOV_NOTIFY_TEMPLATE_IDS }}
+      key: GOV_NOTIFY_CLAIM_REJECT_TEMPLATE_ID
+- name: GOV_NOTIFY_POA_CLAIM_AUTO_APPROVE_TEMPLATE_ID
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.env.AWS_SECRETS_GOV_NOTIFY_TEMPLATE_IDS }}
+      key: GOV_NOTIFY_POA_CLAIM_AUTO_APPROVE_TEMPLATE_ID
+- name: GOV_NOTIFY_CALLBACK_BEARER_TOKEN
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.env.AWS_SECRETS_GOV_NOTIFY_CALLBACK_BEARER_TOKEN }}
+      key: GOV_NOTIFY_CALLBACK_BEARER_TOKEN
+- name: SDS_BASE_URL
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.env.AWS_SECRETS_SDS_CONFIG }}
+      key: SDS_BASE_URL
+- name: SDS_TENANT_ID
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.env.AWS_SECRETS_SDS_CONFIG }}
+      key: SDS_TENANT_ID
+- name: SDS_CLIENT_ID
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.env.AWS_SECRETS_SDS_CONFIG }}
+      key: SDS_CLIENT_ID
+- name: SDS_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.env.AWS_SECRETS_SDS_CONFIG }}
+      key: SDS_CLIENT_SECRET
+- name: SDS_SCOPE
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.env.AWS_SECRETS_SDS_CONFIG }}
+      key: SDS_SCOPE
+{{- end -}}

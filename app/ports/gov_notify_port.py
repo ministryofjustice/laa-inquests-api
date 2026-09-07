@@ -113,4 +113,25 @@ class GovNotifyPort(ABC):
         ...
 
     @abstractmethod
+    def send_claim_granted_decision_email(
+        self,
+        claim: Claim,
+        application: Application,
+        recipient_email: str,
+        firm_name: str,
+    ) -> None:
+        """Send POA claim grant notification to recipient.
+
+        Args:
+            claim: The claim being granted
+            application: The associated application for the claim
+            recipient_email: Email address of the recipient
+            firm_name: Name of the provider firm
+
+        Raises:
+            Exception: If the notification fails to send
+        """
+        ...
+
+    @abstractmethod
     def send_precompiled_letter(self, reference: str, pdf: bytes) -> None: ...

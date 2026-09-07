@@ -1085,6 +1085,41 @@ def test_execute_auto_approves_eligible_payment_on_account_claim():
     assert create_claim_port.commit.call_count == 2
 
 
+def test_execute_does_not_send_grant_email_when_auto_approving_poa_claim():
+    command = _make_command({"net": Decimal("50000.00"), "gross": Decimal("50000.00")})
+    claim = _make_claim()
+
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+    create_claim_decision_port = _make_create_claim_decision_port()
+    update_claim_status_port = _make_update_claim_status_port()
+    create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
+    gov_notify_port = MagicMock()
+
+    application = MagicMock(spec=Application)
+    application.status = "LIVE"
+    application.overall_decision = "GRANTED"
+    application.provider.email_address = "provider@example.com"
+    application.proceeding = MagicMock()
+    application.proceeding.substantive_cost_limitation = 999999
+    application.proceeding.certificate_start_date = None
+
+    use_case = _make_use_case(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(application),
+        get_claims_for_application_port=_make_get_claims_port(),
+        create_claim_decision_port=create_claim_decision_port,
+        update_claim_status_port=update_claim_status_port,
+        create_history_event_port=create_history_event_port,
+        gov_notify_port=gov_notify_port,
+    )
+
+    result = use_case.execute(command)
+
+    assert result.claim.status_id == ClaimStatus.PAY_IN_FULL
+    gov_notify_port.send_claim_granted_decision_email.assert_not_called()
+
+
 def test_execute_does_not_create_history_event_if_auto_approve_eligible_update_claim_status_fails():
     command = _make_command({"net": Decimal("50000.00"), "gross": Decimal("50000.00")})
     claim = _make_claim()

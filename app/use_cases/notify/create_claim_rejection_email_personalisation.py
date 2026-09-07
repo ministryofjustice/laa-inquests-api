@@ -11,7 +11,7 @@ from app.models.gov_notify_templates.claim_reject_personalisation import (
 from app.use_cases.notify.format_utils import (
     format_amount,
     format_claim_type,
-    format_submitted_at,
+    format_date,
 )
 
 
@@ -28,13 +28,13 @@ def create_claim_rejection_email_personalisation(
         provider_name=firm_name,
         client_first_name=application.client.client_first_name,
         client_last_name=application.client.client_last_name,
-        claim_submitted_at=format_submitted_at(claim.submission_date),
+        claim_submitted_at=format_date(claim.submission_date),
         claim_type=format_claim_type(claim.claim_type_id),
         total_claim_amount=format_amount(
             total_claim_amount(
                 claim.total_profit_cost_vat_zero, claim.total_profit_cost_gross
             )
         ),
-        date_of_rejection=format_submitted_at(datetime.now(UTC)),
+        date_of_rejection=format_date(datetime.now(UTC)),
         justification=justification,
     )

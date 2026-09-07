@@ -22,6 +22,9 @@ from app.use_cases.notify.create_application_refusal_email_personalisation impor
 from app.use_cases.notify.create_application_submission_email_personalisation import (
     create_application_submission_email_personalisation,
 )
+from app.use_cases.notify.create_claim_grant_email_personalisation import (
+    create_claim_grant_email_personalisation,
+)
 from app.use_cases.notify.create_claim_rejection_email_personalisation import (
     create_claim_rejection_email_personalisation,
 )
@@ -163,6 +166,23 @@ class GovNotifyAdapter(GovNotifyPort):
             template_id=Config.GOV_NOTIFY_CLAIM_REJECT_TEMPLATE_ID,
             personalisation=personalisation.model_dump(),
             event_name="govnotify_send_claim_rejected_decision_email",
+        )
+
+    def send_claim_granted_decision_email(
+        self,
+        claim: Claim,
+        application: Application,
+        recipient_email: str,
+        firm_name: str,
+    ) -> None:
+        personalisation = create_claim_grant_email_personalisation(
+            claim, application, firm_name
+        )
+        self._send_email_notification(
+            email_address=recipient_email,
+            template_id=Config.GOV_NOTIFY_POA_CLAIM_AUTO_APPROVE_TEMPLATE_ID,
+            personalisation=personalisation.model_dump(),
+            event_name="govnotify_send_claim_granted_decision_email",
         )
 
     def send_precompiled_letter(self, reference: str, pdf: bytes) -> None:
