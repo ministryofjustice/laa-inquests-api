@@ -195,7 +195,7 @@ def test_get_application_history_returns_correct_events(session):
         application_id=application.application_id,
     )
 
-    history = adapter.get_application_history(application.laa_reference)
+    history = adapter.get_application_history(application.application_id)
     assert event1 in history
     assert event2 in history
 
@@ -216,7 +216,7 @@ def test_get_application_history_does_not_return_events_for_other_applications(s
             )
         ],
         provider_id=application1.provider_id,
-        new_laa_reference="INQ-YYY-YYY",
+        laa_reference="INQ-YYY-YYY",
     )
     session.add(application2)
     session.flush()
@@ -264,7 +264,7 @@ def test_get_application_history_returns_event_list_in_reverse_chronological_ord
         application_id=application.application_id,
     )
 
-    history = adapter.get_application_history(application.laa_reference)
+    history = adapter.get_application_history(application.application_id)
     assert history == [event2, event1]
 
 

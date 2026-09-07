@@ -1,9 +1,8 @@
 import logging
 
-from sqlmodel import Session
-
 from app.logging_utils import build_log_extra
-from app.models.application.index import Application, CoronersLetterResult
+from app.models.application.index import CoronersLetterResult
+from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.sds_port import SdsPort
 from app.use_cases.exceptions import (
     CoronersLetterNotFoundError,
@@ -14,12 +13,16 @@ logger = logging.getLogger(__name__)
 
 
 class RetrieveCoronersLetterUseCase:
-    def __init__(self, session: Session, sds_port: SdsPort) -> None:
-        self.session = session
+    def __init__(
+        self, application_lookup_port: ApplicationLookupPort, sds_port: SdsPort
+    ) -> None:
+        self.application_lookup_port = application_lookup_port
         self.sds_port = sds_port
 
     def execute(self, laa_reference: str) -> CoronersLetterResult:
-        application = self.session.get(Application, int(laa_reference))
+        application = self.application_lookup_port.get_application_by_laa_reference(
+            laa_reference
+        )
         if application is None or application.coroners_letter is None:
             logger.warning(
                 "Coroners letter retrieval failed: letter not found",
