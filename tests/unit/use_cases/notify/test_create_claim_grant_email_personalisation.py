@@ -38,7 +38,7 @@ def test_create_claim_grant_email_personalisation_returns_expected_data():
     )
 
     assert isinstance(result, NotifyClaimGrantTemplatePersonalisation)
-    assert result.ref_number == "12345"
+    assert result.ref_number == "INQ-YYY-YYY"
     assert result.provider_name == "Test Solicitors"
     assert result.client_first_name == "Jane"
     assert result.client_last_name == "Doe"

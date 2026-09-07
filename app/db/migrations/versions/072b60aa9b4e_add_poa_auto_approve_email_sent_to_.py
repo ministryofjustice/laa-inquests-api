@@ -22,9 +22,3 @@ def upgrade() -> None:
         "ALTER TYPE historyeventreference ADD VALUE IF NOT EXISTS "
         "'POA_AUTO_APPROVE_EMAIL_SENT'"
     )
-
-
-def downgrade() -> None:
-    # PostgreSQL does not support removing values from an enum type directly.
-    # A full recreation would be needed if a downgrade is required.
-    pass
