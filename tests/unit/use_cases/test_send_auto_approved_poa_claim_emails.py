@@ -97,7 +97,7 @@ def test_sends_grant_email_for_auto_approved_claim(
     create_history_port.create_history_event.assert_called_once()
     assert (
         create_history_port.create_history_event.call_args.kwargs["event_reference"]
-        == HistoryEventReference.POA_AUTO_APPROVE_EMAIL_SENT
+        == HistoryEventReference.CLAIM_APPROVED_EMAIL
     )
     create_history_port.commit.assert_called_once()
 
@@ -122,7 +122,7 @@ def test_skips_claim_when_email_already_sent(
     list_port.list_auto_approved_poa_claims.return_value = [claim]
     history_port.get_application_history.return_value = [
         _event(HistoryEventReference.POA_AUTO_APPROVED, claim.claim_id),
-        _event(HistoryEventReference.POA_AUTO_APPROVE_EMAIL_SENT, claim.claim_id),
+        _event(HistoryEventReference.CLAIM_APPROVED_EMAIL, claim.claim_id),
     ]
 
     use_case.execute()

@@ -64,7 +64,7 @@ class SendAutoApprovedPoaClaimEmailsUseCase:
         ):
             return
         if self._has_event(
-            history, HistoryEventReference.POA_AUTO_APPROVE_EMAIL_SENT, claim.claim_id
+            history, HistoryEventReference.CLAIM_APPROVED_EMAIL, claim.claim_id
         ):
             return
 
@@ -78,7 +78,7 @@ class SendAutoApprovedPoaClaimEmailsUseCase:
             firm_name=firm_name,
         )
         self.create_history_event_port.create_history_event(
-            event_reference=HistoryEventReference.POA_AUTO_APPROVE_EMAIL_SENT,
+            event_reference=HistoryEventReference.CLAIM_APPROVED_EMAIL,
             actor=ActorType.SYSTEM,
             actor_type=ActorType.SYSTEM,
             application_id=application.application_id,
