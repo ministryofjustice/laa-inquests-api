@@ -1111,7 +1111,6 @@ def test_execute_does_not_send_grant_email_when_auto_approving_poa_claim():
 
     result = use_case.execute(command)
 
-    # The grant email is deferred to the daily cron job, not sent on auto-approval.
     assert result.claim.status_id == ClaimStatus.PAY_IN_FULL
     gov_notify_port.send_claim_granted_decision_email.assert_not_called()
 
