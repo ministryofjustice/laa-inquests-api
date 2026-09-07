@@ -93,16 +93,15 @@ class ApplicationRepositoryAdapter(
     def get_application_by_laa_reference(
         self, laa_reference: str
     ) -> Application | None:
-        # TODO: Rename variable
-        normalised_reference = laa_reference.strip().upper()
+        laa_reference = laa_reference.strip().upper()
         application = self.session.exec(
-            select(Application).where(Application.laa_reference == normalised_reference)
+            select(Application).where(Application.laa_reference == laa_reference)
         ).first()
         logger.info(
             "Application lookup completed",
             extra=build_log_extra(
                 event="application_repository_get_completed",
-                laa_reference=normalised_reference,
+                laa_reference=laa_reference,
                 found=application is not None,
             ),
         )
@@ -120,9 +119,7 @@ class ApplicationRepositoryAdapter(
         firm_code: str,
         merits_decision: MeritsDecision | None = None,
     ) -> list[Application]:
-        # TODO: Rename variable
-        normalised_reference = laa_reference.strip().upper()
-
+        laa_reference = laa_reference.strip().upper()
         statement = (
             select(Application)
             .join(Deceased, Application.deceased_id == Deceased.deceased_id)
@@ -131,7 +128,7 @@ class ApplicationRepositoryAdapter(
                 ApplicationProceeding,
                 Application.application_id == ApplicationProceeding.application_id,
             )
-            .where(Application.laa_reference == normalised_reference)
+            .where(Application.laa_reference == laa_reference)
             .where(Provider.firm_code == firm_code)
         )
 
