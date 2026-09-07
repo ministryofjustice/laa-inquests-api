@@ -270,7 +270,15 @@ class TestGetProviderOfficesByFirmId:
                     "city": "London",
                     "county": "Greater London",
                     "postCode": "SW1A 1AA",
-                }
+                },
+                {
+                    "firmOfficeCode": "0A456A",
+                    "addressLine1": "2 Test Street",
+                    "addressLine2": "Suite 3",
+                    "city": "Manchester",
+                    "county": "Greater Manchester",
+                    "postCode": "M1A 1AA",
+                },
             ]
         }
 
@@ -287,7 +295,17 @@ class TestGetProviderOfficesByFirmId:
                     "county": "Greater London",
                     "postcode": "SW1A 1AA",
                 },
-            }
+            },
+            {
+                "office_code": "0A456A",
+                "address": {
+                    "address_line_1": "2 Test Street",
+                    "address_line_2": "Suite 3",
+                    "town_or_city": "Manchester",
+                    "county": "Greater Manchester",
+                    "postcode": "M1A 1AA",
+                },
+            },
         ]
 
     def test_calls_correct_provider_offices_url_with_api_key_header(self, adapter):
