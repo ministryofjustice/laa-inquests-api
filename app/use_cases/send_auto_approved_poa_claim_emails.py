@@ -1,4 +1,4 @@
-"""Use case for sending grant emails for POA claims auto-approved in the last 24 hours."""
+"""Use case for sending grant emails for POA claims auto-approved in the last 48 hours."""
 
 import logging
 from datetime import UTC, datetime, timedelta
@@ -16,11 +16,11 @@ from app.ports.provider_details_port import ProviderDetailsPort
 
 logger = logging.getLogger(__name__)
 
-WINDOW = timedelta(hours=24)
+WINDOW = timedelta(hours=48)
 
 
 class SendAutoApprovedPoaClaimEmailsUseCase:
-    """Send the deferred grant email for each POA claim auto-approved in the last 24 hours."""
+    """Send the deferred grant email for each POA claim auto-approved in the last 48 hours."""
 
     def __init__(
         self,

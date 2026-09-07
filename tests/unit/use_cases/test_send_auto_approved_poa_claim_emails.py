@@ -115,6 +115,22 @@ def test_skips_claim_without_auto_approved_event(
     create_history_port.create_history_event.assert_not_called()
 
 
+def test_skips_claim_when_email_already_sent(
+    use_case, list_port, history_port, gov_notify_port, create_history_port
+):
+    claim = _claim()
+    list_port.list_auto_approved_poa_claims.return_value = [claim]
+    history_port.get_application_history.return_value = [
+        _event(HistoryEventReference.POA_AUTO_APPROVED, claim.claim_id),
+        _event(HistoryEventReference.POA_AUTO_APPROVE_EMAIL_SENT, claim.claim_id),
+    ]
+
+    use_case.execute()
+
+    gov_notify_port.send_claim_granted_decision_email.assert_not_called()
+    create_history_port.create_history_event.assert_not_called()
+
+
 def test_one_claim_failure_does_not_block_others(
     use_case, list_port, history_port, gov_notify_port, create_history_port
 ):
@@ -136,12 +152,12 @@ def test_one_claim_failure_does_not_block_others(
     create_history_port.commit.assert_called_once()
 
 
-def test_queries_previous_24_hour_window(use_case, list_port):
+def test_queries_previous_48_hour_window(use_case, list_port):
     list_port.list_auto_approved_poa_claims.return_value = []
 
     use_case.execute(now=datetime(2026, 9, 7, 9, 0, tzinfo=UTC))
 
     list_port.list_auto_approved_poa_claims.assert_called_once_with(
-        datetime(2026, 9, 6, 9, 0, tzinfo=UTC),
+        datetime(2026, 9, 5, 9, 0, tzinfo=UTC),
         datetime(2026, 9, 7, 9, 0, tzinfo=UTC),
     )
