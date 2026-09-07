@@ -85,11 +85,10 @@ def _auto_approve_poa_claim(
 
 
 def _email_sent_events(session, claim_id):
-    """Return the POA_AUTO_APPROVE_EMAIL_SENT events recorded for a claim."""
+    """Return the CLAIM_APPROVED_EMAIL events recorded for a claim."""
     events = session.exec(
         select(HistoryEvent).where(
-            HistoryEvent.event_reference
-            == HistoryEventReference.POA_AUTO_APPROVE_EMAIL_SENT
+            HistoryEvent.event_reference == HistoryEventReference.CLAIM_APPROVED_EMAIL
         )
     ).all()
     return [
