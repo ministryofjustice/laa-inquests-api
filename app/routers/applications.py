@@ -33,6 +33,7 @@ from app.models.application.index import (
     ApplicationResponse,
     ApplicationSearchResponse,
     GrantApplicationUpdate,
+    ProviderOfficeResponse,
     PublicBody,
     PublicBodyResponse,
     RefuseApplicationUpdate,
@@ -106,6 +107,7 @@ from app.use_cases.get_claim import GetClaimUseCase
 from app.use_cases.grant_decision import GrantDecisionUseCase
 from app.use_cases.list_application_claims import ListApplicationClaimsUseCase
 from app.use_cases.list_applications import ListApplicationsUseCase
+from app.use_cases.list_provider_offices import ListProviderOfficesUseCase
 from app.use_cases.list_public_bodies import ListPublicBodiesUseCase
 from app.use_cases.refuse_decision import RefuseDecisionUseCase
 from app.use_cases.reject_claim import RejectClaimCommand, RejectClaimUseCase
@@ -346,6 +348,12 @@ def get_search_application_use_case(
     )
 
 
+def get_list_provider_offices_use_case(
+    provider_details_port: ProviderDetailsPort = Depends(get_provider_details_port),
+) -> ListProviderOfficesUseCase:
+    return ListProviderOfficesUseCase(provider_details_port=provider_details_port)
+
+
 def get_make_merits_decision_use_case(
     update_decision_port: ApplicationDecisionPort = Depends(get_application_db_adapter),
     gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
@@ -463,6 +471,33 @@ async def search_application(
         raise HTTPException(
             status_code=500,
             detail="Failed to retrieve firm name from provider details service",
+        )
+
+
+@router.get("/provider-offices/{firm_id}", response_model=list[ProviderOfficeResponse])
+async def list_provider_offices(
+    firm_id: str,
+    use_case: ListProviderOfficesUseCase = Depends(get_list_provider_offices_use_case),
+    request: Request = None,
+    _: AuthenticatedUser = Depends(verify_entra_provider_token),
+) -> list[dict]:
+    try:
+        provider_offices = use_case.execute(firm_id)
+        return provider_offices
+    except ProviderDetailsRetrievalError:
+        logger.warning(
+            "Provider office lookup failed",
+            extra=build_log_extra(
+                event="provider_office_lookup_failed",
+                route=_route(request),
+                method=_method(request),
+                status_code=500,
+                firm_id=firm_id,
+            ),
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve provider offices from provider details service",
         )
 
 
