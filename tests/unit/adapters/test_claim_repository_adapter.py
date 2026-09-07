@@ -39,19 +39,12 @@ def _make_domain_claim(overrides=None) -> DomainClaim:
     return DomainClaim(**payload)
 
 
-def _create_claim(session, laa_reference) -> Claim:
-    adapter = ClaimRepositoryAdapter(session)
-    return adapter.create_claim(
-        str(laa_reference), _make_domain_claim(), "claimant@example.com"
-    )
-
-
 def test_create_claim_persists_claim_with_expected_values(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application_id = session.exec(select(Application)).first().application_id
     adapter = ClaimRepositoryAdapter(session)
 
     created = adapter.create_claim(
-        str(laa_reference),
+        application_id,
         _make_domain_claim(
             {"poa_type": POAType.EXPERT_COST, "vat_zero_total": Decimal("150.00")}
         ),
@@ -61,7 +54,7 @@ def test_create_claim_persists_claim_with_expected_values(session):
 
     assert created.claim_id is not None
     assert stored is not None
-    assert stored.laa_reference == laa_reference
+    assert stored.application_id == application_id
     assert stored.claim_type_id == ClaimType.PAYMENT_ON_ACCOUNT
     assert stored.total_profit_cost_net == Decimal("1000.00")
     assert stored.total_profit_cost_gross == Decimal("1200.00")
@@ -71,29 +64,29 @@ def test_create_claim_persists_claim_with_expected_values(session):
 
 
 def test_create_claim_defaults_status_to_submitted(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application_id = session.exec(select(Application)).first().application_id
     adapter = ClaimRepositoryAdapter(session)
 
-    created = adapter.create_claim(str(laa_reference), _make_domain_claim(), None)
+    created = adapter.create_claim(application_id, _make_domain_claim(), None)
 
     assert created.status_id == ClaimStatus.SUBMITTED
 
 
 def test_create_claim_sets_submission_date(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application_id = session.exec(select(Application)).first().application_id
     adapter = ClaimRepositoryAdapter(session)
 
-    created = adapter.create_claim(str(laa_reference), _make_domain_claim(), None)
+    created = adapter.create_claim(application_id, _make_domain_claim(), None)
 
     assert created.submission_date is not None
 
 
 def test_create_claim_persists_optional_fields_as_none_when_omitted(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application_id = session.exec(select(Application)).first().application_id
     adapter = ClaimRepositoryAdapter(session)
 
     created = adapter.create_claim(
-        str(laa_reference),
+        application_id,
         _make_domain_claim(
             {
                 "claim_type": ClaimType.FINAL_BILL,
@@ -120,10 +113,10 @@ def test_create_claim_persists_optional_fields_as_none_when_omitted(session):
 
 
 def test_link_inquest_outcomes_to_claim_persists_link_rows(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application_id = session.exec(select(Application)).first().application_id
     adapter = ClaimRepositoryAdapter(session)
     created = adapter.create_claim(
-        str(laa_reference),
+        application_id,
         _make_domain_claim(
             {
                 "claim_type": ClaimType.FINAL_BILL,
@@ -163,10 +156,10 @@ def test_link_inquest_outcomes_to_claim_persists_link_rows(session):
 
 
 def test_link_cost_template_to_claim_persists_row(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application_id = session.exec(select(Application)).first().application_id
     adapter = ClaimRepositoryAdapter(session)
     created = adapter.create_claim(
-        str(laa_reference),
+        application_id,
         _make_domain_claim(
             {
                 "claim_type": ClaimType.FINAL_BILL,
@@ -202,33 +195,38 @@ def test_link_cost_template_to_claim_persists_row(session):
     assert stored[0].claim_cost_template_file_name == "final_bill_costs.xlsx"
 
 
-def test_get_claims_by_laa_reference_returns_claims_for_application(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+def test_get_claims_by_application_id_returns_claims_for_application(session):
+    application_id = session.exec(select(Application)).first().application_id
     adapter = ClaimRepositoryAdapter(session)
-    _create_claim(session, laa_reference)
-    _create_claim(session, laa_reference)
+    adapter.create_claim(application_id, _make_domain_claim(), "claimant@example.com")
+    adapter.create_claim(application_id, _make_domain_claim(), "claimant@example.com")
 
-    results = adapter.get_claims_by_laa_reference(str(laa_reference))
+    application_id = session.exec(select(Application)).first().application_id
+    results = adapter.get_claims_by_application_id(application_id)
 
     assert len(results) == 2
-    assert all(c.laa_reference == laa_reference for c in results)
+    assert all(c.application_id == application_id for c in results)
 
 
-def test_get_claims_by_laa_reference_returns_empty_list_when_no_claims(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+def test_get_claims_by_application_id_returns_empty_list_when_no_claims(session):
     adapter = ClaimRepositoryAdapter(session)
 
-    results = adapter.get_claims_by_laa_reference(str(laa_reference))
+    application_id = session.exec(select(Application)).first().application_id
+    results = adapter.get_claims_by_application_id(application_id)
 
     assert results == []
 
 
 def test_get_open_claims_returns_only_open_claims(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application_id = session.exec(select(Application)).first().application_id
     adapter = ClaimRepositoryAdapter(session)
 
-    open_claim = _create_claim(session, laa_reference)
-    rejected_claim = _create_claim(session, laa_reference)
+    open_claim = adapter.create_claim(
+        application_id, _make_domain_claim(), "claimant@example.com"
+    )
+    rejected_claim = adapter.create_claim(
+        application_id, _make_domain_claim(), "claimant@example.com"
+    )
     rejected_claim.status_id = ClaimStatus.REJECTED
     session.add(rejected_claim)
     session.commit()
@@ -241,22 +239,25 @@ def test_get_open_claims_returns_only_open_claims(session):
 
 
 def test_get_open_claims_returned_claims_have_matching_application(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    _create_claim(session, laa_reference)
-
+    application_id = session.exec(select(Application)).first().application_id
     adapter = ClaimRepositoryAdapter(session)
+    adapter.create_claim(application_id, _make_domain_claim(), "claimant@example.com")
     results = adapter.get_open_claims()
 
     for claim in results:
-        assert claim.application.laa_reference == claim.laa_reference
+        assert claim.application_id == claim.application.application_id
 
 
 def test_get_open_claims_orders_by_submission_date_ascending(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application_id = session.exec(select(Application)).first().application_id
     adapter = ClaimRepositoryAdapter(session)
 
-    newer_claim = _create_claim(session, laa_reference)
-    older_claim = _create_claim(session, laa_reference)
+    newer_claim = adapter.create_claim(
+        application_id, _make_domain_claim(), "claimant@example.com"
+    )
+    older_claim = adapter.create_claim(
+        application_id, _make_domain_claim(), "claimant@example.com"
+    )
 
     newer_claim.submission_date = datetime(2026, 6, 1, tzinfo=UTC)
     older_claim.submission_date = datetime(2026, 1, 1, tzinfo=UTC)
@@ -273,9 +274,11 @@ def test_get_open_claims_orders_by_submission_date_ascending(session):
 
 
 def test_create_claim_decision_persists_decision_with_expected_values(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application_id = session.exec(select(Application)).first().application_id
     adapter = ClaimRepositoryAdapter(session)
-    claim = _create_claim(session, laa_reference)
+    claim = adapter.create_claim(
+        application_id, _make_domain_claim(), "claimant@example.com"
+    )
 
     decision = adapter.create_claim_decision(claim.claim_id, ClaimDecisionStatus.REJECT)
     stored = session.get(ClaimDecision, decision.claim_decision_id)
@@ -287,9 +290,11 @@ def test_create_claim_decision_persists_decision_with_expected_values(session):
 
 
 def test_create_decision_reason_persists_reason_with_expected_values(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application_id = session.exec(select(Application)).first().application_id
     adapter = ClaimRepositoryAdapter(session)
-    claim = _create_claim(session, laa_reference)
+    claim = adapter.create_claim(
+        application_id, _make_domain_claim(), "claimant@example.com"
+    )
     decision = adapter.create_claim_decision(claim.claim_id, ClaimDecisionStatus.REJECT)
 
     reason = adapter.create_decision_reason(
@@ -306,9 +311,11 @@ def test_create_decision_reason_persists_reason_with_expected_values(session):
 
 
 def test_create_decision_reason_persists_justification_when_provided(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application_id = session.exec(select(Application)).first().application_id
     adapter = ClaimRepositoryAdapter(session)
-    claim = _create_claim(session, laa_reference)
+    claim = adapter.create_claim(
+        application_id, _make_domain_claim(), "claimant@example.com"
+    )
     decision = adapter.create_claim_decision(claim.claim_id, ClaimDecisionStatus.REJECT)
 
     reason = adapter.create_decision_reason(
@@ -321,9 +328,11 @@ def test_create_decision_reason_persists_justification_when_provided(session):
 
 
 def test_link_evidence_to_claim_sets_claim_id_on_existing_evidence(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application_id = session.exec(select(Application)).first().application_id
     adapter = ClaimRepositoryAdapter(session)
-    claim = _create_claim(session, laa_reference)
+    claim = adapter.create_claim(
+        application_id, _make_domain_claim(), "claimant@example.com"
+    )
     evidence = ClaimEvidence(sds_file_name="stored.pdf", file_name="original.pdf")
     session.add(evidence)
     session.commit()
@@ -336,9 +345,11 @@ def test_link_evidence_to_claim_sets_claim_id_on_existing_evidence(session):
 
 
 def test_link_evidence_to_claim_ignores_unknown_evidence_ids(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application_id = session.exec(select(Application)).first().application_id
     adapter = ClaimRepositoryAdapter(session)
-    claim = _create_claim(session, laa_reference)
+    claim = adapter.create_claim(
+        application_id, _make_domain_claim(), "claimant@example.com"
+    )
 
     adapter.link_evidence_to_claim(claim.claim_id, [uuid.uuid4()])  # should not raise
 
@@ -365,9 +376,11 @@ def test_delete_claim_evidence_by_id_returns_false_for_unknown_id(session):
 
 
 def test_update_claim_status_sets_status_on_claim(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application_id = session.exec(select(Application)).first().application_id
     adapter = ClaimRepositoryAdapter(session)
-    claim = _create_claim(session, laa_reference)
+    claim = adapter.create_claim(
+        application_id, _make_domain_claim(), "claimant@example.com"
+    )
     assert claim.status_id == ClaimStatus.SUBMITTED
 
     adapter.update_claim_status(claim.claim_id, ClaimStatus.REJECTED)
@@ -377,9 +390,9 @@ def test_update_claim_status_sets_status_on_claim(session):
 
 
 def test_commit_commits_session(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application_id = session.exec(select(Application)).first().application_id
     adapter = ClaimRepositoryAdapter(session)
-    adapter.create_claim(str(laa_reference), _make_domain_claim(), None)
+    adapter.create_claim(application_id, _make_domain_claim(), None)
 
     adapter.commit()
 
@@ -388,9 +401,9 @@ def test_commit_commits_session(session):
 
 
 def test_rollback_rolls_back_unflushed_changes(session):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    application_id = session.exec(select(Application)).first().application_id
     adapter = ClaimRepositoryAdapter(session)
-    adapter.create_claim(str(laa_reference), _make_domain_claim(), None)
+    adapter.create_claim(application_id, _make_domain_claim(), None)
 
     adapter.rollback()
 

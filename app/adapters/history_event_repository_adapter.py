@@ -87,9 +87,9 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
             "History event created",
             extra=build_log_extra(
                 event="history_event_created",
-                laa_reference=application_id,
                 history_event_id=new_event.id,
                 event_reference=event_reference,
+                application_id=application_id,
             ),
         )
         return new_event
@@ -100,18 +100,18 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
     def rollback(self) -> None:
         self.session.rollback()
 
-    def get_application_history(self, laa_reference: int) -> list[HistoryEvent]:
+    def get_application_history(self, application_id: int) -> list[HistoryEvent]:
         """
         Retrieve the history events of an application.
 
         Args:
-            laa_reference: The LAA reference of the application
+            application_id: The internal application ID
 
         Returns:
             List of history events for the application
         """
         return self.session.exec(
             select(HistoryEvent)
-            .where(HistoryEvent.application_id == laa_reference)
+            .where(HistoryEvent.application_id == application_id)
             .order_by(HistoryEvent.timestamp.desc())
         ).all()

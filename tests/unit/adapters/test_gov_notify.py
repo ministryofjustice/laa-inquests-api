@@ -56,7 +56,9 @@ def test_gov_notify_adapter_sends_refusal_email_successfully():
         assert call_kwargs["email_address"] == "provider@example.com"
         assert call_kwargs["template_id"] == "test-refuse-template-id"
         assert isinstance(call_kwargs["personalisation"], dict)
-        assert call_kwargs["personalisation"]["laa_reference"] == "12345"
+        assert (
+            call_kwargs["personalisation"]["laa_reference"] == application.laa_reference
+        )
         assert (
             call_kwargs["personalisation"]["application_submitted_at"]
             == "18 June 2026 14:03 UTC"
@@ -95,7 +97,9 @@ def test_gov_notify_adapter_sends_confirmation_email_successfully():
         assert call_kwargs["email_address"] == "provider@example.com"
         assert call_kwargs["template_id"] == "test-submit-template-id"
         assert isinstance(call_kwargs["personalisation"], dict)
-        assert call_kwargs["personalisation"]["laa_reference"] == "12345"
+        assert (
+            call_kwargs["personalisation"]["laa_reference"] == application.laa_reference
+        )
         assert call_kwargs["personalisation"]["client_first_name"] == "Jane"
 
 
@@ -137,7 +141,9 @@ def test_gov_notify_adapter_sends_claim_submit_confirmation_email_successfully()
         assert call_kwargs["email_address"] == "provider@example.com"
         assert call_kwargs["template_id"] == "test-claim-submit-template-id"
         assert isinstance(call_kwargs["personalisation"], dict)
-        assert call_kwargs["personalisation"]["laa_reference"] == "12345"
+        assert (
+            call_kwargs["personalisation"]["laa_reference"] == application.laa_reference
+        )
         assert call_kwargs["personalisation"]["client_name"] == "Jane Doe"
         assert call_kwargs["personalisation"]["submission_date"] == "18 June 2026"
 
@@ -182,7 +188,10 @@ def test_gov_notify_adapter_sends_claim_rejected_decision_email_successfully():
         assert call_kwargs["email_address"] == "claimant-123@provider.co.uk"
         assert call_kwargs["template_id"] == "test-claim-reject-template-id"
         assert isinstance(call_kwargs["personalisation"], dict)
-        assert call_kwargs["personalisation"]["cert_ref_number"] == "12345"
+        assert (
+            call_kwargs["personalisation"]["cert_ref_number"]
+            == application.laa_reference
+        )
         assert call_kwargs["personalisation"]["provider_name"] == "Test Solicitors"
         assert call_kwargs["personalisation"]["client_first_name"] == "Jane"
         assert call_kwargs["personalisation"]["client_last_name"] == "Doe"
@@ -265,7 +274,9 @@ def test_gov_notify_adapter_sends_grant_email_successfully():
         assert call_kwargs["email_address"] == "provider@example.com"
         assert call_kwargs["template_id"] == "test-grant-template-id"
         assert isinstance(call_kwargs["personalisation"], dict)
-        assert call_kwargs["personalisation"]["laa_reference"] == "12345"
+        assert (
+            call_kwargs["personalisation"]["laa_reference"] == application.laa_reference
+        )
         assert call_kwargs["personalisation"]["issue_date"] == "18 June 2026"
 
 
@@ -281,7 +292,7 @@ def test_gov_notify_formats_filename():
         "id": "test-notification-id"
     }
     mock_datetime = datetime(2026, 6, 18, 14, 3, 0, tzinfo=UTC)
-    expected_filename = "12345_Certificate_20260618_140300.pdf"
+    expected_filename = "INQ-YYY-YYY_Certificate_20260618_140300.pdf"
 
     with (
         patch("app.adapters.gov_notify.NotificationsAPIClient") as mock_api_client,

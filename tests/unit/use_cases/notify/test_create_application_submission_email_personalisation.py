@@ -26,7 +26,7 @@ def test_create_application_submission_email_personalisation_returns_all_require
 
     assert isinstance(result, NotifyApplicationSubmitTemplatePersonalisation)
 
-    assert result.laa_reference == "12345"
+    assert result.laa_reference == "INQ-YYY-YYY"
     assert result.client_first_name == "Jane"
     assert result.client_last_name == "Doe"
     assert result.client_last_name_at_birth == "Smith"

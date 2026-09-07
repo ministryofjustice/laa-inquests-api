@@ -25,16 +25,16 @@ class SearchApplicationUseCase:
         merits_decision: MeritsDecision | None = None,
     ) -> list[ApplicationSearchResponse]:
         try:
-            normalised_reference = laa_reference.strip()
+            laa_reference = laa_reference.strip().upper()
             matching_applications = self.search_application_port.search_applications(
-                normalised_reference, firm_code, merits_decision
+                laa_reference, firm_code, merits_decision
             )
             if not matching_applications:
                 logger.info(
                     "Application search completed",
                     extra=build_log_extra(
                         event="application_search_completed",
-                        laa_reference=normalised_reference,
+                        laa_reference=laa_reference,
                         firm_code=firm_code,
                         result_count=0,
                     ),
@@ -62,7 +62,7 @@ class SearchApplicationUseCase:
                 "Application search completed",
                 extra=build_log_extra(
                     event="application_search_completed",
-                    laa_reference=normalised_reference,
+                    laa_reference=laa_reference,
                     firm_code=firm_code,
                     result_count=len(response),
                 ),

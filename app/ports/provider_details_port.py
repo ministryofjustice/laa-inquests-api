@@ -15,3 +15,6 @@ class ProviderDetailsPort(ABC):
 
     @abstractmethod
     def does_office_exist(self, office_id: str) -> bool: ...
+
+    @abstractmethod
+    def get_provider_offices_by_firm_id(self, firm_id: str) -> list[dict]: ...
