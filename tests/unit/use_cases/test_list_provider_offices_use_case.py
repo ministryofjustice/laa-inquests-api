@@ -1,6 +1,6 @@
+import logging
 from unittest.mock import MagicMock
 
-import logging
 import pytest
 
 from app.ports.provider_details_port import ProviderDetailsPort
