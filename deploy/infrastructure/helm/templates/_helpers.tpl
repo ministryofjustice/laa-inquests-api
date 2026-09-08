@@ -116,6 +116,11 @@ Secret-backed environment variables shared by the app container and cronjobs.
     secretKeyRef:
       name: {{ .Values.env.AWS_SECRETS_GOV_NOTIFY_TEMPLATE_IDS }}
       key: GOV_NOTIFY_CLAIM_REJECT_TEMPLATE_ID
+- name: GOV_NOTIFY_FINAL_BILL_CLAIM_REJECT_TEMPLATE_ID
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.env.AWS_SECRETS_GOV_NOTIFY_TEMPLATE_IDS }}
+      key: GOV_NOTIFY_FINAL_BILL_CLAIM_REJECT_TEMPLATE_ID
 - name: GOV_NOTIFY_POA_CLAIM_AUTO_APPROVE_TEMPLATE_ID
   valueFrom:
     secretKeyRef:

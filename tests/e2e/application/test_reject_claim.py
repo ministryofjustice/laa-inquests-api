@@ -24,6 +24,7 @@ def _seed_claim(
     laa_reference: int,
     status: ClaimStatus = ClaimStatus.SUBMITTED,
     claimant_id: str | None = "claimant-123@provider.co.uk",
+    claim_type: ClaimType = ClaimType.PAYMENT_ON_ACCOUNT,
 ) -> Claim:
     application_id = (
         session.exec(
@@ -34,7 +35,7 @@ def _seed_claim(
     )
     claim = Claim(
         application_id=application_id,
-        claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
+        claim_type_id=claim_type,
         status_id=status,
         submission_date=datetime.now(UTC),
         total_profit_cost_net=Decimal("1000.00"),
@@ -107,6 +108,31 @@ def test_204_reject_claim_sends_rejection_email_to_claimant(
     assert call_kwargs["reject_reason"] == _reject_payload()["justification"]
     assert call_kwargs["recipient_email"] == claim.claimant_id
     assert call_kwargs["firm_name"] == "Test Firm Name"
+
+
+def test_204_reject_final_bill_claim_sends_rejection_email(
+    session, client, auth_token, mock_gov_notify
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    claim = _seed_claim(session, laa_reference, claim_type=ClaimType.FINAL_BILL)
+
+    response = client.patch(
+        f"/applications/{laa_reference}/claims/{claim.claim_id}/reject",
+        json=_reject_payload(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 204
+    mock_gov_notify.send_claim_rejected_decision_email.assert_called_once_with(
+        claim=claim,
+        application=claim.application,
+        reject_reason=_reject_payload()["justification"],
+        recipient_email=claim.claimant_id,
+        firm_name="Test Firm Name",
+    )
 
 
 def test_204_reject_claim_allows_re_rejecting_and_creates_new_decision(
@@ -203,6 +229,44 @@ def test_204_reject_claim_creates_history_event(session, client, auth_token):
     application = session.exec(select(Application)).first()
     claim = _seed_claim(session, application.laa_reference)
     application = session.exec(select(Application)).first()
+
+    response = client.patch(
+        f"/applications/{application.laa_reference}/claims/{claim.claim_id}/reject",
+        json=_reject_payload(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 204
+
+    history_event = session.exec(
+        select(HistoryEvent).where(
+            (HistoryEvent.application_id == application.application_id)
+            & (
+                HistoryEvent.event_reference
+                == HistoryEventReference.CLAIM_REJECTED_EMAIL
+            )
+        )
+    ).one()
+
+    assert history_event.event_reference == HistoryEventReference.CLAIM_REJECTED_EMAIL
+    assert history_event.actor == ActorType.SYSTEM
+    assert history_event.actor_type == ActorType.SYSTEM
+    assert history_event.event_data == {
+        "recipient": application.provider.email_address,
+        "channel": NotificationType.EMAIL,
+    }
+
+
+def test_204_reject_final_bill_claim_creates_history_event(session, client, auth_token):
+    application = session.exec(select(Application)).first()
+    claim = _seed_claim(
+        session,
+        application.laa_reference,
+        claim_type=ClaimType.FINAL_BILL,
+    )
 
     response = client.patch(
         f"/applications/{application.laa_reference}/claims/{claim.claim_id}/reject",
