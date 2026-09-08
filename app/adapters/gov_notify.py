@@ -11,6 +11,7 @@ from notifications_python_client.notifications import NotificationsAPIClient
 from app.config import Config
 from app.logging_utils import build_log_extra, duration_ms
 from app.models.application.index import Application, ApplicationProceeding
+from app.models.claim.enums import ClaimType
 from app.models.claim.index import Claim
 from app.ports.gov_notify_port import GovNotifyPort
 from app.use_cases.notify.create_application_grant_email_personalisation import (
@@ -30,6 +31,9 @@ from app.use_cases.notify.create_claim_rejection_email_personalisation import (
 )
 from app.use_cases.notify.create_claim_submission_email_personalisation import (
     create_claim_submission_email_personalisation,
+)
+from app.use_cases.notify.create_final_bill_claim_rejection_email_personalisation import (
+    create_final_bill_claim_rejection_email_personalisation,
 )
 
 logger = logging.getLogger(__name__)
@@ -158,12 +162,20 @@ class GovNotifyAdapter(GovNotifyPort):
         recipient_email: str,
         firm_name: str,
     ) -> None:
-        personalisation = create_claim_rejection_email_personalisation(
-            claim, application, reject_reason, firm_name
-        )
+        if claim.claim_type_id == ClaimType.FINAL_BILL:
+            personalisation = create_final_bill_claim_rejection_email_personalisation(
+                claim, application, reject_reason, firm_name
+            )
+            template_id = Config.GOV_NOTIFY_FINAL_BILL_CLAIM_REJECT_TEMPLATE_ID
+        else:
+            personalisation = create_claim_rejection_email_personalisation(
+                claim, application, reject_reason, firm_name
+            )
+            template_id = Config.GOV_NOTIFY_CLAIM_REJECT_TEMPLATE_ID
+
         self._send_email_notification(
             email_address=recipient_email,
-            template_id=Config.GOV_NOTIFY_CLAIM_REJECT_TEMPLATE_ID,
+            template_id=template_id,
             personalisation=personalisation.model_dump(),
             event_name="govnotify_send_claim_rejected_decision_email",
         )

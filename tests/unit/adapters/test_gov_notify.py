@@ -8,6 +8,7 @@ import pytest
 
 from app.adapters.gov_notify import GovNotifyAdapter
 from app.config import Config
+from app.models.claim.enums import ClaimType
 from app.models.claim.index import Claim
 from tests.unit.factories import (
     create_base_application,
@@ -206,6 +207,55 @@ def test_gov_notify_adapter_sends_claim_rejected_decision_email_successfully():
             call_kwargs["personalisation"]["justification"]
             == "Rejected following manual review."
         )
+
+
+def test_gov_notify_adapter_sends_final_bill_claim_rejection_email_successfully():
+    application, _ = _create_test_application_and_proceeding()
+    claim = Claim(
+        claim_id=7,
+        application_id=12345,
+        claim_type_id=ClaimType.FINAL_BILL,
+        submission_date=datetime(2026, 6, 18, 14, 3, tzinfo=ZoneInfo("UTC")),
+        total_profit_cost_gross=1200,
+    )
+    mock_notifications_client = Mock()
+    mock_notifications_client.send_email_notification.return_value = {
+        "id": "test-notification-id"
+    }
+
+    with (
+        patch("app.adapters.gov_notify.NotificationsAPIClient") as mock_api_client,
+        patch.object(
+            Config,
+            "GOV_NOTIFY_FINAL_BILL_CLAIM_REJECT_TEMPLATE_ID",
+            "test-final-bill-claim-reject-template-id",
+        ),
+    ):
+        mock_api_client.return_value = mock_notifications_client
+
+        adapter = GovNotifyAdapter()
+        adapter.send_claim_rejected_decision_email(
+            claim,
+            application,
+            "Rejected following manual review.",
+            "claimant-123@provider.co.uk",
+            "Test Solicitors",
+        )
+
+        call_kwargs = mock_notifications_client.send_email_notification.call_args.kwargs
+        assert call_kwargs["template_id"] == "test-final-bill-claim-reject-template-id"
+        assert call_kwargs["personalisation"] == {
+            "ref_number": application.laa_reference,
+            "provider_name": "Test Solicitors",
+            "client_first_name": "Jane",
+            "client_last_name": "Doe",
+            "date_of_claim": "18 June 2026 14:03 UTC",
+            "claim_type": "Final bill",
+            "claim_ref": "7",
+            "claimed_amount": "1,200.00",
+            "reason_for_refusal": "Rejected following manual review.",
+            "date_of_rejection": call_kwargs["personalisation"]["date_of_rejection"],
+        }
 
 
 def test_gov_notify_adapter_raises_exception_on_api_error():
