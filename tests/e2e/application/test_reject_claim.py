@@ -258,3 +258,41 @@ def test_204_reject_claim_creates_history_event(session, client, auth_token):
         "recipient": application.provider.email_address,
         "channel": NotificationType.EMAIL,
     }
+
+
+def test_204_reject_final_bill_claim_creates_history_event(session, client, auth_token):
+    application = session.exec(select(Application)).first()
+    claim = _seed_claim(
+        session,
+        application.laa_reference,
+        claim_type=ClaimType.FINAL_BILL,
+    )
+
+    response = client.patch(
+        f"/applications/{application.laa_reference}/claims/{claim.claim_id}/reject",
+        json=_reject_payload(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 204
+
+    history_event = session.exec(
+        select(HistoryEvent).where(
+            (HistoryEvent.application_id == application.application_id)
+            & (
+                HistoryEvent.event_reference
+                == HistoryEventReference.CLAIM_REJECTED_EMAIL
+            )
+        )
+    ).one()
+
+    assert history_event.event_reference == HistoryEventReference.CLAIM_REJECTED_EMAIL
+    assert history_event.actor == ActorType.SYSTEM
+    assert history_event.actor_type == ActorType.SYSTEM
+    assert history_event.event_data == {
+        "recipient": application.provider.email_address,
+        "channel": NotificationType.EMAIL,
+    }
