@@ -24,7 +24,6 @@ def test_get_current_user_permissions_resolves_known_role():
     )
 
     assert permissions == {
-        Permission.APPLICATION_READ,
         Permission.APPLICATION_CREATE,
         Permission.CORONERS_LETTER_UPLOAD,
     }
@@ -41,10 +40,8 @@ def test_get_current_user_permissions_unions_multiple_roles():
     )
 
     assert permissions == {
-        Permission.APPLICATION_READ,
         Permission.APPLICATION_CREATE,
         Permission.CORONERS_LETTER_UPLOAD,
-        Permission.CLAIM_READ,
         Permission.CLAIM_CREATE,
     }
 

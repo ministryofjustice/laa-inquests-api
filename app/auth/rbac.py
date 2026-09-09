@@ -19,12 +19,10 @@ class Permission(str, Enum):
 
 ROLE_PERMISSIONS_MAP: dict[str, set[Permission]] = {
     "Inquests - Provider Application User": {
-        Permission.APPLICATION_READ,
         Permission.APPLICATION_CREATE,
         Permission.CORONERS_LETTER_UPLOAD,
     },
     "Inquests - Provider Claims User": {
-        Permission.CLAIM_READ,
         Permission.CLAIM_CREATE,
     },
 }
