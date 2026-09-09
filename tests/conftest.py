@@ -205,8 +205,12 @@ def client_fixture(session: Session):
                 {
                     "User.Provider",
                     "User.Caseworker",
-                    "Provider.ApplicationUser",
-                    "Provider.ClaimsUser",
+                }
+            ),
+            app_roles=frozenset(
+                {
+                    "Inquests - Provider Application User",
+                    "Inquests - Provider Claims User",
                 }
             ),
             name="Test Name",
@@ -311,6 +315,11 @@ def entra_auth_client_fixture(session: Session):
                 firm_code="0A123B",
                 scopes=frozenset(token_scopes[token]),
                 name="Test Name",
+                app_roles=(
+                    frozenset({"Inquests - Provider Application User"})
+                    if token == "valid-provider-application-user-token"
+                    else frozenset()
+                ),
             )
 
         mock_auth.verify_token.side_effect = verify_token

@@ -18,12 +18,12 @@ class Permission(str, Enum):
 
 
 ROLE_PERMISSIONS_MAP: dict[str, set[Permission]] = {
-    "Provider.ApplicationUser": {
+    "Inquests - Provider Application User": {
         Permission.APPLICATION_READ,
         Permission.APPLICATION_CREATE,
         Permission.CORONERS_LETTER_UPLOAD,
     },
-    "Provider.ClaimsUser": {
+    "Inquests - Provider Claims User": {
         Permission.CLAIM_READ,
         Permission.CLAIM_CREATE,
     },
@@ -34,7 +34,7 @@ def get_current_user_permissions(
     user: Annotated[AuthenticatedUser, Depends(verify_entra_token)],
 ) -> set[Permission]:
     permissions: set[Permission] = set()
-    for role in user.scopes:
+    for role in user.app_roles:
         permissions.update(ROLE_PERMISSIONS_MAP.get(role, set()))
     return permissions
 

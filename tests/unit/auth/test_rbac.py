@@ -9,16 +9,19 @@ from app.auth.rbac import (
 from app.ports.entra_auth_port import AuthenticatedUser
 
 
-def _user(scopes: set[str]) -> AuthenticatedUser:
+def _user(app_roles: set[str]) -> AuthenticatedUser:
     return AuthenticatedUser(
         firm_code="0A123B",
-        scopes=frozenset(scopes),
+        scopes=frozenset(),
         name="Test Name",
+        app_roles=frozenset(app_roles),
     )
 
 
 def test_get_current_user_permissions_resolves_known_role():
-    permissions = get_current_user_permissions(_user({"Provider.ApplicationUser"}))
+    permissions = get_current_user_permissions(
+        _user({"Inquests - Provider Application User"})
+    )
 
     assert permissions == {
         Permission.APPLICATION_READ,
@@ -29,7 +32,12 @@ def test_get_current_user_permissions_resolves_known_role():
 
 def test_get_current_user_permissions_unions_multiple_roles():
     permissions = get_current_user_permissions(
-        _user({"Provider.ApplicationUser", "Provider.ClaimsUser"})
+        _user(
+            {
+                "Inquests - Provider Application User",
+                "Inquests - Provider Claims User",
+            }
+        )
     )
 
     assert permissions == {
@@ -42,7 +50,7 @@ def test_get_current_user_permissions_unions_multiple_roles():
 
 
 def test_get_current_user_permissions_ignores_unmapped_role():
-    permissions = get_current_user_permissions(_user({"Some.UnknownRole"}))
+    permissions = get_current_user_permissions(_user({"Some Unknown Role"}))
 
     assert permissions == set()
 
