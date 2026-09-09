@@ -278,15 +278,25 @@ def entra_auth_client_fixture(session: Session):
 
     def get_entra_auth_port_override():
         mock_auth = MagicMock()
-        token_scopes = {
-            "valid-provider-entra-token": {"User.Provider"},
-            "valid-caseworker-entra-token": {"User.Caseworker"},
-            "valid-provider-application-user-token": {
-                "User.Provider",
-                "Provider.ApplicationUser",
+        # Single source of truth for test tokens: each token declares the scopes
+        # and RBAC app roles it carries, mirroring a real Entra JWT payload.
+        tokens = {
+            "valid-provider-entra-token": {
+                "scopes": {"User.Provider"},
+                "app_roles": set(),
             },
-            # Backward compatible alias for existing tests that used one generic token.
-            "valid-entra-token": {"User.Provider"},
+            "valid-caseworker-entra-token": {
+                "scopes": {"User.Caseworker"},
+                "app_roles": set(),
+            },
+            "valid-provider-application-user-token": {
+                "scopes": {"User.Provider"},
+                "app_roles": {"Inquests - Provider Application User"},
+            },
+            "valid-provider-claims-user-token": {
+                "scopes": {"User.Provider"},
+                "app_roles": {"Inquests - Provider Claims User"},
+            },
         }
 
         def verify_token(token: str, required_scopes: set[str] | None = None) -> None:
@@ -297,14 +307,15 @@ def entra_auth_client_fixture(session: Session):
                     headers={"WWW-Authenticate": "Bearer"},
                 )
 
-            if token not in token_scopes:
+            if token not in tokens:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Could not validate credentials",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
 
-            if required_scopes and required_scopes.isdisjoint(token_scopes[token]):
+            token_scopes = tokens[token]["scopes"]
+            if required_scopes and required_scopes.isdisjoint(token_scopes):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Insufficient permissions",
@@ -313,13 +324,9 @@ def entra_auth_client_fixture(session: Session):
 
             return AuthenticatedUser(
                 firm_code="0A123B",
-                scopes=frozenset(token_scopes[token]),
+                scopes=frozenset(token_scopes),
                 name="Test Name",
-                app_roles=(
-                    frozenset({"Inquests - Provider Application User"})
-                    if token == "valid-provider-application-user-token"
-                    else frozenset()
-                ),
+                app_roles=frozenset(tokens[token]["app_roles"]),
             )
 
         mock_auth.verify_token.side_effect = verify_token

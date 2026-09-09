@@ -114,7 +114,7 @@ def test_403_read_application_by_id_returns_403_when_provider_token(
     assert response.status_code == 403
 
 
-def test_201_create_application_returns_201_when_provider_token(
+def test_201_create_application_returns_201_when_provider_application_user_token(
     entra_auth_client,
 ):
     response = entra_auth_client.post(
@@ -122,11 +122,26 @@ def test_201_create_application_returns_201_when_provider_token(
         json=_create_application_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": "Bearer valid-provider-entra-token",
+            "Authorization": "Bearer valid-provider-application-user-token",
         },
     )
 
     assert response.status_code == 201
+
+
+def test_403_create_application_returns_403_when_provider_token_missing_permission(
+    entra_auth_client,
+):
+    response = entra_auth_client.post(
+        "/applications",
+        json=_create_application_payload(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": "Bearer valid-provider-claims-user-token",
+        },
+    )
+
+    assert response.status_code == 403
 
 
 def test_403_create_application_returns_403_when_caseworker_token(

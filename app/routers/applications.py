@@ -766,6 +766,7 @@ def create_application(
     request: ApplicationCreate,
     firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
     use_case: CreateApplicationUseCase = Depends(get_create_application_use_case),
+    _: None = Depends(require_permission(Permission.APPLICATION_CREATE)),
 ) -> Application:
     """Creates a new application with proceedings and public bodies."""
     application = use_case.execute(request, firm_code)
