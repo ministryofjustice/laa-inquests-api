@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 
+import pytest
 from sqlmodel import select
 
 from app.models.application.enums import MeritsDecision
@@ -56,10 +57,16 @@ def test_401_read_certificate_returns_401_when_no_authorization_header(client):
     assert response.status_code == 401
 
 
-def test_403_read_certificate_returns_403_when_provider_token(entra_auth_client):
+@pytest.mark.parametrize(
+    "provider_token",
+    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+)
+def test_403_read_certificate_returns_403_when_provider_token(
+    entra_auth_client, provider_token
+):
     response = entra_auth_client.get(
         "/applications/1/certificate",
-        headers={"Authorization": "Bearer valid-provider-entra-token"},
+        headers={"Authorization": f"Bearer {provider_token}"},
     )
 
     assert response.status_code == 403

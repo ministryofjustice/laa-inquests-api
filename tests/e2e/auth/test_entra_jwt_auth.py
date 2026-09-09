@@ -1,6 +1,7 @@
 import io
 import uuid
 
+import pytest
 from sqlmodel import select
 
 from app.models.application.enums import MeritsDecision
@@ -79,12 +80,16 @@ def test_401_read_all_applications_returns_401_when_bearer_token_is_invalid(
     assert response.status_code == 401
 
 
-def test_403_read_all_applications_returns_403_when_scope_is_not_provider(
-    entra_auth_client,
+@pytest.mark.parametrize(
+    "provider_token",
+    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+)
+def test_403_read_all_applications_returns_403_when_scope_is_not_caseworker(
+    entra_auth_client, provider_token
 ):
     response = entra_auth_client.get(
         "/applications",
-        headers={"Authorization": "Bearer valid-provider-entra-token"},
+        headers={"Authorization": f"Bearer {provider_token}"},
     )
 
     assert response.status_code == 403
@@ -103,12 +108,16 @@ def test_200_read_application_by_id_returns_200_when_caseworker_token(
     assert response.status_code == 200
 
 
+@pytest.mark.parametrize(
+    "provider_token",
+    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+)
 def test_403_read_application_by_id_returns_403_when_provider_token(
-    entra_auth_client,
+    entra_auth_client, provider_token
 ):
     response = entra_auth_client.get(
         "/applications/1",
-        headers={"Authorization": "Bearer valid-provider-entra-token"},
+        headers={"Authorization": f"Bearer {provider_token}"},
     )
 
     assert response.status_code == 403
@@ -189,7 +198,7 @@ def test_403_upload_coroners_letter_returns_403_when_provider_token_missing_perm
                 "application/pdf",
             )
         },
-        headers={"Authorization": "Bearer valid-provider-entra-token"},
+        headers={"Authorization": "Bearer valid-provider-claims-user-token"},
     )
 
     assert response.status_code == 403
@@ -234,8 +243,12 @@ def test_204_refuse_decision_returns_204_when_caseworker_token(
     assert response.status_code == 204
 
 
+@pytest.mark.parametrize(
+    "provider_token",
+    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+)
 def test_403_refuse_decision_returns_403_when_provider_token(
-    entra_auth_client,
+    entra_auth_client, provider_token
 ):
     response = entra_auth_client.patch(
         "/applications/1/refuse-decision",
@@ -246,7 +259,7 @@ def test_403_refuse_decision_returns_403_when_provider_token(
         },
         headers={
             "Content-Type": "application/json",
-            "Authorization": "Bearer valid-provider-entra-token",
+            "Authorization": f"Bearer {provider_token}",
         },
     )
 
@@ -270,28 +283,36 @@ def test_204_grant_decision_returns_204_when_caseworker_token(
     assert response.status_code == 204
 
 
+@pytest.mark.parametrize(
+    "provider_token",
+    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+)
 def test_403_grant_decision_returns_403_when_provider_token(
-    entra_auth_client,
+    entra_auth_client, provider_token
 ):
     response = entra_auth_client.patch(
         "/applications/1/grant-decision",
         json={"certificateStartDate": "2000-01-01"},
         headers={
             "Content-Type": "application/json",
-            "Authorization": "Bearer valid-provider-entra-token",
+            "Authorization": f"Bearer {provider_token}",
         },
     )
 
     assert response.status_code == 403
 
 
+@pytest.mark.parametrize(
+    "provider_token",
+    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+)
 def test_200_search_application_returns_200_when_provider_token(
-    entra_auth_client,
+    entra_auth_client, provider_token
 ):
     response = entra_auth_client.get(
         "/applications/search",
         params={"laa_reference": "1"},
-        headers={"Authorization": "Bearer valid-provider-entra-token"},
+        headers={"Authorization": f"Bearer {provider_token}"},
     )
 
     assert response.status_code == 200
@@ -375,12 +396,16 @@ def test_401_retrieve_coroners_letter_returns_401_when_bearer_token_is_invalid(
     assert response.status_code == 401
 
 
+@pytest.mark.parametrize(
+    "provider_token",
+    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+)
 def test_403_retrieve_coroners_letter_returns_403_when_provider_token(
-    entra_auth_client,
+    entra_auth_client, provider_token
 ):
     response = entra_auth_client.get(
         "/applications/1/coroners-letter",
-        headers={"Authorization": "Bearer valid-provider-entra-token"},
+        headers={"Authorization": f"Bearer {provider_token}"},
     )
 
     assert response.status_code == 403
@@ -395,10 +420,16 @@ def test_200_list_public_bodies_returns_200_when_caseworker_token(entra_auth_cli
     assert response.status_code == 200
 
 
-def test_200_list_public_bodies_returns_200_when_provider_token(entra_auth_client):
+@pytest.mark.parametrize(
+    "provider_token",
+    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+)
+def test_200_list_public_bodies_returns_200_when_application_provider_token(
+    entra_auth_client, provider_token
+):
     response = entra_auth_client.get(
         "/applications/public-bodies",
-        headers={"Authorization": "Bearer valid-provider-entra-token"},
+        headers={"Authorization": f"Bearer {provider_token}"},
     )
 
     assert response.status_code == 200
@@ -442,7 +473,7 @@ def test_200_retrieve_claim_evidence_returns_200_when_caseworker_token(
     assert response.status_code == 200
 
 
-def test_200_retrieve_claim_evidence_returns_200_when_provider_token(
+def test_200_retrieve_claim_evidence_returns_200_when_provider_claims_token(
     session, entra_auth_client
 ):
     claim_evidence = ClaimEvidence(
@@ -455,7 +486,7 @@ def test_200_retrieve_claim_evidence_returns_200_when_provider_token(
 
     response = entra_auth_client.get(
         f"/claims/{claim_evidence.claim_evidence_id}",
-        headers={"Authorization": "Bearer valid-provider-entra-token"},
+        headers={"Authorization": "Bearer valid-provider-claims-user-token"},
     )
 
     assert response.status_code == 200
@@ -491,13 +522,17 @@ def test_401_reject_claim_returns_401_when_no_authorization_header(
     assert response.status_code == 401
 
 
+@pytest.mark.parametrize(
+    "provider_token",
+    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+)
 def test_403_reject_claim_returns_403_when_provider_token(
-    entra_auth_client,
+    entra_auth_client, provider_token
 ):
     response = entra_auth_client.patch(
         "/applications/1/claims/1/reject",
         json={"justification": "Claim rejected following manual assessment."},
-        headers={"Authorization": "Bearer valid-provider-entra-token"},
+        headers={"Authorization": f"Bearer {provider_token}"},
     )
 
     assert response.status_code == 403

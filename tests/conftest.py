@@ -281,10 +281,6 @@ def entra_auth_client_fixture(session: Session):
         # Single source of truth for test tokens: each token declares the scopes
         # and RBAC app roles it carries, mirroring a real Entra JWT payload.
         tokens = {
-            "valid-provider-entra-token": {
-                "scopes": {"User.Provider"},
-                "app_roles": set(),
-            },
             "valid-caseworker-entra-token": {
                 "scopes": {"User.Caseworker"},
                 "app_roles": set(),

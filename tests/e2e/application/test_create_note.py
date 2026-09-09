@@ -112,13 +112,19 @@ def test_401_create_note_requires_authorization(entra_auth_client, application):
     assert response.status_code == 401
 
 
-def test_403_create_note_rejects_provider_token(entra_auth_client, application):
+@pytest.mark.parametrize(
+    "provider_token",
+    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+)
+def test_403_create_note_rejects_provider_token(
+    entra_auth_client, application, provider_token
+):
     response = entra_auth_client.post(
         f"/applications/{application.laa_reference}/note",
         json={"noteText": "Case note"},
         headers={
             "Content-Type": "application/json",
-            "Authorization": "Bearer valid-provider-entra-token",
+            "Authorization": f"Bearer {provider_token}",
         },
     )
 
