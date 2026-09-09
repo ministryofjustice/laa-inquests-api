@@ -190,27 +190,29 @@ class TestCreateApplication:
             },
         )
 
-    assert response.status_code == 201
-    laa_reference = response.json()["laaReference"]
-    application = session.exec(
-        select(Application).where(Application.laa_reference == laa_reference)
-    ).one()
+        assert response.status_code == 201
+        laa_reference = response.json()["laaReference"]
+        application = session.exec(
+            select(Application).where(Application.laa_reference == laa_reference)
+        ).one()
 
-    history_event = session.exec(
-        select(HistoryEvent).where(
-            (HistoryEvent.application_id == application.application_id)
-            & (
-                HistoryEvent.event_reference
-                == HistoryEventReference.APPLICATION_SUBMITTED
+        history_event = session.exec(
+            select(HistoryEvent).where(
+                (HistoryEvent.application_id == application.application_id)
+                & (
+                    HistoryEvent.event_reference
+                    == HistoryEventReference.APPLICATION_SUBMITTED
+                )
             )
-        )
-    ).one()
+        ).one()
 
-    assert history_event.event_reference == HistoryEventReference.APPLICATION_SUBMITTED
-    assert history_event.actor == "provider@example.com"
-    assert history_event.actor_type == ActorType.PROVIDER
-    assert history_event.event_data is None
-    assert history_event.application_id == application.application_id
+        assert (
+            history_event.event_reference == HistoryEventReference.APPLICATION_SUBMITTED
+        )
+        assert history_event.actor == "provider@example.com"
+        assert history_event.actor_type == ActorType.PROVIDER
+        assert history_event.event_data is None
+        assert history_event.application_id == application.application_id
 
     def test_201_create_application_can_omit_correspondence_address(
         self, client, auth_token

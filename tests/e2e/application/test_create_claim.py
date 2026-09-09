@@ -204,7 +204,9 @@ class TestCreateClaimBaseBehaviour:
         assert response.status_code == 201
         mock_gov_notify.send_claim_submit_confirmation_email.assert_called_once()
 
-        call_kwargs = mock_gov_notify.send_claim_submit_confirmation_email.call_args.kwargs
+        call_kwargs = (
+            mock_gov_notify.send_claim_submit_confirmation_email.call_args.kwargs
+        )
         claim = call_kwargs["claim"]
         application = call_kwargs["application"]
         recipient_email = call_kwargs["recipient_email"]
@@ -272,7 +274,10 @@ class TestCreateClaimBaseBehaviour:
         history_event = session.exec(
             select(HistoryEvent).where(
                 (HistoryEvent.application_id == application.application_id)
-                & (HistoryEvent.event_reference == HistoryEventReference.CLAIM_SUBMITTED)
+                & (
+                    HistoryEvent.event_reference
+                    == HistoryEventReference.CLAIM_SUBMITTED
+                )
             )
         ).one()
 
@@ -480,8 +485,9 @@ class TestCreateClaimFundsAndPersistence:
         claim = response.json()
         assert set(claim.keys()) == {"claimId"}
 
-
-    def test_201_create_claim_persists_claim_to_database(session, client, auth_token):
+    def test_201_create_claim_persists_claim_to_database(
+        self, session, client, auth_token
+    ):
         application = session.exec(select(Application)).first()
         laa_reference = application.laa_reference
 
@@ -1803,7 +1809,6 @@ class TestCreateClaimAutoDecisionRules:
         approved_stored = session.get(Claim, approved_claim["claimId"])
         assert approved_stored.status_id == "PAY_IN_FULL"
 
-
     def test_201_create_claim_holds_for_manual_review_when_cumulative_approved_claims_exceed_limit(
         self, session, client, auth_token
     ):
@@ -1851,7 +1856,6 @@ class TestCreateClaimAutoDecisionRules:
         ).first()
         assert decision is None
 
-
     def test_201_create_claim_rejects_when_single_poa_exceeds_cost_limit_even_over_50000(
         self, session, client, auth_token
     ):
@@ -1890,7 +1894,6 @@ class TestCreateClaimAutoDecisionRules:
         assert decision is not None
         assert decision.decision == "REJECT"
 
-
     def test_201_create_claim_holds_for_manual_review_when_poa_over_50000_within_cost_limit(
         self, session, client, auth_token
     ):
@@ -1926,7 +1929,6 @@ class TestCreateClaimAutoDecisionRules:
             select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
         ).first()
         assert decision is None
-
 
     def test_201_create_claim_still_rejects_profit_cost_poa_over_50000_when_max_poa_count_exceeded(
         self, session, client, auth_token

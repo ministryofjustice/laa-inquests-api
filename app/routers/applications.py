@@ -82,6 +82,7 @@ from app.routers.dependencies import (
     get_sds_port,
     verify_entra_caseworker_token,
     verify_entra_provider_or_caseworker_token,
+    verify_entra_provider_token,
 )
 from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
