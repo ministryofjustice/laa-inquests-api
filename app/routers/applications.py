@@ -783,6 +783,7 @@ def create_claim(
     request: ClaimCreate,
     firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
     use_case: CreateClaimUseCase = Depends(get_create_claim_use_case),
+    _: None = Depends(require_permission(Permission.CLAIM_CREATE)),
 ) -> ClaimResponse:
     """Creates a new claim against an application."""
     try:
