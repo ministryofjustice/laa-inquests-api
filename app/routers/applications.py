@@ -22,6 +22,7 @@ from app.adapters.gov_notify import GovNotifyAdapter
 from app.adapters.history_event_repository_adapter import HistoryEventRepositoryAdapter
 from app.adapters.pdf_generator_adapter import PdfGeneratorAdapter
 from app.adapters.provider_details_adapter import ProviderDetailsAdapter
+from app.auth.rbac import Permission, require_permission
 from app.config import Config
 from app.db import get_session
 from app.logging_utils import build_log_extra
@@ -681,7 +682,7 @@ async def upload_coroners_letter(
         get_upload_coroners_letter_use_case
     ),
     request: Request = None,
-    _: None = Depends(verify_entra_provider_token),
+    _: None = Depends(require_permission(Permission.CORONERS_LETTER_UPLOAD)),
 ) -> UploadCoronersLetterResponse:
     """Upload a coroner's letter to document storage and return its file ID."""
     contents = await file.read()
@@ -766,6 +767,7 @@ def create_application(
     request: ApplicationCreate,
     firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
     use_case: CreateApplicationUseCase = Depends(get_create_application_use_case),
+    _: None = Depends(require_permission(Permission.APPLICATION_CREATE)),
 ) -> Application:
     """Creates a new application with proceedings and public bodies."""
     application = use_case.execute(request, firm_code)
@@ -782,6 +784,7 @@ def create_claim(
     request: ClaimCreate,
     firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
     use_case: CreateClaimUseCase = Depends(get_create_claim_use_case),
+    _: None = Depends(require_permission(Permission.CLAIM_CREATE)),
 ) -> ClaimResponse:
     """Creates a new claim against an application."""
     try:

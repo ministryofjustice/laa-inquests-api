@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 
+import pytest
 from sqlmodel import select
 
 from app.domain.constants.report_csv_headers import APPLICATION_BACKLOG_REPORT_HEADERS
@@ -135,12 +136,17 @@ class TestGetApplicationBacklogReportAuth:
 
         assert response.status_code == 401
 
-    def test_403_returns_forbidden_when_provider_token(self, entra_auth_client):
+    @pytest.mark.parametrize(
+        "provider_token",
+        ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+    )
+    def test_403_returns_forbidden_when_provider_token(
+        self, entra_auth_client, provider_token
+    ):
         response = entra_auth_client.get(
             "/reports/applications/backlog",
-            headers={"Authorization": "Bearer valid-provider-entra-token"},
+            headers={"Authorization": f"Bearer {provider_token}"},
         )
-
         assert response.status_code == 403
 
     def test_200_returns_ok_when_caseworker_token(self, entra_auth_client):

@@ -49,6 +49,25 @@ class EntraAuthAdapter:
         cleaned = re.sub(r"\s+", " ", cleaned).strip()
         return cleaned or ""
 
+    def _parse_app_roles(self, app_roles_claim: object) -> frozenset[str]:
+        if app_roles_claim is None:
+            return frozenset()
+
+        if isinstance(app_roles_claim, str):
+            # Support single value and delimited variants defensively.
+            parts = re.split(r"[;,]", app_roles_claim)
+            return frozenset(role.strip() for role in parts if role.strip())
+
+        if isinstance(app_roles_claim, (list, tuple, set, frozenset)):
+            normalized_roles = {
+                role.strip()
+                for role in app_roles_claim
+                if isinstance(role, str) and role.strip()
+            }
+            return frozenset(normalized_roles)
+
+        return frozenset()
+
     def verify_token(
         self, token: str, required_scopes: set[str] | None = None
     ) -> AuthenticatedUser:
@@ -69,6 +88,7 @@ class EntraAuthAdapter:
             )
             token_scopes = frozenset((payload.get("scp") or "").split())
             token_roles = frozenset(payload.get("roles") or [])
+            app_roles = self._parse_app_roles(payload.get("LAA_APP_ROLES"))
             logger.debug(
                 "Entra token validated",
                 extra=build_log_extra(
@@ -80,6 +100,7 @@ class EntraAuthAdapter:
                 scopes=token_scopes | token_roles,
                 name=self._format_name(payload.get("name")),
                 entra_object_id=payload.get("oid"),
+                app_roles=app_roles,
             )
         except HTTPException:
             logger.warning(

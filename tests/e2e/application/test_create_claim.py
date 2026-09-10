@@ -1,9 +1,12 @@
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
+from unittest.mock import MagicMock
 
 from sqlmodel import select
 
+from app import api
+from app.auth.rbac import Permission, get_current_user_permissions
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 from app.models.claim.enums import (
@@ -23,6 +26,8 @@ from app.models.claim.index import (
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.models.notifications.enums import NotificationType
+from app.ports.entra_auth_port import AuthenticatedUser
+from app.routers.dependencies import get_entra_auth_port
 from tests.e2e.factories import create_application_in_db
 
 
@@ -123,705 +128,525 @@ def _seed_approved_claim(
     return claim
 
 
-def test_404_create_claim_when_application_belongs_to_another_firm(
-    session, client, auth_token
-):
-    other_application = create_application_in_db(
-        session,
-        provider_overrides={
-            "firm_code": "ZZ999Z",
-            "office_id": "002",
-            "email_address": "other@example.com",
-        },
-    )
-
-    response = client.post(
-        f"/applications/{other_application.laa_reference}/claim",
-        json=_make_request_body(),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Application not found"
-
-
-def test_201_create_claim_response_contains_only_claim_id_when_not_rejected(
-    session, client, auth_token
-):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 201
-    claim = response.json()
-    assert isinstance(claim["claimId"], int)
-    assert set(claim.keys()) == {"claimId"}
-
-
-def test_201_create_claim_sends_submission_confirmation_email_to_provider(
-    session, client, auth_token, mock_gov_notify
-):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 201
-    mock_gov_notify.send_claim_submit_confirmation_email.assert_called_once()
-
-    call_kwargs = mock_gov_notify.send_claim_submit_confirmation_email.call_args.kwargs
-    claim = call_kwargs["claim"]
-    application = call_kwargs["application"]
-    recipient_email = call_kwargs["recipient_email"]
-    assert claim.application_id == application.application_id
-    assert application.laa_reference == laa_reference
-    assert recipient_email == application.provider.email_address
-
-
-def test_201_create_claim_creates_submission_confirmation_comms_history_event(
-    session, client, auth_token
-):
-    application = session.exec(select(Application)).first()
-    laa_reference = application.laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 201
-
-    history_event = session.exec(
-        select(HistoryEvent).where(
-            (HistoryEvent.application_id == application.application_id)
-            & (
-                HistoryEvent.event_reference
-                == HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION
-            )
+def _override_entra_auth_app_roles(app_roles):
+    def get_entra_auth_port_override():
+        mock_auth = MagicMock()
+        mock_auth.verify_token.return_value = AuthenticatedUser(
+            firm_code="0A123B",
+            scopes=frozenset({"User.Provider"}),
+            app_roles=frozenset(app_roles),
+            name="Test Name",
+            entra_object_id="some-entra-object-id",
         )
-    ).one()
-
-    assert (
-        history_event.event_reference
-        == HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION
-    )
-    assert history_event.actor == ActorType.SYSTEM
-    assert history_event.actor_type == ActorType.SYSTEM
-    assert history_event.event_data == {
-        "recipient": application.provider.email_address,
-        "channel": NotificationType.EMAIL,
-    }
-    assert history_event.application_id == application.application_id
-
-
-def test_201_create_claim_creates_claim_submitted_history_event(
-    session, client, auth_token
-):
-    application = session.exec(select(Application)).first()
-    laa_reference = application.laa_reference
-    request_body = _make_request_body()
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=request_body,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 201
-
-    history_event = session.exec(
-        select(HistoryEvent).where(
-            (HistoryEvent.application_id == application.application_id)
-            & (HistoryEvent.event_reference == HistoryEventReference.CLAIM_SUBMITTED)
-        )
-    ).one()
-
-    assert history_event.event_reference == HistoryEventReference.CLAIM_SUBMITTED
-    assert history_event.actor == request_body["claimantId"]
-    assert history_event.actor_type == ActorType.PROVIDER
-    assert history_event.event_data == {"claim_type": request_body["claimType"]}
-    assert history_event.application_id == application.application_id
-
-
-def test_201_create_claim_auto_approves_payment_on_account_when_eligible(
-    session, client, auth_token
-):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 201
-    claim = response.json()
-    assert set(claim.keys()) == {"claimId"}
-
-    stored_claim = session.get(Claim, claim["claimId"])
-    assert stored_claim is not None
-    assert stored_claim.status_id == "PAY_IN_FULL"
-
-    decision = session.exec(
-        select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
-    ).first()
-    assert decision is not None
-    assert decision.decision == "PAY_IN_FULL"
-
-
-def test_201_create_claim_stores_provisional_total_funds_remaining_for_approved_claim(
-    session, client, auth_token
-):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 201
-    claim_id = response.json()["claimId"]
-
-    stored_claim = session.get(Claim, claim_id)
-    assert stored_claim.status_id == "PAY_IN_FULL"
-    assert stored_claim.total_funds_remaining_after_claim == Decimal("8800.00")
-
-
-def test_201_create_claim_deducts_new_claim_amount_from_total_funds_available_when_not_approved(
-    session, client, auth_token
-):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {
-                "claimType": "FINAL_BILL",
-                "poaTypeId": None,
-                "claimantId": "claimant@provider.com",
-                "totalProfitCostNet": None,
-                "inquestOutcomes": ["NATURAL_CAUSES"],
-                "claimCostTemplateFile": {
-                    "claimCostTemplateFileId": str(uuid.uuid4()),
-                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
-                },
-                "hasCounselBeenPaid": True,
-                "hasAlternativeFunding": False,
-                "hasRecoveryCostsAwarded": True,
-                "financialRecoveryPreviousPreCertificateCosts": 100.00,
-                "financialRecoveryCost": 200.00,
-                "financialRecoveryDamages": 300.00,
-                "financialRecoveryInterest": 50.00,
-                "payingParty": "Test Council",
-                "numberOfCounselInstructed": "2",
-            }
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 201
-    claim_id = response.json()["claimId"]
-
-    stored_claim = session.get(Claim, claim_id)
-    assert stored_claim.status_id != "PAY_IN_FULL"
-    # 10000 limit - 1200 new claim requested gross = 8800
-    assert stored_claim.total_funds_remaining_after_claim == Decimal("8800.00")
-
-
-def test_201_create_claim_deducts_cumulative_approved_and_new_claim_amount(
-    session, client, auth_token
-):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    _seed_approved_claim(
-        session,
-        laa_reference,
-        ClaimDecisionStatus.GRANT,
-        gross=Decimal("2000.00"),
-    )
-    _seed_approved_claim(
-        session,
-        laa_reference,
-        ClaimDecisionStatus.PAY_IN_FULL,
-        vat_zero=Decimal("1500.00"),
-    )
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {"totalProfitCostNet": 800, "totalProfitCostGross": 1000}
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 201
-    claim_id = response.json()["claimId"]
-
-    # 10000 limit - (2000 + 1500 approved) - 1000 new claim requested = 5500
-    stored_claim = session.get(Claim, claim_id)
-    assert stored_claim.total_funds_remaining_after_claim == Decimal("5500.00")
-
-    get_response = client.get(
-        f"/applications/{laa_reference}/claims/{claim_id}",
-        headers={"Authorization": f"Bearer {auth_token}"},
-    )
-    assert get_response.status_code == 200
-    assert get_response.json()["totalFundsRemainingAfterClaim"] == "5500.00"
-
-
-def test_201_created_claim_returns_total_funds_remaining_on_get_by_id(
-    session, client, auth_token
-):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    create_response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-    claim_id = create_response.json()["claimId"]
-
-    get_response = client.get(
-        f"/applications/{laa_reference}/claims/{claim_id}",
-        headers={"Authorization": f"Bearer {auth_token}"},
-    )
-
-    assert get_response.status_code == 200
-    assert get_response.json()["totalFundsRemainingAfterClaim"] == "8800.00"
-
-
-def test_201_create_claim_without_optional_fields(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {
-                "claimType": "FINAL_BILL",
-                "poaTypeId": None,
-                "claimantId": "claimant@provider.com",
-                "totalProfitCostNet": None,
-                "inquestOutcomes": ["NATURAL_CAUSES"],
-                "claimCostTemplateFile": {
-                    "claimCostTemplateFileId": str(uuid.uuid4()),
-                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
-                },
-                "hasCounselBeenPaid": True,
-                "hasAlternativeFunding": False,
-                "hasRecoveryCostsAwarded": True,
-                "financialRecoveryPreviousPreCertificateCosts": 100.00,
-                "financialRecoveryCost": 200.00,
-                "financialRecoveryDamages": 300.00,
-                "financialRecoveryInterest": 50.00,
-                "payingParty": "Test Council",
-                "numberOfCounselInstructed": "2",
-            }
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 201
-    claim = response.json()
-    assert set(claim.keys()) == {"claimId"}
-
-
-def test_201_create_claim_persists_claim_to_database(session, client, auth_token):
-    application = session.exec(select(Application)).first()
-    laa_reference = application.laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    claim_id = response.json()["claimId"]
-    stored_claim = session.get(Claim, claim_id)
-    assert stored_claim is not None
-    assert stored_claim.application_id == application.application_id
-
-
-def test_201_create_claim_links_provided_evidence_ids_to_claim(
-    session, client, auth_token
-):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    evidence = ClaimEvidence(sds_file_name="stored.pdf", file_name="original.pdf")
-    session.add(evidence)
-    session.commit()
-    session.refresh(evidence)
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {"claimEvidenceIds": [str(evidence.claim_evidence_id)]}
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 201
-    claim_id = response.json()["claimId"]
-    stored_evidence = session.get(ClaimEvidence, evidence.claim_evidence_id)
-    assert stored_evidence.claim_id == claim_id
-
-
-def test_422_create_claim_with_empty_evidence_ids_returns_error(
-    session, client, auth_token
-):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body({"claimEvidenceIds": []}),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-    assert response.json()["detail"]["errorCode"] == "MISSING_CLAIM_EVIDENCE"
-
-
-def test_422_payment_on_account_without_poa_type_id(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body({"poaTypeId": None}),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-    assert (
-        response.json()["detail"]["errorCode"]
-        == "MISSING_POA_TYPE_FOR_PAYMENT_ON_ACCOUNT"
-    )
-
-
-def test_422_non_payment_on_account_with_poa_type_id(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {"claimType": "FINAL_BILL", "poaTypeId": "PROFIT_COST"}
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-    assert (
-        response.json()["detail"]["errorCode"]
-        == "POA_TYPE_NOT_ALLOWED_FOR_NON_PAYMENT_ON_ACCOUNT"
-    )
-
-
-def test_201_create_final_bill_claim_persists_inquest_outcome_links(
-    session, client, auth_token
-):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {
-                "claimType": "FINAL_BILL",
-                "poaTypeId": None,
-                "totalProfitCostNet": None,
-                "inquestOutcomes": ["NARRATIVE_CONCLUSION", "NATURAL_CAUSES"],
-                "claimCostTemplateFile": {
-                    "claimCostTemplateFileId": str(uuid.uuid4()),
-                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
-                },
-                "hasCounselBeenPaid": True,
-                "hasAlternativeFunding": False,
-                "hasRecoveryCostsAwarded": True,
-                "financialRecoveryPreviousPreCertificateCosts": 100.00,
-                "financialRecoveryCost": 200.00,
-                "financialRecoveryDamages": 300.00,
-                "financialRecoveryInterest": 50.00,
-                "payingParty": "Test Council",
-                "numberOfCounselInstructed": "2",
-            }
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 201
-    claim_id = response.json()["claimId"]
-
-    stored = session.exec(
-        select(ClaimInquestOutcome).where(ClaimInquestOutcome.claim_id == claim_id)
-    ).all()
-    assert {row.inquest_outcome_id.name for row in stored} == {
-        "NARRATIVE_CONCLUSION",
-        "NATURAL_CAUSES",
-    }
-
-
-def test_201_create_nil_bill_claim_persists_inquest_outcome_links(
-    session, client, auth_token
-):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    body = _make_request_body(
-        {
-            "claimType": "NIL_BILL",
-            "poaTypeId": None,
-            "totalProfitCostNet": None,
-            "totalProfitCostGross": 0,
-            "inquestOutcomes": ["OPEN_CONCLUSION"],
-            "hasAlternativeFunding": False,
-            "hasRecoveryCostsAwarded": True,
-            "financialRecoveryPreviousPreCertificateCosts": 100.00,
-            "financialRecoveryCost": 200.00,
-            "financialRecoveryDamages": 300.00,
-            "financialRecoveryInterest": 50.00,
-            "payingParty": "Test Council",
-        }
-    )
-    del body["claimEvidenceIds"]
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=body,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 201
-    claim_id = response.json()["claimId"]
-
-    stored_claim = session.get(Claim, claim_id)
-    assert stored_claim.claim_type_id == ClaimType.NIL_BILL
-
-    stored = session.exec(
-        select(ClaimInquestOutcome).where(ClaimInquestOutcome.claim_id == claim_id)
-    ).all()
-    assert {row.inquest_outcome_id.name for row in stored} == {"OPEN_CONCLUSION"}
-
-
-def test_422_final_bill_claim_without_inquest_outcomes(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {
-                "claimType": "FINAL_BILL",
-                "poaTypeId": None,
-                "inquestOutcomes": [],
-                "claimCostTemplateFile": {
-                    "claimCostTemplateFileId": str(uuid.uuid4()),
-                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
-                },
-            }
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-    assert response.json()["detail"]["errorCode"] == "MISSING_INQUEST_OUTCOMES"
-
-
-def test_422_payment_on_account_claim_with_inquest_outcomes(
-    session, client, auth_token
-):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body({"inquestOutcomes": ["NATURAL_CAUSES"]}),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-    assert response.json()["detail"]["errorCode"] == "INQUEST_OUTCOMES_NOT_ALLOWED"
-
-
-def test_422_create_claim_with_invalid_inquest_outcome_name(
-    session, client, auth_token
-):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {
-                "claimType": "FINAL_BILL",
-                "poaTypeId": None,
-                "inquestOutcomes": ["NOT_A_REAL_OUTCOME"],
-                "claimCostTemplateFile": {
-                    "claimCostTemplateFileId": str(uuid.uuid4()),
-                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
-                },
-            }
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-
-
-def test_201_create_final_bill_claim_persists_cost_template_file(
-    session, client, auth_token
-):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    file_id = uuid.uuid4()
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {
-                "claimType": "FINAL_BILL",
-                "poaTypeId": None,
-                "totalProfitCostNet": None,
-                "inquestOutcomes": ["NATURAL_CAUSES"],
-                "claimCostTemplateFile": {
-                    "claimCostTemplateFileId": str(file_id),
-                    "claimCostTemplateFileName": "final_bill_costs.xlsx",
-                },
-                "hasCounselBeenPaid": True,
-                "hasAlternativeFunding": False,
-                "hasRecoveryCostsAwarded": True,
-                "financialRecoveryPreviousPreCertificateCosts": 100.00,
-                "financialRecoveryCost": 200.00,
-                "financialRecoveryDamages": 300.00,
-                "financialRecoveryInterest": 50.00,
-                "payingParty": "Test Council",
-                "numberOfCounselInstructed": "2",
-            }
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 201
-    claim_id = response.json()["claimId"]
-
-    stored = session.exec(
-        select(ClaimCostTemplate).where(ClaimCostTemplate.claim_id == claim_id)
-    ).all()
-    assert len(stored) == 1
-    assert stored[0].claim_cost_template_file_id == file_id
-    assert stored[0].claim_cost_template_file_name == "final_bill_costs.xlsx"
-
-
-def test_422_nil_bill_claim_with_cost_template_file(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    body = _make_request_body(
-        {
-            "claimType": "NIL_BILL",
-            "poaTypeId": None,
-            "inquestOutcomes": ["OPEN_CONCLUSION"],
-            "claimCostTemplateFile": {
-                "claimCostTemplateFileId": str(uuid.uuid4()),
-                "claimCostTemplateFileName": "nil_bill_costs.xls",
+        return mock_auth
+
+    api.dependency_overrides[get_entra_auth_port] = get_entra_auth_port_override
+
+
+class TestCreateClaimBaseBehaviour:
+    def test_404_create_claim_when_application_belongs_to_another_firm(
+        self, session, client, auth_token
+    ):
+        other_application = create_application_in_db(
+            session,
+            provider_overrides={
+                "firm_code": "ZZ999Z",
+                "office_id": "002",
+                "email_address": "other@example.com",
             },
-            "hasAlternativeFunding": False,
-            "hasRecoveryCostsAwarded": True,
-            "financialRecoveryPreviousPreCertificateCosts": 100.00,
-            "financialRecoveryCost": 200.00,
-            "financialRecoveryDamages": 300.00,
-            "financialRecoveryInterest": 50.00,
-            "payingParty": "Test Council",
+        )
+
+        response = client.post(
+            f"/applications/{other_application.laa_reference}/claim",
+            json=_make_request_body(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Application not found"
+
+    def test_201_create_claim_response_contains_only_claim_id_when_not_rejected(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+        claim = response.json()
+        assert isinstance(claim["claimId"], int)
+        assert set(claim.keys()) == {"claimId"}
+
+    def test_201_create_claim_sends_submission_confirmation_email_to_provider(
+        self, session, client, auth_token, mock_gov_notify
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+        mock_gov_notify.send_claim_submit_confirmation_email.assert_called_once()
+
+        call_kwargs = (
+            mock_gov_notify.send_claim_submit_confirmation_email.call_args.kwargs
+        )
+        claim = call_kwargs["claim"]
+        application = call_kwargs["application"]
+        recipient_email = call_kwargs["recipient_email"]
+        assert claim.application_id == application.application_id
+        assert application.laa_reference == laa_reference
+        assert recipient_email == application.provider.email_address
+
+    def test_201_create_claim_creates_submission_confirmation_comms_history_event(
+        self, session, client, auth_token
+    ):
+        application = session.exec(select(Application)).first()
+        laa_reference = application.laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+
+        history_event = session.exec(
+            select(HistoryEvent).where(
+                (HistoryEvent.application_id == application.application_id)
+                & (
+                    HistoryEvent.event_reference
+                    == HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION
+                )
+            )
+        ).one()
+
+        assert (
+            history_event.event_reference
+            == HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION
+        )
+        assert history_event.actor == ActorType.SYSTEM
+        assert history_event.actor_type == ActorType.SYSTEM
+        assert history_event.event_data == {
+            "recipient": application.provider.email_address,
+            "channel": NotificationType.EMAIL,
         }
-    )
-    del body["claimEvidenceIds"]
+        assert history_event.application_id == application.application_id
 
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=body,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
+    def test_201_create_claim_creates_claim_submitted_history_event(
+        self, session, client, auth_token
+    ):
+        application = session.exec(select(Application)).first()
+        laa_reference = application.laa_reference
+        request_body = _make_request_body()
 
-    assert response.status_code == 422
-    assert response.json()["detail"]["errorCode"] == "COST_TEMPLATE_FILE_NOT_ALLOWED"
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=request_body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+
+        history_event = session.exec(
+            select(HistoryEvent).where(
+                (HistoryEvent.application_id == application.application_id)
+                & (
+                    HistoryEvent.event_reference
+                    == HistoryEventReference.CLAIM_SUBMITTED
+                )
+            )
+        ).one()
+
+        assert history_event.event_reference == HistoryEventReference.CLAIM_SUBMITTED
+        assert history_event.actor == request_body["claimantId"]
+        assert history_event.actor_type == ActorType.PROVIDER
+        assert history_event.event_data == {"claim_type": request_body["claimType"]}
+        assert history_event.application_id == application.application_id
 
 
-def test_422_nil_bill_claim_with_claim_evidence(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+class TestCreateClaimFundsAndPersistence:
+    def test_201_create_claim_auto_approves_payment_on_account_when_eligible(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
 
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+        claim = response.json()
+        assert set(claim.keys()) == {"claimId"}
+
+        stored_claim = session.get(Claim, claim["claimId"])
+        assert stored_claim is not None
+        assert stored_claim.status_id == "PAY_IN_FULL"
+
+        decision = session.exec(
+            select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
+        ).first()
+        assert decision is not None
+        assert decision.decision == "PAY_IN_FULL"
+
+    def test_201_create_claim_stores_provisional_total_funds_remaining_for_approved_claim(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+        claim_id = response.json()["claimId"]
+
+        stored_claim = session.get(Claim, claim_id)
+        assert stored_claim.status_id == "PAY_IN_FULL"
+        assert stored_claim.total_funds_remaining_after_claim == Decimal("8800.00")
+
+    def test_201_create_claim_deducts_new_claim_amount_from_total_funds_available_when_not_approved(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "claimType": "FINAL_BILL",
+                    "poaTypeId": None,
+                    "claimantId": "claimant@provider.com",
+                    "totalProfitCostNet": None,
+                    "inquestOutcomes": ["NATURAL_CAUSES"],
+                    "claimCostTemplateFile": {
+                        "claimCostTemplateFileId": str(uuid.uuid4()),
+                        "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                    },
+                    "hasCounselBeenPaid": True,
+                    "hasAlternativeFunding": False,
+                    "hasRecoveryCostsAwarded": True,
+                    "financialRecoveryPreviousPreCertificateCosts": 100.00,
+                    "financialRecoveryCost": 200.00,
+                    "financialRecoveryDamages": 300.00,
+                    "financialRecoveryInterest": 50.00,
+                    "payingParty": "Test Council",
+                    "numberOfCounselInstructed": "2",
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+        claim_id = response.json()["claimId"]
+
+        stored_claim = session.get(Claim, claim_id)
+        assert stored_claim.status_id != "PAY_IN_FULL"
+        # 10000 limit - 1200 new claim requested gross = 8800
+        assert stored_claim.total_funds_remaining_after_claim == Decimal("8800.00")
+
+    def test_201_create_claim_deducts_cumulative_approved_and_new_claim_amount(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+        _seed_approved_claim(
+            session,
+            laa_reference,
+            ClaimDecisionStatus.GRANT,
+            gross=Decimal("2000.00"),
+        )
+        _seed_approved_claim(
+            session,
+            laa_reference,
+            ClaimDecisionStatus.PAY_IN_FULL,
+            vat_zero=Decimal("1500.00"),
+        )
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {"totalProfitCostNet": 800, "totalProfitCostGross": 1000}
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+        claim_id = response.json()["claimId"]
+
+        # 10000 limit - (2000 + 1500 approved) - 1000 new claim requested = 5500
+        stored_claim = session.get(Claim, claim_id)
+        assert stored_claim.total_funds_remaining_after_claim == Decimal("5500.00")
+
+        get_response = client.get(
+            f"/applications/{laa_reference}/claims/{claim_id}",
+            headers={"Authorization": f"Bearer {auth_token}"},
+        )
+        assert get_response.status_code == 200
+        assert get_response.json()["totalFundsRemainingAfterClaim"] == "5500.00"
+
+    def test_201_created_claim_returns_total_funds_remaining_on_get_by_id(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        create_response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+        claim_id = create_response.json()["claimId"]
+
+        get_response = client.get(
+            f"/applications/{laa_reference}/claims/{claim_id}",
+            headers={"Authorization": f"Bearer {auth_token}"},
+        )
+
+        assert get_response.status_code == 200
+        assert get_response.json()["totalFundsRemainingAfterClaim"] == "8800.00"
+
+    def test_201_create_claim_without_optional_fields(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "claimType": "FINAL_BILL",
+                    "poaTypeId": None,
+                    "claimantId": "claimant@provider.com",
+                    "totalProfitCostNet": None,
+                    "inquestOutcomes": ["NATURAL_CAUSES"],
+                    "claimCostTemplateFile": {
+                        "claimCostTemplateFileId": str(uuid.uuid4()),
+                        "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                    },
+                    "hasCounselBeenPaid": True,
+                    "hasAlternativeFunding": False,
+                    "hasRecoveryCostsAwarded": True,
+                    "financialRecoveryPreviousPreCertificateCosts": 100.00,
+                    "financialRecoveryCost": 200.00,
+                    "financialRecoveryDamages": 300.00,
+                    "financialRecoveryInterest": 50.00,
+                    "payingParty": "Test Council",
+                    "numberOfCounselInstructed": "2",
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+        claim = response.json()
+        assert set(claim.keys()) == {"claimId"}
+
+    def test_201_create_claim_persists_claim_to_database(
+        self, session, client, auth_token
+    ):
+        application = session.exec(select(Application)).first()
+        laa_reference = application.laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        claim_id = response.json()["claimId"]
+        stored_claim = session.get(Claim, claim_id)
+        assert stored_claim is not None
+        assert stored_claim.application_id == application.application_id
+
+    def test_201_create_claim_links_provided_evidence_ids_to_claim(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+        evidence = ClaimEvidence(sds_file_name="stored.pdf", file_name="original.pdf")
+        session.add(evidence)
+        session.commit()
+        session.refresh(evidence)
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {"claimEvidenceIds": [str(evidence.claim_evidence_id)]}
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+        claim_id = response.json()["claimId"]
+        stored_evidence = session.get(ClaimEvidence, evidence.claim_evidence_id)
+        assert stored_evidence.claim_id == claim_id
+
+
+class TestCreateClaimValidation:
+    def test_422_create_claim_with_empty_evidence_ids_returns_error(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body({"claimEvidenceIds": []}),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert response.json()["detail"]["errorCode"] == "MISSING_CLAIM_EVIDENCE"
+
+    def test_422_payment_on_account_without_poa_type_id(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body({"poaTypeId": None}),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert (
+            response.json()["detail"]["errorCode"]
+            == "MISSING_POA_TYPE_FOR_PAYMENT_ON_ACCOUNT"
+        )
+
+    def test_422_non_payment_on_account_with_poa_type_id(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {"claimType": "FINAL_BILL", "poaTypeId": "PROFIT_COST"}
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert (
+            response.json()["detail"]["errorCode"]
+            == "POA_TYPE_NOT_ALLOWED_FOR_NON_PAYMENT_ON_ACCOUNT"
+        )
+
+    def test_201_create_final_bill_claim_persists_inquest_outcome_links(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "claimType": "FINAL_BILL",
+                    "poaTypeId": None,
+                    "totalProfitCostNet": None,
+                    "inquestOutcomes": ["NARRATIVE_CONCLUSION", "NATURAL_CAUSES"],
+                    "claimCostTemplateFile": {
+                        "claimCostTemplateFileId": str(uuid.uuid4()),
+                        "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                    },
+                    "hasCounselBeenPaid": True,
+                    "hasAlternativeFunding": False,
+                    "hasRecoveryCostsAwarded": True,
+                    "financialRecoveryPreviousPreCertificateCosts": 100.00,
+                    "financialRecoveryCost": 200.00,
+                    "financialRecoveryDamages": 300.00,
+                    "financialRecoveryInterest": 50.00,
+                    "payingParty": "Test Council",
+                    "numberOfCounselInstructed": "2",
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+        claim_id = response.json()["claimId"]
+
+        stored = session.exec(
+            select(ClaimInquestOutcome).where(ClaimInquestOutcome.claim_id == claim_id)
+        ).all()
+        assert {row.inquest_outcome_id.name for row in stored} == {
+            "NARRATIVE_CONCLUSION",
+            "NATURAL_CAUSES",
+        }
+
+    def test_201_create_nil_bill_claim_persists_inquest_outcome_links(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        body = _make_request_body(
             {
                 "claimType": "NIL_BILL",
                 "poaTypeId": None,
-                "claimEvidenceIds": [],
+                "totalProfitCostNet": None,
+                "totalProfitCostGross": 0,
                 "inquestOutcomes": ["OPEN_CONCLUSION"],
                 "hasAlternativeFunding": False,
                 "hasRecoveryCostsAwarded": True,
@@ -831,1119 +656,1417 @@ def test_422_nil_bill_claim_with_claim_evidence(session, client, auth_token):
                 "financialRecoveryInterest": 50.00,
                 "payingParty": "Test Council",
             }
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
+        )
+        del body["claimEvidenceIds"]
 
-    assert response.status_code == 422
-    assert response.json()["detail"]["errorCode"] == "CLAIM_EVIDENCE_NOT_ALLOWED"
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+        claim_id = response.json()["claimId"]
+
+        stored_claim = session.get(Claim, claim_id)
+        assert stored_claim.claim_type_id == ClaimType.NIL_BILL
+
+        stored = session.exec(
+            select(ClaimInquestOutcome).where(ClaimInquestOutcome.claim_id == claim_id)
+        ).all()
+        assert {row.inquest_outcome_id.name for row in stored} == {"OPEN_CONCLUSION"}
+
+    def test_422_final_bill_claim_without_inquest_outcomes(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "claimType": "FINAL_BILL",
+                    "poaTypeId": None,
+                    "inquestOutcomes": [],
+                    "claimCostTemplateFile": {
+                        "claimCostTemplateFileId": str(uuid.uuid4()),
+                        "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                    },
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert response.json()["detail"]["errorCode"] == "MISSING_INQUEST_OUTCOMES"
+
+    def test_422_payment_on_account_claim_with_inquest_outcomes(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body({"inquestOutcomes": ["NATURAL_CAUSES"]}),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert response.json()["detail"]["errorCode"] == "INQUEST_OUTCOMES_NOT_ALLOWED"
+
+    def test_422_create_claim_with_invalid_inquest_outcome_name(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "claimType": "FINAL_BILL",
+                    "poaTypeId": None,
+                    "inquestOutcomes": ["NOT_A_REAL_OUTCOME"],
+                    "claimCostTemplateFile": {
+                        "claimCostTemplateFileId": str(uuid.uuid4()),
+                        "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                    },
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+
+    def test_201_create_final_bill_claim_persists_cost_template_file(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+        file_id = uuid.uuid4()
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "claimType": "FINAL_BILL",
+                    "poaTypeId": None,
+                    "totalProfitCostNet": None,
+                    "inquestOutcomes": ["NATURAL_CAUSES"],
+                    "claimCostTemplateFile": {
+                        "claimCostTemplateFileId": str(file_id),
+                        "claimCostTemplateFileName": "final_bill_costs.xlsx",
+                    },
+                    "hasCounselBeenPaid": True,
+                    "hasAlternativeFunding": False,
+                    "hasRecoveryCostsAwarded": True,
+                    "financialRecoveryPreviousPreCertificateCosts": 100.00,
+                    "financialRecoveryCost": 200.00,
+                    "financialRecoveryDamages": 300.00,
+                    "financialRecoveryInterest": 50.00,
+                    "payingParty": "Test Council",
+                    "numberOfCounselInstructed": "2",
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+        claim_id = response.json()["claimId"]
+
+        stored = session.exec(
+            select(ClaimCostTemplate).where(ClaimCostTemplate.claim_id == claim_id)
+        ).all()
+        assert len(stored) == 1
+        assert stored[0].claim_cost_template_file_id == file_id
+        assert stored[0].claim_cost_template_file_name == "final_bill_costs.xlsx"
+
+    def test_422_nil_bill_claim_with_cost_template_file(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        body = _make_request_body(
+            {
+                "claimType": "NIL_BILL",
+                "poaTypeId": None,
+                "inquestOutcomes": ["OPEN_CONCLUSION"],
+                "claimCostTemplateFile": {
+                    "claimCostTemplateFileId": str(uuid.uuid4()),
+                    "claimCostTemplateFileName": "nil_bill_costs.xls",
+                },
+                "hasAlternativeFunding": False,
+                "hasRecoveryCostsAwarded": True,
+                "financialRecoveryPreviousPreCertificateCosts": 100.00,
+                "financialRecoveryCost": 200.00,
+                "financialRecoveryDamages": 300.00,
+                "financialRecoveryInterest": 50.00,
+                "payingParty": "Test Council",
+            }
+        )
+        del body["claimEvidenceIds"]
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert (
+            response.json()["detail"]["errorCode"] == "COST_TEMPLATE_FILE_NOT_ALLOWED"
+        )
+
+    def test_422_nil_bill_claim_with_claim_evidence(self, session, client, auth_token):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "claimType": "NIL_BILL",
+                    "poaTypeId": None,
+                    "claimEvidenceIds": [],
+                    "inquestOutcomes": ["OPEN_CONCLUSION"],
+                    "hasAlternativeFunding": False,
+                    "hasRecoveryCostsAwarded": True,
+                    "financialRecoveryPreviousPreCertificateCosts": 100.00,
+                    "financialRecoveryCost": 200.00,
+                    "financialRecoveryDamages": 300.00,
+                    "financialRecoveryInterest": 50.00,
+                    "payingParty": "Test Council",
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert response.json()["detail"]["errorCode"] == "CLAIM_EVIDENCE_NOT_ALLOWED"
+
+    def test_422_nil_bill_claim_with_counsel_details(self, session, client, auth_token):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        body = _make_request_body(
+            {
+                "claimType": "NIL_BILL",
+                "poaTypeId": None,
+                "inquestOutcomes": ["OPEN_CONCLUSION"],
+                "hasAlternativeFunding": False,
+                "hasRecoveryCostsAwarded": True,
+                "financialRecoveryPreviousPreCertificateCosts": 100.00,
+                "financialRecoveryCost": 200.00,
+                "financialRecoveryDamages": 300.00,
+                "financialRecoveryInterest": 50.00,
+                "payingParty": "Test Council",
+                "hasCounselBeenPaid": True,
+                "numberOfCounselInstructed": "2",
+            }
+        )
+        del body["claimEvidenceIds"]
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert response.json()["detail"]["errorCode"] == "COUNSEL_DETAILS_NOT_ALLOWED"
+
+    def test_422_final_bill_claim_without_cost_template_file(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "claimType": "FINAL_BILL",
+                    "poaTypeId": None,
+                    "inquestOutcomes": ["NATURAL_CAUSES"],
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert response.json()["detail"]["errorCode"] == "MISSING_COST_TEMPLATE_FILE"
+
+    def test_422_payment_on_account_claim_with_cost_template_file(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "claimCostTemplateFile": {
+                        "claimCostTemplateFileId": str(uuid.uuid4()),
+                        "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                    }
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert (
+            response.json()["detail"]["errorCode"] == "COST_TEMPLATE_FILE_NOT_ALLOWED"
+        )
+
+    def test_422_profit_cost_with_no_cost_fields(self, session, client, auth_token):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "totalProfitCostNet": None,
+                    "totalProfitCostGross": None,
+                    "totalProfitCostVatZero": None,
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert response.json()["detail"]["errorCode"] == "MISSING_TOTAL_CLAIM_COST"
+
+    def test_201_create_final_bill_claim_persists_final_bill_details(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "claimType": "FINAL_BILL",
+                    "poaTypeId": None,
+                    "totalProfitCostNet": None,
+                    "inquestOutcomes": ["NATURAL_CAUSES"],
+                    "claimCostTemplateFile": {
+                        "claimCostTemplateFileId": str(uuid.uuid4()),
+                        "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                    },
+                    "hasCounselBeenPaid": True,
+                    "hasAlternativeFunding": False,
+                    "hasRecoveryCostsAwarded": True,
+                    "financialRecoveryPreviousPreCertificateCosts": 100.00,
+                    "financialRecoveryCost": 200.00,
+                    "financialRecoveryDamages": 300.00,
+                    "financialRecoveryInterest": 50.00,
+                    "payingParty": "Test Council",
+                    "numberOfCounselInstructed": "2",
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+        claim_id = response.json()["claimId"]
+
+        stored = session.get(Claim, claim_id)
+        assert stored.has_counsel_been_paid is True
+        assert stored.has_alternative_funding is False
+        assert stored.has_recovery_costs_awarded is True
+        assert stored.financial_recovery_previous_pre_certificate_costs == Decimal(
+            "100.00"
+        )
+        assert stored.financial_recovery_cost == Decimal("200.00")
+        assert stored.financial_recovery_damages == Decimal("300.00")
+        assert stored.financial_recovery_interest == Decimal("50.00")
+        assert stored.paying_party == "Test Council"
+        assert stored.number_of_counsel_instructed == NumberOfCounselInstructed.TWO
+
+    def test_422_final_bill_claim_without_final_bill_details(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "claimType": "FINAL_BILL",
+                    "poaTypeId": None,
+                    "inquestOutcomes": ["NATURAL_CAUSES"],
+                    "claimCostTemplateFile": {
+                        "claimCostTemplateFileId": str(uuid.uuid4()),
+                        "claimCostTemplateFileName": "claim_cost_template.xlsx",
+                    },
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert response.json()["detail"]["errorCode"] == "MISSING_FINAL_BILL_DETAILS"
+
+    def test_422_payment_on_account_claim_with_final_bill_details(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "hasAlternativeFunding": False,
+                    "hasRecoveryCostsAwarded": True,
+                    "financialRecoveryPreviousPreCertificateCosts": 100.00,
+                    "financialRecoveryCost": 200.00,
+                    "financialRecoveryDamages": 300.00,
+                    "financialRecoveryInterest": 50.00,
+                    "payingParty": "Test Council",
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert (
+            response.json()["detail"]["errorCode"] == "FINAL_BILL_DETAILS_NOT_ALLOWED"
+        )
+
+    def test_422_payment_on_account_claim_with_counsel_details(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "hasCounselBeenPaid": True,
+                    "numberOfCounselInstructed": "2",
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert response.json()["detail"]["errorCode"] == "COUNSEL_DETAILS_NOT_ALLOWED"
+
+    def test_422_final_bill_claim_with_net_total(self, session, client, auth_token):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_final_bill_body({"totalProfitCostNet": 100}),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert (
+            response.json()["detail"]["errorCode"] == "NET_TOTAL_NOT_ALLOWED_FOR_BILL"
+        )
+
+    def test_422_nil_bill_claim_with_net_total(self, session, client, auth_token):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_nil_bill_body({"totalProfitCostNet": 0}),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert (
+            response.json()["detail"]["errorCode"] == "NET_TOTAL_NOT_ALLOWED_FOR_BILL"
+        )
+
+    def test_422_final_bill_claim_with_vat_zero_total(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_final_bill_body({"totalProfitCostVatZero": 100}),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert (
+            response.json()["detail"]["errorCode"]
+            == "VAT_ZERO_TOTAL_NOT_ALLOWED_FOR_BILL"
+        )
+
+    def test_422_final_bill_claim_without_gross_total(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_final_bill_body({"totalProfitCostGross": None}),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert response.json()["detail"]["errorCode"] == "MISSING_GROSS_TOTAL_FOR_BILL"
+
+    def test_422_final_bill_claim_with_zero_gross_total(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_final_bill_body({"totalProfitCostGross": 0}),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert (
+            response.json()["detail"]["errorCode"]
+            == "FINAL_BILL_GROSS_MUST_BE_POSITIVE"
+        )
+
+    def test_422_nil_bill_claim_with_non_zero_gross_total(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_nil_bill_body({"totalProfitCostGross": 100}),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert response.json()["detail"]["errorCode"] == "NIL_BILL_GROSS_MUST_BE_ZERO"
+
+    def test_201_final_bill_claim_with_positive_gross_only(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_final_bill_body(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+        stored_claim = session.get(Claim, response.json()["claimId"])
+        assert stored_claim.total_profit_cost_net is None
+        assert stored_claim.total_profit_cost_gross == Decimal("1200.00")
+
+    def test_201_nil_bill_claim_with_zero_gross_only(self, session, client, auth_token):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_nil_bill_body(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+        stored_claim = session.get(Claim, response.json()["claimId"])
+        assert stored_claim.total_profit_cost_net is None
+        assert stored_claim.total_profit_cost_gross == Decimal("0.00")
+
+    def test_422_profit_cost_with_net_higher_than_gross(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {"totalProfitCostNet": 1200, "totalProfitCostGross": 1000}
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert (
+            response.json()["detail"]["errorCode"]
+            == "NET_TOTAL_HIGHER_THAN_GROSS_TOTAL"
+        )
+
+    def test_201_profit_cost_with_vat_zero_only(self, session, client, auth_token):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "totalProfitCostNet": None,
+                    "totalProfitCostGross": None,
+                    "totalProfitCostVatZero": 500,
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+
+    def test_422_profit_cost_mixing_vat_zero_and_net(self, session, client, auth_token):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {"totalProfitCostNet": 1000, "totalProfitCostVatZero": 500}
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert response.json()["detail"]["errorCode"] == "PROFIT_COST_MIXED_VAT"
+
+    def test_201_non_profit_cost_with_vat_zero_only_defaults_missing_totals(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "poaTypeId": "EXPERT_COST",
+                    "totalProfitCostNet": None,
+                    "totalProfitCostGross": None,
+                    "totalProfitCostVatZero": "150.00",
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+        claim = response.json()
+        assert set(claim.keys()) == {"claimId"}
+
+        stored_claim = session.get(Claim, claim["claimId"])
+        assert stored_claim is not None
+        assert Decimal(str(stored_claim.total_profit_cost_net)) == Decimal("0.00")
+        assert Decimal(str(stored_claim.total_profit_cost_gross)) == Decimal("0.00")
+        assert Decimal(str(stored_claim.total_profit_cost_vat_zero)) == Decimal(
+            "150.00"
+        )
+
+    def test_422_non_profit_cost_with_no_cost_fields(self, session, client, auth_token):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "poaTypeId": "EXPERT_COST",
+                    "totalProfitCostNet": None,
+                    "totalProfitCostGross": None,
+                    "totalProfitCostVatZero": None,
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert response.json()["detail"]["errorCode"] == "MISSING_NON_PROFIT_COST_TOTAL"
+        assert (
+            response.json()["detail"]["message"]
+            == "Please complete the total value of your claim to continue"
+        )
+
+    def test_422_non_profit_cost_with_net_higher_than_gross(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "poaTypeId": "NON_EXPERT_DISBURSEMENT",
+                    "totalProfitCostNet": "120.00",
+                    "totalProfitCostGross": "100.00",
+                    "totalProfitCostVatZero": None,
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert (
+            response.json()["detail"]["errorCode"]
+            == "NET_TOTAL_HIGHER_THAN_GROSS_TOTAL"
+        )
+        assert (
+            response.json()["detail"]["message"]
+            == "Net total cannot be higher than the gross total value"
+        )
+
+    def test_create_claim_with_missing_claimant_id_returns_422(
+        self, session, client, auth_token, mock_gov_notify
+    ):
+        application = session.exec(select(Application)).first()
+        laa_reference = application.laa_reference
+
+        request_body = _make_request_body()
+        request_body["claimantId"] = None
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=request_body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        mock_gov_notify.send_claim_submit_confirmation_email.assert_not_called()
 
 
-def test_422_nil_bill_claim_with_counsel_details(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+class TestCreateClaimAutoDecisionRules:
+    def test_201_create_claim_when_existing_claims_push_application_total_over_limit(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
 
-    body = _make_request_body(
-        {
-            "claimType": "NIL_BILL",
-            "poaTypeId": None,
-            "inquestOutcomes": ["OPEN_CONCLUSION"],
-            "hasAlternativeFunding": False,
-            "hasRecoveryCostsAwarded": True,
-            "financialRecoveryPreviousPreCertificateCosts": 100.00,
-            "financialRecoveryCost": 200.00,
-            "financialRecoveryDamages": 300.00,
-            "financialRecoveryInterest": 50.00,
-            "payingParty": "Test Council",
-            "hasCounselBeenPaid": True,
-            "numberOfCounselInstructed": "2",
+        client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {"totalProfitCostNet": 6000, "totalProfitCostGross": 6000}
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {"totalProfitCostNet": 5000, "totalProfitCostGross": 6000}
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+
+    def test_201_create_claim_auto_reject_returns_reason_and_updates_decision_status(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        for _ in range(4):
+            seed_response = client.post(
+                f"/applications/{laa_reference}/claim",
+                json=_make_request_body(
+                    {
+                        "totalProfitCostNet": 1,
+                        "totalProfitCostGross": 1,
+                    }
+                ),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {auth_token}",
+                },
+            )
+            assert seed_response.status_code == 201
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "totalProfitCostNet": 1,
+                    "totalProfitCostGross": 1,
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+        claim = response.json()
+        assert set(claim.keys()) == {"claimId", "rejectionReasons"}
+        assert claim["rejectionReasons"] == ["MAX_POA_CLAIMS_EXCEEDED"]
+
+        claim_id = claim["claimId"]
+        decision = session.exec(
+            select(ClaimDecision).where(ClaimDecision.claim_id == claim_id)
+        ).first()
+        assert decision is not None
+        assert decision.decision == "REJECT"
+
+        decision_reasons = session.exec(
+            select(DecisionReason).where(
+                DecisionReason.claim_decision_id == decision.claim_decision_id
+            )
+        ).all()
+        assert len(decision_reasons) == 1
+        assert decision_reasons[0].reason_code == "MAX_POA_CLAIMS_EXCEEDED"
+
+    def test_201_create_claim_does_not_count_rejected_profit_cost_poa_towards_max_limit(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        seeded_claim_ids = []
+        for _ in range(4):
+            seed_response = client.post(
+                f"/applications/{laa_reference}/claim",
+                json=_make_request_body(
+                    {
+                        "totalProfitCostNet": 1,
+                        "totalProfitCostGross": 1,
+                    }
+                ),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {auth_token}",
+                },
+            )
+            assert seed_response.status_code == 201
+            seeded_claim_ids.append(seed_response.json()["claimId"])
+
+        claim_to_reject = session.get(Claim, seeded_claim_ids[0])
+        claim_to_reject.status_id = "REJECTED"
+        session.add(claim_to_reject)
+        session.commit()
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "totalProfitCostNet": 1,
+                    "totalProfitCostGross": 1,
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+        claim = response.json()
+        assert set(claim.keys()) == {"claimId"}
+        assert "rejectionReasons" not in claim
+
+        claim_id = claim["claimId"]
+        decision = session.exec(
+            select(ClaimDecision).where(ClaimDecision.claim_id == claim_id)
+        ).first()
+        assert decision is not None
+        assert decision.decision == "PAY_IN_FULL"
+
+    def test_201_create_claim_that_passes_rejection_rules_auto_approves(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "totalProfitCostNet": 1,
+                    "totalProfitCostGross": 1,
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+        claim = response.json()
+        assert set(claim.keys()) == {"claimId"}
+        assert "rejectionReasons" not in claim
+
+        claim_id = claim["claimId"]
+        stored_claim = session.get(Claim, claim_id)
+        assert stored_claim is not None
+        assert stored_claim.status_id == "PAY_IN_FULL"
+
+        decision = session.exec(
+            select(ClaimDecision).where(ClaimDecision.claim_id == claim_id)
+        ).first()
+        assert decision is not None
+        assert decision.decision == "PAY_IN_FULL"
+
+    def test_201_create_claim_does_not_auto_approve_when_amount_exceeds_50000(
+        self, session, client, auth_token
+    ):
+        application = session.exec(select(Application)).first()
+        application_proceeding = application.proceeding
+        application_proceeding.proceeding.substantive_cost_limitation = 999999
+        application_proceeding.certificate_start_date = datetime(2000, 1, 1, tzinfo=UTC)
+        session.add(application_proceeding.proceeding)
+        session.add(application_proceeding)
+        session.commit()
+
+        response = client.post(
+            f"/applications/{application.laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "totalProfitCostNet": 50000.01,
+                    "totalProfitCostGross": 50000.01,
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+        claim = response.json()
+        assert set(claim.keys()) == {"claimId"}
+
+        stored_claim = session.get(Claim, claim["claimId"])
+        assert stored_claim is not None
+        assert stored_claim.status_id == "SUBMITTED"
+
+        decision = session.exec(
+            select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
+        ).first()
+        assert decision is None
+
+    def test_201_create_claim_does_not_auto_approve_when_application_status_is_withdrawn(
+        self, session, client, auth_token
+    ):
+        application = session.exec(select(Application)).first()
+        application_proceeding = application.proceeding
+        application_proceeding.proceeding.substantive_cost_limitation = 999999
+        application_proceeding.certificate_start_date = datetime(2000, 1, 1, tzinfo=UTC)
+        application.status = "WITHDRAWN"
+        session.add(application_proceeding.proceeding)
+        session.add(application_proceeding)
+        session.add(application)
+        session.commit()
+
+        response = client.post(
+            f"/applications/{application.laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "totalProfitCostNet": 50000,
+                    "totalProfitCostGross": 50000,
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+        claim = response.json()
+        assert set(claim.keys()) == {"claimId"}
+
+        stored_claim = session.get(Claim, claim["claimId"])
+        assert stored_claim is not None
+        assert stored_claim.status_id == "SUBMITTED"
+
+        decision = session.exec(
+            select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
+        ).first()
+        assert decision is None
+
+    def test_422_create_claim_when_application_not_granted(
+        self, session, client, auth_token
+    ):
+        application = session.exec(select(Application)).first()
+        application.proceeding.merits_decision = MeritsDecision.PENDING
+        session.add(application.proceeding)
+        session.commit()
+
+        response = client.post(
+            f"/applications/{application.laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "totalProfitCostNet": 1000,
+                    "totalProfitCostGross": 1200,
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert response.json()["detail"]["errorCode"] == "APPLICATION_NOT_GRANTED"
+
+        stored_claims = session.exec(
+            select(Claim).where(Claim.application_id == application.application_id)
+        ).all()
+        assert stored_claims == []
+
+    def test_201_create_claim_auto_reject_returns_multiple_reasons_for_rejection_when_applicable(
+        self, session, client, auth_token
+    ):
+        application = session.exec(select(Application)).first()
+        laa_reference = application.laa_reference
+        application.proceeding.merits_decision = MeritsDecision.GRANTED
+        session.add(application.proceeding)
+        session.commit()
+
+        for _ in range(4):
+            seed_response = client.post(
+                f"/applications/{laa_reference}/claim",
+                json=_make_request_body(
+                    {
+                        "totalProfitCostNet": 1,
+                        "totalProfitCostGross": 1,
+                    }
+                ),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {auth_token}",
+                },
+            )
+            assert seed_response.status_code == 201
+            assert set(seed_response.json().keys()) == {"claimId"}
+
+        application_proceeding = application.proceeding
+        application_proceeding.proceeding.substantive_cost_limitation = 5
+        application_proceeding.certificate_start_date = datetime.now(tz=UTC).date()
+        session.add(application_proceeding.proceeding)
+        session.add(application_proceeding)
+        session.commit()
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "totalProfitCostNet": 10,
+                    "totalProfitCostGross": 10,
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+        claim = response.json()
+        assert set(claim.keys()) == {"claimId", "rejectionReasons"}
+
+        expected_reasons = {
+            "MAX_POA_CLAIMS_EXCEEDED",
+            "CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT",
+            "PROFIT_COST_POA_CLAIM_SUBMITTED_TOO_EARLY",
         }
-    )
-    del body["claimEvidenceIds"]
+        assert set(claim["rejectionReasons"]) == expected_reasons
+        assert len(claim["rejectionReasons"]) == 3
 
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=body,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
+        claim_id = claim["claimId"]
+        decision = session.exec(
+            select(ClaimDecision).where(ClaimDecision.claim_id == claim_id)
+        ).first()
+        assert decision is not None
+        assert decision.decision == "REJECT"
 
-    assert response.status_code == 422
-    assert response.json()["detail"]["errorCode"] == "COUNSEL_DETAILS_NOT_ALLOWED"
+        decision_reasons = session.exec(
+            select(DecisionReason).where(
+                DecisionReason.claim_decision_id == decision.claim_decision_id
+            )
+        ).all()
+        assert len(decision_reasons) == 3
+        assert {r.reason_code for r in decision_reasons} == expected_reasons
 
+    def test_201_create_claim_auto_approves_subsequent_claim_after_one_is_rejected(
+        self, session, client, auth_token
+    ):
+        application = session.exec(select(Application)).first()
+        laa_reference = application.laa_reference
+        application.proceeding.merits_decision = MeritsDecision.GRANTED
+        session.add(application.proceeding)
+        session.commit()
 
-def test_422_final_bill_claim_without_cost_template_file(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+        rejected_response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {"totalProfitCostNet": 12000, "totalProfitCostGross": 12000}
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+        assert rejected_response.status_code == 201
+        rejected_claim = rejected_response.json()
+        assert (
+            "CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT" in rejected_claim["rejectionReasons"]
+        )
+        rejected_stored = session.get(Claim, rejected_claim["claimId"])
+        assert rejected_stored.status_id == "REJECTED"
 
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {
-                "claimType": "FINAL_BILL",
-                "poaTypeId": None,
-                "inquestOutcomes": ["NATURAL_CAUSES"],
-            }
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
+        approved_response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {"totalProfitCostNet": 5000, "totalProfitCostGross": 5000}
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
 
-    assert response.status_code == 422
-    assert response.json()["detail"]["errorCode"] == "MISSING_COST_TEMPLATE_FILE"
+        assert approved_response.status_code == 201
+        approved_claim = approved_response.json()
+        assert set(approved_claim.keys()) == {"claimId"}
 
+        approved_stored = session.get(Claim, approved_claim["claimId"])
+        assert approved_stored.status_id == "PAY_IN_FULL"
 
-def test_422_payment_on_account_claim_with_cost_template_file(
-    session, client, auth_token
-):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    def test_201_create_claim_holds_for_manual_review_when_cumulative_approved_claims_exceed_limit(
+        self, session, client, auth_token
+    ):
+        application = session.exec(select(Application)).first()
+        laa_reference = application.laa_reference
+        application.proceeding.merits_decision = MeritsDecision.GRANTED
+        session.add(application.proceeding)
+        session.commit()
 
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {
-                "claimCostTemplateFile": {
-                    "claimCostTemplateFileId": str(uuid.uuid4()),
-                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
-                }
-            }
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-    assert response.json()["detail"]["errorCode"] == "COST_TEMPLATE_FILE_NOT_ALLOWED"
-
-
-def test_422_profit_cost_with_no_cost_fields(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {
-                "totalProfitCostNet": None,
-                "totalProfitCostGross": None,
-                "totalProfitCostVatZero": None,
-            }
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-    assert response.json()["detail"]["errorCode"] == "MISSING_TOTAL_CLAIM_COST"
-
-
-def test_201_create_final_bill_claim_persists_final_bill_details(
-    session, client, auth_token
-):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {
-                "claimType": "FINAL_BILL",
-                "poaTypeId": None,
-                "totalProfitCostNet": None,
-                "inquestOutcomes": ["NATURAL_CAUSES"],
-                "claimCostTemplateFile": {
-                    "claimCostTemplateFileId": str(uuid.uuid4()),
-                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
+        for gross in (7000, 2000):
+            approved = client.post(
+                f"/applications/{laa_reference}/claim",
+                json=_make_request_body(
+                    {"totalProfitCostNet": gross, "totalProfitCostGross": gross}
+                ),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {auth_token}",
                 },
-                "hasCounselBeenPaid": True,
-                "hasAlternativeFunding": False,
-                "hasRecoveryCostsAwarded": True,
-                "financialRecoveryPreviousPreCertificateCosts": 100.00,
-                "financialRecoveryCost": 200.00,
-                "financialRecoveryDamages": 300.00,
-                "financialRecoveryInterest": 50.00,
-                "payingParty": "Test Council",
-                "numberOfCounselInstructed": "2",
-            }
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
+            )
+            assert approved.status_code == 201
+            assert set(approved.json().keys()) == {"claimId"}
 
-    assert response.status_code == 201
-    claim_id = response.json()["claimId"]
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {"totalProfitCostNet": 2000, "totalProfitCostGross": 2000}
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
 
-    stored = session.get(Claim, claim_id)
-    assert stored.has_counsel_been_paid is True
-    assert stored.has_alternative_funding is False
-    assert stored.has_recovery_costs_awarded is True
-    assert stored.financial_recovery_previous_pre_certificate_costs == Decimal("100.00")
-    assert stored.financial_recovery_cost == Decimal("200.00")
-    assert stored.financial_recovery_damages == Decimal("300.00")
-    assert stored.financial_recovery_interest == Decimal("50.00")
-    assert stored.paying_party == "Test Council"
-    assert stored.number_of_counsel_instructed == NumberOfCounselInstructed.TWO
+        assert response.status_code == 201
+        claim = response.json()
+        assert set(claim.keys()) == {"claimId"}
 
+        stored_claim = session.get(Claim, claim["claimId"])
+        assert stored_claim is not None
+        assert stored_claim.status_id == "SUBMITTED"
 
-def test_422_final_bill_claim_without_final_bill_details(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+        decision = session.exec(
+            select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
+        ).first()
+        assert decision is None
 
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {
-                "claimType": "FINAL_BILL",
-                "poaTypeId": None,
-                "inquestOutcomes": ["NATURAL_CAUSES"],
-                "claimCostTemplateFile": {
-                    "claimCostTemplateFileId": str(uuid.uuid4()),
-                    "claimCostTemplateFileName": "claim_cost_template.xlsx",
+    def test_201_create_claim_rejects_when_single_poa_exceeds_cost_limit_even_over_50000(
+        self, session, client, auth_token
+    ):
+        application = session.exec(select(Application)).first()
+        application_proceeding = application.proceeding
+        application_proceeding.proceeding.substantive_cost_limitation = 10000
+        application_proceeding.certificate_start_date = datetime(2000, 1, 1, tzinfo=UTC)
+        application_proceeding.merits_decision = MeritsDecision.GRANTED
+        session.add(application_proceeding.proceeding)
+        session.add(application_proceeding)
+        session.commit()
+
+        response = client.post(
+            f"/applications/{application.laa_reference}/claim",
+            json=_make_request_body(
+                {"totalProfitCostNet": 60000, "totalProfitCostGross": 60000}
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+        claim = response.json()
+        assert set(claim.keys()) == {"claimId", "rejectionReasons"}
+        assert claim["rejectionReasons"] == ["CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT"]
+
+        stored_claim = session.get(Claim, claim["claimId"])
+        assert stored_claim is not None
+        assert stored_claim.status_id == "REJECTED"
+
+        decision = session.exec(
+            select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
+        ).first()
+        assert decision is not None
+        assert decision.decision == "REJECT"
+
+    def test_201_create_claim_holds_for_manual_review_when_poa_over_50000_within_cost_limit(
+        self, session, client, auth_token
+    ):
+        application = session.exec(select(Application)).first()
+        application_proceeding = application.proceeding
+        application_proceeding.proceeding.substantive_cost_limitation = 100000
+        application_proceeding.certificate_start_date = datetime(2000, 1, 1, tzinfo=UTC)
+        application_proceeding.merits_decision = MeritsDecision.GRANTED
+        session.add(application_proceeding.proceeding)
+        session.add(application_proceeding)
+        session.commit()
+
+        response = client.post(
+            f"/applications/{application.laa_reference}/claim",
+            json=_make_request_body(
+                {"totalProfitCostNet": 60000, "totalProfitCostGross": 60000}
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+        claim = response.json()
+        assert set(claim.keys()) == {"claimId"}
+
+        stored_claim = session.get(Claim, claim["claimId"])
+        assert stored_claim is not None
+        assert stored_claim.status_id == "SUBMITTED"
+
+        decision = session.exec(
+            select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
+        ).first()
+        assert decision is None
+
+    def test_201_create_claim_still_rejects_profit_cost_poa_over_50000_when_max_poa_count_exceeded(
+        self, session, client, auth_token
+    ):
+        application = session.exec(select(Application)).first()
+        laa_reference = application.laa_reference
+        application_proceeding = application.proceeding
+        application_proceeding.proceeding.substantive_cost_limitation = 100000
+        application_proceeding.certificate_start_date = datetime(2000, 1, 1, tzinfo=UTC)
+        application_proceeding.merits_decision = MeritsDecision.GRANTED
+        session.add(application_proceeding.proceeding)
+        session.add(application_proceeding)
+        session.commit()
+
+        for _ in range(4):
+            seed_response = client.post(
+                f"/applications/{laa_reference}/claim",
+                json=_make_request_body(
+                    {"totalProfitCostNet": 1, "totalProfitCostGross": 1}
+                ),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {auth_token}",
                 },
-            }
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
+            )
+            assert seed_response.status_code == 201
 
-    assert response.status_code == 422
-    assert response.json()["detail"]["errorCode"] == "MISSING_FINAL_BILL_DETAILS"
-
-
-def test_422_payment_on_account_claim_with_final_bill_details(
-    session, client, auth_token
-):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {
-                "hasAlternativeFunding": False,
-                "hasRecoveryCostsAwarded": True,
-                "financialRecoveryPreviousPreCertificateCosts": 100.00,
-                "financialRecoveryCost": 200.00,
-                "financialRecoveryDamages": 300.00,
-                "financialRecoveryInterest": 50.00,
-                "payingParty": "Test Council",
-            }
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-    assert response.json()["detail"]["errorCode"] == "FINAL_BILL_DETAILS_NOT_ALLOWED"
-
-
-def test_422_payment_on_account_claim_with_counsel_details(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {
-                "hasCounselBeenPaid": True,
-                "numberOfCounselInstructed": "2",
-            }
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-    assert response.json()["detail"]["errorCode"] == "COUNSEL_DETAILS_NOT_ALLOWED"
-
-
-def test_422_final_bill_claim_with_net_total(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_final_bill_body({"totalProfitCostNet": 100}),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-    assert response.json()["detail"]["errorCode"] == "NET_TOTAL_NOT_ALLOWED_FOR_BILL"
-
-
-def test_422_nil_bill_claim_with_net_total(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_nil_bill_body({"totalProfitCostNet": 0}),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-    assert response.json()["detail"]["errorCode"] == "NET_TOTAL_NOT_ALLOWED_FOR_BILL"
-
-
-def test_422_final_bill_claim_with_vat_zero_total(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_final_bill_body({"totalProfitCostVatZero": 100}),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-    assert (
-        response.json()["detail"]["errorCode"] == "VAT_ZERO_TOTAL_NOT_ALLOWED_FOR_BILL"
-    )
-
-
-def test_422_final_bill_claim_without_gross_total(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_final_bill_body({"totalProfitCostGross": None}),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-    assert response.json()["detail"]["errorCode"] == "MISSING_GROSS_TOTAL_FOR_BILL"
-
-
-def test_422_final_bill_claim_with_zero_gross_total(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_final_bill_body({"totalProfitCostGross": 0}),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-    assert response.json()["detail"]["errorCode"] == "FINAL_BILL_GROSS_MUST_BE_POSITIVE"
-
-
-def test_422_nil_bill_claim_with_non_zero_gross_total(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_nil_bill_body({"totalProfitCostGross": 100}),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-    assert response.json()["detail"]["errorCode"] == "NIL_BILL_GROSS_MUST_BE_ZERO"
-
-
-def test_201_final_bill_claim_with_positive_gross_only(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_final_bill_body(),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 201
-    stored_claim = session.get(Claim, response.json()["claimId"])
-    assert stored_claim.total_profit_cost_net is None
-    assert stored_claim.total_profit_cost_gross == Decimal("1200.00")
-
-
-def test_201_nil_bill_claim_with_zero_gross_only(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_nil_bill_body(),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 201
-    stored_claim = session.get(Claim, response.json()["claimId"])
-    assert stored_claim.total_profit_cost_net is None
-    assert stored_claim.total_profit_cost_gross == Decimal("0.00")
-
-
-def test_422_profit_cost_with_net_higher_than_gross(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {"totalProfitCostNet": 1200, "totalProfitCostGross": 1000}
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-    assert response.json()["detail"]["errorCode"] == "NET_TOTAL_HIGHER_THAN_GROSS_TOTAL"
-
-
-def test_201_profit_cost_with_vat_zero_only(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {
-                "totalProfitCostNet": None,
-                "totalProfitCostGross": None,
-                "totalProfitCostVatZero": 500,
-            }
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 201
-
-
-def test_422_profit_cost_mixing_vat_zero_and_net(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {"totalProfitCostNet": 1000, "totalProfitCostVatZero": 500}
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-    assert response.json()["detail"]["errorCode"] == "PROFIT_COST_MIXED_VAT"
-
-
-def test_201_non_profit_cost_with_vat_zero_only_defaults_missing_totals(
-    session, client, auth_token
-):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {
-                "poaTypeId": "EXPERT_COST",
-                "totalProfitCostNet": None,
-                "totalProfitCostGross": None,
-                "totalProfitCostVatZero": "150.00",
-            }
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 201
-    claim = response.json()
-    assert set(claim.keys()) == {"claimId"}
-
-    stored_claim = session.get(Claim, claim["claimId"])
-    assert stored_claim is not None
-    assert Decimal(str(stored_claim.total_profit_cost_net)) == Decimal("0.00")
-    assert Decimal(str(stored_claim.total_profit_cost_gross)) == Decimal("0.00")
-    assert Decimal(str(stored_claim.total_profit_cost_vat_zero)) == Decimal("150.00")
-
-
-def test_422_non_profit_cost_with_no_cost_fields(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {
-                "poaTypeId": "EXPERT_COST",
-                "totalProfitCostNet": None,
-                "totalProfitCostGross": None,
-                "totalProfitCostVatZero": None,
-            }
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-    assert response.json()["detail"]["errorCode"] == "MISSING_NON_PROFIT_COST_TOTAL"
-    assert (
-        response.json()["detail"]["message"]
-        == "Please complete the total value of your claim to continue"
-    )
-
-
-def test_422_non_profit_cost_with_net_higher_than_gross(session, client, auth_token):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {
-                "poaTypeId": "NON_EXPERT_DISBURSEMENT",
-                "totalProfitCostNet": "120.00",
-                "totalProfitCostGross": "100.00",
-                "totalProfitCostVatZero": None,
-            }
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-    assert response.json()["detail"]["errorCode"] == "NET_TOTAL_HIGHER_THAN_GROSS_TOTAL"
-    assert (
-        response.json()["detail"]["message"]
-        == "Net total cannot be higher than the gross total value"
-    )
-
-
-def test_201_create_claim_when_existing_claims_push_application_total_over_limit(
-    session, client, auth_token
-):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {"totalProfitCostNet": 6000, "totalProfitCostGross": 6000}
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {"totalProfitCostNet": 5000, "totalProfitCostGross": 6000}
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 201
-
-
-def test_201_create_claim_auto_reject_returns_reason_and_updates_decision_status(
-    session, client, auth_token
-):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    for _ in range(4):
-        seed_response = client.post(
+        response = client.post(
             f"/applications/{laa_reference}/claim",
             json=_make_request_body(
-                {
-                    "totalProfitCostNet": 1,
-                    "totalProfitCostGross": 1,
-                }
+                {"totalProfitCostNet": 60000, "totalProfitCostGross": 60000}
             ),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {auth_token}",
             },
         )
-        assert seed_response.status_code == 201
 
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {
-                "totalProfitCostNet": 1,
-                "totalProfitCostGross": 1,
-            }
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
+        assert response.status_code == 201
+        claim = response.json()
+        assert set(claim.keys()) == {"claimId", "rejectionReasons"}
+        assert claim["rejectionReasons"] == ["MAX_POA_CLAIMS_EXCEEDED"]
 
-    assert response.status_code == 201
-    claim = response.json()
-    assert set(claim.keys()) == {"claimId", "rejectionReasons"}
-    assert claim["rejectionReasons"] == ["MAX_POA_CLAIMS_EXCEEDED"]
+        stored_claim = session.get(Claim, claim["claimId"])
+        assert stored_claim.status_id == "REJECTED"
 
-    claim_id = claim["claimId"]
-    decision = session.exec(
-        select(ClaimDecision).where(ClaimDecision.claim_id == claim_id)
-    ).first()
-    assert decision is not None
-    assert decision.decision == "REJECT"
-
-    decision_reasons = session.exec(
-        select(DecisionReason).where(
-            DecisionReason.claim_decision_id == decision.claim_decision_id
-        )
-    ).all()
-    assert len(decision_reasons) == 1
-    assert decision_reasons[0].reason_code == "MAX_POA_CLAIMS_EXCEEDED"
+        decision = session.exec(
+            select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
+        ).first()
+        assert decision is not None
+        assert decision.decision == "REJECT"
 
 
-def test_201_create_claim_does_not_count_rejected_profit_cost_poa_towards_max_limit(
-    session, client, auth_token
-):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+class TestCreateClaimRbac:
+    def test_201_create_claim_with_provider_claims_user_app_role(
+        self, session, client, auth_token
+    ):
+        _override_entra_auth_app_roles({"Inquests - Provider Claims User"})
+        laa_reference = session.exec(select(Application)).first().laa_reference
 
-    seeded_claim_ids = []
-    for _ in range(4):
-        seed_response = client.post(
+        response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
-                {
-                    "totalProfitCostNet": 1,
-                    "totalProfitCostGross": 1,
-                }
-            ),
+            json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {auth_token}",
             },
         )
-        assert seed_response.status_code == 201
-        seeded_claim_ids.append(seed_response.json()["claimId"])
+        assert response.status_code == 201
 
-    claim_to_reject = session.get(Claim, seeded_claim_ids[0])
-    claim_to_reject.status_id = "REJECTED"
-    session.add(claim_to_reject)
-    session.commit()
+    def test_403_create_claim_with_app_role_missing_create_permission(
+        self, session, client, auth_token
+    ):
+        _override_entra_auth_app_roles({"Inquests - Provider Application User"})
+        laa_reference = session.exec(select(Application)).first().laa_reference
 
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {
-                "totalProfitCostNet": 1,
-                "totalProfitCostGross": 1,
-            }
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 201
-    claim = response.json()
-    assert set(claim.keys()) == {"claimId"}
-    assert "rejectionReasons" not in claim
-
-    claim_id = claim["claimId"]
-    decision = session.exec(
-        select(ClaimDecision).where(ClaimDecision.claim_id == claim_id)
-    ).first()
-    assert decision is not None
-    assert decision.decision == "PAY_IN_FULL"
-
-
-def test_201_create_claim_that_passes_rejection_rules_auto_approves(
-    session, client, auth_token
-):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {
-                "totalProfitCostNet": 1,
-                "totalProfitCostGross": 1,
-            }
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 201
-    claim = response.json()
-    assert set(claim.keys()) == {"claimId"}
-    assert "rejectionReasons" not in claim
-
-    claim_id = claim["claimId"]
-    stored_claim = session.get(Claim, claim_id)
-    assert stored_claim is not None
-    assert stored_claim.status_id == "PAY_IN_FULL"
-
-    decision = session.exec(
-        select(ClaimDecision).where(ClaimDecision.claim_id == claim_id)
-    ).first()
-    assert decision is not None
-    assert decision.decision == "PAY_IN_FULL"
-
-
-def test_201_create_claim_does_not_auto_approve_when_amount_exceeds_50000(
-    session, client, auth_token
-):
-    application = session.exec(select(Application)).first()
-    application_proceeding = application.proceeding
-    application_proceeding.proceeding.substantive_cost_limitation = 999999
-    application_proceeding.certificate_start_date = datetime(2000, 1, 1, tzinfo=UTC)
-    session.add(application_proceeding.proceeding)
-    session.add(application_proceeding)
-    session.commit()
-
-    response = client.post(
-        f"/applications/{application.laa_reference}/claim",
-        json=_make_request_body(
-            {
-                "totalProfitCostNet": 50000.01,
-                "totalProfitCostGross": 50000.01,
-            }
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 201
-    claim = response.json()
-    assert set(claim.keys()) == {"claimId"}
-
-    stored_claim = session.get(Claim, claim["claimId"])
-    assert stored_claim is not None
-    assert stored_claim.status_id == "SUBMITTED"
-
-    decision = session.exec(
-        select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
-    ).first()
-    assert decision is None
-
-
-def test_201_create_claim_does_not_auto_approve_when_application_status_is_withdrawn(
-    session, client, auth_token
-):
-    application = session.exec(select(Application)).first()
-    application_proceeding = application.proceeding
-    application_proceeding.proceeding.substantive_cost_limitation = 999999
-    application_proceeding.certificate_start_date = datetime(2000, 1, 1, tzinfo=UTC)
-    application.status = "WITHDRAWN"
-    session.add(application_proceeding.proceeding)
-    session.add(application_proceeding)
-    session.add(application)
-    session.commit()
-
-    response = client.post(
-        f"/applications/{application.laa_reference}/claim",
-        json=_make_request_body(
-            {
-                "totalProfitCostNet": 50000,
-                "totalProfitCostGross": 50000,
-            }
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 201
-    claim = response.json()
-    assert set(claim.keys()) == {"claimId"}
-
-    stored_claim = session.get(Claim, claim["claimId"])
-    assert stored_claim is not None
-    assert stored_claim.status_id == "SUBMITTED"
-
-    decision = session.exec(
-        select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
-    ).first()
-    assert decision is None
-
-
-def test_422_create_claim_when_application_not_granted(session, client, auth_token):
-    application = session.exec(select(Application)).first()
-    application.proceeding.merits_decision = MeritsDecision.PENDING
-    session.add(application.proceeding)
-    session.commit()
-
-    response = client.post(
-        f"/applications/{application.laa_reference}/claim",
-        json=_make_request_body(
-            {
-                "totalProfitCostNet": 1000,
-                "totalProfitCostGross": 1200,
-            }
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-    assert response.json()["detail"]["errorCode"] == "APPLICATION_NOT_GRANTED"
-
-    stored_claims = session.exec(
-        select(Claim).where(Claim.application_id == application.application_id)
-    ).all()
-    assert stored_claims == []
-
-
-def test_201_create_claim_auto_reject_returns_multiple_reasons_for_rejection_when_applicable(
-    session, client, auth_token
-):
-    application = session.exec(select(Application)).first()
-    laa_reference = application.laa_reference
-    application.proceeding.merits_decision = MeritsDecision.GRANTED
-    session.add(application.proceeding)
-    session.commit()
-
-    for _ in range(4):
-        seed_response = client.post(
+        response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
-                {
-                    "totalProfitCostNet": 1,
-                    "totalProfitCostGross": 1,
-                }
-            ),
+            json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {auth_token}",
             },
         )
-        assert seed_response.status_code == 201
-        assert set(seed_response.json().keys()) == {"claimId"}
+        assert response.status_code == 403
 
-    application_proceeding = application.proceeding
-    application_proceeding.proceeding.substantive_cost_limitation = 5
-    application_proceeding.certificate_start_date = datetime.now(tz=UTC).date()
-    session.add(application_proceeding.proceeding)
-    session.add(application_proceeding)
-    session.commit()
+    def test_403_create_claim_with_unmapped_app_role(self, session, client, auth_token):
+        _override_entra_auth_app_roles({"Some Unknown Role"})
+        laa_reference = session.exec(select(Application)).first().laa_reference
 
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {
-                "totalProfitCostNet": 10,
-                "totalProfitCostGross": 10,
-            }
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 201
-    claim = response.json()
-    assert set(claim.keys()) == {"claimId", "rejectionReasons"}
-
-    expected_reasons = {
-        "MAX_POA_CLAIMS_EXCEEDED",
-        "CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT",
-        "PROFIT_COST_POA_CLAIM_SUBMITTED_TOO_EARLY",
-    }
-    assert set(claim["rejectionReasons"]) == expected_reasons
-    assert len(claim["rejectionReasons"]) == 3
-
-    claim_id = claim["claimId"]
-    decision = session.exec(
-        select(ClaimDecision).where(ClaimDecision.claim_id == claim_id)
-    ).first()
-    assert decision is not None
-    assert decision.decision == "REJECT"
-
-    decision_reasons = session.exec(
-        select(DecisionReason).where(
-            DecisionReason.claim_decision_id == decision.claim_decision_id
-        )
-    ).all()
-    assert len(decision_reasons) == 3
-    assert {r.reason_code for r in decision_reasons} == expected_reasons
-
-
-def test_201_create_claim_auto_approves_subsequent_claim_after_one_is_rejected(
-    session, client, auth_token
-):
-    application = session.exec(select(Application)).first()
-    laa_reference = application.laa_reference
-    application.proceeding.merits_decision = MeritsDecision.GRANTED
-    session.add(application.proceeding)
-    session.commit()
-
-    rejected_response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {"totalProfitCostNet": 12000, "totalProfitCostGross": 12000}
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-    assert rejected_response.status_code == 201
-    rejected_claim = rejected_response.json()
-    assert "CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT" in rejected_claim["rejectionReasons"]
-    rejected_stored = session.get(Claim, rejected_claim["claimId"])
-    assert rejected_stored.status_id == "REJECTED"
-
-    approved_response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {"totalProfitCostNet": 5000, "totalProfitCostGross": 5000}
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert approved_response.status_code == 201
-    approved_claim = approved_response.json()
-    assert set(approved_claim.keys()) == {"claimId"}
-
-    approved_stored = session.get(Claim, approved_claim["claimId"])
-    assert approved_stored.status_id == "PAY_IN_FULL"
-
-
-def test_201_create_claim_holds_for_manual_review_when_cumulative_approved_claims_exceed_limit(
-    session, client, auth_token
-):
-    application = session.exec(select(Application)).first()
-    laa_reference = application.laa_reference
-    application.proceeding.merits_decision = MeritsDecision.GRANTED
-    session.add(application.proceeding)
-    session.commit()
-
-    for gross in (7000, 2000):
-        approved = client.post(
+        response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
-                {"totalProfitCostNet": gross, "totalProfitCostGross": gross}
-            ),
+            json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {auth_token}",
             },
         )
-        assert approved.status_code == 201
-        assert set(approved.json().keys()) == {"claimId"}
+        assert response.status_code == 403
 
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {"totalProfitCostNet": 2000, "totalProfitCostGross": 2000}
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
+    def test_201_create_claim_with_permission_override(
+        self, session, client, auth_token
+    ):
+        def get_current_user_permissions_override():
+            return {Permission.CLAIM_CREATE}
 
-    assert response.status_code == 201
-    claim = response.json()
-    assert set(claim.keys()) == {"claimId"}
+        api.dependency_overrides[get_current_user_permissions] = (
+            get_current_user_permissions_override
+        )
+        laa_reference = session.exec(select(Application)).first().laa_reference
 
-    stored_claim = session.get(Claim, claim["claimId"])
-    assert stored_claim is not None
-    assert stored_claim.status_id == "SUBMITTED"
-
-    decision = session.exec(
-        select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
-    ).first()
-    assert decision is None
-
-
-def test_201_create_claim_rejects_when_single_poa_exceeds_cost_limit_even_over_50000(
-    session, client, auth_token
-):
-    application = session.exec(select(Application)).first()
-    application_proceeding = application.proceeding
-    application_proceeding.proceeding.substantive_cost_limitation = 10000
-    application_proceeding.certificate_start_date = datetime(2000, 1, 1, tzinfo=UTC)
-    application_proceeding.merits_decision = MeritsDecision.GRANTED
-    session.add(application_proceeding.proceeding)
-    session.add(application_proceeding)
-    session.commit()
-
-    response = client.post(
-        f"/applications/{application.laa_reference}/claim",
-        json=_make_request_body(
-            {"totalProfitCostNet": 60000, "totalProfitCostGross": 60000}
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 201
-    claim = response.json()
-    assert set(claim.keys()) == {"claimId", "rejectionReasons"}
-    assert claim["rejectionReasons"] == ["CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT"]
-
-    stored_claim = session.get(Claim, claim["claimId"])
-    assert stored_claim is not None
-    assert stored_claim.status_id == "REJECTED"
-
-    decision = session.exec(
-        select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
-    ).first()
-    assert decision is not None
-    assert decision.decision == "REJECT"
-
-
-def test_201_create_claim_holds_for_manual_review_when_poa_over_50000_within_cost_limit(
-    session, client, auth_token
-):
-    application = session.exec(select(Application)).first()
-    application_proceeding = application.proceeding
-    application_proceeding.proceeding.substantive_cost_limitation = 100000
-    application_proceeding.certificate_start_date = datetime(2000, 1, 1, tzinfo=UTC)
-    application_proceeding.merits_decision = MeritsDecision.GRANTED
-    session.add(application_proceeding.proceeding)
-    session.add(application_proceeding)
-    session.commit()
-
-    response = client.post(
-        f"/applications/{application.laa_reference}/claim",
-        json=_make_request_body(
-            {"totalProfitCostNet": 60000, "totalProfitCostGross": 60000}
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 201
-    claim = response.json()
-    assert set(claim.keys()) == {"claimId"}
-
-    stored_claim = session.get(Claim, claim["claimId"])
-    assert stored_claim is not None
-    assert stored_claim.status_id == "SUBMITTED"
-
-    decision = session.exec(
-        select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
-    ).first()
-    assert decision is None
-
-
-def test_201_create_claim_still_rejects_profit_cost_poa_over_50000_when_max_poa_count_exceeded(
-    session, client, auth_token
-):
-    application = session.exec(select(Application)).first()
-    laa_reference = application.laa_reference
-    application_proceeding = application.proceeding
-    application_proceeding.proceeding.substantive_cost_limitation = 100000
-    application_proceeding.certificate_start_date = datetime(2000, 1, 1, tzinfo=UTC)
-    application_proceeding.merits_decision = MeritsDecision.GRANTED
-    session.add(application_proceeding.proceeding)
-    session.add(application_proceeding)
-    session.commit()
-
-    for _ in range(4):
-        seed_response = client.post(
+        response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
-                {"totalProfitCostNet": 1, "totalProfitCostGross": 1}
-            ),
+            json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {auth_token}",
             },
         )
-        assert seed_response.status_code == 201
+        assert response.status_code == 201
 
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=_make_request_body(
-            {"totalProfitCostNet": 60000, "totalProfitCostGross": 60000}
-        ),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
+    def test_403_create_claim_with_empty_permission_override(
+        self, session, client, auth_token
+    ):
+        def get_current_user_permissions_override():
+            return set()
 
-    assert response.status_code == 201
-    claim = response.json()
-    assert set(claim.keys()) == {"claimId", "rejectionReasons"}
-    assert claim["rejectionReasons"] == ["MAX_POA_CLAIMS_EXCEEDED"]
+        api.dependency_overrides[get_current_user_permissions] = (
+            get_current_user_permissions_override
+        )
+        laa_reference = session.exec(select(Application)).first().laa_reference
 
-    stored_claim = session.get(Claim, claim["claimId"])
-    assert stored_claim.status_id == "REJECTED"
-
-    decision = session.exec(
-        select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
-    ).first()
-    assert decision is not None
-    assert decision.decision == "REJECT"
-
-
-def test_create_claim_with_missing_claimant_id_returns_422(
-    session, client, auth_token, mock_gov_notify
-):
-    application = session.exec(select(Application)).first()
-    laa_reference = application.laa_reference
-
-    request_body = _make_request_body()
-    request_body["claimantId"] = None
-
-    response = client.post(
-        f"/applications/{laa_reference}/claim",
-        json=request_body,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
-        },
-    )
-
-    assert response.status_code == 422
-    mock_gov_notify.send_claim_submit_confirmation_email.assert_not_called()
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+        assert response.status_code == 403
