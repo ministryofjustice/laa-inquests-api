@@ -73,7 +73,7 @@ urllib3==2.7.0
 uvicorn[standard]==0.35.0
 uvloop==0.21.0
 watchfiles==1.1.0
-weasyprint==69.0
+weasyprint==70.0
 webencodings==0.5.1
 websockets==15.0.1
 zopfli==0.4.3
