@@ -94,7 +94,7 @@ def get_delete_claim_evidence_use_case(
     "/evidence",
     response_model=UploadClaimEvidenceResponse,
     status_code=201,
-    dependencies=[Depends(require_permission(Permission.CLAIM_CREATE))],
+    dependencies=[Depends(require_permission(Permission.CLAIM_EVIDENCE_UPLOAD))],
 )
 async def upload_claim_evidence(
     file: UploadFile = File(...),

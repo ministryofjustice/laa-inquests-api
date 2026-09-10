@@ -3,6 +3,7 @@ import uuid
 from unittest.mock import MagicMock
 
 from app import api
+from app.auth.rbac import Permission, get_current_user_permissions
 from app.routers.claims import get_sds_port
 from tests.helpers.entra_auth import override_entra_auth_app_roles
 
@@ -177,7 +178,7 @@ class TestUploadClaimEvidenceRbac:
 
         assert response.status_code == 201
 
-    def test_403_upload_claim_evidence_with_app_role_missing_create_permission(
+    def test_403_upload_claim_evidence_with_app_role_missing_upload_permission(
         self, client, auth_token
     ):
         override_entra_auth_app_roles({"Inquests - Provider Application User"})
@@ -195,6 +196,28 @@ class TestUploadClaimEvidenceRbac:
         )
 
         assert response.status_code == 403
+
+    def test_201_upload_claim_evidence_with_upload_permission(self, client, auth_token):
+        def get_current_user_permissions_override():
+            return {Permission.CLAIM_EVIDENCE_UPLOAD}
+
+        api.dependency_overrides[get_current_user_permissions] = (
+            get_current_user_permissions_override
+        )
+
+        response = client.post(
+            "/claims/evidence",
+            files={
+                "file": (
+                    "claim_evidence.pdf",
+                    io.BytesIO(b"test content"),
+                    "application/pdf",
+                )
+            },
+            headers={"Authorization": f"Bearer {auth_token}"},
+        )
+
+        assert response.status_code == 201
 
     def test_403_upload_claim_evidence_with_unmapped_app_role(self, client, auth_token):
         override_entra_auth_app_roles({"Some Unknown Role"})

@@ -15,6 +15,7 @@ class Permission(str, Enum):
     CLAIM_READ = "claim:read"
     CLAIM_CREATE = "claim:create"
     CLAIM_DELETE = "claim:delete"
+    CLAIM_EVIDENCE_UPLOAD = "claim-evidence:upload"
 
     CORONERS_LETTER_UPLOAD = "coroners-letter:upload"
     CORONERS_LETTER_DELETE = "coroners-letter:delete"
@@ -33,6 +34,7 @@ ROLE_PERMISSIONS_MAP: dict[str, set[Permission]] = {
         Permission.APPLICATION_SEARCH,
         Permission.CLAIM_CREATE,
         Permission.CLAIM_DELETE,
+        Permission.CLAIM_EVIDENCE_UPLOAD,
         Permission.PROVIDER_OFFICES_READ,
     },
 }
