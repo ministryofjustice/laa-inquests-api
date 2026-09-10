@@ -387,6 +387,71 @@ class TestListProviderOfficesAuth:
         assert response.status_code == 403
 
 
+class TestDeleteCoronersLetterAuth:
+    def test_204_delete_coroners_letter_when_provider_application_user_token(
+        self,
+        session,
+        entra_auth_client,
+    ):
+        coroners_letter = CoronersLetter(
+            sds_file_name="stored-file_abc123.pdf",
+            file_name="coroners_letter.pdf",
+        )
+        session.add(coroners_letter)
+        session.commit()
+        session.refresh(coroners_letter)
+
+        response = entra_auth_client.delete(
+            f"/applications/coroners-letter/{coroners_letter.coroners_letter_id}",
+            headers={"Authorization": "Bearer valid-provider-application-user-token"},
+        )
+
+        assert response.status_code == 204
+
+    def test_403_delete_coroners_letter_when_provider_token_missing_permission(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.delete(
+            f"/applications/coroners-letter/{uuid.uuid4()}",
+            headers={"Authorization": "Bearer valid-provider-claims-user-token"},
+        )
+
+        assert response.status_code == 403
+
+    def test_403_delete_coroners_letter_when_caseworker_token(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.delete(
+            f"/applications/coroners-letter/{uuid.uuid4()}",
+            headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+        )
+
+        assert response.status_code == 403
+
+    def test_401_delete_coroners_letter_returns_401_when_no_authorization_header(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.delete(
+            f"/applications/coroners-letter/{uuid.uuid4()}"
+        )
+
+        assert response.status_code == 401
+
+    def test_401_delete_coroners_letter_when_bearer_token_is_invalid(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.delete(
+            f"/applications/coroners-letter/{uuid.uuid4()}",
+            headers={"Authorization": "Bearer invalid-token"},
+        )
+
+        assert response.status_code == 401
+
+
 def test_200_retrieve_coroners_letter_returns_200_when_caseworker_token(
     session, entra_auth_client
 ):

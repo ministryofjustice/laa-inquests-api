@@ -15,6 +15,7 @@ class Permission(str, Enum):
     CLAIM_CREATE = "claim:create"
 
     CORONERS_LETTER_UPLOAD = "coroners-letter:upload"
+    CORONERS_LETTER_DELETE = "coroners-letter:delete"
 
     PROVIDER_OFFICES_READ = "provider-offices:read"
 
@@ -24,6 +25,7 @@ ROLE_PERMISSIONS_MAP: dict[str, set[Permission]] = {
         Permission.APPLICATION_CREATE,
         Permission.CORONERS_LETTER_UPLOAD,
         Permission.PROVIDER_OFFICES_READ,
+        Permission.CORONERS_LETTER_DELETE,
     },
     "Inquests - Provider Claims User": {
         Permission.CLAIM_CREATE,

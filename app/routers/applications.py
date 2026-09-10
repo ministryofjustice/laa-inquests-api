@@ -82,7 +82,6 @@ from app.routers.dependencies import (
     get_sds_port,
     verify_entra_caseworker_token,
     verify_entra_provider_or_caseworker_token,
-    verify_entra_provider_token,
 )
 from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
@@ -731,7 +730,7 @@ def delete_coroners_letter(
         get_delete_coroners_letter_use_case
     ),
     request: Request = None,
-    _: None = Depends(verify_entra_provider_token),
+    _: None = Depends(require_permission(Permission.CORONERS_LETTER_DELETE)),
 ) -> Response:
     """Delete an uploaded coroner's letter from document storage and the database."""
     try:
