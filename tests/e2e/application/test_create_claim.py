@@ -1,7 +1,6 @@
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
-from unittest.mock import MagicMock
 
 from sqlmodel import select
 
@@ -26,9 +25,8 @@ from app.models.claim.index import (
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.models.notifications.enums import NotificationType
-from app.ports.entra_auth_port import AuthenticatedUser
-from app.routers.dependencies import get_entra_auth_port
 from tests.e2e.factories import create_application_in_db
+from tests.helpers.entra_auth import override_entra_auth_app_roles
 
 
 def _make_request_body(overrides=None):
@@ -126,21 +124,6 @@ def _seed_approved_claim(
     session.add(ClaimDecision(claim_id=claim.claim_id, decision=decision))
     session.commit()
     return claim
-
-
-def _override_entra_auth_app_roles(app_roles):
-    def get_entra_auth_port_override():
-        mock_auth = MagicMock()
-        mock_auth.verify_token.return_value = AuthenticatedUser(
-            firm_code="0A123B",
-            scopes=frozenset({"User.Provider"}),
-            app_roles=frozenset(app_roles),
-            name="Test Name",
-            entra_object_id="some-entra-object-id",
-        )
-        return mock_auth
-
-    api.dependency_overrides[get_entra_auth_port] = get_entra_auth_port_override
 
 
 class TestCreateClaimBaseBehaviour:
@@ -1986,7 +1969,7 @@ class TestCreateClaimRbac:
     def test_201_create_claim_with_provider_claims_user_app_role(
         self, session, client, auth_token
     ):
-        _override_entra_auth_app_roles({"Inquests - Provider Claims User"})
+        override_entra_auth_app_roles({"Inquests - Provider Claims User"})
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -2002,7 +1985,7 @@ class TestCreateClaimRbac:
     def test_403_create_claim_with_app_role_missing_create_permission(
         self, session, client, auth_token
     ):
-        _override_entra_auth_app_roles({"Inquests - Provider Application User"})
+        override_entra_auth_app_roles({"Inquests - Provider Application User"})
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -2016,7 +1999,7 @@ class TestCreateClaimRbac:
         assert response.status_code == 403
 
     def test_403_create_claim_with_unmapped_app_role(self, session, client, auth_token):
-        _override_entra_auth_app_roles({"Some Unknown Role"})
+        override_entra_auth_app_roles({"Some Unknown Role"})
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(

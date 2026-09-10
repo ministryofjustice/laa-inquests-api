@@ -4,9 +4,8 @@ from unittest.mock import MagicMock
 
 from app import api
 from app.auth.rbac import Permission, get_current_user_permissions
-from app.ports.entra_auth_port import AuthenticatedUser
 from app.routers.applications import CoronersLetterUploadError, get_sds_port
-from app.routers.dependencies import get_entra_auth_port
+from tests.helpers.entra_auth import override_entra_auth_app_roles
 
 
 def is_valid_uuid(val):
@@ -93,26 +92,11 @@ class TestUploadCoronersLetter:
         assert response.status_code == 500
 
 
-def _override_entra_auth_app_roles(app_roles):
-    def get_entra_auth_port_override():
-        mock_auth = MagicMock()
-        mock_auth.verify_token.return_value = AuthenticatedUser(
-            firm_code="0A123B",
-            scopes=frozenset({"User.Provider"}),
-            app_roles=frozenset(app_roles),
-            name="Test Name",
-            entra_object_id="some-entra-object-id",
-        )
-        return mock_auth
-
-    api.dependency_overrides[get_entra_auth_port] = get_entra_auth_port_override
-
-
 class TestUploadCoronersLetterRbac:
     def test_201_upload_coroners_letter_with_provider_application_user_app_role(
         self, client, auth_token
     ):
-        _override_entra_auth_app_roles({"Inquests - Provider Application User"})
+        override_entra_auth_app_roles({"Inquests - Provider Application User"})
 
         response = client.post(
             "/applications/upload-coroners-letter",
@@ -130,7 +114,7 @@ class TestUploadCoronersLetterRbac:
     def test_403_upload_coroners_letter_with_app_role_missing_upload_permission(
         self, client, auth_token
     ):
-        _override_entra_auth_app_roles({"Inquests - Provider Claims User"})
+        override_entra_auth_app_roles({"Inquests - Provider Claims User"})
 
         response = client.post(
             "/applications/upload-coroners-letter",
@@ -148,7 +132,7 @@ class TestUploadCoronersLetterRbac:
     def test_403_upload_coroners_letter_with_unmapped_app_role(
         self, client, auth_token
     ):
-        _override_entra_auth_app_roles({"Some.UnknownRole"})
+        override_entra_auth_app_roles({"Some Unknown Role"})
 
         response = client.post(
             "/applications/upload-coroners-letter",

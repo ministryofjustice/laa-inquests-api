@@ -82,7 +82,6 @@ from app.routers.dependencies import (
     get_sds_port,
     verify_entra_caseworker_token,
     verify_entra_provider_or_caseworker_token,
-    verify_entra_provider_token,
 )
 from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
@@ -445,7 +444,11 @@ def get_delete_coroners_letter_use_case(
     )
 
 
-@router.get("/search", response_model=list[ApplicationSearchResponse])
+@router.get(
+    "/search",
+    response_model=list[ApplicationSearchResponse],
+    dependencies=[Depends(require_permission(Permission.APPLICATION_SEARCH))],
+)
 async def search_application(
     laa_reference: str,
     firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
@@ -475,12 +478,15 @@ async def search_application(
         )
 
 
-@router.get("/provider-offices/{firm_id}", response_model=list[ProviderOfficeResponse])
+@router.get(
+    "/provider-offices/{firm_id}",
+    response_model=list[ProviderOfficeResponse],
+    dependencies=[Depends(require_permission(Permission.PROVIDER_OFFICES_READ))],
+)
 async def list_provider_offices(
     firm_id: str,
     use_case: ListProviderOfficesUseCase = Depends(get_list_provider_offices_use_case),
     request: Request = None,
-    _: AuthenticatedUser = Depends(verify_entra_provider_token),
 ) -> list[dict]:
     try:
         provider_offices = use_case.execute(firm_id)
@@ -675,6 +681,7 @@ async def read_all_applications(
     "/upload-coroners-letter",
     response_model=UploadCoronersLetterResponse,
     status_code=201,
+    dependencies=[Depends(require_permission(Permission.CORONERS_LETTER_UPLOAD))],
 )
 async def upload_coroners_letter(
     file: UploadFile = File(...),
@@ -682,7 +689,6 @@ async def upload_coroners_letter(
         get_upload_coroners_letter_use_case
     ),
     request: Request = None,
-    _: None = Depends(require_permission(Permission.CORONERS_LETTER_UPLOAD)),
 ) -> UploadCoronersLetterResponse:
     """Upload a coroner's letter to document storage and return its file ID."""
     contents = await file.read()
@@ -722,14 +728,17 @@ async def upload_coroners_letter(
     )
 
 
-@router.delete("/coroners-letter/{coroners_letter_id}", status_code=204)
+@router.delete(
+    "/coroners-letter/{coroners_letter_id}",
+    status_code=204,
+    dependencies=[Depends(require_permission(Permission.CORONERS_LETTER_DELETE))],
+)
 def delete_coroners_letter(
     coroners_letter_id: uuid.UUID,
     use_case: DeleteCoronersLetterUseCase = Depends(
         get_delete_coroners_letter_use_case
     ),
     request: Request = None,
-    _: None = Depends(verify_entra_provider_token),
 ) -> Response:
     """Delete an uploaded coroner's letter from document storage and the database."""
     try:
@@ -762,12 +771,16 @@ def delete_coroners_letter(
     return Response(status_code=204)
 
 
-@router.post("/", response_model=ApplicationResponse, status_code=201)
+@router.post(
+    "/",
+    response_model=ApplicationResponse,
+    status_code=201,
+    dependencies=[Depends(require_permission(Permission.APPLICATION_CREATE))],
+)
 def create_application(
     request: ApplicationCreate,
     firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
     use_case: CreateApplicationUseCase = Depends(get_create_application_use_case),
-    _: None = Depends(require_permission(Permission.APPLICATION_CREATE)),
 ) -> Application:
     """Creates a new application with proceedings and public bodies."""
     application = use_case.execute(request, firm_code)
@@ -778,13 +791,13 @@ def create_application(
     "/{laa_reference}/claim",
     response_model=ClaimResponse,
     status_code=201,
+    dependencies=[Depends(require_permission(Permission.CLAIM_CREATE))],
 )
 def create_claim(
     laa_reference: str,
     request: ClaimCreate,
     firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
     use_case: CreateClaimUseCase = Depends(get_create_claim_use_case),
-    _: None = Depends(require_permission(Permission.CLAIM_CREATE)),
 ) -> ClaimResponse:
     """Creates a new claim against an application."""
     try:

@@ -1,5 +1,4 @@
 import uuid
-from unittest.mock import MagicMock
 
 import pytest
 from sqlmodel import select
@@ -10,8 +9,7 @@ from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
-from app.ports.entra_auth_port import AuthenticatedUser
-from app.routers.dependencies import get_entra_auth_port
+from tests.helpers.entra_auth import override_entra_auth_app_roles
 
 pytestmark = pytest.mark.usefixtures("mock_gov_notify")
 
@@ -58,21 +56,6 @@ def _make_request_body(client_overrides=None):
             "emailAddress": "provider@example.com",
         },
     }
-
-
-def _override_entra_auth_app_roles(app_roles):
-    def get_entra_auth_port_override():
-        mock_auth = MagicMock()
-        mock_auth.verify_token.return_value = AuthenticatedUser(
-            firm_code="0A123B",
-            scopes=frozenset({"User.Provider"}),
-            app_roles=frozenset(app_roles),
-            name="Test Name",
-            entra_object_id="some-entra-object-id",
-        )
-        return mock_auth
-
-    api.dependency_overrides[get_entra_auth_port] = get_entra_auth_port_override
 
 
 class TestCreateApplication:
@@ -519,7 +502,7 @@ class TestCreateApplicationRbac:
     def test_201_create_application_with_provider_application_user_app_role(
         self, client, auth_token
     ):
-        _override_entra_auth_app_roles({"Inquests - Provider Application User"})
+        override_entra_auth_app_roles({"Inquests - Provider Application User"})
 
         response = client.post(
             "/applications",
@@ -534,7 +517,7 @@ class TestCreateApplicationRbac:
     def test_403_create_application_with_app_role_missing_create_permission(
         self, client, auth_token
     ):
-        _override_entra_auth_app_roles({"Inquests - Provider Claims User"})
+        override_entra_auth_app_roles({"Inquests - Provider Claims User"})
 
         response = client.post(
             "/applications",
@@ -547,7 +530,7 @@ class TestCreateApplicationRbac:
         assert response.status_code == 403
 
     def test_403_create_application_with_unmapped_app_role(self, client, auth_token):
-        _override_entra_auth_app_roles({"Some Unknown Role"})
+        override_entra_auth_app_roles({"Some Unknown Role"})
 
         response = client.post(
             "/applications",

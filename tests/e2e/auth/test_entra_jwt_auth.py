@@ -7,47 +7,13 @@ from sqlmodel import select
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application, CoronersLetter
 from app.models.claim.index import ClaimEvidence
-
-
-def _create_application_payload():
-    return {
-        "coronersLetterId": str(uuid.uuid4()),
-        "proceeding": {"proceedingId": "IQOT"},
-        "client": {
-            "clientFirstName": "Test",
-            "clientLastName": "Surname",
-            "dateOfBirth": "1990-01-01",
-            "nationalInsuranceNumber": "AB12345A",
-            "correspondenceAddressSource": "USE_SPECIFIED_ADDRESS",
-            "correspondenceAddress": {
-                "addressLine1": "2 Example Lane",
-                "townOrCity": "London",
-                "postcode": "SW1A 1AA",
-            },
-            "hasNoFixedAbode": False,
-            "homeAddress": {
-                "addressLine1": "1 Example Lane",
-                "addressLine2": "Flat 2",
-                "townOrCity": "London",
-                "county": "Greater London",
-                "postcode": "SW1A 1AA",
-            },
-        },
-        "publicBodies": [{"publicBodyId": "Department for Transport"}],
-        "deceased": {
-            "deceasedFirstName": "Test",
-            "deceasedLastName": "Surname",
-            "deceasedDateOfBirth": "2000-01-01",
-            "deceasedDateOfDeath": "2025-01-01",
-            "coronersReference": "COR-2025-001",
-            "furtherInformation": "Further details to be confirmed",
-            "clientRelationshipToDeceased": "guardian",
-        },
-        "provider": {
-            "officeId": "0U651L",
-            "emailAddress": "provider@example.com",
-        },
-    }
+from tests.helpers.application_payloads import create_application_payload
+from tests.helpers.entra_auth import (
+    override_entra_auth_port_with_provider_no_role_token,
+)
+from tests.helpers.provider_details import (
+    override_provider_details_port_with_provider_offices,
+)
 
 
 def test_200_read_all_applications_returns_200_when_valid_entra_token(
@@ -128,7 +94,7 @@ def test_201_create_application_returns_201_when_provider_application_user_token
 ):
     response = entra_auth_client.post(
         "/applications",
-        json=_create_application_payload(),
+        json=create_application_payload(),
         headers={
             "Content-Type": "application/json",
             "Authorization": "Bearer valid-provider-application-user-token",
@@ -143,7 +109,7 @@ def test_403_create_application_returns_403_when_provider_token_missing_permissi
 ):
     response = entra_auth_client.post(
         "/applications",
-        json=_create_application_payload(),
+        json=create_application_payload(),
         headers={
             "Content-Type": "application/json",
             "Authorization": "Bearer valid-provider-claims-user-token",
@@ -158,7 +124,7 @@ def test_403_create_application_returns_403_when_caseworker_token(
 ):
     response = entra_auth_client.post(
         "/applications",
-        json=_create_application_payload(),
+        json=create_application_payload(),
         headers={
             "Content-Type": "application/json",
             "Authorization": "Bearer valid-caseworker-entra-token",
@@ -302,55 +268,399 @@ def test_403_grant_decision_returns_403_when_provider_token(
     assert response.status_code == 403
 
 
-@pytest.mark.parametrize(
-    "provider_token",
-    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
-)
-def test_200_search_application_returns_200_when_provider_token(
-    entra_auth_client, provider_token
-):
-    response = entra_auth_client.get(
-        "/applications/search",
-        params={"laa_reference": "1"},
-        headers={"Authorization": f"Bearer {provider_token}"},
+class TestSearchApplicationAuth:
+    def test_200_search_application_returns_200_when_provider_claims_user_token(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.get(
+            "/applications/search",
+            params={"laa_reference": "1"},
+            headers={"Authorization": "Bearer valid-provider-claims-user-token"},
+        )
+
+        assert response.status_code == 200
+
+    def test_403_search_application_returns_403_when_provider_application_user_token(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.get(
+            "/applications/search",
+            params={"laa_reference": "1"},
+            headers={"Authorization": "Bearer valid-provider-application-user-token"},
+        )
+
+        assert response.status_code == 403
+
+    def test_403_search_application_returns_403_when_provider_token_missing_permission(
+        self,
+        entra_auth_client,
+    ):
+        override_entra_auth_port_with_provider_no_role_token()
+
+        response = entra_auth_client.get(
+            "/applications/search",
+            params={"laa_reference": "1"},
+            headers={"Authorization": "Bearer valid-provider-no-role-token"},
+        )
+
+        assert response.status_code == 403
+
+    def test_401_search_application_returns_401_when_no_authorization_header(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.get(
+            "/applications/search",
+            params={"laa_reference": "1"},
+        )
+
+        assert response.status_code == 401
+
+    def test_401_search_application_returns_401_when_bearer_token_is_invalid(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.get(
+            "/applications/search",
+            params={"laa_reference": "1"},
+            headers={"Authorization": "Bearer invalid-token"},
+        )
+
+        assert response.status_code == 401
+
+    def test_403_search_application_returns_403_when_caseworker_token(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.get(
+            "/applications/search",
+            params={"laa_reference": "1"},
+            headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+        )
+
+        assert response.status_code == 403
+
+
+class TestUploadClaimEvidenceAuth:
+    def test_201_upload_claim_evidence_when_provider_claims_user_token(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.post(
+            "/claims/evidence",
+            files={
+                "file": (
+                    "claim_evidence.pdf",
+                    io.BytesIO(b"test content"),
+                    "application/pdf",
+                )
+            },
+            headers={"Authorization": "Bearer valid-provider-claims-user-token"},
+        )
+
+        assert response.status_code == 201
+
+    def test_403_upload_claim_evidence_when_provider_application_user_token(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.post(
+            "/claims/evidence",
+            files={
+                "file": (
+                    "claim_evidence.pdf",
+                    io.BytesIO(b"test content"),
+                    "application/pdf",
+                )
+            },
+            headers={"Authorization": "Bearer valid-provider-application-user-token"},
+        )
+
+        assert response.status_code == 403
+
+    def test_403_upload_claim_evidence_when_provider_token_missing_permission(
+        self,
+        entra_auth_client,
+    ):
+        override_entra_auth_port_with_provider_no_role_token()
+
+        response = entra_auth_client.post(
+            "/claims/evidence",
+            files={
+                "file": (
+                    "claim_evidence.pdf",
+                    io.BytesIO(b"test content"),
+                    "application/pdf",
+                )
+            },
+            headers={"Authorization": "Bearer valid-provider-no-role-token"},
+        )
+
+        assert response.status_code == 403
+
+    def test_403_upload_claim_evidence_when_caseworker_token(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.post(
+            "/claims/evidence",
+            files={
+                "file": (
+                    "claim_evidence.pdf",
+                    io.BytesIO(b"test content"),
+                    "application/pdf",
+                )
+            },
+            headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+        )
+
+        assert response.status_code == 403
+
+    def test_401_upload_claim_evidence_when_no_authorization_header(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.post(
+            "/claims/evidence",
+            files={
+                "file": (
+                    "claim_evidence.pdf",
+                    io.BytesIO(b"test content"),
+                    "application/pdf",
+                )
+            },
+        )
+
+        assert response.status_code == 401
+
+    def test_401_upload_claim_evidence_when_bearer_token_is_invalid(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.post(
+            "/claims/evidence",
+            files={
+                "file": (
+                    "claim_evidence.pdf",
+                    io.BytesIO(b"test content"),
+                    "application/pdf",
+                )
+            },
+            headers={"Authorization": "Bearer invalid-token"},
+        )
+
+        assert response.status_code == 401
+
+
+class TestDeleteClaimEvidenceAuth:
+    def test_204_delete_claim_evidence_when_provider_claims_user_token(
+        self,
+        session,
+        entra_auth_client,
+    ):
+        claim_evidence = ClaimEvidence(
+            sds_file_name="stored-claim-evidence_abc123.pdf",
+            file_name="claim_evidence.pdf",
+        )
+        session.add(claim_evidence)
+        session.commit()
+        session.refresh(claim_evidence)
+
+        response = entra_auth_client.delete(
+            f"/claims/{claim_evidence.claim_evidence_id}",
+            headers={"Authorization": "Bearer valid-provider-claims-user-token"},
+        )
+
+        assert response.status_code == 204
+
+    def test_403_delete_claim_evidence_when_provider_application_user_token(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.delete(
+            f"/claims/{uuid.uuid4()}",
+            headers={"Authorization": "Bearer valid-provider-application-user-token"},
+        )
+
+        assert response.status_code == 403
+
+    def test_403_delete_claim_evidence_when_provider_token_missing_permission(
+        self,
+        entra_auth_client,
+    ):
+        override_entra_auth_port_with_provider_no_role_token()
+
+        response = entra_auth_client.delete(
+            f"/claims/{uuid.uuid4()}",
+            headers={"Authorization": "Bearer valid-provider-no-role-token"},
+        )
+
+        assert response.status_code == 403
+
+    def test_403_delete_claim_evidence_when_caseworker_token(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.delete(
+            f"/claims/{uuid.uuid4()}",
+            headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+        )
+
+        assert response.status_code == 403
+
+    def test_401_delete_claim_evidence_when_no_authorization_header(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.delete(f"/claims/{uuid.uuid4()}")
+
+        assert response.status_code == 401
+
+    def test_401_delete_claim_evidence_when_bearer_token_is_invalid(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.delete(
+            f"/claims/{uuid.uuid4()}",
+            headers={"Authorization": "Bearer invalid-token"},
+        )
+
+        assert response.status_code == 401
+
+
+class TestListProviderOfficesAuth:
+    @pytest.mark.parametrize(
+        "provider_token",
+        ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
     )
+    def test_200_list_provider_offices_returns_200_when_provider_token(
+        self, entra_auth_client, provider_token
+    ):
+        override_provider_details_port_with_provider_offices()
 
-    assert response.status_code == 200
+        response = entra_auth_client.get(
+            "/applications/provider-offices/123",
+            headers={"Authorization": f"Bearer {provider_token}"},
+        )
+
+        assert response.status_code == 200
+
+    def test_401_list_provider_offices_returns_401_when_no_authorization_header(
+        self,
+        entra_auth_client,
+    ):
+        override_provider_details_port_with_provider_offices()
+
+        response = entra_auth_client.get("/applications/provider-offices/123")
+
+        assert response.status_code == 401
+
+    def test_401_list_provider_offices_returns_401_when_bearer_token_is_invalid(
+        self,
+        entra_auth_client,
+    ):
+        override_provider_details_port_with_provider_offices()
+
+        response = entra_auth_client.get(
+            "/applications/provider-offices/123",
+            headers={"Authorization": "Bearer invalid-token"},
+        )
+
+        assert response.status_code == 401
+
+    def test_403_list_provider_offices_returns_403_when_caseworker_token(
+        self,
+        entra_auth_client,
+    ):
+        override_provider_details_port_with_provider_offices()
+
+        response = entra_auth_client.get(
+            "/applications/provider-offices/123",
+            headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+        )
+
+        assert response.status_code == 403
+
+    def test_403_list_provider_offices_returns_403_when_provider_token_missing_permission(
+        self,
+        entra_auth_client,
+    ):
+        override_provider_details_port_with_provider_offices()
+        override_entra_auth_port_with_provider_no_role_token()
+
+        response = entra_auth_client.get(
+            "/applications/provider-offices/123",
+            headers={"Authorization": "Bearer valid-provider-no-role-token"},
+        )
+
+        assert response.status_code == 403
 
 
-def test_401_search_application_returns_401_when_no_authorization_header(
-    entra_auth_client,
-):
-    response = entra_auth_client.get(
-        "/applications/search",
-        params={"laa_reference": "1"},
-    )
+class TestDeleteCoronersLetterAuth:
+    def test_204_delete_coroners_letter_when_provider_application_user_token(
+        self,
+        session,
+        entra_auth_client,
+    ):
+        coroners_letter = CoronersLetter(
+            sds_file_name="stored-file_abc123.pdf",
+            file_name="coroners_letter.pdf",
+        )
+        session.add(coroners_letter)
+        session.commit()
+        session.refresh(coroners_letter)
 
-    assert response.status_code == 401
+        response = entra_auth_client.delete(
+            f"/applications/coroners-letter/{coroners_letter.coroners_letter_id}",
+            headers={"Authorization": "Bearer valid-provider-application-user-token"},
+        )
 
+        assert response.status_code == 204
 
-def test_401_search_application_returns_401_when_bearer_token_is_invalid(
-    entra_auth_client,
-):
-    response = entra_auth_client.get(
-        "/applications/search",
-        params={"laa_reference": "1"},
-        headers={"Authorization": "Bearer invalid-token"},
-    )
+    def test_403_delete_coroners_letter_when_provider_token_missing_permission(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.delete(
+            f"/applications/coroners-letter/{uuid.uuid4()}",
+            headers={"Authorization": "Bearer valid-provider-claims-user-token"},
+        )
 
-    assert response.status_code == 401
+        assert response.status_code == 403
 
+    def test_403_delete_coroners_letter_when_caseworker_token(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.delete(
+            f"/applications/coroners-letter/{uuid.uuid4()}",
+            headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+        )
 
-def test_403_search_application_returns_403_when_caseworker_token(
-    entra_auth_client,
-):
-    response = entra_auth_client.get(
-        "/applications/search",
-        params={"laa_reference": "1"},
-        headers={"Authorization": "Bearer valid-caseworker-entra-token"},
-    )
+        assert response.status_code == 403
 
-    assert response.status_code == 403
+    def test_401_delete_coroners_letter_returns_401_when_no_authorization_header(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.delete(
+            f"/applications/coroners-letter/{uuid.uuid4()}"
+        )
+
+        assert response.status_code == 401
+
+    def test_401_delete_coroners_letter_when_bearer_token_is_invalid(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.delete(
+            f"/applications/coroners-letter/{uuid.uuid4()}",
+            headers={"Authorization": "Bearer invalid-token"},
+        )
+
+        assert response.status_code == 401
 
 
 def test_200_retrieve_coroners_letter_returns_200_when_caseworker_token(

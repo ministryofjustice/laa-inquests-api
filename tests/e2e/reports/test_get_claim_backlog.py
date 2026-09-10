@@ -7,7 +7,7 @@ from app.models.application.index import Application
 from app.models.claim.enums import ClaimStatus
 from app.models.claim.index import Claim
 from tests.e2e.factories import create_claim_in_db
-from tests.helpers import parse_csv_fieldnames, parse_csv_rows
+from tests.helpers.csv_helpers import parse_csv_fieldnames, parse_csv_rows
 
 CLAIMS_BACKLOG_REPORT_HEADERS = [
     "Case reference",

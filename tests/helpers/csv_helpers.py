@@ -8,4 +8,4 @@ def parse_csv_rows(content: str) -> list[dict[str, str]]:
 
 def parse_csv_fieldnames(content: str) -> list[str]:
     reader = csv.DictReader(io.StringIO(content))
-    return reader.fieldnames or []
+    return list(reader.fieldnames or [])
