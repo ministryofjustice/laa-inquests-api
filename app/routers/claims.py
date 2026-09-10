@@ -94,12 +94,12 @@ def get_delete_claim_evidence_use_case(
     "/evidence",
     response_model=UploadClaimEvidenceResponse,
     status_code=201,
+    dependencies=[Depends(require_permission(Permission.CLAIM_CREATE))],
 )
 async def upload_claim_evidence(
     file: UploadFile = File(...),
     use_case: UploadClaimEvidenceUseCase = Depends(get_upload_claim_evidence_use_case),
     request: Request = None,
-    _: None = Depends(require_permission(Permission.CLAIM_CREATE)),
 ) -> UploadClaimEvidenceResponse:
     """Upload claim evidence to document storage and return its file ID."""
     contents = await file.read()
@@ -204,12 +204,15 @@ def retrieve_claim_evidence(
     )
 
 
-@router.delete("/{claim_evidence_id}", status_code=204)
+@router.delete(
+    "/{claim_evidence_id}",
+    status_code=204,
+    dependencies=[Depends(require_permission(Permission.CLAIM_DELETE))],
+)
 def delete_claim_evidence(
     claim_evidence_id: uuid.UUID,
     use_case: DeleteClaimEvidenceUseCase = Depends(get_delete_claim_evidence_use_case),
     request: Request = None,
-    _: None = Depends(require_permission(Permission.CLAIM_DELETE)),
 ) -> Response:
     try:
         use_case.execute(claim_evidence_id)
