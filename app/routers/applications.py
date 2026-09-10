@@ -475,14 +475,15 @@ async def search_application(
         )
 
 
-@router.get("/provider-offices/{firm_id}", response_model=list[ProviderOfficeResponse])
+@router.get(
+    "/provider-offices/{firm_id}",
+    response_model=list[ProviderOfficeResponse],
+    dependencies=[Depends(require_permission(Permission.PROVIDER_OFFICES_READ))],
+)
 async def list_provider_offices(
     firm_id: str,
     use_case: ListProviderOfficesUseCase = Depends(get_list_provider_offices_use_case),
     request: Request = None,
-    _: AuthenticatedUser = Depends(
-        require_permission(Permission.PROVIDER_OFFICES_READ)
-    ),
 ) -> list[dict]:
     try:
         provider_offices = use_case.execute(firm_id)
