@@ -138,7 +138,7 @@ def test_creates_pay_in_full_decision_amount_updates_status_and_commits():
             profit_cost_gross=Decimal("1200.00"),
             profit_cost_vat_zero=None,
             disbursement_net=Decimal("100.00"),
-            disbursement_gross=Decimal("120.00"),
+            disbursement_gross=Decimal("200.00"),
             disbursement_vat_zero=Decimal("50.00"),
         )
     )
@@ -153,7 +153,7 @@ def test_creates_pay_in_full_decision_amount_updates_status_and_commits():
         profit_cost_gross=Decimal("1200.00"),
         profit_cost_vat_zero=None,
         disbursement_net=Decimal("100.00"),
-        disbursement_gross=Decimal("120.00"),
+        disbursement_gross=Decimal("200.00"),
         disbursement_vat_zero=Decimal("50.00"),
     )
     update_status_port.update_claim_status.assert_called_once_with(
@@ -173,7 +173,7 @@ def test_creates_pay_in_full_decision_amount_updates_status_and_commits():
             "profit_cost_gross": "1200.00",
             "profit_cost_vat_zero": None,
             "disbursement_net": "100.00",
-            "disbursement_gross": "120.00",
+            "disbursement_gross": "200.00",
             "disbursement_vat_zero": "50.00",
         },
     )
@@ -201,6 +201,8 @@ def test_history_event_not_created_when_update_claim_status_fails():
                 5,
                 profit_cost_net=Decimal("1000.00"),
                 profit_cost_gross=Decimal("1200.00"),
+                disbursement_net=Decimal("100.00"),
+                disbursement_gross=Decimal("200.00"),
             )
         )
 
@@ -237,6 +239,8 @@ def test_pay_in_full_claim_not_committed_when_create_history_event_fails():
                 5,
                 profit_cost_net=Decimal("1000.00"),
                 profit_cost_gross=Decimal("1200.00"),
+                disbursement_net=Decimal("100.00"),
+                disbursement_gross=Decimal("200.00"),
             )
         )
 
@@ -263,5 +267,30 @@ def test_raises_invalid_claim_error_when_profit_cost_totals_invalid():
         )
 
     assert exc.value.code == ClaimErrorCode.MISSING_GROSS_TOTAL_WHEN_NET_ENTERED
+    create_decision_port.create_claim_decision.assert_not_called()
+    update_status_port.commit.assert_not_called()
+
+
+def test_raises_invalid_claim_error_when_disbursement_totals_invalid():
+    (
+        use_case,
+        create_decision_port,
+        _,
+        update_status_port,
+        _,
+    ) = _build_use_case(claim=_claim(claim_id=5), application=_application())
+
+    with pytest.raises(InvalidClaimError) as exc:
+        use_case.execute(
+            PayInFullClaimCommand(
+                "1",
+                5,
+                profit_cost_net=Decimal("1000.00"),
+                profit_cost_gross=Decimal("1200.00"),
+                disbursement_net=Decimal("100.00"),
+            )
+        )
+
+    assert exc.value.code == ClaimErrorCode.MISSING_DISBURSEMENT_GROSS_WHEN_NET_ENTERED
     create_decision_port.create_claim_decision.assert_not_called()
     update_status_port.commit.assert_not_called()

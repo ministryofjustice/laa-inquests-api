@@ -17,7 +17,7 @@ def _pay_in_full_payload(overrides=None):
         "profitCostGross": "1200.00",
         "profitCostVatZero": None,
         "disbursementNet": "100.00",
-        "disbursementGross": "120.00",
+        "disbursementGross": "200.00",
         "disbursementVatZero": "50.00",
     }
     if overrides is not None:
@@ -87,7 +87,7 @@ def test_204_pay_in_full_claim_creates_decision_amount_and_updates_status(
     assert amount.profit_cost_gross == Decimal("1200.00")
     assert amount.profit_cost_vat_zero is None
     assert amount.disbursement_net == Decimal("100.00")
-    assert amount.disbursement_gross == Decimal("120.00")
+    assert amount.disbursement_gross == Decimal("200.00")
     assert amount.disbursement_vat_zero == Decimal("50.00")
 
     session.refresh(claim)
@@ -143,7 +143,7 @@ def test_204_pay_in_full_claim_persists_partial_amounts_as_null(
                 "profitCostVatZero": "500.00",
                 "disbursementNet": None,
                 "disbursementGross": None,
-                "disbursementVatZero": None,
+                "disbursementVatZero": "50.00",
             }
         ),
         headers={
@@ -167,7 +167,7 @@ def test_204_pay_in_full_claim_persists_partial_amounts_as_null(
     assert amount.profit_cost_vat_zero == Decimal("500.00")
     assert amount.disbursement_net is None
     assert amount.disbursement_gross is None
-    assert amount.disbursement_vat_zero is None
+    assert amount.disbursement_vat_zero == Decimal("50.00")
 
 
 def test_204_pay_in_full_claim_allows_re_deciding_and_creates_new_decision_and_amount(
@@ -398,6 +398,130 @@ def test_204_pay_in_full_claim_allows_vat_zero_only(session, client, auth_token)
             "profitCostNet": None,
             "profitCostGross": None,
             "profitCostVatZero": "500.00",
+        },
+    )
+
+    assert response.status_code == 204
+
+
+def test_422_pay_in_full_claim_when_all_disbursement_totals_missing(
+    session, client, auth_token
+):
+    response = _post_pay_in_full(
+        session,
+        client,
+        auth_token,
+        {
+            "disbursementNet": None,
+            "disbursementGross": None,
+            "disbursementVatZero": None,
+        },
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["errorCode"] == "MISSING_DISBURSEMENT_TOTAL"
+    assert detail["message"] == "Enter the total of the claim to continue"
+
+
+def test_422_pay_in_full_claim_when_disbursement_net_without_gross(
+    session, client, auth_token
+):
+    response = _post_pay_in_full(
+        session,
+        client,
+        auth_token,
+        {"disbursementGross": None, "disbursementVatZero": None},
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["errorCode"] == "MISSING_DISBURSEMENT_GROSS_WHEN_NET_ENTERED"
+    assert detail["message"] == "Enter the gross total of the claim"
+
+
+def test_422_pay_in_full_claim_when_disbursement_gross_without_net(
+    session, client, auth_token
+):
+    response = _post_pay_in_full(
+        session,
+        client,
+        auth_token,
+        {"disbursementNet": None, "disbursementVatZero": None},
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["errorCode"] == "MISSING_DISBURSEMENT_NET_WHEN_GROSS_ENTERED"
+    assert (
+        detail["message"] == "Enter the net total for disbursement costs excluding VAT"
+    )
+
+
+def test_422_pay_in_full_claim_when_disbursement_gross_not_greater_than_total(
+    session, client, auth_token
+):
+    response = _post_pay_in_full(
+        session,
+        client,
+        auth_token,
+        {
+            "disbursementNet": "100.00",
+            "disbursementGross": "120.00",
+            "disbursementVatZero": "50.00",
+        },
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["errorCode"] == "DISBURSEMENT_GROSS_NOT_GREATER_THAN_TOTAL"
+    assert (
+        detail["message"]
+        == "The gross total must be greater than the 0% VAT and net total combined"
+    )
+
+
+def test_422_pay_in_full_claim_when_disbursement_has_more_than_two_decimal_places(
+    session, client, auth_token
+):
+    response = _post_pay_in_full(
+        session,
+        client,
+        auth_token,
+        {"disbursementNet": "100.001"},
+    )
+
+    assert response.status_code == 422
+
+
+def test_204_pay_in_full_claim_allows_disbursement_vat_zero_only(
+    session, client, auth_token
+):
+    response = _post_pay_in_full(
+        session,
+        client,
+        auth_token,
+        {
+            "disbursementNet": None,
+            "disbursementGross": None,
+            "disbursementVatZero": "50.00",
+        },
+    )
+
+    assert response.status_code == 204
+
+
+def test_204_pay_in_full_claim_allows_disbursement_vat_zero_net_and_gross(
+    session, client, auth_token
+):
+    response = _post_pay_in_full(
+        session,
+        client,
+        auth_token,
+        {
+            "disbursementNet": "100.00",
+            "disbursementGross": "200.00",
+            "disbursementVatZero": "50.00",
         },
     )
 

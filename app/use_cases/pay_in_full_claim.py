@@ -70,6 +70,9 @@ class PayInFullClaimUseCase:
                 profit_cost_net=command.profit_cost_net,
                 profit_cost_gross=command.profit_cost_gross,
                 profit_cost_vat_zero=command.profit_cost_vat_zero,
+                disbursement_net=command.disbursement_net,
+                disbursement_gross=command.disbursement_gross,
+                disbursement_vat_zero=command.disbursement_vat_zero,
             ).validate()
         except ClaimValidationError as e:
             raise InvalidClaimError(code=e.code, message=e.message) from e

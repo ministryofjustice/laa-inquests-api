@@ -308,6 +308,9 @@ class PayInFullClaimRequest(BaseModel):
         "profit_cost_net",
         "profit_cost_gross",
         "profit_cost_vat_zero",
+        "disbursement_net",
+        "disbursement_gross",
+        "disbursement_vat_zero",
     )
     @classmethod
     def _validate_two_decimal_places(cls, value: Decimal | None) -> Decimal | None:
