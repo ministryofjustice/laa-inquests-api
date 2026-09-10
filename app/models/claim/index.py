@@ -148,6 +148,33 @@ class DecisionReason(SQLModel, table=True):
     claim_decision: ClaimDecision = Relationship(back_populates="decision_reasons")
 
 
+class ClaimDecisionAmount(SQLModel, table=True):
+    __tablename__ = "claim_decision_amount"
+
+    claim_decision_amount_id: int | None = Field(default=None, primary_key=True)
+    claim_decision_id: int = Field(
+        foreign_key="claim_decision.claim_decision_id", unique=True
+    )
+    profit_cost_net: Decimal | None = Field(
+        default=None, sa_column=Column(Numeric(10, 2), nullable=True)
+    )
+    profit_cost_gross: Decimal | None = Field(
+        default=None, sa_column=Column(Numeric(10, 2), nullable=True)
+    )
+    profit_cost_vat_zero: Decimal | None = Field(
+        default=None, sa_column=Column(Numeric(10, 2), nullable=True)
+    )
+    disbursement_net: Decimal | None = Field(
+        default=None, sa_column=Column(Numeric(10, 2), nullable=True)
+    )
+    disbursement_gross: Decimal | None = Field(
+        default=None, sa_column=Column(Numeric(10, 2), nullable=True)
+    )
+    disbursement_vat_zero: Decimal | None = Field(
+        default=None, sa_column=Column(Numeric(10, 2), nullable=True)
+    )
+
+
 class ClaimEvidence(SQLModel, table=True):
     __tablename__ = "claim_evidence"
     claim_evidence_id: uuid.UUID = Field(
@@ -253,6 +280,29 @@ class RejectClaimRequest(BaseModel):
         from_attributes=True,
     )
     justification: str = PydanticField(examples=["Rejected following manual review."])
+
+
+# REQUEST BODY -- Pay in full
+class PayInFullClaimRequest(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+    profit_cost_net: Decimal | None = PydanticField(default=None, examples=["1000.00"])
+    profit_cost_gross: Decimal | None = PydanticField(
+        default=None, examples=["1200.00"]
+    )
+    profit_cost_vat_zero: Decimal | None = PydanticField(
+        default=None, examples=["500.00"]
+    )
+    disbursement_net: Decimal | None = PydanticField(default=None, examples=["100.00"])
+    disbursement_gross: Decimal | None = PydanticField(
+        default=None, examples=["120.00"]
+    )
+    disbursement_vat_zero: Decimal | None = PydanticField(
+        default=None, examples=["50.00"]
+    )
 
 
 # RESPONSE BODY
