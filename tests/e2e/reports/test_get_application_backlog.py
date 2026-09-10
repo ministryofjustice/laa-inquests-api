@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
-from sqlmodel import select
 import pytest
+from sqlmodel import select
 
 from app.domain.constants.report_csv_headers import APPLICATION_BACKLOG_REPORT_HEADERS
 from app.models.application.enums import MeritsDecision
