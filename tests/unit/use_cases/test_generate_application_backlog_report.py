@@ -13,7 +13,7 @@ from app.use_cases.exceptions import (
 from app.use_cases.generate_application_backlog_report import (
     GenerateApplicationBacklogReportUseCase,
 )
-from tests.helpers import parse_csv_rows
+from tests.helpers.csv_helpers import parse_csv_rows
 from tests.unit.factories import (
     create_base_application,
     create_base_application_proceeding,

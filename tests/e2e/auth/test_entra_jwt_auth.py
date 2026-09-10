@@ -7,47 +7,7 @@ from sqlmodel import select
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application, CoronersLetter
 from app.models.claim.index import ClaimEvidence
-
-
-def _create_application_payload():
-    return {
-        "coronersLetterId": str(uuid.uuid4()),
-        "proceeding": {"proceedingId": "IQOT"},
-        "client": {
-            "clientFirstName": "Test",
-            "clientLastName": "Surname",
-            "dateOfBirth": "1990-01-01",
-            "nationalInsuranceNumber": "AB12345A",
-            "correspondenceAddressSource": "USE_SPECIFIED_ADDRESS",
-            "correspondenceAddress": {
-                "addressLine1": "2 Example Lane",
-                "townOrCity": "London",
-                "postcode": "SW1A 1AA",
-            },
-            "hasNoFixedAbode": False,
-            "homeAddress": {
-                "addressLine1": "1 Example Lane",
-                "addressLine2": "Flat 2",
-                "townOrCity": "London",
-                "county": "Greater London",
-                "postcode": "SW1A 1AA",
-            },
-        },
-        "publicBodies": [{"publicBodyId": "Department for Transport"}],
-        "deceased": {
-            "deceasedFirstName": "Test",
-            "deceasedLastName": "Surname",
-            "deceasedDateOfBirth": "2000-01-01",
-            "deceasedDateOfDeath": "2025-01-01",
-            "coronersReference": "COR-2025-001",
-            "furtherInformation": "Further details to be confirmed",
-            "clientRelationshipToDeceased": "guardian",
-        },
-        "provider": {
-            "officeId": "0U651L",
-            "emailAddress": "provider@example.com",
-        },
-    }
+from tests.helpers.application_payloads import create_application_payload
 
 
 def test_200_read_all_applications_returns_200_when_valid_entra_token(
@@ -128,7 +88,7 @@ def test_201_create_application_returns_201_when_provider_application_user_token
 ):
     response = entra_auth_client.post(
         "/applications",
-        json=_create_application_payload(),
+        json=create_application_payload(),
         headers={
             "Content-Type": "application/json",
             "Authorization": "Bearer valid-provider-application-user-token",
@@ -143,7 +103,7 @@ def test_403_create_application_returns_403_when_provider_token_missing_permissi
 ):
     response = entra_auth_client.post(
         "/applications",
-        json=_create_application_payload(),
+        json=create_application_payload(),
         headers={
             "Content-Type": "application/json",
             "Authorization": "Bearer valid-provider-claims-user-token",
@@ -158,7 +118,7 @@ def test_403_create_application_returns_403_when_caseworker_token(
 ):
     response = entra_auth_client.post(
         "/applications",
-        json=_create_application_payload(),
+        json=create_application_payload(),
         headers={
             "Content-Type": "application/json",
             "Authorization": "Bearer valid-caseworker-entra-token",

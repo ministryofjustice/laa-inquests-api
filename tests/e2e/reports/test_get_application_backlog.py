@@ -7,7 +7,7 @@ from app.domain.constants.report_csv_headers import APPLICATION_BACKLOG_REPORT_H
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 from tests.e2e.factories import create_application_in_db
-from tests.helpers import parse_csv_rows
+from tests.helpers.csv_helpers import parse_csv_rows
 
 
 class TestGetApplicationBacklogReport:
