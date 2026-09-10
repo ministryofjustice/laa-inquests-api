@@ -8,6 +8,12 @@ from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application, CoronersLetter
 from app.models.claim.index import ClaimEvidence
 from tests.helpers.application_payloads import create_application_payload
+from tests.helpers.entra_auth import (
+    override_entra_auth_port_with_provider_no_role_token,
+)
+from tests.helpers.provider_details import (
+    override_provider_details_port_with_provider_offices,
+)
 
 
 def test_200_read_all_applications_returns_200_when_valid_entra_token(
@@ -311,6 +317,74 @@ def test_403_search_application_returns_403_when_caseworker_token(
     )
 
     assert response.status_code == 403
+
+
+class TestListProviderOfficesAuth:
+    @pytest.mark.parametrize(
+        "provider_token",
+        ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+    )
+    def test_200_list_provider_offices_returns_200_when_provider_token(
+        self, entra_auth_client, provider_token
+    ):
+        override_provider_details_port_with_provider_offices()
+
+        response = entra_auth_client.get(
+            "/applications/provider-offices/123",
+            headers={"Authorization": f"Bearer {provider_token}"},
+        )
+
+        assert response.status_code == 200
+
+    def test_401_list_provider_offices_returns_401_when_no_authorization_header(
+        self,
+        entra_auth_client,
+    ):
+        override_provider_details_port_with_provider_offices()
+
+        response = entra_auth_client.get("/applications/provider-offices/123")
+
+        assert response.status_code == 401
+
+    def test_401_list_provider_offices_returns_401_when_bearer_token_is_invalid(
+        self,
+        entra_auth_client,
+    ):
+        override_provider_details_port_with_provider_offices()
+
+        response = entra_auth_client.get(
+            "/applications/provider-offices/123",
+            headers={"Authorization": "Bearer invalid-token"},
+        )
+
+        assert response.status_code == 401
+
+    def test_403_list_provider_offices_returns_403_when_caseworker_token(
+        self,
+        entra_auth_client,
+    ):
+        override_provider_details_port_with_provider_offices()
+
+        response = entra_auth_client.get(
+            "/applications/provider-offices/123",
+            headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+        )
+
+        assert response.status_code == 403
+
+    def test_403_list_provider_offices_returns_403_when_provider_token_missing_permission(
+        self,
+        entra_auth_client,
+    ):
+        override_provider_details_port_with_provider_offices()
+        override_entra_auth_port_with_provider_no_role_token()
+
+        response = entra_auth_client.get(
+            "/applications/provider-offices/123",
+            headers={"Authorization": "Bearer valid-provider-no-role-token"},
+        )
+
+        assert response.status_code == 403
 
 
 def test_200_retrieve_coroners_letter_returns_200_when_caseworker_token(

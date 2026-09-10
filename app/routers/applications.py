@@ -480,7 +480,9 @@ async def list_provider_offices(
     firm_id: str,
     use_case: ListProviderOfficesUseCase = Depends(get_list_provider_offices_use_case),
     request: Request = None,
-    _: AuthenticatedUser = Depends(verify_entra_provider_token),
+    _: AuthenticatedUser = Depends(
+        require_permission(Permission.PROVIDER_OFFICES_READ)
+    ),
 ) -> list[dict]:
     try:
         provider_offices = use_case.execute(firm_id)

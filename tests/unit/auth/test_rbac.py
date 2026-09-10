@@ -5,6 +5,7 @@ from app.auth.rbac import (
     Permission,
     get_current_user_permissions,
     require_permission,
+    ROLE_PERMISSIONS_MAP,
 )
 from app.ports.entra_auth_port import AuthenticatedUser
 
@@ -23,10 +24,7 @@ def test_get_current_user_permissions_resolves_known_role():
         _user({"Inquests - Provider Application User"})
     )
 
-    assert permissions == {
-        Permission.APPLICATION_CREATE,
-        Permission.CORONERS_LETTER_UPLOAD,
-    }
+    assert permissions == ROLE_PERMISSIONS_MAP["Inquests - Provider Application User"]
 
 
 def test_get_current_user_permissions_unions_multiple_roles():
@@ -39,11 +37,9 @@ def test_get_current_user_permissions_unions_multiple_roles():
         )
     )
 
-    assert permissions == {
-        Permission.APPLICATION_CREATE,
-        Permission.CORONERS_LETTER_UPLOAD,
-        Permission.CLAIM_CREATE,
-    }
+    assert permissions == ROLE_PERMISSIONS_MAP[
+        "Inquests - Provider Application User"
+    ].union(ROLE_PERMISSIONS_MAP["Inquests - Provider Claims User"])
 
 
 def test_get_current_user_permissions_ignores_unmapped_role():

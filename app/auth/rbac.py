@@ -16,14 +16,18 @@ class Permission(str, Enum):
 
     CORONERS_LETTER_UPLOAD = "coroners-letter:upload"
 
+    PROVIDER_OFFICES_READ = "provider-offices:read"
+
 
 ROLE_PERMISSIONS_MAP: dict[str, set[Permission]] = {
     "Inquests - Provider Application User": {
         Permission.APPLICATION_CREATE,
         Permission.CORONERS_LETTER_UPLOAD,
+        Permission.PROVIDER_OFFICES_READ,
     },
     "Inquests - Provider Claims User": {
         Permission.CLAIM_CREATE,
+        Permission.PROVIDER_OFFICES_READ,
     },
 }
 
