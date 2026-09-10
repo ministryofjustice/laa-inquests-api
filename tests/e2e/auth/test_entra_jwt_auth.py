@@ -454,6 +454,82 @@ class TestUploadClaimEvidenceAuth:
         assert response.status_code == 401
 
 
+class TestDeleteClaimEvidenceAuth:
+    def test_204_delete_claim_evidence_when_provider_claims_user_token(
+        self,
+        session,
+        entra_auth_client,
+    ):
+        claim_evidence = ClaimEvidence(
+            sds_file_name="stored-claim-evidence_abc123.pdf",
+            file_name="claim_evidence.pdf",
+        )
+        session.add(claim_evidence)
+        session.commit()
+        session.refresh(claim_evidence)
+
+        response = entra_auth_client.delete(
+            f"/claims/{claim_evidence.claim_evidence_id}",
+            headers={"Authorization": "Bearer valid-provider-claims-user-token"},
+        )
+
+        assert response.status_code == 204
+
+    def test_403_delete_claim_evidence_when_provider_application_user_token(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.delete(
+            f"/claims/{uuid.uuid4()}",
+            headers={"Authorization": "Bearer valid-provider-application-user-token"},
+        )
+
+        assert response.status_code == 403
+
+    def test_403_delete_claim_evidence_when_provider_token_missing_permission(
+        self,
+        entra_auth_client,
+    ):
+        override_entra_auth_port_with_provider_no_role_token()
+
+        response = entra_auth_client.delete(
+            f"/claims/{uuid.uuid4()}",
+            headers={"Authorization": "Bearer valid-provider-no-role-token"},
+        )
+
+        assert response.status_code == 403
+
+    def test_403_delete_claim_evidence_when_caseworker_token(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.delete(
+            f"/claims/{uuid.uuid4()}",
+            headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+        )
+
+        assert response.status_code == 403
+
+    def test_401_delete_claim_evidence_when_no_authorization_header(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.delete(f"/claims/{uuid.uuid4()}")
+
+        assert response.status_code == 401
+
+    def test_401_delete_claim_evidence_when_bearer_token_is_invalid(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.delete(
+            f"/claims/{uuid.uuid4()}",
+            headers={"Authorization": "Bearer invalid-token"},
+        )
+
+        assert response.status_code == 401
+
+
 class TestListProviderOfficesAuth:
     @pytest.mark.parametrize(
         "provider_token",

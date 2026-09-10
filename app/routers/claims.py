@@ -25,7 +25,6 @@ from app.routers.dependencies import (
     get_claim_db_adapter,
     get_sds_port,
     verify_entra_provider_or_caseworker_token,
-    verify_entra_provider_token,
 )
 from app.use_cases.delete_claim_evidence import DeleteClaimEvidenceUseCase
 from app.use_cases.exceptions import (
@@ -210,7 +209,7 @@ def delete_claim_evidence(
     claim_evidence_id: uuid.UUID,
     use_case: DeleteClaimEvidenceUseCase = Depends(get_delete_claim_evidence_use_case),
     request: Request = None,
-    _: None = Depends(verify_entra_provider_token),
+    _: None = Depends(require_permission(Permission.CLAIM_DELETE)),
 ) -> Response:
     try:
         use_case.execute(claim_evidence_id)

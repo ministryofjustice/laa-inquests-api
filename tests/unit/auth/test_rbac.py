@@ -2,10 +2,10 @@ import pytest
 from fastapi import HTTPException
 
 from app.auth.rbac import (
+    ROLE_PERMISSIONS_MAP,
     Permission,
     get_current_user_permissions,
     require_permission,
-    ROLE_PERMISSIONS_MAP,
 )
 from app.ports.entra_auth_port import AuthenticatedUser
 
@@ -19,12 +19,20 @@ def _user(app_roles: set[str]) -> AuthenticatedUser:
     )
 
 
-def test_get_current_user_permissions_resolves_known_role():
+def test_get_current_user_permissions_resolves_provider_application_user_role():
     permissions = get_current_user_permissions(
         _user({"Inquests - Provider Application User"})
     )
 
     assert permissions == ROLE_PERMISSIONS_MAP["Inquests - Provider Application User"]
+
+
+def test_get_current_user_permissions_resolves_provider_claims_user_role():
+    permissions = get_current_user_permissions(
+        _user({"Inquests - Provider Claims User"})
+    )
+
+    assert permissions == ROLE_PERMISSIONS_MAP["Inquests - Provider Claims User"]
 
 
 def test_get_current_user_permissions_unions_multiple_roles():
