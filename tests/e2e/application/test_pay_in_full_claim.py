@@ -15,7 +15,7 @@ def _pay_in_full_payload(overrides=None):
     payload = {
         "profitCostNet": "1000.00",
         "profitCostGross": "1200.00",
-        "profitCostVatZero": "500.00",
+        "profitCostVatZero": None,
         "disbursementNet": "100.00",
         "disbursementGross": "120.00",
         "disbursementVatZero": "50.00",
@@ -85,7 +85,7 @@ def test_204_pay_in_full_claim_creates_decision_amount_and_updates_status(
     ).one()
     assert amount.profit_cost_net == Decimal("1000.00")
     assert amount.profit_cost_gross == Decimal("1200.00")
-    assert amount.profit_cost_vat_zero == Decimal("500.00")
+    assert amount.profit_cost_vat_zero is None
     assert amount.disbursement_net == Decimal("100.00")
     assert amount.disbursement_gross == Decimal("120.00")
     assert amount.disbursement_vat_zero == Decimal("50.00")
@@ -138,7 +138,9 @@ def test_204_pay_in_full_claim_persists_partial_amounts_as_null(
         f"/applications/{laa_reference}/claims/{claim.claim_id}/pay-in-full",
         json=_pay_in_full_payload(
             {
+                "profitCostNet": None,
                 "profitCostGross": None,
+                "profitCostVatZero": "500.00",
                 "disbursementNet": None,
                 "disbursementGross": None,
                 "disbursementVatZero": None,
@@ -160,7 +162,7 @@ def test_204_pay_in_full_claim_persists_partial_amounts_as_null(
             ClaimDecisionAmount.claim_decision_id == decision.claim_decision_id
         )
     ).one()
-    assert amount.profit_cost_net == Decimal("1000.00")
+    assert amount.profit_cost_net is None
     assert amount.profit_cost_gross is None
     assert amount.profit_cost_vat_zero == Decimal("500.00")
     assert amount.disbursement_net is None
@@ -249,3 +251,154 @@ def test_404_pay_in_full_claim_when_claim_belongs_to_another_application(
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Claim not found"
+
+
+def _post_pay_in_full(session, client, auth_token, overrides):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    claim = _seed_claim(session, laa_reference)
+    return client.patch(
+        f"/applications/{laa_reference}/claims/{claim.claim_id}/pay-in-full",
+        json=_pay_in_full_payload(overrides),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+
+def test_422_pay_in_full_claim_when_profit_cost_net_without_gross(
+    session, client, auth_token
+):
+    response = _post_pay_in_full(
+        session,
+        client,
+        auth_token,
+        {"profitCostGross": None, "profitCostVatZero": None},
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["errorCode"] == "MISSING_GROSS_TOTAL_WHEN_NET_ENTERED"
+    assert detail["message"] == "Enter the gross total for profit costs including VAT"
+
+
+def test_422_pay_in_full_claim_when_profit_cost_gross_without_net(
+    session, client, auth_token
+):
+    response = _post_pay_in_full(
+        session,
+        client,
+        auth_token,
+        {"profitCostNet": None, "profitCostVatZero": None},
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["errorCode"] == "MISSING_NET_TOTAL_WHEN_GROSS_ENTERED"
+    assert detail["message"] == "Enter the net total for profit costs excluding VAT"
+
+
+def test_422_pay_in_full_claim_when_all_profit_cost_totals_missing(
+    session, client, auth_token
+):
+    response = _post_pay_in_full(
+        session,
+        client,
+        auth_token,
+        {
+            "profitCostNet": None,
+            "profitCostGross": None,
+            "profitCostVatZero": None,
+        },
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["errorCode"] == "MISSING_TOTAL_CLAIM_COST"
+    assert detail["message"] == "Complete the total value of the claim to continue"
+
+
+def test_422_pay_in_full_claim_when_vat_zero_mixed_with_net_and_gross(
+    session, client, auth_token
+):
+    response = _post_pay_in_full(
+        session,
+        client,
+        auth_token,
+        {
+            "profitCostNet": "1000.00",
+            "profitCostGross": "1200.00",
+            "profitCostVatZero": "500.00",
+        },
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["errorCode"] == "PROFIT_COST_MIXED_VAT"
+    assert (
+        detail["message"]
+        == "You cannot submit a total profit cost claim with both 0% and 20% VAT"
+    )
+
+
+def test_422_pay_in_full_claim_when_net_higher_than_gross(session, client, auth_token):
+    response = _post_pay_in_full(
+        session,
+        client,
+        auth_token,
+        {
+            "profitCostNet": "1300.00",
+            "profitCostGross": "1200.00",
+            "profitCostVatZero": None,
+        },
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["errorCode"] == "NET_TOTAL_HIGHER_THAN_GROSS_TOTAL"
+    assert detail["message"] == "Net total cannot be higher than the gross total value"
+
+
+def test_422_pay_in_full_claim_when_profit_cost_has_more_than_two_decimal_places(
+    session, client, auth_token
+):
+    response = _post_pay_in_full(
+        session,
+        client,
+        auth_token,
+        {"profitCostNet": "1000.001", "profitCostVatZero": None},
+    )
+
+    assert response.status_code == 422
+
+
+def test_204_pay_in_full_claim_allows_zero_profit_cost_totals(
+    session, client, auth_token
+):
+    response = _post_pay_in_full(
+        session,
+        client,
+        auth_token,
+        {
+            "profitCostNet": "0.00",
+            "profitCostGross": "0.00",
+            "profitCostVatZero": None,
+        },
+    )
+
+    assert response.status_code == 204
+
+
+def test_204_pay_in_full_claim_allows_vat_zero_only(session, client, auth_token):
+    response = _post_pay_in_full(
+        session,
+        client,
+        auth_token,
+        {
+            "profitCostNet": None,
+            "profitCostGross": None,
+            "profitCostVatZero": "500.00",
+        },
+    )
+
+    assert response.status_code == 204

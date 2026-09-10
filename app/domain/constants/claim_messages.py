@@ -57,3 +57,13 @@ NIL_BILL_GROSS_MUST_BE_ZERO_MESSAGE = "The gross total must be zero for nil bill
 CLAIM_EVIDENCE_NOT_ALLOWED_MESSAGE = (
     "Claim evidence may only be provided for payment on account and final bill claims"
 )
+
+# Pay-in-full profit cost validation messages
+PIF_MISSING_TOTAL_CLAIM_COST_MESSAGE = (
+    "Complete the total value of the claim to continue"
+)
+PIF_PROFIT_COST_MIXED_VAT_MESSAGE = (
+    "You cannot submit a total profit cost claim with both 0% and 20% VAT"
+)
+PIF_MISSING_GROSS_TOTAL_MESSAGE = "Enter the gross total for profit costs including VAT"
+PIF_MISSING_NET_TOTAL_MESSAGE = "Enter the net total for profit costs excluding VAT"

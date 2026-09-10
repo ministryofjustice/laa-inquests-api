@@ -304,6 +304,19 @@ class PayInFullClaimRequest(BaseModel):
         default=None, examples=["50.00"]
     )
 
+    @field_validator(
+        "profit_cost_net",
+        "profit_cost_gross",
+        "profit_cost_vat_zero",
+    )
+    @classmethod
+    def _validate_two_decimal_places(cls, value: Decimal | None) -> Decimal | None:
+        if value is not None and value.is_finite():
+            exponent = value.as_tuple().exponent
+            if isinstance(exponent, int) and exponent < -2:
+                raise ValueError("must have no more than 2 decimal places")
+        return value
+
 
 # RESPONSE BODY
 class ClaimResponse(BaseModel):

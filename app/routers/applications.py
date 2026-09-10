@@ -963,6 +963,10 @@ def pay_in_full_claim(
         raise HTTPException(status_code=404, detail="Application not found")
     except ClaimNotFoundError:
         raise HTTPException(status_code=404, detail="Claim not found")
+    except InvalidClaimError as e:
+        raise HTTPException(
+            status_code=422, detail={"errorCode": e.code, "message": e.message}
+        )
 
     return Response(status_code=204)
 

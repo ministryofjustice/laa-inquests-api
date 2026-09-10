@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from app.contexts.user import get_entra_user_name
+from app.domain.claim_error import ClaimValidationError
+from app.domain.pay_in_full import PayInFullClaim
 from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.ports.application_lookup_port import ApplicationLookupPort
@@ -12,7 +14,11 @@ from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.ports.claim.update_claim_status_port import UpdateClaimStatusPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
-from app.use_cases.exceptions import ApplicationNotFoundError, ClaimNotFoundError
+from app.use_cases.exceptions import (
+    ApplicationNotFoundError,
+    ClaimNotFoundError,
+    InvalidClaimError,
+)
 
 
 def _to_json_amount(amount: Decimal | None) -> str | None:
@@ -58,6 +64,15 @@ class PayInFullClaimUseCase:
         claim = self.get_claim_by_id_port.get_claim_by_id(command.claim_id)
         if claim is None or claim.application_id != application.application_id:
             raise ClaimNotFoundError(command.claim_id)
+
+        try:
+            PayInFullClaim(
+                profit_cost_net=command.profit_cost_net,
+                profit_cost_gross=command.profit_cost_gross,
+                profit_cost_vat_zero=command.profit_cost_vat_zero,
+            ).validate()
+        except ClaimValidationError as e:
+            raise InvalidClaimError(code=e.code, message=e.message) from e
 
         try:
             claim_decision = self.create_claim_decision_port.create_claim_decision(
