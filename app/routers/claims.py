@@ -14,6 +14,7 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 
+from app.auth.rbac import Permission, require_permission
 from app.logging_utils import build_log_extra
 from app.models.claim.index import UploadClaimEvidenceResponse
 from app.ports.claim.delete_claim_evidence_port import DeleteClaimEvidencePort
@@ -99,7 +100,7 @@ async def upload_claim_evidence(
     file: UploadFile = File(...),
     use_case: UploadClaimEvidenceUseCase = Depends(get_upload_claim_evidence_use_case),
     request: Request = None,
-    _: None = Depends(verify_entra_provider_token),
+    _: None = Depends(require_permission(Permission.CLAIM_CREATE)),
 ) -> UploadClaimEvidenceResponse:
     """Upload claim evidence to document storage and return its file ID."""
     contents = await file.read()

@@ -343,6 +343,117 @@ class TestSearchApplicationAuth:
         assert response.status_code == 403
 
 
+class TestUploadClaimEvidenceAuth:
+    def test_201_upload_claim_evidence_when_provider_claims_user_token(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.post(
+            "/claims/evidence",
+            files={
+                "file": (
+                    "claim_evidence.pdf",
+                    io.BytesIO(b"test content"),
+                    "application/pdf",
+                )
+            },
+            headers={"Authorization": "Bearer valid-provider-claims-user-token"},
+        )
+
+        assert response.status_code == 201
+
+    def test_403_upload_claim_evidence_when_provider_application_user_token(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.post(
+            "/claims/evidence",
+            files={
+                "file": (
+                    "claim_evidence.pdf",
+                    io.BytesIO(b"test content"),
+                    "application/pdf",
+                )
+            },
+            headers={"Authorization": "Bearer valid-provider-application-user-token"},
+        )
+
+        assert response.status_code == 403
+
+    def test_403_upload_claim_evidence_when_provider_token_missing_permission(
+        self,
+        entra_auth_client,
+    ):
+        override_entra_auth_port_with_provider_no_role_token()
+
+        response = entra_auth_client.post(
+            "/claims/evidence",
+            files={
+                "file": (
+                    "claim_evidence.pdf",
+                    io.BytesIO(b"test content"),
+                    "application/pdf",
+                )
+            },
+            headers={"Authorization": "Bearer valid-provider-no-role-token"},
+        )
+
+        assert response.status_code == 403
+
+    def test_403_upload_claim_evidence_when_caseworker_token(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.post(
+            "/claims/evidence",
+            files={
+                "file": (
+                    "claim_evidence.pdf",
+                    io.BytesIO(b"test content"),
+                    "application/pdf",
+                )
+            },
+            headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+        )
+
+        assert response.status_code == 403
+
+    def test_401_upload_claim_evidence_when_no_authorization_header(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.post(
+            "/claims/evidence",
+            files={
+                "file": (
+                    "claim_evidence.pdf",
+                    io.BytesIO(b"test content"),
+                    "application/pdf",
+                )
+            },
+        )
+
+        assert response.status_code == 401
+
+    def test_401_upload_claim_evidence_when_bearer_token_is_invalid(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.post(
+            "/claims/evidence",
+            files={
+                "file": (
+                    "claim_evidence.pdf",
+                    io.BytesIO(b"test content"),
+                    "application/pdf",
+                )
+            },
+            headers={"Authorization": "Bearer invalid-token"},
+        )
+
+        assert response.status_code == 401
+
+
 class TestListProviderOfficesAuth:
     @pytest.mark.parametrize(
         "provider_token",
