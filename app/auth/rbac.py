@@ -10,6 +10,7 @@ from app.routers.dependencies import verify_entra_token
 class Permission(str, Enum):
     APPLICATION_READ = "application:read"
     APPLICATION_CREATE = "application:create"
+    APPLICATION_SEARCH = "application:search"
 
     CLAIM_READ = "claim:read"
     CLAIM_CREATE = "claim:create"
@@ -24,10 +25,11 @@ ROLE_PERMISSIONS_MAP: dict[str, set[Permission]] = {
     "Inquests - Provider Application User": {
         Permission.APPLICATION_CREATE,
         Permission.CORONERS_LETTER_UPLOAD,
-        Permission.PROVIDER_OFFICES_READ,
         Permission.CORONERS_LETTER_DELETE,
+        Permission.PROVIDER_OFFICES_READ,
     },
     "Inquests - Provider Claims User": {
+        Permission.APPLICATION_SEARCH,
         Permission.CLAIM_CREATE,
         Permission.PROVIDER_OFFICES_READ,
     },

@@ -268,55 +268,79 @@ def test_403_grant_decision_returns_403_when_provider_token(
     assert response.status_code == 403
 
 
-@pytest.mark.parametrize(
-    "provider_token",
-    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
-)
-def test_200_search_application_returns_200_when_provider_token(
-    entra_auth_client, provider_token
-):
-    response = entra_auth_client.get(
-        "/applications/search",
-        params={"laa_reference": "1"},
-        headers={"Authorization": f"Bearer {provider_token}"},
-    )
+class TestSearchApplicationAuth:
+    def test_200_search_application_returns_200_when_provider_claims_user_token(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.get(
+            "/applications/search",
+            params={"laa_reference": "1"},
+            headers={"Authorization": "Bearer valid-provider-claims-user-token"},
+        )
 
-    assert response.status_code == 200
+        assert response.status_code == 200
 
+    def test_403_search_application_returns_403_when_provider_application_user_token(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.get(
+            "/applications/search",
+            params={"laa_reference": "1"},
+            headers={"Authorization": "Bearer valid-provider-application-user-token"},
+        )
 
-def test_401_search_application_returns_401_when_no_authorization_header(
-    entra_auth_client,
-):
-    response = entra_auth_client.get(
-        "/applications/search",
-        params={"laa_reference": "1"},
-    )
+        assert response.status_code == 403
 
-    assert response.status_code == 401
+    def test_403_search_application_returns_403_when_provider_token_missing_permission(
+        self,
+        entra_auth_client,
+    ):
+        override_entra_auth_port_with_provider_no_role_token()
 
+        response = entra_auth_client.get(
+            "/applications/search",
+            params={"laa_reference": "1"},
+            headers={"Authorization": "Bearer valid-provider-no-role-token"},
+        )
 
-def test_401_search_application_returns_401_when_bearer_token_is_invalid(
-    entra_auth_client,
-):
-    response = entra_auth_client.get(
-        "/applications/search",
-        params={"laa_reference": "1"},
-        headers={"Authorization": "Bearer invalid-token"},
-    )
+        assert response.status_code == 403
 
-    assert response.status_code == 401
+    def test_401_search_application_returns_401_when_no_authorization_header(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.get(
+            "/applications/search",
+            params={"laa_reference": "1"},
+        )
 
+        assert response.status_code == 401
 
-def test_403_search_application_returns_403_when_caseworker_token(
-    entra_auth_client,
-):
-    response = entra_auth_client.get(
-        "/applications/search",
-        params={"laa_reference": "1"},
-        headers={"Authorization": "Bearer valid-caseworker-entra-token"},
-    )
+    def test_401_search_application_returns_401_when_bearer_token_is_invalid(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.get(
+            "/applications/search",
+            params={"laa_reference": "1"},
+            headers={"Authorization": "Bearer invalid-token"},
+        )
 
-    assert response.status_code == 403
+        assert response.status_code == 401
+
+    def test_403_search_application_returns_403_when_caseworker_token(
+        self,
+        entra_auth_client,
+    ):
+        response = entra_auth_client.get(
+            "/applications/search",
+            params={"laa_reference": "1"},
+            headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+        )
+
+        assert response.status_code == 403
 
 
 class TestListProviderOfficesAuth:

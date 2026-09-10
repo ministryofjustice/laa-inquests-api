@@ -451,6 +451,7 @@ async def search_application(
     merits_decision: MeritsDecision | None = None,
     request: Request = None,
     use_case: SearchApplicationUseCase = Depends(get_search_application_use_case),
+    _: None = Depends(require_permission(Permission.APPLICATION_SEARCH)),
 ) -> list[ApplicationSearchResponse]:
     """Search for an application by exact LAA reference number."""
     try:
