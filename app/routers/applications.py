@@ -288,6 +288,9 @@ def get_get_claim_use_case(
 def get_create_claim_use_case(
     create_claim_port: CreateClaimPort = Depends(get_claim_db_adapter),
     create_claim_decision_port: CreateClaimDecisionPort = Depends(get_claim_db_adapter),
+    create_claim_decision_amount_port: CreateClaimDecisionAmountPort = Depends(
+        get_claim_db_adapter
+    ),
     create_decision_reason_port: CreateDecisionReasonPort = Depends(
         get_claim_db_adapter
     ),
@@ -311,6 +314,7 @@ def get_create_claim_use_case(
         create_history_event_port=create_history_event_port,
         gov_notify_port=gov_notify_port,
         create_claim_decision_port=create_claim_decision_port,
+        create_claim_decision_amount_port=create_claim_decision_amount_port,
         create_decision_reason_port=create_decision_reason_port,
         update_claim_status_port=update_claim_status_port,
         get_claim_decision_port=get_claim_decision_port,
