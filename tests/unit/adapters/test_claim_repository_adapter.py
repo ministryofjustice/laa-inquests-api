@@ -288,6 +288,7 @@ def test_create_claim_decision_persists_decision_with_expected_values(session):
     assert stored is not None
     assert stored.claim_id == claim.claim_id
     assert stored.decision == ClaimDecisionStatus.REJECT
+    assert stored.created_at is not None
 
 
 def test_create_decision_reason_persists_reason_with_expected_values(session):

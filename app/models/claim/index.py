@@ -133,6 +133,9 @@ class ClaimDecision(SQLModel, table=True):
     decision: ClaimDecisionStatus = Field(
         sa_column=Column(Enum(ClaimDecisionStatus), nullable=False)
     )
+    created_at: datetime | None = Field(
+        default_factory=lambda: datetime.now(UTC), index=True
+    )
     decision_reasons: list["DecisionReason"] = Relationship(
         back_populates="claim_decision"
     )
