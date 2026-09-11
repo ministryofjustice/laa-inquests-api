@@ -32,6 +32,9 @@ from app.models.claim.index import Claim
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.notifications.enums import NotificationType
 from app.ports.application_lookup_port import ApplicationLookupPort
+from app.ports.claim.create_claim_decision_amount_port import (
+    CreateClaimDecisionAmountPort,
+)
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
@@ -45,6 +48,20 @@ from app.ports.gov_notify_port import GovNotifyPort
 from app.use_cases.exceptions import ApplicationNotFoundError, InvalidClaimError
 
 logger = logging.getLogger(__name__)
+
+
+def _claim_decision_amount_fields(claim: Claim) -> dict[str, Decimal | None]:
+    if claim.poa_type_id == POAType.PROFIT_COST:
+        return {
+            "profit_cost_net": claim.total_profit_cost_net,
+            "profit_cost_gross": claim.total_profit_cost_gross,
+            "profit_cost_vat_zero": claim.total_profit_cost_vat_zero,
+        }
+    return {
+        "disbursement_net": claim.total_profit_cost_net,
+        "disbursement_gross": claim.total_profit_cost_gross,
+        "disbursement_vat_zero": claim.total_profit_cost_vat_zero,
+    }
 
 
 @dataclass(frozen=True)
@@ -87,6 +104,7 @@ class CreateClaimUseCase:
         create_history_event_port: CreateHistoryEventPort,
         gov_notify_port: GovNotifyPort | None = None,
         create_claim_decision_port: CreateClaimDecisionPort | None = None,
+        create_claim_decision_amount_port: CreateClaimDecisionAmountPort | None = None,
         create_decision_reason_port: CreateDecisionReasonPort | None = None,
         update_claim_status_port: UpdateClaimStatusPort | None = None,
         get_claim_decision_port: GetClaimDecisionPort | None = None,
@@ -97,6 +115,7 @@ class CreateClaimUseCase:
         self.create_history_event_port = create_history_event_port
         self.gov_notify_port = gov_notify_port
         self.create_claim_decision_port = create_claim_decision_port
+        self.create_claim_decision_amount_port = create_claim_decision_amount_port
         self.create_decision_reason_port = create_decision_reason_port
         self.update_claim_status_port = update_claim_status_port
         self.get_claim_decision_port = get_claim_decision_port
@@ -334,12 +353,19 @@ class CreateClaimUseCase:
                 and not needs_manual_review
                 and validated_claim.is_eligible_for_auto_approval(application)
                 and self.create_claim_decision_port is not None
+                and self.create_claim_decision_amount_port is not None
                 and self.update_claim_status_port is not None
             ):
                 try:
-                    self.create_claim_decision_port.create_claim_decision(
-                        claim_id=claim.claim_id,
-                        decision_status=ClaimDecisionStatus.PAY_IN_FULL,
+                    claim_decision = (
+                        self.create_claim_decision_port.create_claim_decision(
+                            claim_id=claim.claim_id,
+                            decision_status=ClaimDecisionStatus.PAY_IN_FULL,
+                        )
+                    )
+                    self.create_claim_decision_amount_port.create_claim_decision_amount(
+                        claim_decision_id=claim_decision.claim_decision_id,
+                        **_claim_decision_amount_fields(claim),
                     )
                     self.update_claim_status_port.update_claim_status(
                         claim_id=claim.claim_id,

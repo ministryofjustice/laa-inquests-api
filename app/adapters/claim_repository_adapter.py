@@ -21,11 +21,15 @@ from app.models.claim.index import (
     Claim,
     ClaimCostTemplate,
     ClaimDecision,
+    ClaimDecisionAmount,
     ClaimInquestOutcome,
     DecisionReason,
 )
 from app.models.claim.index import (
     ClaimEvidence as ClaimEvidenceModel,
+)
+from app.ports.claim.create_claim_decision_amount_port import (
+    CreateClaimDecisionAmountPort,
 )
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
@@ -54,6 +58,7 @@ class ClaimRepositoryAdapter(
     GetClaimByIdPort,
     GetClaimDecisionPort,
     CreateClaimDecisionPort,
+    CreateClaimDecisionAmountPort,
     CreateDecisionReasonPort,
     UpdateClaimStatusPort,
     UploadClaimEvidencePort,
@@ -233,6 +238,37 @@ class ClaimRepositoryAdapter(
             ),
         )
         return decision
+
+    def create_claim_decision_amount(
+        self,
+        claim_decision_id: int,
+        profit_cost_net: Decimal | None = None,
+        profit_cost_gross: Decimal | None = None,
+        profit_cost_vat_zero: Decimal | None = None,
+        disbursement_net: Decimal | None = None,
+        disbursement_gross: Decimal | None = None,
+        disbursement_vat_zero: Decimal | None = None,
+    ) -> ClaimDecisionAmount:
+        amount = ClaimDecisionAmount(
+            claim_decision_id=claim_decision_id,
+            profit_cost_net=profit_cost_net,
+            profit_cost_gross=profit_cost_gross,
+            profit_cost_vat_zero=profit_cost_vat_zero,
+            disbursement_net=disbursement_net,
+            disbursement_gross=disbursement_gross,
+            disbursement_vat_zero=disbursement_vat_zero,
+        )
+        self.session.add(amount)
+        self.session.flush()
+        self.session.refresh(amount)
+        logger.info(
+            "Claim decision amount created in repository",
+            extra=build_log_extra(
+                event="claim_repository_decision_amount_create_completed",
+                claim_decision_id=claim_decision_id,
+            ),
+        )
+        return amount
 
     def create_decision_reason(
         self,

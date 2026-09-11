@@ -46,10 +46,14 @@ from app.models.claim.index import (
     ClaimCreate,
     ClaimResponse,
     ClaimSummaryResponse,
+    PayInFullClaimRequest,
     RejectClaimRequest,
 )
 from app.models.history.index import CreateNoteRequest, HistoryEventResponse
 from app.ports.application_lookup_port import ApplicationLookupPort
+from app.ports.claim.create_claim_decision_amount_port import (
+    CreateClaimDecisionAmountPort,
+)
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
@@ -109,6 +113,10 @@ from app.use_cases.list_application_claims import ListApplicationClaimsUseCase
 from app.use_cases.list_applications import ListApplicationsUseCase
 from app.use_cases.list_provider_offices import ListProviderOfficesUseCase
 from app.use_cases.list_public_bodies import ListPublicBodiesUseCase
+from app.use_cases.pay_in_full_claim import (
+    PayInFullClaimCommand,
+    PayInFullClaimUseCase,
+)
 from app.use_cases.refuse_decision import RefuseDecisionUseCase
 from app.use_cases.reject_claim import RejectClaimCommand, RejectClaimUseCase
 from app.use_cases.retrieve_certificate import RetrieveCertificateUseCase
@@ -279,6 +287,9 @@ def get_get_claim_use_case(
 def get_create_claim_use_case(
     create_claim_port: CreateClaimPort = Depends(get_claim_db_adapter),
     create_claim_decision_port: CreateClaimDecisionPort = Depends(get_claim_db_adapter),
+    create_claim_decision_amount_port: CreateClaimDecisionAmountPort = Depends(
+        get_claim_db_adapter
+    ),
     create_decision_reason_port: CreateDecisionReasonPort = Depends(
         get_claim_db_adapter
     ),
@@ -302,6 +313,7 @@ def get_create_claim_use_case(
         create_history_event_port=create_history_event_port,
         gov_notify_port=gov_notify_port,
         create_claim_decision_port=create_claim_decision_port,
+        create_claim_decision_amount_port=create_claim_decision_amount_port,
         create_decision_reason_port=create_decision_reason_port,
         update_claim_status_port=update_claim_status_port,
         get_claim_decision_port=get_claim_decision_port,
@@ -333,6 +345,30 @@ def get_reject_claim_use_case(
         create_history_event_port=create_history_event_port,
         provider_details_port=provider_details_port,
         gov_notify_port=gov_notify_port,
+    )
+
+
+def get_pay_in_full_claim_use_case(
+    application_lookup_port: ApplicationLookupPort = Depends(
+        get_application_db_adapter
+    ),
+    get_claim_by_id_port: GetClaimByIdPort = Depends(get_claim_db_adapter),
+    create_claim_decision_port: CreateClaimDecisionPort = Depends(get_claim_db_adapter),
+    create_claim_decision_amount_port: CreateClaimDecisionAmountPort = Depends(
+        get_claim_db_adapter
+    ),
+    update_claim_status_port: UpdateClaimStatusPort = Depends(get_claim_db_adapter),
+    create_history_event_port: CreateHistoryEventPort = Depends(
+        get_history_event_adapter
+    ),
+) -> PayInFullClaimUseCase:
+    return PayInFullClaimUseCase(
+        application_lookup_port=application_lookup_port,
+        get_claim_by_id_port=get_claim_by_id_port,
+        create_claim_decision_port=create_claim_decision_port,
+        create_claim_decision_amount_port=create_claim_decision_amount_port,
+        update_claim_status_port=update_claim_status_port,
+        create_history_event_port=create_history_event_port,
     )
 
 
@@ -914,6 +950,40 @@ def reject_claim(
         raise HTTPException(status_code=404, detail="Application not found")
     except ClaimNotFoundError:
         raise HTTPException(status_code=404, detail="Claim not found")
+
+    return Response(status_code=204)
+
+
+@router.patch("/{laa_reference}/claims/{claim_id}/pay-in-full", status_code=204)
+def pay_in_full_claim(
+    laa_reference: str,
+    claim_id: int,
+    request: PayInFullClaimRequest,
+    use_case: PayInFullClaimUseCase = Depends(get_pay_in_full_claim_use_case),
+    _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
+) -> Response:
+    """Record a pay-in-full decision against a claim, with approved amounts."""
+    try:
+        use_case.execute(
+            PayInFullClaimCommand(
+                laa_reference=laa_reference,
+                claim_id=claim_id,
+                profit_cost_net=request.profit_cost_net,
+                profit_cost_gross=request.profit_cost_gross,
+                profit_cost_vat_zero=request.profit_cost_vat_zero,
+                disbursement_net=request.disbursement_net,
+                disbursement_gross=request.disbursement_gross,
+                disbursement_vat_zero=request.disbursement_vat_zero,
+            ),
+        )
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
+    except ClaimNotFoundError:
+        raise HTTPException(status_code=404, detail="Claim not found")
+    except InvalidClaimError as e:
+        raise HTTPException(
+            status_code=422, detail={"errorCode": e.code, "message": e.message}
+        )
 
     return Response(status_code=204)
 

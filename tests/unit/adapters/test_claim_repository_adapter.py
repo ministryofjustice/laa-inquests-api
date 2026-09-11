@@ -20,6 +20,7 @@ from app.models.claim.index import (
     Claim,
     ClaimCostTemplate,
     ClaimDecision,
+    ClaimDecisionAmount,
     ClaimEvidence,
     ClaimInquestOutcome,
     DecisionReason,
@@ -287,6 +288,7 @@ def test_create_claim_decision_persists_decision_with_expected_values(session):
     assert stored is not None
     assert stored.claim_id == claim.claim_id
     assert stored.decision == ClaimDecisionStatus.REJECT
+    assert stored.created_at is not None
 
 
 def test_create_decision_reason_persists_reason_with_expected_values(session):
@@ -325,6 +327,58 @@ def test_create_decision_reason_persists_justification_when_provided(session):
     )
 
     assert reason.justification == "Some justification text"
+
+
+def test_create_claim_decision_amount_persists_amounts_with_expected_values(session):
+    application_id = session.exec(select(Application)).first().application_id
+    adapter = ClaimRepositoryAdapter(session)
+    claim = adapter.create_claim(
+        application_id, _make_domain_claim(), "claimant@example.com"
+    )
+    decision = adapter.create_claim_decision(
+        claim.claim_id, ClaimDecisionStatus.PAY_IN_FULL
+    )
+
+    amount = adapter.create_claim_decision_amount(
+        decision.claim_decision_id,
+        profit_cost_net=Decimal("1000.00"),
+        profit_cost_gross=Decimal("1200.00"),
+        profit_cost_vat_zero=Decimal("500.00"),
+        disbursement_net=Decimal("100.00"),
+        disbursement_gross=Decimal("120.00"),
+        disbursement_vat_zero=Decimal("50.00"),
+    )
+    stored = session.get(ClaimDecisionAmount, amount.claim_decision_amount_id)
+
+    assert amount.claim_decision_amount_id is not None
+    assert stored is not None
+    assert stored.claim_decision_id == decision.claim_decision_id
+    assert stored.profit_cost_net == Decimal("1000.00")
+    assert stored.profit_cost_gross == Decimal("1200.00")
+    assert stored.profit_cost_vat_zero == Decimal("500.00")
+    assert stored.disbursement_net == Decimal("100.00")
+    assert stored.disbursement_gross == Decimal("120.00")
+    assert stored.disbursement_vat_zero == Decimal("50.00")
+
+
+def test_create_claim_decision_amount_persists_none_when_fields_omitted(session):
+    application_id = session.exec(select(Application)).first().application_id
+    adapter = ClaimRepositoryAdapter(session)
+    claim = adapter.create_claim(
+        application_id, _make_domain_claim(), "claimant@example.com"
+    )
+    decision = adapter.create_claim_decision(
+        claim.claim_id, ClaimDecisionStatus.PAY_IN_FULL
+    )
+
+    amount = adapter.create_claim_decision_amount(decision.claim_decision_id)
+
+    assert amount.profit_cost_net is None
+    assert amount.profit_cost_gross is None
+    assert amount.profit_cost_vat_zero is None
+    assert amount.disbursement_net is None
+    assert amount.disbursement_gross is None
+    assert amount.disbursement_vat_zero is None
 
 
 def test_link_evidence_to_claim_sets_claim_id_on_existing_evidence(session):

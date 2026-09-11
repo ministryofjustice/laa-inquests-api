@@ -13,11 +13,13 @@ from app.models.claim.enums import (
     ClaimStatus,
     ClaimType,
     NumberOfCounselInstructed,
+    POAType,
 )
 from app.models.claim.index import (
     Claim,
     ClaimCostTemplate,
     ClaimDecision,
+    ClaimDecisionAmount,
     ClaimEvidence,
     ClaimInquestOutcome,
     DecisionReason,
@@ -299,6 +301,83 @@ class TestCreateClaimFundsAndPersistence:
         ).first()
         assert decision is not None
         assert decision.decision == "PAY_IN_FULL"
+
+    def test_201_create_claim_auto_approval_persists_profit_cost_decision_amount(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {"poaTypeId": "PROFIT_COST", "totalProfitCostNet": 1000}
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+        claim_id = response.json()["claimId"]
+
+        decision = session.exec(
+            select(ClaimDecision).where(ClaimDecision.claim_id == claim_id)
+        ).one()
+        decision_amount = session.exec(
+            select(ClaimDecisionAmount).where(
+                ClaimDecisionAmount.claim_decision_id == decision.claim_decision_id
+            )
+        ).one()
+
+        assert decision_amount.profit_cost_net == Decimal("1000.00")
+        assert decision_amount.profit_cost_gross == Decimal("1200.00")
+        assert decision_amount.profit_cost_vat_zero is None
+        assert decision_amount.disbursement_net is None
+        assert decision_amount.disbursement_gross is None
+        assert decision_amount.disbursement_vat_zero is None
+
+    def test_201_create_claim_auto_approval_persists_disbursement_decision_amount(
+        self, session, client, auth_token
+    ):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "poaTypeId": POAType.EXPERT_COST.value,
+                    "totalProfitCostNet": 1000,
+                    "totalProfitCostGross": 1200,
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {auth_token}",
+            },
+        )
+
+        assert response.status_code == 201
+        claim_id = response.json()["claimId"]
+
+        stored_claim = session.get(Claim, claim_id)
+        assert stored_claim.status_id == ClaimStatus.PAY_IN_FULL
+
+        decision = session.exec(
+            select(ClaimDecision).where(ClaimDecision.claim_id == claim_id)
+        ).one()
+        decision_amount = session.exec(
+            select(ClaimDecisionAmount).where(
+                ClaimDecisionAmount.claim_decision_id == decision.claim_decision_id
+            )
+        ).one()
+
+        assert decision_amount.disbursement_net == Decimal("1000.00")
+        assert decision_amount.disbursement_gross == Decimal("1200.00")
+        assert decision_amount.disbursement_vat_zero == Decimal("0.00")
+        assert decision_amount.profit_cost_net is None
+        assert decision_amount.profit_cost_gross is None
+        assert decision_amount.profit_cost_vat_zero is None
 
     def test_201_create_claim_stores_provisional_total_funds_remaining_for_approved_claim(
         self, session, client, auth_token
