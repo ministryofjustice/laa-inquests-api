@@ -1,4 +1,4 @@
-"""idds_830_add_payment_extract_to_claim_decision_amount
+"""idds_830_create_claim_payment_extract_table
 
 Revision ID: c7d9e1f3a5b2
 Revises: 2392ff78c8f2
@@ -37,37 +37,29 @@ tax_code_enum = sa.Enum(
 def upgrade() -> None:
     invoice_type_code_enum.create(op.get_bind(), checkfirst=True)
     tax_code_enum.create(op.get_bind(), checkfirst=True)
-    op.add_column(
-        "claim_decision_amount",
-        sa.Column("invoice_number", sa.String(), nullable=True),
-    )
-    op.add_column(
-        "claim_decision_amount",
+    op.create_table(
+        "claim_payment_extract",
+        sa.Column("claim_payment_extract_id", sa.Integer(), nullable=False),
+        sa.Column("claim_id", sa.Integer(), nullable=False),
+        sa.Column("sequence_number", sa.Integer(), nullable=False),
+        sa.Column("invoice_number", sa.String(), nullable=False),
         sa.Column(
             "invoice_amount",
             sa.Numeric(precision=10, scale=2),
-            nullable=True,
+            nullable=False,
         ),
-    )
-    op.add_column(
-        "claim_decision_amount",
-        sa.Column("invoice_date", sa.Date(), nullable=True),
-    )
-    op.add_column(
-        "claim_decision_amount",
-        sa.Column("invoice_type", invoice_type_code_enum, nullable=True),
-    )
-    op.add_column(
-        "claim_decision_amount",
-        sa.Column("tax_code", tax_code_enum, nullable=True),
+        sa.Column("invoice_date", sa.Date(), nullable=False),
+        sa.Column("invoice_type", invoice_type_code_enum, nullable=False),
+        sa.Column("tax_code", tax_code_enum, nullable=False),
+        sa.Column("created_at", sa.DateTime(), nullable=True),
+        sa.ForeignKeyConstraint(["claim_id"], ["claim.claim_id"]),
+        sa.PrimaryKeyConstraint("claim_payment_extract_id"),
+        sa.UniqueConstraint("claim_id", "sequence_number"),
+        sa.UniqueConstraint("invoice_number"),
     )
 
 
 def downgrade() -> None:
-    op.drop_column("claim_decision_amount", "tax_code")
-    op.drop_column("claim_decision_amount", "invoice_type")
-    op.drop_column("claim_decision_amount", "invoice_date")
-    op.drop_column("claim_decision_amount", "invoice_amount")
-    op.drop_column("claim_decision_amount", "invoice_number")
+    op.drop_table("claim_payment_extract")
     tax_code_enum.drop(op.get_bind(), checkfirst=True)
     invoice_type_code_enum.drop(op.get_bind(), checkfirst=True)

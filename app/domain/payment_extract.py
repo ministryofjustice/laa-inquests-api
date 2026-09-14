@@ -16,6 +16,7 @@ def bankers_round(value: Decimal) -> Decimal:
 
 @dataclass(frozen=True)
 class PaymentExtractLine:
+    sequence_number: int
     invoice_number: str
     invoice_amount: Decimal
     invoice_date: date
@@ -40,6 +41,7 @@ def build_poa_profit_cost_extract(
         raise ValueError("POA profit cost extract requires a net or vat_zero amount")
 
     return PaymentExtractLine(
+        sequence_number=sequence,
         invoice_number=f"{claim_id}_{sequence:03d}",
         invoice_amount=invoice_amount,
         invoice_date=submission_date.date(),

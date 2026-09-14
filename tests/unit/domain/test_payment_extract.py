@@ -77,6 +77,7 @@ class TestBuildPoaProfitCostExtract:
             vat_zero=None,
         )
 
+        assert line.sequence_number == 1
         assert line.invoice_number == "42_001"
 
     def test_invoice_number_uses_given_sequence(self):
@@ -88,6 +89,7 @@ class TestBuildPoaProfitCostExtract:
             vat_zero=None,
         )
 
+        assert line.sequence_number == 12
         assert line.invoice_number == "42_012"
 
     def test_invoice_date_is_submission_date(self):

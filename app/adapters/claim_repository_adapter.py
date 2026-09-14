@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import date, datetime
+from datetime import datetime
 from decimal import Decimal
 
 from sqlmodel import Session, select
@@ -8,6 +8,7 @@ from sqlmodel import Session, select
 from app.domain.claim import Claim as DomainClaim
 from app.domain.claim_evidence import ClaimEvidence as DomainClaimEvidence
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
+from app.domain.payment_extract import PaymentExtractLine
 from app.logging_utils import build_log_extra
 from app.models.application.index import Application
 from app.models.claim.enums import (
@@ -15,9 +16,7 @@ from app.models.claim.enums import (
     ClaimStatus,
     ClaimType,
     InquestOutcomeCode,
-    InvoiceTypeCode,
     ReasonCode,
-    TaxCode,
 )
 from app.models.claim.index import (
     Claim,
@@ -25,6 +24,7 @@ from app.models.claim.index import (
     ClaimDecision,
     ClaimDecisionAmount,
     ClaimInquestOutcome,
+    ClaimPaymentExtract,
     DecisionReason,
 )
 from app.models.claim.index import (
@@ -36,6 +36,7 @@ from app.ports.claim.create_claim_decision_amount_port import (
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
+from app.ports.claim.create_payment_extract_port import CreatePaymentExtractPort
 from app.ports.claim.delete_claim_evidence_port import DeleteClaimEvidencePort
 from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.ports.claim.get_claim_decision_port import GetClaimDecisionPort
@@ -62,6 +63,7 @@ class ClaimRepositoryAdapter(
     CreateClaimDecisionPort,
     CreateClaimDecisionAmountPort,
     CreateDecisionReasonPort,
+    CreatePaymentExtractPort,
     UpdateClaimStatusPort,
     UploadClaimEvidencePort,
     GetClaimEvidencePort,
@@ -250,11 +252,6 @@ class ClaimRepositoryAdapter(
         disbursement_net: Decimal | None = None,
         disbursement_gross: Decimal | None = None,
         disbursement_vat_zero: Decimal | None = None,
-        invoice_number: str | None = None,
-        invoice_amount: Decimal | None = None,
-        invoice_date: date | None = None,
-        invoice_type: InvoiceTypeCode | None = None,
-        tax_code: TaxCode | None = None,
     ) -> ClaimDecisionAmount:
         amount = ClaimDecisionAmount(
             claim_decision_id=claim_decision_id,
@@ -264,11 +261,6 @@ class ClaimRepositoryAdapter(
             disbursement_net=disbursement_net,
             disbursement_gross=disbursement_gross,
             disbursement_vat_zero=disbursement_vat_zero,
-            invoice_number=invoice_number,
-            invoice_amount=invoice_amount,
-            invoice_date=invoice_date,
-            invoice_type=invoice_type,
-            tax_code=tax_code,
         )
         self.session.add(amount)
         self.session.flush()
@@ -281,6 +273,33 @@ class ClaimRepositoryAdapter(
             ),
         )
         return amount
+
+    def create_payment_extract(
+        self,
+        claim_id: int,
+        line: PaymentExtractLine,
+    ) -> ClaimPaymentExtract:
+        payment_extract = ClaimPaymentExtract(
+            claim_id=claim_id,
+            sequence_number=line.sequence_number,
+            invoice_number=line.invoice_number,
+            invoice_amount=line.invoice_amount,
+            invoice_date=line.invoice_date,
+            invoice_type=line.invoice_type,
+            tax_code=line.tax_code,
+        )
+        self.session.add(payment_extract)
+        self.session.flush()
+        self.session.refresh(payment_extract)
+        logger.info(
+            "Claim payment extract created in repository",
+            extra=build_log_extra(
+                event="claim_repository_payment_extract_create_completed",
+                claim_id=claim_id,
+                invoice_number=line.invoice_number,
+            ),
+        )
+        return payment_extract
 
     def create_decision_reason(
         self,

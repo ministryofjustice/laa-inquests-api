@@ -18,7 +18,10 @@ from app.domain.constants.claim_messages import (
     APPLICATION_NOT_GRANTED_MESSAGE,
     CLAIM_EVIDENCE_NOT_ALLOWED_MESSAGE,
 )
-from app.domain.payment_extract import build_poa_profit_cost_extract
+from app.domain.payment_extract import (
+    PaymentExtractLine,
+    build_poa_profit_cost_extract,
+)
 from app.logging_utils import build_log_extra
 from app.models.claim.enums import (
     ClaimDecisionStatus,
@@ -39,6 +42,7 @@ from app.ports.claim.create_claim_decision_amount_port import (
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
+from app.ports.claim.create_payment_extract_port import CreatePaymentExtractPort
 from app.ports.claim.get_claim_decision_port import GetClaimDecisionPort
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
 from app.ports.claim.update_claim_status_port import (
@@ -65,24 +69,14 @@ def _claim_decision_amount_fields(claim: Claim) -> dict[str, Decimal | None]:
     }
 
 
-# Payment extract is only produced for pay-in-full POA profit cost claims.
-def _payment_extract_fields(claim: Claim) -> dict[str, object]:
-    if claim.poa_type_id != POAType.PROFIT_COST:
-        return {}
-    line = build_poa_profit_cost_extract(
+def _build_payment_extract(claim: Claim) -> PaymentExtractLine:
+    return build_poa_profit_cost_extract(
         claim_id=claim.claim_id,
         sequence=1,
         submission_date=claim.submission_date,
         net=claim.total_profit_cost_net,
         vat_zero=claim.total_profit_cost_vat_zero,
     )
-    return {
-        "invoice_number": line.invoice_number,
-        "invoice_amount": line.invoice_amount,
-        "invoice_date": line.invoice_date,
-        "invoice_type": line.invoice_type,
-        "tax_code": line.tax_code,
-    }
 
 
 @dataclass(frozen=True)
@@ -129,6 +123,7 @@ class CreateClaimUseCase:
         create_decision_reason_port: CreateDecisionReasonPort | None = None,
         update_claim_status_port: UpdateClaimStatusPort | None = None,
         get_claim_decision_port: GetClaimDecisionPort | None = None,
+        create_payment_extract_port: CreatePaymentExtractPort | None = None,
     ) -> None:
         self.create_claim_port = create_claim_port
         self.application_lookup_port = application_lookup_port
@@ -140,6 +135,7 @@ class CreateClaimUseCase:
         self.create_decision_reason_port = create_decision_reason_port
         self.update_claim_status_port = update_claim_status_port
         self.get_claim_decision_port = get_claim_decision_port
+        self.create_payment_extract_port = create_payment_extract_port
 
     def execute(self, command: CreateClaimCommand) -> CreateClaimResult:
         if command.claim_type == ClaimType.NIL_BILL:
@@ -387,8 +383,16 @@ class CreateClaimUseCase:
                     self.create_claim_decision_amount_port.create_claim_decision_amount(
                         claim_decision_id=claim_decision.claim_decision_id,
                         **_claim_decision_amount_fields(claim),
-                        **_payment_extract_fields(claim),
                     )
+                    # Payment extract is only produced for POA profit cost claims.
+                    if (
+                        claim.poa_type_id == POAType.PROFIT_COST
+                        and self.create_payment_extract_port is not None
+                    ):
+                        self.create_payment_extract_port.create_payment_extract(
+                            claim_id=claim.claim_id,
+                            line=_build_payment_extract(claim),
+                        )
                     self.update_claim_status_port.update_claim_status(
                         claim_id=claim.claim_id,
                         status=ClaimStatus.PAY_IN_FULL,

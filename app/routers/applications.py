@@ -57,6 +57,7 @@ from app.ports.claim.create_claim_decision_amount_port import (
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
+from app.ports.claim.create_payment_extract_port import CreatePaymentExtractPort
 from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.ports.claim.get_claim_decision_port import GetClaimDecisionPort
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
@@ -305,6 +306,9 @@ def get_create_claim_use_case(
     ),
     get_claim_decision_port: GetClaimDecisionPort = Depends(get_claim_db_adapter),
     gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
+    create_payment_extract_port: CreatePaymentExtractPort = Depends(
+        get_claim_db_adapter
+    ),
 ) -> CreateClaimUseCase:
     return CreateClaimUseCase(
         create_claim_port=create_claim_port,
@@ -317,6 +321,7 @@ def get_create_claim_use_case(
         create_decision_reason_port=create_decision_reason_port,
         update_claim_status_port=update_claim_status_port,
         get_claim_decision_port=get_claim_decision_port,
+        create_payment_extract_port=create_payment_extract_port,
     )
 
 
