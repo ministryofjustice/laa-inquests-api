@@ -49,6 +49,18 @@ class ReasonCode(str, enum.Enum):
     MANUAL_REJECTION = "MANUAL_REJECTION"
 
 
+class InvoiceTypeCode(str, enum.Enum):
+    FINAL_BILL_FEES = "Inq Final Bill (Fees)"
+    FINAL_BILL_DISBURSEMENT = "Inq Final Bill (Disb)"
+    POA = "Inq POA"
+    RECOUPED = "Inq Recouped POA"
+
+
+class TaxCode(str, enum.Enum):
+    GB_VAT_20 = "GB VAT 20%"
+    ZERO_VAT = "ZERO VAT"
+
+
 class InquestOutcomeCode(str, enum.Enum):
     ACCIDENT_OR_MISADVENTURE = "ACCIDENT_OR_MISADVENTURE"
     ALCOHOL_OR_DRUGS_RELATED = "ALCOHOL_OR_DRUGS_RELATED"

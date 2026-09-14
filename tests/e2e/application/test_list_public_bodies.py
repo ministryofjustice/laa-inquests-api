@@ -1,3 +1,6 @@
+import pytest
+
+
 def test_200_list_public_bodies_returns_seeded_record_with_id_and_description(
     client, auth_token
 ):
@@ -52,10 +55,16 @@ def test_200_list_public_bodies_returns_200_when_caseworker_token(entra_auth_cli
     assert response.status_code == 200
 
 
-def test_200_list_public_bodies_returns_200_when_provider_token(entra_auth_client):
+@pytest.mark.parametrize(
+    "provider_token",
+    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+)
+def test_200_list_public_bodies_returns_200_when_provider_token(
+    entra_auth_client, provider_token
+):
     response = entra_auth_client.get(
         "/applications/public-bodies",
-        headers={"Authorization": "Bearer valid-provider-entra-token"},
+        headers={"Authorization": f"Bearer {provider_token}"},
     )
 
     assert response.status_code == 200

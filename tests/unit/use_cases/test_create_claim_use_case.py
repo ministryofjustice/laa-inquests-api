@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, call
 import pytest
 
 from app.domain.claim_error import ClaimErrorCode
+from app.domain.payment_extract import PaymentExtractLine
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 from app.models.claim.enums import (
@@ -13,24 +14,34 @@ from app.models.claim.enums import (
     ClaimStatus,
     ClaimType,
     InquestOutcomeCode,
+    InvoiceTypeCode,
     NumberOfCounselInstructed,
     POAType,
     ReasonCode,
+    TaxCode,
 )
 from app.models.claim.index import Claim, ClaimDecision
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.notifications.enums import NotificationType
 from app.ports.application_lookup_port import ApplicationLookupPort
+from app.ports.claim.create_claim_decision_amount_port import (
+    CreateClaimDecisionAmountPort,
+)
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.create_claim_port import CreateClaimPort
 from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
+from app.ports.claim.create_payment_extract_port import CreatePaymentExtractPort
 from app.ports.claim.get_claim_decision_port import GetClaimDecisionPort
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
 from app.ports.claim.update_claim_status_port import (
     UpdateClaimStatusPort,
 )
 from app.ports.create_history_event_port import CreateHistoryEventPort
-from app.use_cases.create_claim import CreateClaimCommand, CreateClaimUseCase
+from app.use_cases.create_claim import (
+    CreateClaimCommand,
+    CreateClaimUseCase,
+    _build_payment_extract,
+)
 from app.use_cases.exceptions import ApplicationNotFoundError, InvalidClaimError
 
 _UNSET = object()
@@ -103,6 +114,14 @@ def _make_create_claim_decision_port(claim_decision_id: int = 10):
     return port
 
 
+def _make_create_claim_decision_amount_port():
+    return MagicMock(spec=CreateClaimDecisionAmountPort)
+
+
+def _make_create_payment_extract_port():
+    return MagicMock(spec=CreatePaymentExtractPort)
+
+
 def _make_create_decision_reason_port():
     return MagicMock(spec=CreateDecisionReasonPort)
 
@@ -125,6 +144,46 @@ def _make_use_case(**kwargs):
         "create_history_event_port", MagicMock(spec=CreateHistoryEventPort)
     )
     return CreateClaimUseCase(**kwargs)
+
+
+def _claim_with_poa(poa_type, net, gross, vat_zero=None) -> Claim:
+    return Claim(
+        claim_id=1,
+        application_id=12345,
+        claim_type_id="PAYMENT_ON_ACCOUNT",
+        total_profit_cost_net=net,
+        total_profit_cost_gross=gross,
+        total_profit_cost_vat_zero=vat_zero,
+        poa_type_id=poa_type,
+    )
+
+
+def _execute_auto_approval(
+    command,
+    claim,
+    create_claim_decision_amount_port,
+    create_payment_extract_port=None,
+):
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+
+    application = MagicMock(spec=Application)
+    application.status = "LIVE"
+    application.overall_decision = "GRANTED"
+    application.proceeding = MagicMock()
+    application.proceeding.substantive_cost_limitation = 999999
+    application.proceeding.certificate_start_date = None
+
+    use_case = _make_use_case(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(application),
+        get_claims_for_application_port=_make_get_claims_port(),
+        create_claim_decision_port=_make_create_claim_decision_port(),
+        create_claim_decision_amount_port=create_claim_decision_amount_port,
+        update_claim_status_port=_make_update_claim_status_port(),
+        create_payment_extract_port=create_payment_extract_port,
+    )
+    return use_case.execute(command)
 
 
 def test_execute_raises_invalid_claim_error_when_no_evidence_ids_provided():
@@ -1037,6 +1096,38 @@ def test_execute_auto_reject_does_not_persist_when_auto_reject_create_history_ev
     )  # This rollback is for auto reject claim
 
 
+def test_build_payment_extract_maps_vat_profit_cost_claim():
+    claim = _claim_with_poa(POAType.PROFIT_COST, Decimal("1000.00"), Decimal("1200.00"))
+
+    line = _build_payment_extract(claim)
+
+    assert line == PaymentExtractLine(
+        sequence_number=1,
+        invoice_number="1_001",
+        invoice_amount=Decimal("960.00"),
+        invoice_date=claim.submission_date.date(),
+        invoice_type=InvoiceTypeCode.POA,
+        tax_code=TaxCode.GB_VAT_20,
+    )
+
+
+def test_build_payment_extract_maps_zero_vat_profit_cost_claim():
+    claim = _claim_with_poa(
+        POAType.PROFIT_COST, None, None, vat_zero=Decimal("1000.00")
+    )
+
+    line = _build_payment_extract(claim)
+
+    assert line == PaymentExtractLine(
+        sequence_number=1,
+        invoice_number="1_001",
+        invoice_amount=Decimal("800.00"),
+        invoice_date=claim.submission_date.date(),
+        invoice_type=InvoiceTypeCode.POA,
+        tax_code=TaxCode.ZERO_VAT,
+    )
+
+
 def test_execute_auto_approves_eligible_payment_on_account_claim():
     command = _make_command({"net": Decimal("50000.00"), "gross": Decimal("50000.00")})
     claim = _make_claim()
@@ -1044,6 +1135,8 @@ def test_execute_auto_approves_eligible_payment_on_account_claim():
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
     create_claim_decision_port = _make_create_claim_decision_port()
+    create_claim_decision_amount_port = _make_create_claim_decision_amount_port()
+    create_payment_extract_port = _make_create_payment_extract_port()
     update_claim_status_port = _make_update_claim_status_port()
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
 
@@ -1059,8 +1152,10 @@ def test_execute_auto_approves_eligible_payment_on_account_claim():
         application_lookup_port=_make_application_lookup_port(application),
         get_claims_for_application_port=_make_get_claims_port(),
         create_claim_decision_port=create_claim_decision_port,
+        create_claim_decision_amount_port=create_claim_decision_amount_port,
         update_claim_status_port=update_claim_status_port,
         create_history_event_port=create_history_event_port,
+        create_payment_extract_port=create_payment_extract_port,
     )
 
     result = use_case.execute(command)
@@ -1070,6 +1165,23 @@ def test_execute_auto_approves_eligible_payment_on_account_claim():
     create_claim_decision_port.create_claim_decision.assert_called_once_with(
         claim_id=1,
         decision_status=ClaimDecisionStatus.PAY_IN_FULL,
+    )
+    create_claim_decision_amount_port.create_claim_decision_amount.assert_called_once_with(
+        claim_decision_id=10,
+        profit_cost_net=claim.total_profit_cost_net,
+        profit_cost_gross=claim.total_profit_cost_gross,
+        profit_cost_vat_zero=claim.total_profit_cost_vat_zero,
+    )
+    create_payment_extract_port.create_payment_extract.assert_called_once_with(
+        claim_id=1,
+        line=PaymentExtractLine(
+            sequence_number=1,
+            invoice_number="1_001",
+            invoice_amount=Decimal("960.00"),
+            invoice_date=claim.submission_date.date(),
+            invoice_type=InvoiceTypeCode.POA,
+            tax_code=TaxCode.GB_VAT_20,
+        ),
     )
     update_claim_status_port.update_claim_status.assert_called_once_with(
         claim_id=1,
@@ -1083,6 +1195,230 @@ def test_execute_auto_approves_eligible_payment_on_account_claim():
         event_data={"claim_reference": 1},
     )
     assert create_claim_port.commit.call_count == 2
+
+
+def test_execute_auto_approval_persists_profit_cost_amounts_for_profit_cost_poa():
+    command = _make_command(
+        {
+            "poa_type": POAType.PROFIT_COST,
+            "net": Decimal("40000.00"),
+            "gross": Decimal("40000.00"),
+        }
+    )
+    claim = _claim_with_poa(
+        POAType.PROFIT_COST, Decimal("40000.00"), Decimal("40000.00")
+    )
+    amount_port = _make_create_claim_decision_amount_port()
+    extract_port = _make_create_payment_extract_port()
+
+    result = _execute_auto_approval(command, claim, amount_port, extract_port)
+
+    assert result.claim.status_id == ClaimStatus.PAY_IN_FULL
+    amount_port.create_claim_decision_amount.assert_called_once_with(
+        claim_decision_id=10,
+        profit_cost_net=Decimal("40000.00"),
+        profit_cost_gross=Decimal("40000.00"),
+        profit_cost_vat_zero=None,
+    )
+    extract_port.create_payment_extract.assert_called_once_with(
+        claim_id=1,
+        line=PaymentExtractLine(
+            sequence_number=1,
+            invoice_number="1_001",
+            invoice_amount=Decimal("38400.00"),
+            invoice_date=claim.submission_date.date(),
+            invoice_type=InvoiceTypeCode.POA,
+            tax_code=TaxCode.GB_VAT_20,
+        ),
+    )
+
+
+def test_execute_auto_approval_persists_zero_vat_payment_extract_for_profit_cost_poa():
+    command = _make_command(
+        {
+            "poa_type": POAType.PROFIT_COST,
+            "net": None,
+            "gross": None,
+            "vat_zero_total": Decimal("1000.00"),
+        }
+    )
+    claim = _claim_with_poa(
+        POAType.PROFIT_COST, None, None, vat_zero=Decimal("1000.00")
+    )
+    amount_port = _make_create_claim_decision_amount_port()
+    extract_port = _make_create_payment_extract_port()
+
+    result = _execute_auto_approval(command, claim, amount_port, extract_port)
+
+    assert result.claim.status_id == ClaimStatus.PAY_IN_FULL
+    amount_port.create_claim_decision_amount.assert_called_once_with(
+        claim_decision_id=10,
+        profit_cost_net=None,
+        profit_cost_gross=None,
+        profit_cost_vat_zero=Decimal("1000.00"),
+    )
+    extract_port.create_payment_extract.assert_called_once_with(
+        claim_id=1,
+        line=PaymentExtractLine(
+            sequence_number=1,
+            invoice_number="1_001",
+            invoice_amount=Decimal("800.00"),
+            invoice_date=claim.submission_date.date(),
+            invoice_type=InvoiceTypeCode.POA,
+            tax_code=TaxCode.ZERO_VAT,
+        ),
+    )
+
+
+def test_execute_auto_approval_persists_disbursement_amounts_for_expert_cost_poa():
+    command = _make_command(
+        {
+            "poa_type": POAType.EXPERT_COST,
+            "net": Decimal("40000.00"),
+            "gross": Decimal("40000.00"),
+        }
+    )
+    claim = _claim_with_poa(
+        POAType.EXPERT_COST, Decimal("40000.00"), Decimal("40000.00")
+    )
+    amount_port = _make_create_claim_decision_amount_port()
+    extract_port = _make_create_payment_extract_port()
+
+    result = _execute_auto_approval(command, claim, amount_port, extract_port)
+
+    assert result.claim.status_id == ClaimStatus.PAY_IN_FULL
+    amount_port.create_claim_decision_amount.assert_called_once_with(
+        claim_decision_id=10,
+        disbursement_net=Decimal("40000.00"),
+        disbursement_gross=Decimal("40000.00"),
+        disbursement_vat_zero=None,
+    )
+    extract_port.create_payment_extract.assert_not_called()
+
+
+def test_execute_auto_approval_persists_disbursement_amounts_for_non_expert_poa():
+    command = _make_command(
+        {
+            "poa_type": POAType.NON_EXPERT_DISBURSEMENT,
+            "net": Decimal("40000.00"),
+            "gross": Decimal("40000.00"),
+        }
+    )
+    claim = _claim_with_poa(
+        POAType.NON_EXPERT_DISBURSEMENT, Decimal("40000.00"), Decimal("40000.00")
+    )
+    amount_port = _make_create_claim_decision_amount_port()
+    extract_port = _make_create_payment_extract_port()
+
+    result = _execute_auto_approval(command, claim, amount_port, extract_port)
+
+    assert result.claim.status_id == ClaimStatus.PAY_IN_FULL
+    amount_port.create_claim_decision_amount.assert_called_once_with(
+        claim_decision_id=10,
+        disbursement_net=Decimal("40000.00"),
+        disbursement_gross=Decimal("40000.00"),
+        disbursement_vat_zero=None,
+    )
+    extract_port.create_payment_extract.assert_not_called()
+
+
+def test_execute_does_not_persist_decision_amount_when_claim_auto_rejected():
+    command = _make_command({"net": Decimal("5000.00"), "gross": Decimal("5000.00")})
+    claim = _make_claim()
+
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+    amount_port = _make_create_claim_decision_amount_port()
+
+    application = MagicMock(spec=Application)
+    application.status = "LIVE"
+    application.overall_decision = "GRANTED"
+    application.proceeding = MagicMock()
+    application.proceeding.substantive_cost_limitation = 1000
+    application.proceeding.certificate_start_date = None
+
+    use_case = _make_use_case(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(application),
+        get_claims_for_application_port=_make_get_claims_port(),
+        create_claim_decision_port=_make_create_claim_decision_port(),
+        create_claim_decision_amount_port=amount_port,
+        create_decision_reason_port=_make_create_decision_reason_port(),
+        update_claim_status_port=_make_update_claim_status_port(),
+    )
+
+    result = use_case.execute(command)
+
+    assert result.claim.status_id == ClaimStatus.REJECTED
+    amount_port.create_claim_decision_amount.assert_not_called()
+
+
+def test_execute_does_not_persist_decision_amount_when_claim_needs_manual_review():
+    command = _make_command({"net": Decimal("50000.01"), "gross": Decimal("50000.01")})
+    claim = _make_claim()
+
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+    amount_port = _make_create_claim_decision_amount_port()
+
+    application = MagicMock(spec=Application)
+    application.status = "LIVE"
+    application.overall_decision = "GRANTED"
+    application.proceeding = MagicMock()
+    application.proceeding.substantive_cost_limitation = 999999
+    application.proceeding.certificate_start_date = None
+
+    use_case = _make_use_case(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(application),
+        get_claims_for_application_port=_make_get_claims_port(),
+        create_claim_decision_port=_make_create_claim_decision_port(),
+        create_claim_decision_amount_port=amount_port,
+        update_claim_status_port=_make_update_claim_status_port(),
+    )
+
+    result = use_case.execute(command)
+
+    assert result.claim.status_id != ClaimStatus.PAY_IN_FULL
+    amount_port.create_claim_decision_amount.assert_not_called()
+
+
+def test_execute_reverts_to_submitted_when_persisting_decision_amount_fails():
+    command = _make_command({"net": Decimal("50000.00"), "gross": Decimal("50000.00")})
+    claim = _make_claim()
+
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+    create_claim_decision_port = _make_create_claim_decision_port()
+    amount_port = _make_create_claim_decision_amount_port()
+    amount_port.create_claim_decision_amount.side_effect = Exception(
+        "Unable to persist decision amount"
+    )
+    update_claim_status_port = _make_update_claim_status_port()
+
+    application = MagicMock(spec=Application)
+    application.status = "LIVE"
+    application.overall_decision = "GRANTED"
+    application.proceeding = MagicMock()
+    application.proceeding.substantive_cost_limitation = 999999
+    application.proceeding.certificate_start_date = None
+
+    use_case = _make_use_case(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(application),
+        get_claims_for_application_port=_make_get_claims_port(),
+        create_claim_decision_port=create_claim_decision_port,
+        create_claim_decision_amount_port=amount_port,
+        update_claim_status_port=update_claim_status_port,
+    )
+
+    result = use_case.execute(command)
+
+    assert result.claim.status_id == ClaimStatus.SUBMITTED
+    assert result.rejection_reasons is None
+    update_claim_status_port.update_claim_status.assert_not_called()
+    assert create_claim_port.commit.call_count == 1
+    assert create_claim_port.rollback.call_count == 1
 
 
 def test_execute_does_not_send_grant_email_when_auto_approving_poa_claim():
@@ -1109,6 +1445,7 @@ def test_execute_does_not_send_grant_email_when_auto_approving_poa_claim():
         application_lookup_port=_make_application_lookup_port(application),
         get_claims_for_application_port=_make_get_claims_port(),
         create_claim_decision_port=create_claim_decision_port,
+        create_claim_decision_amount_port=_make_create_claim_decision_amount_port(),
         update_claim_status_port=update_claim_status_port,
         create_history_event_port=create_history_event_port,
         gov_notify_port=gov_notify_port,
@@ -1145,6 +1482,7 @@ def test_execute_does_not_create_history_event_if_auto_approve_eligible_update_c
         application_lookup_port=_make_application_lookup_port(application),
         get_claims_for_application_port=_make_get_claims_port(),
         create_claim_decision_port=create_claim_decision_port,
+        create_claim_decision_amount_port=_make_create_claim_decision_amount_port(),
         update_claim_status_port=update_claim_status_port,
         create_history_event_port=create_history_event_port,
     )
@@ -1201,6 +1539,7 @@ def test_execute_does_not_auto_approve_if_create_history_event_fails():
         application_lookup_port=_make_application_lookup_port(application),
         get_claims_for_application_port=_make_get_claims_port(),
         create_claim_decision_port=create_claim_decision_port,
+        create_claim_decision_amount_port=_make_create_claim_decision_amount_port(),
         update_claim_status_port=update_claim_status_port,
         create_history_event_port=create_history_event_port,
     )
@@ -1400,6 +1739,7 @@ def test_execute_sets_funds_deducting_new_amount_even_when_auto_approved():
         application_lookup_port=_make_application_lookup_port(application),
         get_claims_for_application_port=_make_get_claims_port([]),
         create_claim_decision_port=create_claim_decision_port,
+        create_claim_decision_amount_port=_make_create_claim_decision_amount_port(),
         update_claim_status_port=update_claim_status_port,
         get_claim_decision_port=_make_get_claim_decision_port(),
     )
