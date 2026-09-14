@@ -76,3 +76,32 @@ def test_require_permission_raises_403_when_permission_missing():
 
     assert exc_info.value.status_code == 403
     assert "claim:create" in exc_info.value.detail
+
+
+def test_external_provider_application_user_permission_set():
+    assert ROLE_PERMISSIONS_MAP["Inquests - Provider Application User"] == {
+        Permission.APPLICATION_CREATE,
+        Permission.CORONERS_LETTER_UPLOAD,
+        Permission.CORONERS_LETTER_DELETE,
+        Permission.PROVIDER_OFFICES_READ,
+    }
+
+
+def test_external_provider_claims_user_permission_set():
+    assert ROLE_PERMISSIONS_MAP["Inquests - Provider Claims User"] == {
+        Permission.APPLICATION_SEARCH,
+        Permission.CLAIM_CREATE,
+        Permission.CLAIM_DELETE,
+        Permission.CLAIM_EVIDENCE_UPLOAD,
+        Permission.PROVIDER_OFFICES_READ,
+    }
+
+
+def test_internal_applications_caseworker_permission_set():
+    assert ROLE_PERMISSIONS_MAP["Inquests - Internal Applications Caseworker"] == {
+        Permission.APPLICATION_READ,
+        Permission.APPLICATION_MANAGE,
+        Permission.CERTIFICATE_READ,
+        Permission.HISTORY_READ,
+        Permission.CASE_NOTE_CREATE,
+    }
