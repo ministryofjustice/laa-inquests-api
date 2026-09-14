@@ -59,6 +59,13 @@ ROLE_PERMISSIONS_MAP: dict[str, set[Permission]] = {
         Permission.HISTORY_READ,
         Permission.CASE_NOTE_CREATE,
     },
+    "Inquests - Internal Customer Service Agent": {
+        Permission.APPLICATION_READ,
+        Permission.CLAIM_READ,
+        Permission.CERTIFICATE_READ,
+        Permission.CASE_NOTE_CREATE,
+        Permission.HISTORY_READ,
+    },
 }
 
 

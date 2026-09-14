@@ -116,3 +116,13 @@ def test_internal_claims_caseworker_permission_set():
         Permission.HISTORY_READ,
         Permission.CASE_NOTE_CREATE,
     }
+
+
+def test_internal_customer_service_agent_permission_set():
+    assert ROLE_PERMISSIONS_MAP["Inquests - Internal Customer Service Agent"] == {
+        Permission.APPLICATION_READ,
+        Permission.CLAIM_READ,
+        Permission.CERTIFICATE_READ,
+        Permission.CASE_NOTE_CREATE,
+        Permission.HISTORY_READ,
+    }
