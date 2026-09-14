@@ -86,6 +86,13 @@ ROLE_PERMISSIONS_MAP: dict[str, set[Permission]] = {
     "Inquests - Claim workflow reporting": {
         Permission.REPORTS_CLAIM_WORKFLOW_READ,
     },
+    "Inquests - Policy": {
+        Permission.REPORTS_MI_READ,
+    },
+    "Inquests - Finance": {
+        Permission.REPORTS_MI_READ,
+        Permission.REPORTS_PAYMENT_READ,
+    },
 }
 
 

@@ -150,3 +150,16 @@ def test_internal_claim_workflow_reporting_permission_set():
     assert ROLE_PERMISSIONS_MAP["Inquests - Claim workflow reporting"] == {
         Permission.REPORTS_CLAIM_WORKFLOW_READ,
     }
+
+
+def test_internal_policy_permission_set():
+    assert ROLE_PERMISSIONS_MAP["Inquests - Policy"] == {
+        Permission.REPORTS_MI_READ,
+    }
+
+
+def test_internal_finance_permission_set():
+    assert ROLE_PERMISSIONS_MAP["Inquests - Finance"] == {
+        Permission.REPORTS_MI_READ,
+        Permission.REPORTS_PAYMENT_READ,
+    }
