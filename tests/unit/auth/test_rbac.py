@@ -138,3 +138,15 @@ def test_internal_assurance_permission_set():
         Permission.REPORTS_MI_READ,
         Permission.REPORTS_PAYMENT_READ,
     }
+
+
+def test_internal_application_workflow_reporting_permission_set():
+    assert ROLE_PERMISSIONS_MAP["Inquests - Application workflow reporting"] == {
+        Permission.REPORTS_APPLICATION_WORKFLOW_READ,
+    }
+
+
+def test_internal_claim_workflow_reporting_permission_set():
+    assert ROLE_PERMISSIONS_MAP["Inquests - Claim workflow reporting"] == {
+        Permission.REPORTS_CLAIM_WORKFLOW_READ,
+    }
