@@ -1,14 +1,14 @@
 import uuid
 from collections.abc import Iterator
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, field_validator
 from pydantic import Field as PydanticField
 from pydantic.alias_generators import to_camel
-from sqlalchemy import Boolean, Column, Numeric
+from sqlalchemy import Boolean, Column, Date, Numeric, UniqueConstraint
 from sqlmodel import Enum, Field, Relationship, SQLModel
 
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
@@ -18,9 +18,11 @@ from app.models.claim.enums import (
     ClaimStatus,
     ClaimType,
     InquestOutcomeCode,
+    InvoiceTypeCode,
     NumberOfCounselInstructed,
     POAType,
     ReasonCode,
+    TaxCode,
 )
 
 
@@ -176,6 +178,26 @@ class ClaimDecisionAmount(SQLModel, table=True):
     disbursement_vat_zero: Decimal | None = Field(
         default=None, sa_column=Column(Numeric(10, 2), nullable=True)
     )
+
+
+class ClaimPaymentExtract(SQLModel, table=True):
+    __tablename__ = "claim_payment_extract"
+    __table_args__ = (
+        UniqueConstraint("claim_id", "sequence_number"),
+        UniqueConstraint("invoice_number"),
+    )
+
+    claim_payment_extract_id: int | None = Field(default=None, primary_key=True)
+    claim_id: int = Field(foreign_key="claim.claim_id")
+    sequence_number: int
+    invoice_number: str
+    invoice_amount: Decimal = Field(sa_column=Column(Numeric(10, 2), nullable=False))
+    invoice_date: date = Field(sa_column=Column(Date, nullable=False))
+    invoice_type: InvoiceTypeCode = Field(
+        sa_column=Column(Enum(InvoiceTypeCode), nullable=False)
+    )
+    tax_code: TaxCode = Field(sa_column=Column(Enum(TaxCode), nullable=False))
+    created_at: datetime | None = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class ClaimEvidence(SQLModel, table=True):
