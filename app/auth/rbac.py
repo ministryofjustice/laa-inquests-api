@@ -47,14 +47,14 @@ ROLE_PERMISSIONS_MAP: dict[str, set[Permission]] = {
         Permission.CLAIM_EVIDENCE_UPLOAD,
         Permission.PROVIDER_OFFICES_READ,
     },
-    "Inquests - Internal Applications Caseworker": {
+    "Inquests - Applications caseworker": {
         Permission.APPLICATION_READ,
         Permission.APPLICATION_MANAGE,
         Permission.CERTIFICATE_READ,
         Permission.HISTORY_READ,
         Permission.CASE_NOTE_CREATE,
     },
-    "Inquests - Internal Claims Caseworker": {
+    "Inquests - Claims caseworker": {
         Permission.APPLICATION_READ,
         Permission.CLAIM_READ,
         Permission.CLAIM_MANAGE,
@@ -62,14 +62,14 @@ ROLE_PERMISSIONS_MAP: dict[str, set[Permission]] = {
         Permission.HISTORY_READ,
         Permission.CASE_NOTE_CREATE,
     },
-    "Inquests - Internal Customer Service Agent": {
+    "Inquests - Customer service agent": {
         Permission.APPLICATION_READ,
         Permission.CLAIM_READ,
         Permission.CERTIFICATE_READ,
         Permission.CASE_NOTE_CREATE,
         Permission.HISTORY_READ,
     },
-    "Inquests - Internal Assurance": {
+    "Inquests - Assurance": {
         Permission.APPLICATION_READ,
         Permission.CLAIM_READ,
         Permission.CERTIFICATE_READ,

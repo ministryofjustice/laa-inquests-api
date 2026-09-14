@@ -98,7 +98,7 @@ def test_external_provider_claims_user_permission_set():
 
 
 def test_internal_applications_caseworker_permission_set():
-    assert ROLE_PERMISSIONS_MAP["Inquests - Internal Applications Caseworker"] == {
+    assert ROLE_PERMISSIONS_MAP["Inquests - Applications caseworker"] == {
         Permission.APPLICATION_READ,
         Permission.APPLICATION_MANAGE,
         Permission.CERTIFICATE_READ,
@@ -108,7 +108,7 @@ def test_internal_applications_caseworker_permission_set():
 
 
 def test_internal_claims_caseworker_permission_set():
-    assert ROLE_PERMISSIONS_MAP["Inquests - Internal Claims Caseworker"] == {
+    assert ROLE_PERMISSIONS_MAP["Inquests - Claims caseworker"] == {
         Permission.APPLICATION_READ,
         Permission.CLAIM_READ,
         Permission.CLAIM_MANAGE,
@@ -119,7 +119,7 @@ def test_internal_claims_caseworker_permission_set():
 
 
 def test_internal_customer_service_agent_permission_set():
-    assert ROLE_PERMISSIONS_MAP["Inquests - Internal Customer Service Agent"] == {
+    assert ROLE_PERMISSIONS_MAP["Inquests - Customer service agent"] == {
         Permission.APPLICATION_READ,
         Permission.CLAIM_READ,
         Permission.CERTIFICATE_READ,
@@ -129,7 +129,7 @@ def test_internal_customer_service_agent_permission_set():
 
 
 def test_internal_assurance_permission_set():
-    assert ROLE_PERMISSIONS_MAP["Inquests - Internal Assurance"] == {
+    assert ROLE_PERMISSIONS_MAP["Inquests - Assurance"] == {
         Permission.APPLICATION_READ,
         Permission.CLAIM_READ,
         Permission.CERTIFICATE_READ,
