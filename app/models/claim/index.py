@@ -133,6 +133,9 @@ class ClaimDecision(SQLModel, table=True):
     decision: ClaimDecisionStatus = Field(
         sa_column=Column(Enum(ClaimDecisionStatus), nullable=False)
     )
+    created_at: datetime | None = Field(
+        default_factory=lambda: datetime.now(UTC), index=True
+    )
     decision_reasons: list["DecisionReason"] = Relationship(
         back_populates="claim_decision"
     )
@@ -146,6 +149,33 @@ class DecisionReason(SQLModel, table=True):
     reason_code: ReasonCode = Field(sa_column=Column(Enum(ReasonCode), nullable=False))
     justification: str | None = Field(default=None)
     claim_decision: ClaimDecision = Relationship(back_populates="decision_reasons")
+
+
+class ClaimDecisionAmount(SQLModel, table=True):
+    __tablename__ = "claim_decision_amount"
+
+    claim_decision_amount_id: int | None = Field(default=None, primary_key=True)
+    claim_decision_id: int = Field(
+        foreign_key="claim_decision.claim_decision_id", unique=True
+    )
+    profit_cost_net: Decimal | None = Field(
+        default=None, sa_column=Column(Numeric(10, 2), nullable=True)
+    )
+    profit_cost_gross: Decimal | None = Field(
+        default=None, sa_column=Column(Numeric(10, 2), nullable=True)
+    )
+    profit_cost_vat_zero: Decimal | None = Field(
+        default=None, sa_column=Column(Numeric(10, 2), nullable=True)
+    )
+    disbursement_net: Decimal | None = Field(
+        default=None, sa_column=Column(Numeric(10, 2), nullable=True)
+    )
+    disbursement_gross: Decimal | None = Field(
+        default=None, sa_column=Column(Numeric(10, 2), nullable=True)
+    )
+    disbursement_vat_zero: Decimal | None = Field(
+        default=None, sa_column=Column(Numeric(10, 2), nullable=True)
+    )
 
 
 class ClaimEvidence(SQLModel, table=True):
@@ -253,6 +283,45 @@ class RejectClaimRequest(BaseModel):
         from_attributes=True,
     )
     justification: str = PydanticField(examples=["Rejected following manual review."])
+
+
+# REQUEST BODY -- Pay in full
+class PayInFullClaimRequest(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+    profit_cost_net: Decimal | None = PydanticField(default=None, examples=["1000.00"])
+    profit_cost_gross: Decimal | None = PydanticField(
+        default=None, examples=["1200.00"]
+    )
+    profit_cost_vat_zero: Decimal | None = PydanticField(
+        default=None, examples=["500.00"]
+    )
+    disbursement_net: Decimal | None = PydanticField(default=None, examples=["100.00"])
+    disbursement_gross: Decimal | None = PydanticField(
+        default=None, examples=["120.00"]
+    )
+    disbursement_vat_zero: Decimal | None = PydanticField(
+        default=None, examples=["50.00"]
+    )
+
+    @field_validator(
+        "profit_cost_net",
+        "profit_cost_gross",
+        "profit_cost_vat_zero",
+        "disbursement_net",
+        "disbursement_gross",
+        "disbursement_vat_zero",
+    )
+    @classmethod
+    def _validate_two_decimal_places(cls, value: Decimal | None) -> Decimal | None:
+        if value is not None and value.is_finite():
+            exponent = value.as_tuple().exponent
+            if isinstance(exponent, int) and exponent < -2:
+                raise ValueError("must have no more than 2 decimal places")
+        return value
 
 
 # RESPONSE BODY

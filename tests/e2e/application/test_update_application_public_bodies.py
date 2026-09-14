@@ -1,3 +1,4 @@
+import pytest
 from sqlmodel import select
 
 from app.models.application.enums import MeritsDecision, PublicBodyId
@@ -152,15 +153,19 @@ def test_401_update_application_public_bodies_returns_401_when_no_authorization_
     assert response.status_code == 401
 
 
-def test_403_update_application_public_bodies_returns_403_when_token_is_a_provider_token(
-    entra_auth_client,
+@pytest.mark.parametrize(
+    "provider_token",
+    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+)
+def test_403_update_application_public_bodies_returns_403_when_provider_token(
+    entra_auth_client, provider_token
 ):
     response = entra_auth_client.patch(
         "/applications/1/public-bodies",
         json={"publicBodies": ["Ministry of Defence"]},
         headers={
             "Content-Type": "application/json",
-            "Authorization": "Bearer valid-provider-entra-token",
+            "Authorization": f"Bearer {provider_token}",
         },
     )
 

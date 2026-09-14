@@ -14,6 +14,7 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 
+from app.auth.rbac import Permission, require_permission
 from app.logging_utils import build_log_extra
 from app.models.claim.index import UploadClaimEvidenceResponse
 from app.ports.claim.delete_claim_evidence_port import DeleteClaimEvidencePort
@@ -24,7 +25,6 @@ from app.routers.dependencies import (
     get_claim_db_adapter,
     get_sds_port,
     verify_entra_provider_or_caseworker_token,
-    verify_entra_provider_token,
 )
 from app.use_cases.delete_claim_evidence import DeleteClaimEvidenceUseCase
 from app.use_cases.exceptions import (
@@ -94,12 +94,12 @@ def get_delete_claim_evidence_use_case(
     "/evidence",
     response_model=UploadClaimEvidenceResponse,
     status_code=201,
+    dependencies=[Depends(require_permission(Permission.CLAIM_EVIDENCE_UPLOAD))],
 )
 async def upload_claim_evidence(
     file: UploadFile = File(...),
     use_case: UploadClaimEvidenceUseCase = Depends(get_upload_claim_evidence_use_case),
     request: Request = None,
-    _: None = Depends(verify_entra_provider_token),
 ) -> UploadClaimEvidenceResponse:
     """Upload claim evidence to document storage and return its file ID."""
     contents = await file.read()
@@ -204,12 +204,15 @@ def retrieve_claim_evidence(
     )
 
 
-@router.delete("/{claim_evidence_id}", status_code=204)
+@router.delete(
+    "/{claim_evidence_id}",
+    status_code=204,
+    dependencies=[Depends(require_permission(Permission.CLAIM_DELETE))],
+)
 def delete_claim_evidence(
     claim_evidence_id: uuid.UUID,
     use_case: DeleteClaimEvidenceUseCase = Depends(get_delete_claim_evidence_use_case),
     request: Request = None,
-    _: None = Depends(verify_entra_provider_token),
 ) -> Response:
     try:
         use_case.execute(claim_evidence_id)

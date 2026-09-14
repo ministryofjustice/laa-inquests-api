@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 
+import pytest
 from sqlmodel import select
 
 from app.models.application.index import Application
@@ -18,15 +19,19 @@ def test_401_get_application_history_returns_401_when_no_authorization_header(
     assert response.status_code == 401
 
 
+@pytest.mark.parametrize(
+    "provider_token",
+    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+)
 def test_403_get_application_history_returns_403_when_provider_token(
-    entra_auth_client, session
+    entra_auth_client, session, provider_token
 ):
     first_application_row = session.exec(select(Application)).first()
     laa_reference = first_application_row.laa_reference
 
     response = entra_auth_client.get(
         f"/applications/{laa_reference}/history",
-        headers={"Authorization": "Bearer valid-provider-entra-token"},
+        headers={"Authorization": f"Bearer {provider_token}"},
     )
 
     assert response.status_code == 403

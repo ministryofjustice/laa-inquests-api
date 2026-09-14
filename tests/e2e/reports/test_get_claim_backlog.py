@@ -1,12 +1,13 @@
 from datetime import UTC, datetime
 
+import pytest
 from sqlmodel import select
 
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimStatus
 from app.models.claim.index import Claim
 from tests.e2e.factories import create_claim_in_db
-from tests.helpers import parse_csv_fieldnames, parse_csv_rows
+from tests.helpers.csv_helpers import parse_csv_fieldnames, parse_csv_rows
 
 CLAIMS_BACKLOG_REPORT_HEADERS = [
     "Case reference",
@@ -126,10 +127,16 @@ class TestGetClaimBacklogReportAuth:
 
         assert response.status_code == 401
 
-    def test_403_returns_forbidden_when_provider_token(self, entra_auth_client):
+    @pytest.mark.parametrize(
+        "provider_token",
+        ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+    )
+    def test_403_returns_forbidden_when_provider_token(
+        self, entra_auth_client, provider_token
+    ):
         response = entra_auth_client.get(
             "/reports/claims/backlog",
-            headers={"Authorization": "Bearer valid-provider-entra-token"},
+            headers={"Authorization": f"Bearer {provider_token}"},
         )
 
         assert response.status_code == 403
