@@ -8,19 +8,21 @@ from app.routers.dependencies import verify_entra_token
 
 
 class Permission(str, Enum):
-    APPLICATION_READ = "application:read"
     APPLICATION_CREATE = "application:create"
+    APPLICATION_READ = "application:read"
     APPLICATION_MANAGE = "application:manage"
     APPLICATION_SEARCH = "application:search"
 
-    CLAIM_READ = "claim:read"
     CLAIM_CREATE = "claim:create"
+    CLAIM_READ = "claim:read"
+    CLAIM_MANAGE = "claim:manage"
     CLAIM_DELETE = "claim:delete"
     CLAIM_EVIDENCE_UPLOAD = "claim-evidence:upload"
 
-    CERTIFICATE_READ = "certificate:read"
-    HISTORY_READ = "history:read"
     CASE_NOTE_CREATE = "case-note:create"
+    HISTORY_READ = "history:read"
+
+    CERTIFICATE_READ = "certificate:read"
 
     CORONERS_LETTER_UPLOAD = "coroners-letter:upload"
     CORONERS_LETTER_DELETE = "coroners-letter:delete"
@@ -45,6 +47,14 @@ ROLE_PERMISSIONS_MAP: dict[str, set[Permission]] = {
     "Inquests - Internal Applications Caseworker": {
         Permission.APPLICATION_READ,
         Permission.APPLICATION_MANAGE,
+        Permission.CERTIFICATE_READ,
+        Permission.HISTORY_READ,
+        Permission.CASE_NOTE_CREATE,
+    },
+    "Inquests - Internal Claims Caseworker": {
+        Permission.APPLICATION_READ,
+        Permission.CLAIM_READ,
+        Permission.CLAIM_MANAGE,
         Permission.CERTIFICATE_READ,
         Permission.HISTORY_READ,
         Permission.CASE_NOTE_CREATE,
