@@ -8,19 +8,31 @@ from app.routers.dependencies import verify_entra_token
 
 
 class Permission(str, Enum):
-    APPLICATION_READ = "application:read"
     APPLICATION_CREATE = "application:create"
+    APPLICATION_READ = "application:read"
+    APPLICATION_MANAGE = "application:manage"
     APPLICATION_SEARCH = "application:search"
 
-    CLAIM_READ = "claim:read"
     CLAIM_CREATE = "claim:create"
+    CLAIM_READ = "claim:read"
+    CLAIM_MANAGE = "claim:manage"
     CLAIM_DELETE = "claim:delete"
     CLAIM_EVIDENCE_UPLOAD = "claim-evidence:upload"
+
+    CASE_NOTE_CREATE = "case-note:create"
+    HISTORY_READ = "history:read"
+
+    CERTIFICATE_READ = "certificate:read"
 
     CORONERS_LETTER_UPLOAD = "coroners-letter:upload"
     CORONERS_LETTER_DELETE = "coroners-letter:delete"
 
     PROVIDER_OFFICES_READ = "provider-offices:read"
+
+    REPORTS_MI_READ = "reports-mi:read"
+    REPORTS_PAYMENT_READ = "reports-payment:read"
+    REPORTS_APPLICATION_WORKFLOW_READ = "reports-application-workflow:read"
+    REPORTS_CLAIM_WORKFLOW_READ = "reports-claim-workflow:read"
 
 
 ROLE_PERMISSIONS_MAP: dict[str, set[Permission]] = {
@@ -36,6 +48,50 @@ ROLE_PERMISSIONS_MAP: dict[str, set[Permission]] = {
         Permission.CLAIM_DELETE,
         Permission.CLAIM_EVIDENCE_UPLOAD,
         Permission.PROVIDER_OFFICES_READ,
+    },
+    "Inquests - Applications caseworker": {
+        Permission.APPLICATION_READ,
+        Permission.APPLICATION_MANAGE,
+        Permission.CERTIFICATE_READ,
+        Permission.HISTORY_READ,
+        Permission.CASE_NOTE_CREATE,
+    },
+    "Inquests - Claims caseworker": {
+        Permission.APPLICATION_READ,
+        Permission.CLAIM_READ,
+        Permission.CLAIM_MANAGE,
+        Permission.CERTIFICATE_READ,
+        Permission.HISTORY_READ,
+        Permission.CASE_NOTE_CREATE,
+    },
+    "Inquests - Customer service agent": {
+        Permission.APPLICATION_READ,
+        Permission.CLAIM_READ,
+        Permission.CERTIFICATE_READ,
+        Permission.CASE_NOTE_CREATE,
+        Permission.HISTORY_READ,
+    },
+    "Inquests - Assurance": {
+        Permission.APPLICATION_READ,
+        Permission.CLAIM_READ,
+        Permission.CERTIFICATE_READ,
+        Permission.CASE_NOTE_CREATE,
+        Permission.HISTORY_READ,
+        Permission.REPORTS_MI_READ,
+        Permission.REPORTS_PAYMENT_READ,
+    },
+    "Inquests - Application workflow reporting": {
+        Permission.REPORTS_APPLICATION_WORKFLOW_READ,
+    },
+    "Inquests - Claim workflow reporting": {
+        Permission.REPORTS_CLAIM_WORKFLOW_READ,
+    },
+    "Inquests - Policy": {
+        Permission.REPORTS_MI_READ,
+    },
+    "Inquests - Finance": {
+        Permission.REPORTS_MI_READ,
+        Permission.REPORTS_PAYMENT_READ,
     },
 }
 

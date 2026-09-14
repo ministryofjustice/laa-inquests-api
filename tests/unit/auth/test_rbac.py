@@ -76,3 +76,90 @@ def test_require_permission_raises_403_when_permission_missing():
 
     assert exc_info.value.status_code == 403
     assert "claim:create" in exc_info.value.detail
+
+
+def test_external_provider_application_user_permission_set():
+    assert ROLE_PERMISSIONS_MAP["Inquests - Provider Application User"] == {
+        Permission.APPLICATION_CREATE,
+        Permission.CORONERS_LETTER_UPLOAD,
+        Permission.CORONERS_LETTER_DELETE,
+        Permission.PROVIDER_OFFICES_READ,
+    }
+
+
+def test_external_provider_claims_user_permission_set():
+    assert ROLE_PERMISSIONS_MAP["Inquests - Provider Claims User"] == {
+        Permission.APPLICATION_SEARCH,
+        Permission.CLAIM_CREATE,
+        Permission.CLAIM_DELETE,
+        Permission.CLAIM_EVIDENCE_UPLOAD,
+        Permission.PROVIDER_OFFICES_READ,
+    }
+
+
+def test_internal_applications_caseworker_permission_set():
+    assert ROLE_PERMISSIONS_MAP["Inquests - Applications caseworker"] == {
+        Permission.APPLICATION_READ,
+        Permission.APPLICATION_MANAGE,
+        Permission.CERTIFICATE_READ,
+        Permission.HISTORY_READ,
+        Permission.CASE_NOTE_CREATE,
+    }
+
+
+def test_internal_claims_caseworker_permission_set():
+    assert ROLE_PERMISSIONS_MAP["Inquests - Claims caseworker"] == {
+        Permission.APPLICATION_READ,
+        Permission.CLAIM_READ,
+        Permission.CLAIM_MANAGE,
+        Permission.CERTIFICATE_READ,
+        Permission.HISTORY_READ,
+        Permission.CASE_NOTE_CREATE,
+    }
+
+
+def test_internal_customer_service_agent_permission_set():
+    assert ROLE_PERMISSIONS_MAP["Inquests - Customer service agent"] == {
+        Permission.APPLICATION_READ,
+        Permission.CLAIM_READ,
+        Permission.CERTIFICATE_READ,
+        Permission.CASE_NOTE_CREATE,
+        Permission.HISTORY_READ,
+    }
+
+
+def test_internal_assurance_permission_set():
+    assert ROLE_PERMISSIONS_MAP["Inquests - Assurance"] == {
+        Permission.APPLICATION_READ,
+        Permission.CLAIM_READ,
+        Permission.CERTIFICATE_READ,
+        Permission.CASE_NOTE_CREATE,
+        Permission.HISTORY_READ,
+        Permission.REPORTS_MI_READ,
+        Permission.REPORTS_PAYMENT_READ,
+    }
+
+
+def test_internal_application_workflow_reporting_permission_set():
+    assert ROLE_PERMISSIONS_MAP["Inquests - Application workflow reporting"] == {
+        Permission.REPORTS_APPLICATION_WORKFLOW_READ,
+    }
+
+
+def test_internal_claim_workflow_reporting_permission_set():
+    assert ROLE_PERMISSIONS_MAP["Inquests - Claim workflow reporting"] == {
+        Permission.REPORTS_CLAIM_WORKFLOW_READ,
+    }
+
+
+def test_internal_policy_permission_set():
+    assert ROLE_PERMISSIONS_MAP["Inquests - Policy"] == {
+        Permission.REPORTS_MI_READ,
+    }
+
+
+def test_internal_finance_permission_set():
+    assert ROLE_PERMISSIONS_MAP["Inquests - Finance"] == {
+        Permission.REPORTS_MI_READ,
+        Permission.REPORTS_PAYMENT_READ,
+    }
