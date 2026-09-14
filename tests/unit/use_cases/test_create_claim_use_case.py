@@ -13,9 +13,11 @@ from app.models.claim.enums import (
     ClaimStatus,
     ClaimType,
     InquestOutcomeCode,
+    InvoiceTypeCode,
     NumberOfCounselInstructed,
     POAType,
     ReasonCode,
+    TaxCode,
 )
 from app.models.claim.index import Claim, ClaimDecision
 from app.models.history.enums import ActorType, HistoryEventReference
@@ -1119,6 +1121,11 @@ def test_execute_auto_approves_eligible_payment_on_account_claim():
         profit_cost_net=claim.total_profit_cost_net,
         profit_cost_gross=claim.total_profit_cost_gross,
         profit_cost_vat_zero=claim.total_profit_cost_vat_zero,
+        invoice_number="1_001",
+        invoice_amount=Decimal("960.00"),
+        invoice_date=claim.submission_date.date(),
+        invoice_type=InvoiceTypeCode.POA,
+        tax_code=TaxCode.GB_VAT_20,
     )
     update_claim_status_port.update_claim_status.assert_called_once_with(
         claim_id=1,
@@ -1155,6 +1162,41 @@ def test_execute_auto_approval_persists_profit_cost_amounts_for_profit_cost_poa(
         profit_cost_net=Decimal("40000.00"),
         profit_cost_gross=Decimal("40000.00"),
         profit_cost_vat_zero=None,
+        invoice_number="1_001",
+        invoice_amount=Decimal("38400.00"),
+        invoice_date=claim.submission_date.date(),
+        invoice_type=InvoiceTypeCode.POA,
+        tax_code=TaxCode.GB_VAT_20,
+    )
+
+
+def test_execute_auto_approval_persists_zero_vat_payment_extract_for_profit_cost_poa():
+    command = _make_command(
+        {
+            "poa_type": POAType.PROFIT_COST,
+            "net": None,
+            "gross": None,
+            "vat_zero_total": Decimal("1000.00"),
+        }
+    )
+    claim = _claim_with_poa(
+        POAType.PROFIT_COST, None, None, vat_zero=Decimal("1000.00")
+    )
+    amount_port = _make_create_claim_decision_amount_port()
+
+    result = _execute_auto_approval(command, claim, amount_port)
+
+    assert result.claim.status_id == ClaimStatus.PAY_IN_FULL
+    amount_port.create_claim_decision_amount.assert_called_once_with(
+        claim_decision_id=10,
+        profit_cost_net=None,
+        profit_cost_gross=None,
+        profit_cost_vat_zero=Decimal("1000.00"),
+        invoice_number="1_001",
+        invoice_amount=Decimal("800.00"),
+        invoice_date=claim.submission_date.date(),
+        invoice_type=InvoiceTypeCode.POA,
+        tax_code=TaxCode.ZERO_VAT,
     )
 
 

@@ -18,6 +18,7 @@ from app.domain.constants.claim_messages import (
     APPLICATION_NOT_GRANTED_MESSAGE,
     CLAIM_EVIDENCE_NOT_ALLOWED_MESSAGE,
 )
+from app.domain.payment_extract import build_poa_profit_cost_extract
 from app.logging_utils import build_log_extra
 from app.models.claim.enums import (
     ClaimDecisionStatus,
@@ -61,6 +62,26 @@ def _claim_decision_amount_fields(claim: Claim) -> dict[str, Decimal | None]:
         "disbursement_net": claim.total_profit_cost_net,
         "disbursement_gross": claim.total_profit_cost_gross,
         "disbursement_vat_zero": claim.total_profit_cost_vat_zero,
+    }
+
+
+# Payment extract is only produced for pay-in-full POA profit cost claims.
+def _payment_extract_fields(claim: Claim) -> dict[str, object]:
+    if claim.poa_type_id != POAType.PROFIT_COST:
+        return {}
+    line = build_poa_profit_cost_extract(
+        claim_id=claim.claim_id,
+        sequence=1,
+        submission_date=claim.submission_date,
+        net=claim.total_profit_cost_net,
+        vat_zero=claim.total_profit_cost_vat_zero,
+    )
+    return {
+        "invoice_number": line.invoice_number,
+        "invoice_amount": line.invoice_amount,
+        "invoice_date": line.invoice_date,
+        "invoice_type": line.invoice_type,
+        "tax_code": line.tax_code,
     }
 
 
@@ -366,6 +387,7 @@ class CreateClaimUseCase:
                     self.create_claim_decision_amount_port.create_claim_decision_amount(
                         claim_decision_id=claim_decision.claim_decision_id,
                         **_claim_decision_amount_fields(claim),
+                        **_payment_extract_fields(claim),
                     )
                     self.update_claim_status_port.update_claim_status(
                         claim_id=claim.claim_id,

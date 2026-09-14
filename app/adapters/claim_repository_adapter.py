@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlmodel import Session, select
@@ -15,7 +15,9 @@ from app.models.claim.enums import (
     ClaimStatus,
     ClaimType,
     InquestOutcomeCode,
+    InvoiceTypeCode,
     ReasonCode,
+    TaxCode,
 )
 from app.models.claim.index import (
     Claim,
@@ -248,6 +250,11 @@ class ClaimRepositoryAdapter(
         disbursement_net: Decimal | None = None,
         disbursement_gross: Decimal | None = None,
         disbursement_vat_zero: Decimal | None = None,
+        invoice_number: str | None = None,
+        invoice_amount: Decimal | None = None,
+        invoice_date: date | None = None,
+        invoice_type: InvoiceTypeCode | None = None,
+        tax_code: TaxCode | None = None,
     ) -> ClaimDecisionAmount:
         amount = ClaimDecisionAmount(
             claim_decision_id=claim_decision_id,
@@ -257,6 +264,11 @@ class ClaimRepositoryAdapter(
             disbursement_net=disbursement_net,
             disbursement_gross=disbursement_gross,
             disbursement_vat_zero=disbursement_vat_zero,
+            invoice_number=invoice_number,
+            invoice_amount=invoice_amount,
+            invoice_date=invoice_date,
+            invoice_type=invoice_type,
+            tax_code=tax_code,
         )
         self.session.add(amount)
         self.session.flush()
