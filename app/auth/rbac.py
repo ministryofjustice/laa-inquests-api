@@ -29,6 +29,9 @@ class Permission(str, Enum):
 
     PROVIDER_OFFICES_READ = "provider-offices:read"
 
+    REPORTS_MI_READ = "reports-mi:read"
+    REPORTS_PAYMENT_READ = "reports-payment:read"
+
 
 ROLE_PERMISSIONS_MAP: dict[str, set[Permission]] = {
     "Inquests - Provider Application User": {
@@ -65,6 +68,15 @@ ROLE_PERMISSIONS_MAP: dict[str, set[Permission]] = {
         Permission.CERTIFICATE_READ,
         Permission.CASE_NOTE_CREATE,
         Permission.HISTORY_READ,
+    },
+    "Inquests - Internal Assurance": {
+        Permission.APPLICATION_READ,
+        Permission.CLAIM_READ,
+        Permission.CERTIFICATE_READ,
+        Permission.CASE_NOTE_CREATE,
+        Permission.HISTORY_READ,
+        Permission.REPORTS_MI_READ,
+        Permission.REPORTS_PAYMENT_READ,
     },
 }
 

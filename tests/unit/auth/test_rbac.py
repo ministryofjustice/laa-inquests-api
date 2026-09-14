@@ -126,3 +126,15 @@ def test_internal_customer_service_agent_permission_set():
         Permission.CASE_NOTE_CREATE,
         Permission.HISTORY_READ,
     }
+
+
+def test_internal_assurance_permission_set():
+    assert ROLE_PERMISSIONS_MAP["Inquests - Internal Assurance"] == {
+        Permission.APPLICATION_READ,
+        Permission.CLAIM_READ,
+        Permission.CERTIFICATE_READ,
+        Permission.CASE_NOTE_CREATE,
+        Permission.HISTORY_READ,
+        Permission.REPORTS_MI_READ,
+        Permission.REPORTS_PAYMENT_READ,
+    }
