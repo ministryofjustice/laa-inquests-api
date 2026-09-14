@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractmethod
 
+from app.domain.pay_in_full import PayInFullClaim
 from app.models.application.index import Application, ApplicationProceeding
 from app.models.claim.index import Claim
 
@@ -127,6 +128,29 @@ class GovNotifyPort(ABC):
             application: The associated application for the claim
             recipient_email: Email address of the recipient
             firm_name: Name of the provider firm
+
+        Raises:
+            Exception: If the notification fails to send
+        """
+        ...
+
+    @abstractmethod
+    def send_claim_final_bill_paid_decision_email(
+        self,
+        claim: Claim,
+        application: Application,
+        recipient_email: str,
+        firm_name: str,
+        decision_amounts: PayInFullClaim,
+    ) -> None:
+        """Send final bill claim paid (granted) notification to recipient.
+
+        Args:
+            claim: The claim being paid in full
+            application: The associated application for the claim
+            recipient_email: Email address of the recipient
+            firm_name: Name of the provider firm
+            decision_amounts: The assessed profit cost and disbursement amounts
 
         Raises:
             Exception: If the notification fails to send

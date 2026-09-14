@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from decimal import Decimal
 
@@ -6,6 +7,7 @@ from app.domain.claim_error import ClaimValidationError
 from app.domain.pay_in_full import PayInFullClaim
 from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus
 from app.models.history.enums import ActorType, HistoryEventReference
+from app.models.notifications.enums import NotificationType
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_decision_amount_port import (
     CreateClaimDecisionAmountPort,
@@ -14,11 +16,15 @@ from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.ports.claim.update_claim_status_port import UpdateClaimStatusPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
+from app.ports.gov_notify_port import GovNotifyPort
+from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
     ClaimNotFoundError,
     InvalidClaimError,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _to_json_amount(amount: Decimal | None) -> str | None:
@@ -46,6 +52,8 @@ class PayInFullClaimUseCase:
         create_claim_decision_amount_port: CreateClaimDecisionAmountPort,
         update_claim_status_port: UpdateClaimStatusPort,
         create_history_event_port: CreateHistoryEventPort,
+        provider_details_port: ProviderDetailsPort | None = None,
+        gov_notify_port: GovNotifyPort | None = None,
     ) -> None:
         self.application_lookup_port = application_lookup_port
         self.get_claim_by_id_port = get_claim_by_id_port
@@ -53,6 +61,8 @@ class PayInFullClaimUseCase:
         self.create_claim_decision_amount_port = create_claim_decision_amount_port
         self.update_claim_status_port = update_claim_status_port
         self.create_history_event_port = create_history_event_port
+        self.provider_details_port = provider_details_port
+        self.gov_notify_port = gov_notify_port
 
     def execute(self, command: PayInFullClaimCommand) -> None:
         application = self.application_lookup_port.get_application_by_laa_reference(
@@ -66,14 +76,15 @@ class PayInFullClaimUseCase:
             raise ClaimNotFoundError(command.claim_id)
 
         try:
-            PayInFullClaim(
+            decision_amounts = PayInFullClaim(
                 profit_cost_net=command.profit_cost_net,
                 profit_cost_gross=command.profit_cost_gross,
                 profit_cost_vat_zero=command.profit_cost_vat_zero,
                 disbursement_net=command.disbursement_net,
                 disbursement_gross=command.disbursement_gross,
                 disbursement_vat_zero=command.disbursement_vat_zero,
-            ).validate()
+            )
+            decision_amounts.validate()
         except ClaimValidationError as e:
             raise InvalidClaimError(code=e.code, message=e.message) from e
 
@@ -117,7 +128,37 @@ class PayInFullClaimUseCase:
                 },
             )
 
+            self.create_history_event_port.create_history_event(
+                event_reference=HistoryEventReference.CLAIM_FINAL_BILL_PAID_EMAIL,
+                actor=ActorType.SYSTEM,
+                actor_type=ActorType.SYSTEM,
+                application_id=application.application_id,
+                event_data={
+                    "recipient": application.provider.email_address,
+                    "channel": NotificationType.EMAIL,
+                },
+            )
+
             self.update_claim_status_port.commit()
         except Exception:
             self.update_claim_status_port.rollback()
             raise
+
+        if self.gov_notify_port is not None and self.provider_details_port is not None:
+            try:
+                firm_name = self.provider_details_port.get_firm_name(
+                    application.provider.firm_code
+                )
+                self.gov_notify_port.send_claim_final_bill_paid_decision_email(
+                    claim=claim,
+                    application=application,
+                    recipient_email=application.provider.email_address,
+                    firm_name=firm_name,
+                    decision_amounts=decision_amounts,
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to send final bill paid email for claim %s",
+                    command.claim_id,
+                    exc_info=True,
+                )

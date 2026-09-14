@@ -9,6 +9,7 @@ from app.domain.claim_error import ClaimErrorCode
 from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ClaimType, POAType
 from app.models.claim.index import Claim, ClaimDecision, ClaimDecisionAmount
 from app.models.history.enums import ActorType, HistoryEventReference
+from app.models.notifications.enums import NotificationType
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_decision_amount_port import (
     CreateClaimDecisionAmountPort,
@@ -45,6 +46,7 @@ def _application(application_id: int = 1):
     application.application_id = application_id
     application.laa_reference = f"INQ-{application_id:03d}-REF"
     application.provider.firm_code = "ABC123"
+    application.provider.email_address = "provider@example.com"
     return application
 
 
@@ -161,7 +163,8 @@ def test_creates_pay_in_full_decision_amount_updates_status_and_commits():
         status=ClaimStatus.PAY_IN_FULL,
     )
 
-    create_history_event_port.create_history_event.assert_called_once_with(
+    assert create_history_event_port.create_history_event.call_count == 2
+    create_history_event_port.create_history_event.assert_any_call(
         event_reference=HistoryEventReference.CLAIM_ASSESSMENT_COMPLETED,
         actor="Caseworker",
         actor_type=ActorType.CASEWORKER,
@@ -175,6 +178,16 @@ def test_creates_pay_in_full_decision_amount_updates_status_and_commits():
             "disbursement_net": "100.00",
             "disbursement_gross": "200.00",
             "disbursement_vat_zero": "50.00",
+        },
+    )
+    create_history_event_port.create_history_event.assert_any_call(
+        event_reference=HistoryEventReference.CLAIM_FINAL_BILL_PAID_EMAIL,
+        actor=ActorType.SYSTEM,
+        actor_type=ActorType.SYSTEM,
+        application_id=1,
+        event_data={
+            "recipient": "provider@example.com",
+            "channel": NotificationType.EMAIL,
         },
     )
 

@@ -9,6 +9,7 @@ from notifications_python_client import prepare_upload
 from notifications_python_client.notifications import NotificationsAPIClient
 
 from app.config import Config
+from app.domain.pay_in_full import PayInFullClaim
 from app.logging_utils import build_log_extra, duration_ms
 from app.models.application.index import Application, ApplicationProceeding
 from app.models.claim.enums import ClaimType
@@ -31,6 +32,9 @@ from app.use_cases.notify.create_claim_rejection_email_personalisation import (
 )
 from app.use_cases.notify.create_claim_submission_email_personalisation import (
     create_claim_submission_email_personalisation,
+)
+from app.use_cases.notify.create_final_bill_claim_grant_email_personalisation import (
+    create_final_bill_claim_grant_email_personalisation,
 )
 from app.use_cases.notify.create_final_bill_claim_rejection_email_personalisation import (
     create_final_bill_claim_rejection_email_personalisation,
@@ -195,6 +199,24 @@ class GovNotifyAdapter(GovNotifyPort):
             template_id=Config.GOV_NOTIFY_POA_CLAIM_AUTO_APPROVE_TEMPLATE_ID,
             personalisation=personalisation.model_dump(),
             event_name="govnotify_send_claim_granted_decision_email",
+        )
+
+    def send_claim_final_bill_paid_decision_email(
+        self,
+        claim: Claim,
+        application: Application,
+        recipient_email: str,
+        firm_name: str,
+        decision_amounts: PayInFullClaim,
+    ) -> None:
+        personalisation = create_final_bill_claim_grant_email_personalisation(
+            claim, application, firm_name, decision_amounts
+        )
+        self._send_email_notification(
+            email_address=recipient_email,
+            template_id=Config.GOV_NOTIFY_FINAL_BILL_CLAIM_GRANT_TEMPLATE_ID,
+            personalisation=personalisation.model_dump(),
+            event_name="govnotify_send_claim_final_bill_paid_decision_email",
         )
 
     def send_precompiled_letter(self, reference: str, pdf: bytes) -> None:
