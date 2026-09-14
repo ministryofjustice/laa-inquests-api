@@ -384,7 +384,6 @@ class CreateClaimUseCase:
                         claim_decision_id=claim_decision.claim_decision_id,
                         **_claim_decision_amount_fields(claim),
                     )
-                    # Payment extract is only produced for POA profit cost claims.
                     if (
                         claim.poa_type_id == POAType.PROFIT_COST
                         and self.create_payment_extract_port is not None
