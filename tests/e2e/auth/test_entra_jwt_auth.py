@@ -8,9 +8,6 @@ from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application, CoronersLetter
 from app.models.claim.index import ClaimEvidence
 from tests.helpers.application_payloads import create_application_payload
-from tests.helpers.entra_auth import (
-    override_entra_auth_port_with_provider_no_role_token,
-)
 from tests.helpers.provider_details import (
     override_provider_details_port_with_provider_offices,
 )
@@ -294,11 +291,8 @@ class TestSearchApplicationAuth:
         assert response.status_code == 403
 
     def test_403_search_application_returns_403_when_provider_token_missing_permission(
-        self,
-        mock_entra_auth_client,
+        self, mock_entra_auth_client
     ):
-        override_entra_auth_port_with_provider_no_role_token()
-
         response = mock_entra_auth_client.get(
             "/applications/search",
             params={"laa_reference": "1"},
@@ -384,8 +378,6 @@ class TestUploadClaimEvidenceAuth:
         self,
         mock_entra_auth_client,
     ):
-        override_entra_auth_port_with_provider_no_role_token()
-
         response = mock_entra_auth_client.post(
             "/claims/evidence",
             files={
@@ -490,8 +482,6 @@ class TestDeleteClaimEvidenceAuth:
         self,
         mock_entra_auth_client,
     ):
-        override_entra_auth_port_with_provider_no_role_token()
-
         response = mock_entra_auth_client.delete(
             f"/claims/{uuid.uuid4()}",
             headers={"Authorization": "Bearer valid-provider-no-role-token"},
@@ -588,7 +578,6 @@ class TestListProviderOfficesAuth:
         mock_entra_auth_client,
     ):
         override_provider_details_port_with_provider_offices()
-        override_entra_auth_port_with_provider_no_role_token()
 
         response = mock_entra_auth_client.get(
             "/applications/provider-offices/123",
