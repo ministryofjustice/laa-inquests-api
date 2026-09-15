@@ -48,3 +48,65 @@ def build_poa_profit_cost_extract(
         invoice_type=InvoiceTypeCode.POA,
         tax_code=tax_code,
     )
+
+
+def build_final_bill_fee_lines(
+    claim_id: int,
+    submission_date: datetime,
+    gross: Decimal | None,
+    vat_zero: Decimal | None,
+    start_sequence: int = 1,
+) -> list[PaymentExtractLine]:
+    standard_amount = (gross or Decimal(0)) - (vat_zero or Decimal(0))
+    zero_amount = vat_zero or Decimal(0)
+
+    lines: list[PaymentExtractLine] = []
+    sequence = start_sequence
+    invoice_date = submission_date.date()
+
+    if standard_amount > 0:
+        lines.append(
+            PaymentExtractLine(
+                sequence_number=sequence,
+                invoice_number=f"{claim_id}_{sequence:03d}",
+                invoice_amount=bankers_round(standard_amount),
+                invoice_date=invoice_date,
+                invoice_type=InvoiceTypeCode.FINAL_BILL_FEES,
+                tax_code=TaxCode.GB_VAT_20,
+            )
+        )
+        sequence += 1
+
+    if zero_amount > 0:
+        lines.append(
+            PaymentExtractLine(
+                sequence_number=sequence,
+                invoice_number=f"{claim_id}_{sequence:03d}",
+                invoice_amount=bankers_round(zero_amount),
+                invoice_date=invoice_date,
+                invoice_type=InvoiceTypeCode.FINAL_BILL_FEES,
+                tax_code=TaxCode.ZERO_VAT,
+            )
+        )
+
+    if not lines:
+        raise ValueError("Final bill fee lines require a gross or vat_zero amount")
+
+    return lines
+
+
+def build_recoupment_line(
+    claim_id: int,
+    sequence: int,
+    original_amount: Decimal,
+    tax_code: TaxCode,
+    decision_date: date,
+) -> PaymentExtractLine:
+    return PaymentExtractLine(
+        sequence_number=sequence,
+        invoice_number=f"{claim_id}_{sequence:03d}",
+        invoice_amount=bankers_round(-original_amount),
+        invoice_date=decision_date,
+        invoice_type=InvoiceTypeCode.RECOUPED,
+        tax_code=tax_code,
+    )

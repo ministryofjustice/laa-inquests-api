@@ -4,14 +4,26 @@ from decimal import Decimal
 from app.contexts.user import get_entra_user_name
 from app.domain.claim_error import ClaimValidationError
 from app.domain.pay_in_full import PayInFullClaim
-from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus
+from app.domain.payment_extract import (
+    build_final_bill_fee_lines,
+    build_recoupment_line,
+)
+from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ClaimType
+from app.models.claim.index import Claim, ClaimDecision
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_decision_amount_port import (
     CreateClaimDecisionAmountPort,
 )
 from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
+from app.ports.claim.create_payment_extract_port import CreatePaymentExtractPort
 from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
+from app.ports.claim.get_claim_payment_extracts_port import (
+    GetClaimPaymentExtractsPort,
+)
+from app.ports.claim.list_recoupable_poa_extracts_port import (
+    ListRecoupablePoaExtractsPort,
+)
 from app.ports.claim.update_claim_status_port import UpdateClaimStatusPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.use_cases.exceptions import (
@@ -46,6 +58,9 @@ class PayInFullClaimUseCase:
         create_claim_decision_amount_port: CreateClaimDecisionAmountPort,
         update_claim_status_port: UpdateClaimStatusPort,
         create_history_event_port: CreateHistoryEventPort,
+        create_payment_extract_port: CreatePaymentExtractPort | None = None,
+        get_claim_payment_extracts_port: GetClaimPaymentExtractsPort | None = None,
+        list_recoupable_poa_extracts_port: ListRecoupablePoaExtractsPort | None = None,
     ) -> None:
         self.application_lookup_port = application_lookup_port
         self.get_claim_by_id_port = get_claim_by_id_port
@@ -53,6 +68,9 @@ class PayInFullClaimUseCase:
         self.create_claim_decision_amount_port = create_claim_decision_amount_port
         self.update_claim_status_port = update_claim_status_port
         self.create_history_event_port = create_history_event_port
+        self.create_payment_extract_port = create_payment_extract_port
+        self.get_claim_payment_extracts_port = get_claim_payment_extracts_port
+        self.list_recoupable_poa_extracts_port = list_recoupable_poa_extracts_port
 
     def execute(self, command: PayInFullClaimCommand) -> None:
         application = self.application_lookup_port.get_application_by_laa_reference(
@@ -117,7 +135,61 @@ class PayInFullClaimUseCase:
                 },
             )
 
+            self._create_final_bill_payment_extract(application, claim, claim_decision)
+
             self.update_claim_status_port.commit()
         except Exception:
             self.update_claim_status_port.rollback()
             raise
+
+    def _create_final_bill_payment_extract(
+        self,
+        application,
+        claim: Claim,
+        claim_decision: ClaimDecision,
+    ) -> None:
+        if (
+            claim.claim_type_id != ClaimType.FINAL_BILL
+            or self.create_payment_extract_port is None
+            or self.get_claim_payment_extracts_port is None
+            or self.list_recoupable_poa_extracts_port is None
+        ):
+            return
+
+        existing = self.get_claim_payment_extracts_port.get_payment_extracts_for_claim(
+            claim.claim_id
+        )
+        if existing:
+            return
+
+        fee_lines = build_final_bill_fee_lines(
+            claim_id=claim.claim_id,
+            submission_date=claim.submission_date,
+            gross=claim.total_profit_cost_gross,
+            vat_zero=claim.total_profit_cost_vat_zero,
+        )
+        for line in fee_lines:
+            self.create_payment_extract_port.create_payment_extract(
+                claim_id=claim.claim_id,
+                line=line,
+            )
+
+        sequence = fee_lines[-1].sequence_number + 1
+        decision_date = claim_decision.created_at.date()
+        recoupable = (
+            self.list_recoupable_poa_extracts_port.list_recoupable_poa_extracts(
+                application.application_id
+            )
+        )
+        for extract in recoupable:
+            self.create_payment_extract_port.create_payment_extract(
+                claim_id=claim.claim_id,
+                line=build_recoupment_line(
+                    claim_id=claim.claim_id,
+                    sequence=sequence,
+                    original_amount=extract.invoice_amount,
+                    tax_code=extract.tax_code,
+                    decision_date=decision_date,
+                ),
+            )
+            sequence += 1

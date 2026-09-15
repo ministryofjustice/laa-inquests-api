@@ -16,6 +16,7 @@ from app.models.claim.enums import (
     ClaimStatus,
     ClaimType,
     InquestOutcomeCode,
+    POAType,
     ReasonCode,
 )
 from app.models.claim.index import (
@@ -41,9 +42,15 @@ from app.ports.claim.delete_claim_evidence_port import DeleteClaimEvidencePort
 from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.ports.claim.get_claim_decision_port import GetClaimDecisionPort
 from app.ports.claim.get_claim_evidence_port import GetClaimEvidencePort
+from app.ports.claim.get_claim_payment_extracts_port import (
+    GetClaimPaymentExtractsPort,
+)
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
 from app.ports.claim.list_auto_approved_poa_claims_port import (
     ListAutoApprovedPoaClaimsPort,
+)
+from app.ports.claim.list_recoupable_poa_extracts_port import (
+    ListRecoupablePoaExtractsPort,
 )
 from app.ports.claim.update_claim_status_port import (
     UpdateClaimStatusPort,
@@ -64,6 +71,8 @@ class ClaimRepositoryAdapter(
     CreateClaimDecisionAmountPort,
     CreateDecisionReasonPort,
     CreatePaymentExtractPort,
+    GetClaimPaymentExtractsPort,
+    ListRecoupablePoaExtractsPort,
     UpdateClaimStatusPort,
     UploadClaimEvidencePort,
     GetClaimEvidencePort,
@@ -300,6 +309,35 @@ class ClaimRepositoryAdapter(
             ),
         )
         return payment_extract
+
+    def get_payment_extracts_for_claim(
+        self, claim_id: int
+    ) -> list[ClaimPaymentExtract]:
+        statement = (
+            select(ClaimPaymentExtract)
+            .where(ClaimPaymentExtract.claim_id == claim_id)
+            .order_by(ClaimPaymentExtract.sequence_number.asc())
+        )
+        return list(self.session.exec(statement).all())
+
+    def list_recoupable_poa_extracts(
+        self, application_id: int
+    ) -> list[ClaimPaymentExtract]:
+        statement = (
+            select(ClaimPaymentExtract)
+            .join(Claim, ClaimPaymentExtract.claim_id == Claim.claim_id)
+            .where(
+                Claim.application_id == application_id,
+                Claim.claim_type_id == ClaimType.PAYMENT_ON_ACCOUNT,
+                Claim.poa_type_id == POAType.PROFIT_COST,
+                Claim.status_id == ClaimStatus.PAY_IN_FULL,
+            )
+            .order_by(
+                ClaimPaymentExtract.claim_id.asc(),
+                ClaimPaymentExtract.sequence_number.asc(),
+            )
+        )
+        return list(self.session.exec(statement).all())
 
     def create_decision_reason(
         self,
