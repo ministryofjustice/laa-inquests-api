@@ -18,7 +18,7 @@ def test_200_read_all_applications_returns_200_when_valid_entra_token(
 ):
     response = mock_entra_auth_client.get(
         "/applications",
-        headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+        headers={"Authorization": "Bearer Caseworker No Role"},
     )
 
     assert response.status_code == 200
@@ -65,7 +65,7 @@ def test_200_read_application_by_id_returns_200_when_caseworker_token(
     application = session.exec(select(Application)).first()
     response = mock_entra_auth_client.get(
         f"/applications/{application.laa_reference}",
-        headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+        headers={"Authorization": "Bearer Caseworker No Role"},
     )
 
     assert response.status_code == 200
@@ -124,7 +124,7 @@ def test_403_create_application_returns_403_when_caseworker_token(
         json=create_application_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": "Bearer valid-caseworker-entra-token",
+            "Authorization": "Bearer Caseworker No Role",
         },
     )
 
@@ -179,7 +179,7 @@ def test_403_upload_coroners_letter_returns_403_when_caseworker_token(
                 "application/pdf",
             )
         },
-        headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+        headers={"Authorization": "Bearer Caseworker No Role"},
     )
 
     assert response.status_code == 403
@@ -199,7 +199,7 @@ def test_204_refuse_decision_returns_204_when_caseworker_token(
         },
         headers={
             "Content-Type": "application/json",
-            "Authorization": "Bearer valid-caseworker-entra-token",
+            "Authorization": "Bearer Caseworker No Role",
         },
     )
 
@@ -239,7 +239,7 @@ def test_204_grant_decision_returns_204_when_caseworker_token(
         json={"certificateStartDate": "2000-01-01"},
         headers={
             "Content-Type": "application/json",
-            "Authorization": "Bearer valid-caseworker-entra-token",
+            "Authorization": "Bearer Caseworker No Role",
         },
     )
 
@@ -331,7 +331,7 @@ class TestSearchApplicationAuth:
         response = mock_entra_auth_client.get(
             "/applications/search",
             params={"laa_reference": "1"},
-            headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+            headers={"Authorization": "Bearer Caseworker No Role"},
         )
 
         assert response.status_code == 403
@@ -405,7 +405,7 @@ class TestUploadClaimEvidenceAuth:
                     "application/pdf",
                 )
             },
-            headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+            headers={"Authorization": "Bearer Caseworker No Role"},
         )
 
         assert response.status_code == 403
@@ -495,7 +495,7 @@ class TestDeleteClaimEvidenceAuth:
     ):
         response = mock_entra_auth_client.delete(
             f"/claims/{uuid.uuid4()}",
-            headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+            headers={"Authorization": "Bearer Caseworker No Role"},
         )
 
         assert response.status_code == 403
@@ -568,7 +568,7 @@ class TestListProviderOfficesAuth:
 
         response = mock_entra_auth_client.get(
             "/applications/provider-offices/123",
-            headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+            headers={"Authorization": "Bearer Caseworker No Role"},
         )
 
         assert response.status_code == 403
@@ -625,7 +625,7 @@ class TestDeleteCoronersLetterAuth:
     ):
         response = mock_entra_auth_client.delete(
             f"/applications/coroners-letter/{uuid.uuid4()}",
-            headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+            headers={"Authorization": "Bearer Caseworker No Role"},
         )
 
         assert response.status_code == 403
@@ -670,7 +670,7 @@ def test_200_retrieve_coroners_letter_returns_200_when_caseworker_token(
 
     response = mock_entra_auth_client.get(
         f"/applications/{application.laa_reference}/coroners-letter",
-        headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+        headers={"Authorization": "Bearer Caseworker No Role"},
     )
 
     assert response.status_code == 200
@@ -715,7 +715,7 @@ def test_200_list_public_bodies_returns_200_when_caseworker_token(
 ):
     response = mock_entra_auth_client.get(
         "/applications/public-bodies",
-        headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+        headers={"Authorization": "Bearer Caseworker No Role"},
     )
 
     assert response.status_code == 200
@@ -768,7 +768,7 @@ def test_200_retrieve_claim_evidence_returns_200_when_caseworker_token(
 
     response = mock_entra_auth_client.get(
         f"/claims/{claim_evidence.claim_evidence_id}",
-        headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+        headers={"Authorization": "Bearer Caseworker No Role"},
     )
 
     assert response.status_code == 200

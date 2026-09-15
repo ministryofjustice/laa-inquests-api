@@ -51,7 +51,7 @@ def test_200_list_public_bodies_returns_200_when_caseworker_token(
 ):
     response = mock_entra_auth_client.get(
         "/applications/public-bodies",
-        headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+        headers={"Authorization": "Bearer Caseworker No Role"},
     )
 
     assert response.status_code == 200

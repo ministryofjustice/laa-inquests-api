@@ -7,6 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session, SQLModel, StaticPool, create_engine
 
 from app import api
+from app.auth.rbac import ROLE_PERMISSIONS_MAP
 from app.db import get_session
 from app.db.session import CustomSession
 from app.models import User
@@ -279,48 +280,30 @@ def mock_entra_auth_client_fixture(session: Session):
 
     def get_entra_auth_port_override():
         mock_auth = MagicMock()
-        # Single source of truth for test tokens: each token declares the scopes
-        # and RBAC app roles it carries, mirroring a real Entra JWT payload.
-        tokens = {
-            "valid-caseworker-entra-token": {  # TODO: Will get removed when RBAC is complete
-                "scopes": {"User.Caseworker"},
-                "app_roles": set(),
-            },
-            "Inquests - Provider Application User": {
-                "scopes": {"User.Provider"},
-                "app_roles": {"Inquests - Provider Application User"},
-            },
-            "Inquests - Provider Claims User": {
-                "scopes": {"User.Provider"},
-                "app_roles": {"Inquests - Provider Claims User"},
-            },
-            "Provider No Role": {
-                "scopes": {"User.Provider"},
-                "app_roles": set(),
-            },
-            "Inquests - Claims caseworker": {
-                "scopes": {"User.Caseworker"},
-                "app_roles": {"Inquests - Claims caseworker"},
-            },
-        }
 
-        def verify_token(token: str, required_scopes: set[str] | None = None) -> None:
-            if token == "invalid-token":
+        # Pass in role you want (e.g. Inquests - Provider Application User) or Provider/Caseworker No Role
+        def verify_token(role: str, required_scopes: set[str] | None = None) -> None:
+            app_roles: frozenset
+            scopes: frozenset
+
+            if role in ROLE_PERMISSIONS_MAP:
+                app_roles = frozenset([role])
+                scopes = frozenset(
+                    ["User.Provider" if "Provider" in role else "User.Caseworker"]
+                )
+            elif "No Role" in role:
+                app_roles = frozenset()
+                scopes = frozenset(
+                    ["User.Provider" if "Provider" in role else "User.Caseworker"]
+                )
+            else:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Could not validate credentials",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
 
-            if token not in tokens:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Could not validate credentials",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-
-            token_scopes = tokens[token]["scopes"]
-            if required_scopes and required_scopes.isdisjoint(token_scopes):
+            if required_scopes and required_scopes.isdisjoint(scopes):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Insufficient permissions",
@@ -329,9 +312,9 @@ def mock_entra_auth_client_fixture(session: Session):
 
             return AuthenticatedUser(
                 firm_code="0A123B",
-                scopes=frozenset(token_scopes),
+                scopes=scopes,
                 name="Test Name",
-                app_roles=frozenset(tokens[token]["app_roles"]),
+                app_roles=app_roles,
             )
 
         mock_auth.verify_token.side_effect = verify_token
