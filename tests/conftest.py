@@ -282,15 +282,15 @@ def mock_entra_auth_client_fixture(session: Session):
         # Single source of truth for test tokens: each token declares the scopes
         # and RBAC app roles it carries, mirroring a real Entra JWT payload.
         tokens = {
-            "valid-caseworker-entra-token": {  # TODO: fix naming conventions
+            "valid-caseworker-entra-token": {  # TODO: Will get removed when RBAC is complete
                 "scopes": {"User.Caseworker"},
                 "app_roles": set(),
             },
-            "valid-provider-application-user-token": {
+            "Inquests - Provider Application User": {
                 "scopes": {"User.Provider"},
                 "app_roles": {"Inquests - Provider Application User"},
             },
-            "valid-provider-claims-user-token": {
+            "Inquests - Provider Claims User": {
                 "scopes": {"User.Provider"},
                 "app_roles": {"Inquests - Provider Claims User"},
             },
@@ -298,8 +298,7 @@ def mock_entra_auth_client_fixture(session: Session):
                 "scopes": {"User.Provider"},
                 "app_roles": set(),
             },
-            "unknown-role-token": {"scopes": {"User.Provider"}, "app_roles": set()},
-            "valid-caseworker-claims-user-token": {
+            "Inquests - Claims caseworker": {
                 "scopes": {"User.Caseworker"},
                 "app_roles": {"Inquests - Claims caseworker"},
             },

@@ -17,7 +17,7 @@ def application(session) -> Application:
 def _caseworker_headers(auth_token: str) -> dict[str, str]:
     return {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {auth_token}",
+        "Authorization": "Bearer Inquests - Provider Application User",
     }
 
 
@@ -114,7 +114,7 @@ def test_401_create_note_requires_authorization(mock_entra_auth_client, applicat
 
 @pytest.mark.parametrize(
     "provider_token",
-    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+    ["Inquests - Provider Application User", "Inquests - Provider Claims User"],
 )
 def test_403_create_note_rejects_provider_token(
     mock_entra_auth_client, application, provider_token

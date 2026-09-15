@@ -59,7 +59,7 @@ def test_401_read_certificate_returns_401_when_no_authorization_header(client):
 
 @pytest.mark.parametrize(
     "provider_token",
-    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+    ["Inquests - Provider Application User", "Inquests - Provider Claims User"],
 )
 def test_403_read_certificate_returns_403_when_provider_token(
     mock_entra_auth_client, provider_token

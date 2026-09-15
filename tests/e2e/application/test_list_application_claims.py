@@ -77,7 +77,7 @@ def test_200_assessed_true_returns_only_non_submitted_claims(
 
     response = client.get(
         f"/applications/{laa_reference}/claims?assessed=true",
-        headers={"Authorization": "Bearer valid-caseworker-claims-user-token"},
+        headers={"Authorization": "Bearer Inquests - Claims caseworker"},
     )
 
     assert response.status_code == 200
@@ -197,7 +197,7 @@ def test_401_returns_unauthorized_when_no_auth_header(session, client):
 
 @pytest.mark.parametrize(
     "provider_token",
-    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+    ["Inquests - Provider Application User", "Inquests - Provider Claims User"],
 )
 def test_403_returns_forbidden_when_provider_token(
     mock_entra_auth_client, provider_token

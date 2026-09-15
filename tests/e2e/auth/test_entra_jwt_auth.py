@@ -45,7 +45,7 @@ def test_401_read_all_applications_returns_401_when_bearer_token_is_invalid(
 
 @pytest.mark.parametrize(
     "provider_token",
-    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+    ["Inquests - Provider Application User", "Inquests - Provider Claims User"],
 )
 def test_403_read_all_applications_returns_403_when_scope_is_not_caseworker(
     mock_entra_auth_client, provider_token
@@ -73,7 +73,7 @@ def test_200_read_application_by_id_returns_200_when_caseworker_token(
 
 @pytest.mark.parametrize(
     "provider_token",
-    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+    ["Inquests - Provider Application User", "Inquests - Provider Claims User"],
 )
 def test_403_read_application_by_id_returns_403_when_provider_token(
     mock_entra_auth_client, provider_token
@@ -94,7 +94,7 @@ def test_201_create_application_returns_201_when_provider_application_user_token
         json=create_application_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": "Bearer valid-provider-application-user-token",
+            "Authorization": "Bearer Inquests - Provider Application User",
         },
     )
 
@@ -109,7 +109,7 @@ def test_403_create_application_returns_403_when_provider_token_missing_permissi
         json=create_application_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": "Bearer valid-provider-claims-user-token",
+            "Authorization": "Bearer Inquests - Provider Claims User",
         },
     )
 
@@ -143,7 +143,7 @@ def test_201_upload_coroners_letter_returns_201_when_provider_application_user_t
                 "application/pdf",
             )
         },
-        headers={"Authorization": "Bearer valid-provider-application-user-token"},
+        headers={"Authorization": "Bearer Inquests - Provider Application User"},
     )
 
     assert response.status_code == 201
@@ -161,7 +161,7 @@ def test_403_upload_coroners_letter_returns_403_when_provider_token_missing_perm
                 "application/pdf",
             )
         },
-        headers={"Authorization": "Bearer valid-provider-claims-user-token"},
+        headers={"Authorization": "Bearer Inquests - Provider Claims User"},
     )
 
     assert response.status_code == 403
@@ -208,7 +208,7 @@ def test_204_refuse_decision_returns_204_when_caseworker_token(
 
 @pytest.mark.parametrize(
     "provider_token",
-    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+    ["Inquests - Provider Application User", "Inquests - Provider Claims User"],
 )
 def test_403_refuse_decision_returns_403_when_provider_token(
     mock_entra_auth_client, provider_token
@@ -248,7 +248,7 @@ def test_204_grant_decision_returns_204_when_caseworker_token(
 
 @pytest.mark.parametrize(
     "provider_token",
-    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+    ["Inquests - Provider Application User", "Inquests - Provider Claims User"],
 )
 def test_403_grant_decision_returns_403_when_provider_token(
     mock_entra_auth_client, provider_token
@@ -273,7 +273,7 @@ class TestSearchApplicationAuth:
         response = mock_entra_auth_client.get(
             "/applications/search",
             params={"laa_reference": "1"},
-            headers={"Authorization": "Bearer valid-provider-claims-user-token"},
+            headers={"Authorization": "Bearer Inquests - Provider Claims User"},
         )
 
         assert response.status_code == 200
@@ -285,7 +285,7 @@ class TestSearchApplicationAuth:
         response = mock_entra_auth_client.get(
             "/applications/search",
             params={"laa_reference": "1"},
-            headers={"Authorization": "Bearer valid-provider-application-user-token"},
+            headers={"Authorization": "Bearer Inquests - Provider Application User"},
         )
 
         assert response.status_code == 403
@@ -351,7 +351,7 @@ class TestUploadClaimEvidenceAuth:
                     "application/pdf",
                 )
             },
-            headers={"Authorization": "Bearer valid-provider-claims-user-token"},
+            headers={"Authorization": "Bearer Inquests - Provider Claims User"},
         )
 
         assert response.status_code == 201
@@ -369,7 +369,7 @@ class TestUploadClaimEvidenceAuth:
                     "application/pdf",
                 )
             },
-            headers={"Authorization": "Bearer valid-provider-application-user-token"},
+            headers={"Authorization": "Bearer Inquests - Provider Application User"},
         )
 
         assert response.status_code == 403
@@ -462,7 +462,7 @@ class TestDeleteClaimEvidenceAuth:
 
         response = mock_entra_auth_client.delete(
             f"/claims/{claim_evidence.claim_evidence_id}",
-            headers={"Authorization": "Bearer valid-provider-claims-user-token"},
+            headers={"Authorization": "Bearer Inquests - Provider Claims User"},
         )
 
         assert response.status_code == 204
@@ -473,7 +473,7 @@ class TestDeleteClaimEvidenceAuth:
     ):
         response = mock_entra_auth_client.delete(
             f"/claims/{uuid.uuid4()}",
-            headers={"Authorization": "Bearer valid-provider-application-user-token"},
+            headers={"Authorization": "Bearer Inquests - Provider Application User"},
         )
 
         assert response.status_code == 403
@@ -523,7 +523,7 @@ class TestDeleteClaimEvidenceAuth:
 class TestListProviderOfficesAuth:
     @pytest.mark.parametrize(
         "provider_token",
-        ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+        ["Inquests - Provider Application User", "Inquests - Provider Claims User"],
     )
     def test_200_list_provider_offices_returns_200_when_provider_token(
         self, mock_entra_auth_client, provider_token
@@ -603,7 +603,7 @@ class TestDeleteCoronersLetterAuth:
 
         response = mock_entra_auth_client.delete(
             f"/applications/coroners-letter/{coroners_letter.coroners_letter_id}",
-            headers={"Authorization": "Bearer valid-provider-application-user-token"},
+            headers={"Authorization": "Bearer Inquests - Provider Application User"},
         )
 
         assert response.status_code == 204
@@ -614,7 +614,7 @@ class TestDeleteCoronersLetterAuth:
     ):
         response = mock_entra_auth_client.delete(
             f"/applications/coroners-letter/{uuid.uuid4()}",
-            headers={"Authorization": "Bearer valid-provider-claims-user-token"},
+            headers={"Authorization": "Bearer Inquests - Provider Claims User"},
         )
 
         assert response.status_code == 403
@@ -697,7 +697,7 @@ def test_401_retrieve_coroners_letter_returns_401_when_bearer_token_is_invalid(
 
 @pytest.mark.parametrize(
     "provider_token",
-    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+    ["Inquests - Provider Application User", "Inquests - Provider Claims User"],
 )
 def test_403_retrieve_coroners_letter_returns_403_when_provider_token(
     mock_entra_auth_client, provider_token
@@ -723,7 +723,7 @@ def test_200_list_public_bodies_returns_200_when_caseworker_token(
 
 @pytest.mark.parametrize(
     "provider_token",
-    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+    ["Inquests - Provider Application User", "Inquests - Provider Claims User"],
 )
 def test_200_list_public_bodies_returns_200_when_application_provider_token(
     mock_entra_auth_client, provider_token
@@ -787,7 +787,7 @@ def test_200_retrieve_claim_evidence_returns_200_when_provider_claims_token(
 
     response = mock_entra_auth_client.get(
         f"/claims/{claim_evidence.claim_evidence_id}",
-        headers={"Authorization": "Bearer valid-provider-claims-user-token"},
+        headers={"Authorization": "Bearer Inquests - Provider Claims User"},
     )
 
     assert response.status_code == 200
@@ -825,7 +825,7 @@ def test_401_reject_claim_returns_401_when_no_authorization_header(
 
 @pytest.mark.parametrize(
     "provider_token",
-    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+    ["Inquests - Provider Application User", "Inquests - Provider Claims User"],
 )
 def test_403_reject_claim_returns_403_when_provider_token(
     mock_entra_auth_client, provider_token

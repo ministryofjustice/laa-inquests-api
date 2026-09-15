@@ -59,7 +59,7 @@ def test_200_list_public_bodies_returns_200_when_caseworker_token(
 
 @pytest.mark.parametrize(
     "provider_token",
-    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+    ["Inquests - Provider Application User", "Inquests - Provider Claims User"],
 )
 def test_200_list_public_bodies_returns_200_when_provider_token(
     mock_entra_auth_client, provider_token
