@@ -7,6 +7,7 @@ from sqlmodel import select
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ClaimType, POAType
 from app.models.claim.index import Claim, ClaimDecision
+from tests.helpers.entra_auth import override_entra_auth_app_roles
 
 
 def _seed_claim(
@@ -57,6 +58,7 @@ def _seed_decision(
 def test_200_returns_empty_list_when_application_has_no_claims(
     session, client, auth_token
 ):
+    override_entra_auth_app_roles({"Inquests - Claims caseworker"})
     laa_reference = session.exec(select(Application)).first().laa_reference
 
     response = client.get(
@@ -71,6 +73,7 @@ def test_200_returns_empty_list_when_application_has_no_claims(
 def test_200_assessed_true_returns_only_non_submitted_claims(
     session, client, auth_token
 ):
+    override_entra_auth_app_roles({"Inquests - Claims caseworker"})
     laa_reference = session.exec(select(Application)).first().laa_reference
     _seed_claim(session, laa_reference, ClaimStatus.SUBMITTED)
     assessed_claim = _seed_claim(session, laa_reference, ClaimStatus.ACCEPTED)
@@ -98,6 +101,8 @@ def test_200_assessed_true_returns_only_non_submitted_claims(
 
 
 def test_200_includes_claim_status_for_each_claim(session, client, auth_token):
+    override_entra_auth_app_roles({"Inquests - Claims caseworker"})
+
     laa_reference = session.exec(select(Application)).first().laa_reference
     _seed_claim(session, laa_reference, ClaimStatus.ACCEPTED)
 
@@ -113,6 +118,7 @@ def test_200_includes_claim_status_for_each_claim(session, client, auth_token):
 def test_200_includes_claim_decision_status_when_a_decision_exists(
     session, client, auth_token
 ):
+    override_entra_auth_app_roles({"Inquests - Claims caseworker"})
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference, ClaimStatus.REJECTED)
     _seed_decision(session, claim.claim_id, ClaimDecisionStatus.REJECT)
@@ -129,6 +135,7 @@ def test_200_includes_claim_decision_status_when_a_decision_exists(
 def test_200_claim_decision_status_is_null_when_no_decision_exists(
     session, client, auth_token
 ):
+    override_entra_auth_app_roles({"Inquests - Claims caseworker"})
     laa_reference = session.exec(select(Application)).first().laa_reference
     _seed_claim(session, laa_reference, ClaimStatus.ACCEPTED)
 
@@ -142,6 +149,7 @@ def test_200_claim_decision_status_is_null_when_no_decision_exists(
 
 
 def test_200_assessed_false_returns_only_submitted_claims(session, client, auth_token):
+    override_entra_auth_app_roles({"Inquests - Claims caseworker"})
     laa_reference = session.exec(select(Application)).first().laa_reference
     submitted_claim = _seed_claim(session, laa_reference, ClaimStatus.SUBMITTED)
     _seed_claim(session, laa_reference, ClaimStatus.ACCEPTED)
@@ -156,6 +164,7 @@ def test_200_assessed_false_returns_only_submitted_claims(session, client, auth_
 
 
 def test_422_when_assessed_query_param_is_missing(session, client, auth_token):
+    override_entra_auth_app_roles({"Inquests - Claims caseworker"})
     laa_reference = session.exec(select(Application)).first().laa_reference
 
     response = client.get(
@@ -167,6 +176,7 @@ def test_422_when_assessed_query_param_is_missing(session, client, auth_token):
 
 
 def test_422_when_assessed_query_param_is_not_a_boolean(session, client, auth_token):
+    override_entra_auth_app_roles({"Inquests - Claims caseworker"})
     laa_reference = session.exec(select(Application)).first().laa_reference
 
     response = client.get(
@@ -178,6 +188,7 @@ def test_422_when_assessed_query_param_is_not_a_boolean(session, client, auth_to
 
 
 def test_404_when_application_does_not_exist(client, auth_token):
+    override_entra_auth_app_roles({"Inquests - Claims caseworker"})
     response = client.get(
         "/applications/999999/claims?assessed=true",
         headers={"Authorization": f"Bearer {auth_token}"},
