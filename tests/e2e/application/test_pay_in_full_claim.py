@@ -6,8 +6,9 @@ from sqlmodel import select
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimStatus, ClaimType, POAType
 from app.models.claim.index import Claim, ClaimDecision, ClaimDecisionAmount
-from app.models.history.enums import HistoryEventReference
+from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
+from app.models.notifications.enums import NotificationType
 from tests.e2e.factories import create_application_in_db
 
 
@@ -526,3 +527,103 @@ def test_204_pay_in_full_claim_allows_disbursement_vat_zero_net_and_gross(
     )
 
     assert response.status_code == 204
+
+
+def test_204_pay_in_full_claim_sends_final_bill_paid_email_to_provider(
+    session, client, auth_token, mock_gov_notify
+):
+    application = session.exec(select(Application)).first()
+    claim = _seed_claim(session, application.laa_reference)
+
+    response = client.patch(
+        f"/applications/{application.laa_reference}/claims/{claim.claim_id}/pay-in-full",
+        json=_pay_in_full_payload(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 204
+    mock_gov_notify.send_claim_final_bill_paid_decision_email.assert_called_once()
+
+    call_kwargs = (
+        mock_gov_notify.send_claim_final_bill_paid_decision_email.call_args.kwargs
+    )
+    assert call_kwargs["claim"].claim_id == claim.claim_id
+    assert call_kwargs["application"].laa_reference == application.laa_reference
+    assert call_kwargs["recipient_email"] == application.provider.email_address
+    assert call_kwargs["firm_name"] == "Test Firm Name"
+    assert call_kwargs["decision_amounts"].profit_cost_net == Decimal("1000.00")
+    assert call_kwargs["decision_amounts"].profit_cost_gross == Decimal("1200.00")
+    assert call_kwargs["decision_amounts"].disbursement_net == Decimal("100.00")
+    assert call_kwargs["decision_amounts"].disbursement_gross == Decimal("200.00")
+    assert call_kwargs["decision_amounts"].disbursement_vat_zero == Decimal("50.00")
+
+
+def test_204_pay_in_full_claim_creates_email_history_event(
+    session, client, auth_token, mock_gov_notify
+):
+    application = session.exec(select(Application)).first()
+    claim = _seed_claim(session, application.laa_reference)
+
+    response = client.patch(
+        f"/applications/{application.laa_reference}/claims/{claim.claim_id}/pay-in-full",
+        json=_pay_in_full_payload(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 204
+
+    history_event = session.exec(
+        select(HistoryEvent).where(
+            (HistoryEvent.application_id == application.application_id)
+            & (
+                HistoryEvent.event_reference
+                == HistoryEventReference.CLAIM_FINAL_BILL_PAID_EMAIL
+            )
+        )
+    ).one()
+
+    assert (
+        history_event.event_reference
+        == HistoryEventReference.CLAIM_FINAL_BILL_PAID_EMAIL
+    )
+    assert history_event.actor == ActorType.SYSTEM
+    assert history_event.actor_type == ActorType.SYSTEM
+    assert history_event.event_data == {
+        "recipient": application.provider.email_address,
+        "channel": NotificationType.EMAIL,
+    }
+
+
+def test_204_pay_in_full_claim_succeeds_when_final_bill_paid_email_fails(
+    session, client, auth_token, mock_gov_notify
+):
+    application = session.exec(select(Application)).first()
+    claim = _seed_claim(session, application.laa_reference)
+    mock_gov_notify.send_claim_final_bill_paid_decision_email.side_effect = Exception(
+        "Gov Notify unavailable"
+    )
+
+    response = client.patch(
+        f"/applications/{application.laa_reference}/claims/{claim.claim_id}/pay-in-full",
+        json=_pay_in_full_payload(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_token}",
+        },
+    )
+
+    assert response.status_code == 204
+
+    decision = session.exec(
+        select(ClaimDecision).where(ClaimDecision.claim_id == claim.claim_id)
+    ).one()
+    assert decision.decision == "PAY_IN_FULL"
+
+    session.refresh(claim)
+    assert claim.status_id == ClaimStatus.PAY_IN_FULL

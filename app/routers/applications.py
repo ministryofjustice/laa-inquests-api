@@ -366,6 +366,8 @@ def get_pay_in_full_claim_use_case(
     create_history_event_port: CreateHistoryEventPort = Depends(
         get_history_event_adapter
     ),
+    provider_details_port: ProviderDetailsPort = Depends(get_provider_details_port),
+    gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
 ) -> PayInFullClaimUseCase:
     return PayInFullClaimUseCase(
         application_lookup_port=application_lookup_port,
@@ -374,6 +376,8 @@ def get_pay_in_full_claim_use_case(
         create_claim_decision_amount_port=create_claim_decision_amount_port,
         update_claim_status_port=update_claim_status_port,
         create_history_event_port=create_history_event_port,
+        provider_details_port=provider_details_port,
+        gov_notify_port=gov_notify_port,
     )
 
 
