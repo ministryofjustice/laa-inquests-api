@@ -5,7 +5,6 @@ from unittest.mock import MagicMock
 from app import api
 from app.auth.rbac import Permission, get_current_user_permissions
 from app.routers.claims import get_sds_port
-from tests.helpers.entra_auth import override_entra_auth_app_roles
 
 
 def is_valid_uuid(val):
@@ -160,10 +159,8 @@ def test_201_upload_claim_evidence_allows_multiple_uploads(client, auth_token):
 
 class TestUploadClaimEvidenceRbac:
     def test_201_upload_claim_evidence_with_provider_claims_user_app_role(
-        self, client, auth_token
+        self, client, mock_entra_auth_client
     ):
-        override_entra_auth_app_roles({"Inquests - Provider Claims User"})
-
         response = client.post(
             "/claims/evidence",
             files={
@@ -173,16 +170,14 @@ class TestUploadClaimEvidenceRbac:
                     "application/pdf",
                 )
             },
-            headers={"Authorization": f"Bearer {auth_token}"},
+            headers={"Authorization": "Bearer valid-provider-claims-user-token"},
         )
 
         assert response.status_code == 201
 
     def test_403_upload_claim_evidence_with_app_role_missing_upload_permission(
-        self, client, auth_token
+        self, client, mock_entra_auth_client
     ):
-        override_entra_auth_app_roles({"Inquests - Provider Application User"})
-
         response = client.post(
             "/claims/evidence",
             files={
@@ -192,7 +187,7 @@ class TestUploadClaimEvidenceRbac:
                     "application/pdf",
                 )
             },
-            headers={"Authorization": f"Bearer {auth_token}"},
+            headers={"Authorization": "Bearer valid-provider-application-user-token"},
         )
 
         assert response.status_code == 403
@@ -219,9 +214,9 @@ class TestUploadClaimEvidenceRbac:
 
         assert response.status_code == 201
 
-    def test_403_upload_claim_evidence_with_unmapped_app_role(self, client, auth_token):
-        override_entra_auth_app_roles({"Some Unknown Role"})
-
+    def test_403_upload_claim_evidence_with_unmapped_app_role(
+        self, client, mock_entra_auth_client
+    ):
         response = client.post(
             "/claims/evidence",
             files={
@@ -231,7 +226,7 @@ class TestUploadClaimEvidenceRbac:
                     "application/pdf",
                 )
             },
-            headers={"Authorization": f"Bearer {auth_token}"},
+            headers={"Authorization": "Bearer unknown-role-token"},
         )
 
         assert response.status_code == 403

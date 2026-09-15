@@ -5,7 +5,6 @@ from unittest.mock import MagicMock
 from app import api
 from app.models.claim.index import ClaimEvidence
 from app.routers.claims import get_sds_port
-from tests.helpers.entra_auth import override_entra_auth_app_roles
 
 
 def _upload_evidence_and_get_id(client, auth_token):
@@ -64,9 +63,8 @@ def test_500_delete_claim_evidence_when_sds_fails(client, auth_token):
 
 class TestDeleteClaimEvidenceRbac:
     def test_204_delete_claim_evidence_with_provider_claims_user_app_role(
-        self, session, client, auth_token
+        self, session, client, mock_entra_auth_client
     ):
-        override_entra_auth_app_roles({"Inquests - Provider Claims User"})
         claim_evidence = ClaimEvidence(
             sds_file_name="stored-claim-evidence_abc123.pdf",
             file_name="claim_evidence.pdf",
@@ -77,29 +75,27 @@ class TestDeleteClaimEvidenceRbac:
 
         response = client.delete(
             f"/claims/{claim_evidence.claim_evidence_id}",
-            headers={"Authorization": f"Bearer {auth_token}"},
+            headers={"Authorization": "Bearer valid-provider-claims-user-token"},
         )
 
         assert response.status_code == 204
 
     def test_403_delete_claim_evidence_with_app_role_missing_delete_permission(
-        self, client, auth_token
+        self, client, mock_entra_auth_client
     ):
-        override_entra_auth_app_roles({"Inquests - Provider Application User"})
-
         response = client.delete(
             f"/claims/{uuid.uuid4()}",
-            headers={"Authorization": f"Bearer {auth_token}"},
+            headers={"Authorization": "Bearer valid-provider-application-user-token"},
         )
 
         assert response.status_code == 403
 
-    def test_403_delete_claim_evidence_with_unmapped_app_role(self, client, auth_token):
-        override_entra_auth_app_roles({"Some Unknown Role"})
-
+    def test_403_delete_claim_evidence_with_unmapped_app_role(
+        self, client, mock_entra_auth_client
+    ):
         response = client.delete(
             f"/claims/{uuid.uuid4()}",
-            headers={"Authorization": f"Bearer {auth_token}"},
+            headers={"Authorization": "Bearer unknown-role-token"},
         )
 
         assert response.status_code == 403

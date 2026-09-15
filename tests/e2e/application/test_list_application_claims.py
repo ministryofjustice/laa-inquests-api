@@ -7,7 +7,6 @@ from sqlmodel import select
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ClaimType, POAType
 from app.models.claim.index import Claim, ClaimDecision
-from tests.helpers.entra_auth import override_entra_auth_app_roles
 
 
 def _seed_claim(
@@ -72,14 +71,13 @@ def test_200_returns_empty_list_when_application_has_no_claims(
 def test_200_assessed_true_returns_only_non_submitted_claims(
     session, client, mock_entra_auth_client
 ):
-    override_entra_auth_app_roles({"Inquests - Claims caseworker"})
     laa_reference = session.exec(select(Application)).first().laa_reference
     _seed_claim(session, laa_reference, ClaimStatus.SUBMITTED)
     assessed_claim = _seed_claim(session, laa_reference, ClaimStatus.ACCEPTED)
 
     response = client.get(
         f"/applications/{laa_reference}/claims?assessed=true",
-        headers={"Authorization": "Bearer valid-claims-caseworker-user-token"},
+        headers={"Authorization": "Bearer valid-caseworker-claims-user-token"},
     )
 
     assert response.status_code == 200
