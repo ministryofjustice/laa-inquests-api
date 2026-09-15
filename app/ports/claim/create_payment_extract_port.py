@@ -9,5 +9,5 @@ class CreatePaymentExtractPort(ABC):
     def create_payment_extract(
         self,
         claim_id: int,
-        line: PaymentExtractLine,
-    ) -> ClaimPaymentExtract: ...
+        lines: list[PaymentExtractLine],
+    ) -> list[ClaimPaymentExtract]: ...

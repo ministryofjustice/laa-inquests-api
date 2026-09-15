@@ -78,7 +78,7 @@ def _build_payment_extract_lines(claim: Claim) -> list[PaymentExtractLine]:
                 sequence=1,
                 submission_date=claim.submission_date,
                 net=claim.total_profit_cost_net,
-                vat_zero=claim.total_profit_cost_vat_zero,
+                vat_zero_amount=claim.total_profit_cost_vat_zero,
             )
         ]
     if claim.poa_type_id in (POAType.EXPERT_COST, POAType.NON_EXPERT_DISBURSEMENT):
@@ -86,7 +86,7 @@ def _build_payment_extract_lines(claim: Claim) -> list[PaymentExtractLine]:
             claim_id=claim.claim_id,
             submission_date=claim.submission_date,
             gross=claim.total_profit_cost_gross,
-            vat_zero=claim.total_profit_cost_vat_zero,
+            vat_zero_amount=claim.total_profit_cost_vat_zero,
         )
     return []
 
@@ -397,11 +397,10 @@ class CreateClaimUseCase:
                         **_claim_decision_amount_fields(claim),
                     )
                     if self.create_payment_extract_port is not None:
-                        for line in _build_payment_extract_lines(claim):
-                            self.create_payment_extract_port.create_payment_extract(
-                                claim_id=claim.claim_id,
-                                line=line,
-                            )
+                        self.create_payment_extract_port.create_payment_extract(
+                            claim_id=claim.claim_id,
+                            lines=_build_payment_extract_lines(claim),
+                        )
                     self.update_claim_status_port.update_claim_status(
                         claim_id=claim.claim_id,
                         status=ClaimStatus.PAY_IN_FULL,

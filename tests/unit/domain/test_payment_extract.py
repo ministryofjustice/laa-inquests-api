@@ -37,7 +37,7 @@ class TestBuildPoaProfitCostExtract:
             sequence=1,
             submission_date=_submission(),
             net=Decimal("1000.00"),
-            vat_zero=None,
+            vat_zero_amount=None,
         )
 
         # 1000 * 0.8 * 1.2 = 960.00
@@ -50,7 +50,7 @@ class TestBuildPoaProfitCostExtract:
             sequence=1,
             submission_date=_submission(),
             net=None,
-            vat_zero=Decimal("1000.00"),
+            vat_zero_amount=Decimal("1000.00"),
         )
 
         # 1000 * 0.8 = 800.00, no VAT added
@@ -63,7 +63,7 @@ class TestBuildPoaProfitCostExtract:
             sequence=1,
             submission_date=_submission(),
             net=Decimal("333.33"),
-            vat_zero=None,
+            vat_zero_amount=None,
         )
 
         # 333.33 * 0.8 * 1.2 = 319.9968 -> 320.00
@@ -75,7 +75,7 @@ class TestBuildPoaProfitCostExtract:
             sequence=1,
             submission_date=_submission(),
             net=Decimal("1000.00"),
-            vat_zero=None,
+            vat_zero_amount=None,
         )
 
         assert line.sequence_number == 1
@@ -87,7 +87,7 @@ class TestBuildPoaProfitCostExtract:
             sequence=12,
             submission_date=_submission(),
             net=Decimal("1000.00"),
-            vat_zero=None,
+            vat_zero_amount=None,
         )
 
         assert line.sequence_number == 12
@@ -99,7 +99,7 @@ class TestBuildPoaProfitCostExtract:
             sequence=1,
             submission_date=_submission(2025, 1, 5),
             net=Decimal("1000.00"),
-            vat_zero=None,
+            vat_zero_amount=None,
         )
 
         assert line.invoice_date == datetime(2025, 1, 5, tzinfo=UTC).date()
@@ -110,7 +110,7 @@ class TestBuildPoaProfitCostExtract:
             sequence=1,
             submission_date=_submission(),
             net=Decimal("1000.00"),
-            vat_zero=None,
+            vat_zero_amount=None,
         )
 
         assert line.invoice_type == InvoiceTypeCode.POA
@@ -122,7 +122,7 @@ class TestBuildPoaDisbursementExtract:
             claim_id=7,
             submission_date=_submission(),
             gross=Decimal("1200.00"),
-            vat_zero=None,
+            vat_zero_amount=None,
         )
 
         assert len(lines) == 1
@@ -138,7 +138,7 @@ class TestBuildPoaDisbursementExtract:
             claim_id=7,
             submission_date=_submission(),
             gross=None,
-            vat_zero=Decimal("500.00"),
+            vat_zero_amount=Decimal("500.00"),
         )
 
         assert len(lines) == 1
@@ -153,7 +153,7 @@ class TestBuildPoaDisbursementExtract:
             claim_id=42,
             submission_date=_submission(),
             gross=Decimal("1200.00"),
-            vat_zero=Decimal("200.00"),
+            vat_zero_amount=Decimal("200.00"),
         )
 
         assert len(lines) == 2
@@ -176,7 +176,7 @@ class TestBuildPoaDisbursementExtract:
             claim_id=7,
             submission_date=_submission(),
             gross=Decimal("500.00"),
-            vat_zero=Decimal("500.00"),
+            vat_zero_amount=Decimal("500.00"),
         )
 
         assert len(lines) == 1
@@ -189,7 +189,7 @@ class TestBuildPoaDisbursementExtract:
             claim_id=7,
             submission_date=_submission(),
             gross=Decimal("1000.125"),
-            vat_zero=None,
+            vat_zero_amount=None,
         )
 
         assert lines[0].invoice_amount == Decimal("1000.12")
@@ -199,7 +199,7 @@ class TestBuildPoaDisbursementExtract:
             claim_id=7,
             submission_date=_submission(2025, 1, 5),
             gross=Decimal("1200.00"),
-            vat_zero=None,
+            vat_zero_amount=None,
         )
 
         assert lines[0].invoice_date == datetime(2025, 1, 5, tzinfo=UTC).date()
@@ -209,7 +209,7 @@ class TestBuildPoaDisbursementExtract:
             claim_id=7,
             submission_date=_submission(),
             gross=None,
-            vat_zero=None,
+            vat_zero_amount=None,
         )
 
         assert lines == []

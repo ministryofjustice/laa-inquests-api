@@ -1208,14 +1208,16 @@ def test_execute_auto_approves_eligible_payment_on_account_claim():
     )
     create_payment_extract_port.create_payment_extract.assert_called_once_with(
         claim_id=1,
-        line=PaymentExtractLine(
-            sequence_number=1,
-            invoice_number="1_001",
-            invoice_amount=Decimal("960.00"),
-            invoice_date=claim.submission_date.date(),
-            invoice_type=InvoiceTypeCode.POA,
-            tax_code=TaxCode.GB_VAT_20,
-        ),
+        lines=[
+            PaymentExtractLine(
+                sequence_number=1,
+                invoice_number="1_001",
+                invoice_amount=Decimal("960.00"),
+                invoice_date=claim.submission_date.date(),
+                invoice_type=InvoiceTypeCode.POA,
+                tax_code=TaxCode.GB_VAT_20,
+            )
+        ],
     )
     update_claim_status_port.update_claim_status.assert_called_once_with(
         claim_id=1,
@@ -1256,14 +1258,16 @@ def test_execute_auto_approval_persists_profit_cost_amounts_for_profit_cost_poa(
     )
     extract_port.create_payment_extract.assert_called_once_with(
         claim_id=1,
-        line=PaymentExtractLine(
-            sequence_number=1,
-            invoice_number="1_001",
-            invoice_amount=Decimal("38400.00"),
-            invoice_date=claim.submission_date.date(),
-            invoice_type=InvoiceTypeCode.POA,
-            tax_code=TaxCode.GB_VAT_20,
-        ),
+        lines=[
+            PaymentExtractLine(
+                sequence_number=1,
+                invoice_number="1_001",
+                invoice_amount=Decimal("38400.00"),
+                invoice_date=claim.submission_date.date(),
+                invoice_type=InvoiceTypeCode.POA,
+                tax_code=TaxCode.GB_VAT_20,
+            )
+        ],
     )
 
 
@@ -1293,14 +1297,16 @@ def test_execute_auto_approval_persists_zero_vat_payment_extract_for_profit_cost
     )
     extract_port.create_payment_extract.assert_called_once_with(
         claim_id=1,
-        line=PaymentExtractLine(
-            sequence_number=1,
-            invoice_number="1_001",
-            invoice_amount=Decimal("800.00"),
-            invoice_date=claim.submission_date.date(),
-            invoice_type=InvoiceTypeCode.POA,
-            tax_code=TaxCode.ZERO_VAT,
-        ),
+        lines=[
+            PaymentExtractLine(
+                sequence_number=1,
+                invoice_number="1_001",
+                invoice_amount=Decimal("800.00"),
+                invoice_date=claim.submission_date.date(),
+                invoice_type=InvoiceTypeCode.POA,
+                tax_code=TaxCode.ZERO_VAT,
+            )
+        ],
     )
 
 
@@ -1329,14 +1335,16 @@ def test_execute_auto_approval_persists_disbursement_amounts_for_expert_cost_poa
     )
     extract_port.create_payment_extract.assert_called_once_with(
         claim_id=1,
-        line=PaymentExtractLine(
-            sequence_number=1,
-            invoice_number="1_001",
-            invoice_amount=Decimal("40000.00"),
-            invoice_date=claim.submission_date.date(),
-            invoice_type=InvoiceTypeCode.POA,
-            tax_code=TaxCode.GB_VAT_20,
-        ),
+        lines=[
+            PaymentExtractLine(
+                sequence_number=1,
+                invoice_number="1_001",
+                invoice_amount=Decimal("40000.00"),
+                invoice_date=claim.submission_date.date(),
+                invoice_type=InvoiceTypeCode.POA,
+                tax_code=TaxCode.GB_VAT_20,
+            )
+        ],
     )
 
 
@@ -1365,14 +1373,16 @@ def test_execute_auto_approval_persists_disbursement_amounts_for_non_expert_poa(
     )
     extract_port.create_payment_extract.assert_called_once_with(
         claim_id=1,
-        line=PaymentExtractLine(
-            sequence_number=1,
-            invoice_number="1_001",
-            invoice_amount=Decimal("40000.00"),
-            invoice_date=claim.submission_date.date(),
-            invoice_type=InvoiceTypeCode.POA,
-            tax_code=TaxCode.GB_VAT_20,
-        ),
+        lines=[
+            PaymentExtractLine(
+                sequence_number=1,
+                invoice_number="1_001",
+                invoice_amount=Decimal("40000.00"),
+                invoice_date=claim.submission_date.date(),
+                invoice_type=InvoiceTypeCode.POA,
+                tax_code=TaxCode.GB_VAT_20,
+            )
+        ],
     )
 
 
