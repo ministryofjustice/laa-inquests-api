@@ -44,8 +44,8 @@ def test_500_list_provider_offices_when_provider_details_lookup_fails(
     )
 
 
-def test_403_list_provider_offices_when_caseworker_token(entra_auth_client):
-    response = entra_auth_client.get(
+def test_403_list_provider_offices_when_caseworker_token(mock_entra_auth_client):
+    response = mock_entra_auth_client.get(
         "/applications/provider-offices/123",
         headers={"Authorization": "Bearer valid-caseworker-entra-token"},
     )

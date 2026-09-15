@@ -60,8 +60,8 @@ def test_500_delete_coroners_letter_when_sds_fails(client, auth_token):
     assert delete_response.status_code == 500
 
 
-def test_403_delete_coroners_letter_when_caseworker_token(entra_auth_client):
-    response = entra_auth_client.delete(
+def test_403_delete_coroners_letter_when_caseworker_token(mock_entra_auth_client):
+    response = mock_entra_auth_client.delete(
         f"/applications/coroners-letter/{uuid.uuid4()}",
         headers={"Authorization": "Bearer valid-caseworker-entra-token"},
     )

@@ -431,8 +431,8 @@ def test_401_returns_unauthorized_when_no_auth_header(session, client):
     assert response.status_code == 401
 
 
-def test_403_returns_forbidden_when_provider_application_token(entra_auth_client):
-    response = entra_auth_client.get(
+def test_403_returns_forbidden_when_provider_application_token(mock_entra_auth_client):
+    response = mock_entra_auth_client.get(
         "/applications/1/claims/1",
         headers={"Authorization": "Bearer valid-provider-application-user-token"},
     )

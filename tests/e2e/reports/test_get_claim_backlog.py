@@ -114,13 +114,13 @@ class TestGetClaimBacklogReport:
 class TestGetClaimBacklogReportAuth:
     """Authentication tests for GET /reports/claims/backlog."""
 
-    def test_401_returns_unauthorized_when_no_auth_header(self, entra_auth_client):
-        response = entra_auth_client.get("/reports/claims/backlog")
+    def test_401_returns_unauthorized_when_no_auth_header(self, mock_entra_auth_client):
+        response = mock_entra_auth_client.get("/reports/claims/backlog")
 
         assert response.status_code == 401
 
-    def test_401_returns_unauthorized_when_invalid_token(self, entra_auth_client):
-        response = entra_auth_client.get(
+    def test_401_returns_unauthorized_when_invalid_token(self, mock_entra_auth_client):
+        response = mock_entra_auth_client.get(
             "/reports/claims/backlog",
             headers={"Authorization": "Bearer invalid-token"},
         )
@@ -132,17 +132,17 @@ class TestGetClaimBacklogReportAuth:
         ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
     )
     def test_403_returns_forbidden_when_provider_token(
-        self, entra_auth_client, provider_token
+        self, mock_entra_auth_client, provider_token
     ):
-        response = entra_auth_client.get(
+        response = mock_entra_auth_client.get(
             "/reports/claims/backlog",
             headers={"Authorization": f"Bearer {provider_token}"},
         )
 
         assert response.status_code == 403
 
-    def test_200_returns_ok_when_caseworker_token(self, entra_auth_client):
-        response = entra_auth_client.get(
+    def test_200_returns_ok_when_caseworker_token(self, mock_entra_auth_client):
+        response = mock_entra_auth_client.get(
             "/reports/claims/backlog",
             headers={"Authorization": "Bearer valid-caseworker-entra-token"},
         )

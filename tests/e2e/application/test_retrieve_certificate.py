@@ -62,9 +62,9 @@ def test_401_read_certificate_returns_401_when_no_authorization_header(client):
     ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
 )
 def test_403_read_certificate_returns_403_when_provider_token(
-    entra_auth_client, provider_token
+    mock_entra_auth_client, provider_token
 ):
-    response = entra_auth_client.get(
+    response = mock_entra_auth_client.get(
         "/applications/1/certificate",
         headers={"Authorization": f"Bearer {provider_token}"},
     )

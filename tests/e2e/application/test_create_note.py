@@ -102,8 +102,8 @@ def test_404_create_note_returns_not_found_for_missing_application(client, auth_
     assert response.json() == {"detail": "Application not found"}
 
 
-def test_401_create_note_requires_authorization(entra_auth_client, application):
-    response = entra_auth_client.post(
+def test_401_create_note_requires_authorization(mock_entra_auth_client, application):
+    response = mock_entra_auth_client.post(
         f"/applications/{application.laa_reference}/note",
         json={"noteText": "Case note"},
         headers={"Content-Type": "application/json"},
@@ -117,9 +117,9 @@ def test_401_create_note_requires_authorization(entra_auth_client, application):
     ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
 )
 def test_403_create_note_rejects_provider_token(
-    entra_auth_client, application, provider_token
+    mock_entra_auth_client, application, provider_token
 ):
-    response = entra_auth_client.post(
+    response = mock_entra_auth_client.post(
         f"/applications/{application.laa_reference}/note",
         json={"noteText": "Case note"},
         headers={
