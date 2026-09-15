@@ -613,6 +613,7 @@ def retrieve_coroners_letter(
 @router.get(
     "/{laa_reference}/claims",
     response_model=list[ClaimSummaryResponse],
+    dependencies=[Depends(require_permission(Permission.CLAIM_READ))],
 )
 def list_application_claims(
     laa_reference: str,
@@ -620,7 +621,6 @@ def list_application_claims(
     use_case: ListApplicationClaimsUseCase = Depends(
         get_list_application_claims_use_case
     ),
-    _: None = Depends(verify_entra_caseworker_token),
 ) -> list[ClaimSummaryResponse]:
     """List claims for an application, filtered by assessed status."""
     try:

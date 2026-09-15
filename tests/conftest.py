@@ -293,6 +293,14 @@ def entra_auth_client_fixture(session: Session):
                 "scopes": {"User.Provider"},
                 "app_roles": {"Inquests - Provider Claims User"},
             },
+            "valid-claims-caseworker-user-token": {
+                "scopes": {"User.Caseworker"},
+                "app_roles": {"Inquests - Claims caseworker"},
+            },
+            "valid-applications-caseworker-user-token": {
+                "scopes": {"User.Caseworker"},
+                "app_roles": {"Inquests - Applications caseworker"},
+            },
         }
 
         def verify_token(token: str, required_scopes: set[str] | None = None) -> None:

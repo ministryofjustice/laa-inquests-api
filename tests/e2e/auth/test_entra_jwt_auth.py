@@ -663,6 +663,34 @@ class TestDeleteCoronersLetterAuth:
         assert response.status_code == 401
 
 
+class TestApplicationClaimsReadAuth:
+    def test_200_list_application_claims_when_claims_caseworker_user_token(
+        self,
+        session,
+        entra_auth_client,
+    ):
+        application = session.exec(select(Application)).first()
+        response = entra_auth_client.get(
+            f"/applications/{application.laa_reference}/claims?assessed=True",
+            headers={"Authorization": "Bearer valid-claims-caseworker-user-token"},
+        )
+        assert response.status_code == 200
+
+    def test_403_list_application_claims_when_applications_caseworker_user_token(
+        self,
+        session,
+        entra_auth_client,
+    ):
+        application = session.exec(select(Application)).first()
+        response = entra_auth_client.get(
+            f"/applications/{application.laa_reference}/claims?assessed=True",
+            headers={
+                "Authorization": "Bearer valid-applications-caseworker-user-token"
+            },
+        )
+        assert response.status_code == 403
+
+
 def test_200_retrieve_coroners_letter_returns_200_when_caseworker_token(
     session, entra_auth_client
 ):
