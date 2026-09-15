@@ -48,3 +48,43 @@ def build_poa_profit_cost_extract(
         invoice_type=InvoiceTypeCode.POA,
         tax_code=tax_code,
     )
+
+
+def build_poa_disbursement_extract(
+    claim_id: int,
+    submission_date: datetime,
+    gross: Decimal | None,
+    vat_zero: Decimal | None,
+) -> list[PaymentExtractLine]:
+    invoice_date = submission_date.date()
+    standard_amount = (gross or Decimal("0.00")) - (vat_zero or Decimal("0.00"))
+
+    lines: list[PaymentExtractLine] = []
+    sequence = 1
+
+    if standard_amount > 0:
+        lines.append(
+            PaymentExtractLine(
+                sequence_number=sequence,
+                invoice_number=f"{claim_id}_{sequence:03d}",
+                invoice_amount=bankers_round(standard_amount),
+                invoice_date=invoice_date,
+                invoice_type=InvoiceTypeCode.POA,
+                tax_code=TaxCode.GB_VAT_20,
+            )
+        )
+        sequence += 1
+
+    if vat_zero is not None and vat_zero > 0:
+        lines.append(
+            PaymentExtractLine(
+                sequence_number=sequence,
+                invoice_number=f"{claim_id}_{sequence:03d}",
+                invoice_amount=bankers_round(vat_zero),
+                invoice_date=invoice_date,
+                invoice_type=InvoiceTypeCode.POA,
+                tax_code=TaxCode.ZERO_VAT,
+            )
+        )
+
+    return lines

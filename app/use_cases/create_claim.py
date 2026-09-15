@@ -20,6 +20,7 @@ from app.domain.constants.claim_messages import (
 )
 from app.domain.payment_extract import (
     PaymentExtractLine,
+    build_poa_disbursement_extract,
     build_poa_profit_cost_extract,
 )
 from app.logging_utils import build_log_extra
@@ -69,14 +70,25 @@ def _claim_decision_amount_fields(claim: Claim) -> dict[str, Decimal | None]:
     }
 
 
-def _build_payment_extract(claim: Claim) -> PaymentExtractLine:
-    return build_poa_profit_cost_extract(
-        claim_id=claim.claim_id,
-        sequence=1,
-        submission_date=claim.submission_date,
-        net=claim.total_profit_cost_net,
-        vat_zero=claim.total_profit_cost_vat_zero,
-    )
+def _build_payment_extract_lines(claim: Claim) -> list[PaymentExtractLine]:
+    if claim.poa_type_id == POAType.PROFIT_COST:
+        return [
+            build_poa_profit_cost_extract(
+                claim_id=claim.claim_id,
+                sequence=1,
+                submission_date=claim.submission_date,
+                net=claim.total_profit_cost_net,
+                vat_zero=claim.total_profit_cost_vat_zero,
+            )
+        ]
+    if claim.poa_type_id in (POAType.EXPERT_COST, POAType.NON_EXPERT_DISBURSEMENT):
+        return build_poa_disbursement_extract(
+            claim_id=claim.claim_id,
+            submission_date=claim.submission_date,
+            gross=claim.total_profit_cost_gross,
+            vat_zero=claim.total_profit_cost_vat_zero,
+        )
+    return []
 
 
 @dataclass(frozen=True)
@@ -384,14 +396,12 @@ class CreateClaimUseCase:
                         claim_decision_id=claim_decision.claim_decision_id,
                         **_claim_decision_amount_fields(claim),
                     )
-                    if (
-                        claim.poa_type_id == POAType.PROFIT_COST
-                        and self.create_payment_extract_port is not None
-                    ):
-                        self.create_payment_extract_port.create_payment_extract(
-                            claim_id=claim.claim_id,
-                            line=_build_payment_extract(claim),
-                        )
+                    if self.create_payment_extract_port is not None:
+                        for line in _build_payment_extract_lines(claim):
+                            self.create_payment_extract_port.create_payment_extract(
+                                claim_id=claim.claim_id,
+                                line=line,
+                            )
                     self.update_claim_status_port.update_claim_status(
                         claim_id=claim.claim_id,
                         status=ClaimStatus.PAY_IN_FULL,
