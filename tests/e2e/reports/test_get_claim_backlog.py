@@ -144,7 +144,7 @@ class TestGetClaimBacklogReportAuth:
     def test_200_returns_ok_when_caseworker_token(self, mock_entra_auth_client):
         response = mock_entra_auth_client.get(
             "/reports/claims/backlog",
-            headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+            headers={"Authorization": "Bearer Caseworker No Role"},
         )
 
         assert response.status_code == 200
