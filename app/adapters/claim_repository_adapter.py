@@ -277,29 +277,32 @@ class ClaimRepositoryAdapter(
     def create_payment_extract(
         self,
         claim_id: int,
-        line: PaymentExtractLine,
-    ) -> ClaimPaymentExtract:
-        payment_extract = ClaimPaymentExtract(
-            claim_id=claim_id,
-            sequence_number=line.sequence_number,
-            invoice_number=line.invoice_number,
-            invoice_amount=line.invoice_amount,
-            invoice_date=line.invoice_date,
-            invoice_type=line.invoice_type,
-            tax_code=line.tax_code,
-        )
-        self.session.add(payment_extract)
-        self.session.flush()
-        self.session.refresh(payment_extract)
-        logger.info(
-            "Claim payment extract created in repository",
-            extra=build_log_extra(
-                event="claim_repository_payment_extract_create_completed",
+        lines: list[PaymentExtractLine],
+    ) -> list[ClaimPaymentExtract]:
+        payment_extracts: list[ClaimPaymentExtract] = []
+        for line in lines:
+            payment_extract = ClaimPaymentExtract(
                 claim_id=claim_id,
+                sequence_number=line.sequence_number,
                 invoice_number=line.invoice_number,
-            ),
-        )
-        return payment_extract
+                invoice_amount=line.invoice_amount,
+                invoice_date=line.invoice_date,
+                invoice_type=line.invoice_type,
+                tax_code=line.tax_code,
+            )
+            self.session.add(payment_extract)
+            self.session.flush()
+            self.session.refresh(payment_extract)
+            logger.info(
+                "Claim payment extract created in repository",
+                extra=build_log_extra(
+                    event="claim_repository_payment_extract_create_completed",
+                    claim_id=claim_id,
+                    invoice_number=line.invoice_number,
+                ),
+            )
+            payment_extracts.append(payment_extract)
+        return payment_extracts
 
     def create_decision_reason(
         self,

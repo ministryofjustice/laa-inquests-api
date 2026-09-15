@@ -40,7 +40,7 @@ from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.use_cases.create_claim import (
     CreateClaimCommand,
     CreateClaimUseCase,
-    _build_payment_extract,
+    _build_payment_extract_lines,
 )
 from app.use_cases.exceptions import ApplicationNotFoundError, InvalidClaimError
 
@@ -1099,16 +1099,18 @@ def test_execute_auto_reject_does_not_persist_when_auto_reject_create_history_ev
 def test_build_payment_extract_maps_vat_profit_cost_claim():
     claim = _claim_with_poa(POAType.PROFIT_COST, Decimal("1000.00"), Decimal("1200.00"))
 
-    line = _build_payment_extract(claim)
+    lines = _build_payment_extract_lines(claim)
 
-    assert line == PaymentExtractLine(
-        sequence_number=1,
-        invoice_number="1_001",
-        invoice_amount=Decimal("960.00"),
-        invoice_date=claim.submission_date.date(),
-        invoice_type=InvoiceTypeCode.POA,
-        tax_code=TaxCode.GB_VAT_20,
-    )
+    assert lines == [
+        PaymentExtractLine(
+            sequence_number=1,
+            invoice_number="1_001",
+            invoice_amount=Decimal("960.00"),
+            invoice_date=claim.submission_date.date(),
+            invoice_type=InvoiceTypeCode.POA,
+            tax_code=TaxCode.GB_VAT_20,
+        )
+    ]
 
 
 def test_build_payment_extract_maps_zero_vat_profit_cost_claim():
@@ -1116,16 +1118,48 @@ def test_build_payment_extract_maps_zero_vat_profit_cost_claim():
         POAType.PROFIT_COST, None, None, vat_zero=Decimal("1000.00")
     )
 
-    line = _build_payment_extract(claim)
+    lines = _build_payment_extract_lines(claim)
 
-    assert line == PaymentExtractLine(
-        sequence_number=1,
-        invoice_number="1_001",
-        invoice_amount=Decimal("800.00"),
-        invoice_date=claim.submission_date.date(),
-        invoice_type=InvoiceTypeCode.POA,
-        tax_code=TaxCode.ZERO_VAT,
+    assert lines == [
+        PaymentExtractLine(
+            sequence_number=1,
+            invoice_number="1_001",
+            invoice_amount=Decimal("800.00"),
+            invoice_date=claim.submission_date.date(),
+            invoice_type=InvoiceTypeCode.POA,
+            tax_code=TaxCode.ZERO_VAT,
+        )
+    ]
+
+
+def test_build_payment_extract_maps_disbursement_claim_to_two_lines():
+    claim = _claim_with_poa(
+        POAType.EXPERT_COST,
+        Decimal("1000.00"),
+        Decimal("1200.00"),
+        vat_zero=Decimal("200.00"),
     )
+
+    lines = _build_payment_extract_lines(claim)
+
+    assert lines == [
+        PaymentExtractLine(
+            sequence_number=1,
+            invoice_number="1_001",
+            invoice_amount=Decimal("1000.00"),
+            invoice_date=claim.submission_date.date(),
+            invoice_type=InvoiceTypeCode.POA,
+            tax_code=TaxCode.GB_VAT_20,
+        ),
+        PaymentExtractLine(
+            sequence_number=2,
+            invoice_number="1_002",
+            invoice_amount=Decimal("200.00"),
+            invoice_date=claim.submission_date.date(),
+            invoice_type=InvoiceTypeCode.POA,
+            tax_code=TaxCode.ZERO_VAT,
+        ),
+    ]
 
 
 def test_execute_auto_approves_eligible_payment_on_account_claim():
@@ -1174,14 +1208,16 @@ def test_execute_auto_approves_eligible_payment_on_account_claim():
     )
     create_payment_extract_port.create_payment_extract.assert_called_once_with(
         claim_id=1,
-        line=PaymentExtractLine(
-            sequence_number=1,
-            invoice_number="1_001",
-            invoice_amount=Decimal("960.00"),
-            invoice_date=claim.submission_date.date(),
-            invoice_type=InvoiceTypeCode.POA,
-            tax_code=TaxCode.GB_VAT_20,
-        ),
+        lines=[
+            PaymentExtractLine(
+                sequence_number=1,
+                invoice_number="1_001",
+                invoice_amount=Decimal("960.00"),
+                invoice_date=claim.submission_date.date(),
+                invoice_type=InvoiceTypeCode.POA,
+                tax_code=TaxCode.GB_VAT_20,
+            )
+        ],
     )
     update_claim_status_port.update_claim_status.assert_called_once_with(
         claim_id=1,
@@ -1222,14 +1258,16 @@ def test_execute_auto_approval_persists_profit_cost_amounts_for_profit_cost_poa(
     )
     extract_port.create_payment_extract.assert_called_once_with(
         claim_id=1,
-        line=PaymentExtractLine(
-            sequence_number=1,
-            invoice_number="1_001",
-            invoice_amount=Decimal("38400.00"),
-            invoice_date=claim.submission_date.date(),
-            invoice_type=InvoiceTypeCode.POA,
-            tax_code=TaxCode.GB_VAT_20,
-        ),
+        lines=[
+            PaymentExtractLine(
+                sequence_number=1,
+                invoice_number="1_001",
+                invoice_amount=Decimal("38400.00"),
+                invoice_date=claim.submission_date.date(),
+                invoice_type=InvoiceTypeCode.POA,
+                tax_code=TaxCode.GB_VAT_20,
+            )
+        ],
     )
 
 
@@ -1259,14 +1297,16 @@ def test_execute_auto_approval_persists_zero_vat_payment_extract_for_profit_cost
     )
     extract_port.create_payment_extract.assert_called_once_with(
         claim_id=1,
-        line=PaymentExtractLine(
-            sequence_number=1,
-            invoice_number="1_001",
-            invoice_amount=Decimal("800.00"),
-            invoice_date=claim.submission_date.date(),
-            invoice_type=InvoiceTypeCode.POA,
-            tax_code=TaxCode.ZERO_VAT,
-        ),
+        lines=[
+            PaymentExtractLine(
+                sequence_number=1,
+                invoice_number="1_001",
+                invoice_amount=Decimal("800.00"),
+                invoice_date=claim.submission_date.date(),
+                invoice_type=InvoiceTypeCode.POA,
+                tax_code=TaxCode.ZERO_VAT,
+            )
+        ],
     )
 
 
@@ -1293,7 +1333,19 @@ def test_execute_auto_approval_persists_disbursement_amounts_for_expert_cost_poa
         disbursement_gross=Decimal("40000.00"),
         disbursement_vat_zero=None,
     )
-    extract_port.create_payment_extract.assert_not_called()
+    extract_port.create_payment_extract.assert_called_once_with(
+        claim_id=1,
+        lines=[
+            PaymentExtractLine(
+                sequence_number=1,
+                invoice_number="1_001",
+                invoice_amount=Decimal("40000.00"),
+                invoice_date=claim.submission_date.date(),
+                invoice_type=InvoiceTypeCode.POA,
+                tax_code=TaxCode.GB_VAT_20,
+            )
+        ],
+    )
 
 
 def test_execute_auto_approval_persists_disbursement_amounts_for_non_expert_poa():
@@ -1319,7 +1371,19 @@ def test_execute_auto_approval_persists_disbursement_amounts_for_non_expert_poa(
         disbursement_gross=Decimal("40000.00"),
         disbursement_vat_zero=None,
     )
-    extract_port.create_payment_extract.assert_not_called()
+    extract_port.create_payment_extract.assert_called_once_with(
+        claim_id=1,
+        lines=[
+            PaymentExtractLine(
+                sequence_number=1,
+                invoice_number="1_001",
+                invoice_amount=Decimal("40000.00"),
+                invoice_date=claim.submission_date.date(),
+                invoice_type=InvoiceTypeCode.POA,
+                tax_code=TaxCode.GB_VAT_20,
+            )
+        ],
+    )
 
 
 def test_execute_does_not_persist_decision_amount_when_claim_auto_rejected():
