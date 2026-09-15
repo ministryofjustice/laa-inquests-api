@@ -294,7 +294,7 @@ def mock_entra_auth_client_fixture(session: Session):
                 "scopes": {"User.Provider"},
                 "app_roles": {"Inquests - Provider Claims User"},
             },
-            "valid-provider-no-role-token": {
+            "Provider No Role": {
                 "scopes": {"User.Provider"},
                 "app_roles": set(),
             },

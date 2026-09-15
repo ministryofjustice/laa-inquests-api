@@ -296,7 +296,7 @@ class TestSearchApplicationAuth:
         response = mock_entra_auth_client.get(
             "/applications/search",
             params={"laa_reference": "1"},
-            headers={"Authorization": "Bearer valid-provider-no-role-token"},
+            headers={"Authorization": "Bearer Provider No Role"},
         )
 
         assert response.status_code == 403
@@ -387,7 +387,7 @@ class TestUploadClaimEvidenceAuth:
                     "application/pdf",
                 )
             },
-            headers={"Authorization": "Bearer valid-provider-no-role-token"},
+            headers={"Authorization": "Bearer Provider No Role"},
         )
 
         assert response.status_code == 403
@@ -484,7 +484,7 @@ class TestDeleteClaimEvidenceAuth:
     ):
         response = mock_entra_auth_client.delete(
             f"/claims/{uuid.uuid4()}",
-            headers={"Authorization": "Bearer valid-provider-no-role-token"},
+            headers={"Authorization": "Bearer Provider No Role"},
         )
 
         assert response.status_code == 403
@@ -581,7 +581,7 @@ class TestListProviderOfficesAuth:
 
         response = mock_entra_auth_client.get(
             "/applications/provider-offices/123",
-            headers={"Authorization": "Bearer valid-provider-no-role-token"},
+            headers={"Authorization": "Bearer Provider No Role"},
         )
 
         assert response.status_code == 403

@@ -532,7 +532,7 @@ class TestCreateApplicationRbac:
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": "Bearer valid-provider-no-role-token",
+                "Authorization": "Bearer Provider No Role",
             },
         )
         assert response.status_code == 403

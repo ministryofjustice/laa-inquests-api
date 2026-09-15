@@ -136,7 +136,7 @@ class TestUploadCoronersLetterRbac:
                     "application/pdf",
                 )
             },
-            headers={"Authorization": "Bearer valid-provider-no-role-token"},
+            headers={"Authorization": "Bearer Provider No Role"},
         )
         assert response.status_code == 403
 
