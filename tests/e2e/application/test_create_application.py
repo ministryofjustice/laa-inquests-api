@@ -9,7 +9,6 @@ from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
-from tests.helpers.entra_auth import override_entra_auth_app_roles
 
 pytestmark = pytest.mark.usefixtures("mock_gov_notify")
 
@@ -500,44 +499,40 @@ class TestCreateApplication:
 
 class TestCreateApplicationRbac:
     def test_201_create_application_with_provider_application_user_app_role(
-        self, client, auth_token
+        self, client, mock_entra_auth_client
     ):
-        override_entra_auth_app_roles({"Inquests - Provider Application User"})
-
         response = client.post(
             "/applications",
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": "Bearer valid-provider-application-user-token",
             },
         )
         assert response.status_code == 201
 
     def test_403_create_application_with_app_role_missing_create_permission(
-        self, client, auth_token
+        self, client, mock_entra_auth_client
     ):
-        override_entra_auth_app_roles({"Inquests - Provider Claims User"})
-
         response = client.post(
             "/applications",
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": "Bearer valid-provider-claims-user-token",
             },
         )
         assert response.status_code == 403
 
-    def test_403_create_application_with_unmapped_app_role(self, client, auth_token):
-        override_entra_auth_app_roles({"Some Unknown Role"})
-
+    def test_403_create_application_with_unmapped_app_role(
+        self, client, mock_entra_auth_client
+    ):
         response = client.post(
             "/applications",
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": "Bearer unknown-role-token",
             },
         )
         assert response.status_code == 403
