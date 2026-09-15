@@ -138,7 +138,7 @@ class TestGetApplicationBacklogReportAuth:
 
     @pytest.mark.parametrize(
         "provider_token",
-        ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+        ["Inquests - Provider Application User", "Inquests - Provider Claims User"],
     )
     def test_403_returns_forbidden_when_provider_token(
         self, mock_entra_auth_client, provider_token

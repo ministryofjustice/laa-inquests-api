@@ -75,7 +75,7 @@ class TestDeleteClaimEvidenceRbac:
 
         response = client.delete(
             f"/claims/{claim_evidence.claim_evidence_id}",
-            headers={"Authorization": "Bearer valid-provider-claims-user-token"},
+            headers={"Authorization": "Bearer Inquests - Provider Claims User"},
         )
 
         assert response.status_code == 204
@@ -85,7 +85,7 @@ class TestDeleteClaimEvidenceRbac:
     ):
         response = client.delete(
             f"/claims/{uuid.uuid4()}",
-            headers={"Authorization": "Bearer valid-provider-application-user-token"},
+            headers={"Authorization": "Bearer Inquests - Provider Application User"},
         )
 
         assert response.status_code == 403
@@ -95,7 +95,7 @@ class TestDeleteClaimEvidenceRbac:
     ):
         response = client.delete(
             f"/claims/{uuid.uuid4()}",
-            headers={"Authorization": "Bearer unknown-role-token"},
+            headers={"Authorization": "Bearer valid-provider-no-role-token"},
         )
 
         assert response.status_code == 403

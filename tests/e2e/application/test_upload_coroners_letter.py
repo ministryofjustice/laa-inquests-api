@@ -104,7 +104,7 @@ class TestUploadCoronersLetterRbac:
                     "application/pdf",
                 )
             },
-            headers={"Authorization": "Bearer valid-provider-application-user-token"},
+            headers={"Authorization": "Bearer Inquests - Provider Application User"},
         )
         assert response.status_code == 201
 
@@ -120,7 +120,7 @@ class TestUploadCoronersLetterRbac:
                     "application/pdf",
                 )
             },
-            headers={"Authorization": "Bearer valid-provider-claims-user-token"},
+            headers={"Authorization": "Bearer Inquests - Provider Claims User"},
         )
         assert response.status_code == 403
 
@@ -136,7 +136,7 @@ class TestUploadCoronersLetterRbac:
                     "application/pdf",
                 )
             },
-            headers={"Authorization": "Bearer unknown-role-token"},
+            headers={"Authorization": "Bearer valid-provider-no-role-token"},
         )
         assert response.status_code == 403
 
