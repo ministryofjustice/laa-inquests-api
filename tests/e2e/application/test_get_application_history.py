@@ -9,12 +9,12 @@ from app.models.history.index import HistoryEvent
 
 
 def test_401_get_application_history_returns_401_when_no_authorization_header(
-    entra_auth_client, session
+    mock_entra_auth_client, session
 ):
     first_application_row = session.exec(select(Application)).first()
     laa_reference = first_application_row.laa_reference
 
-    response = entra_auth_client.get(f"/applications/{laa_reference}/history")
+    response = mock_entra_auth_client.get(f"/applications/{laa_reference}/history")
 
     assert response.status_code == 401
 
@@ -24,12 +24,12 @@ def test_401_get_application_history_returns_401_when_no_authorization_header(
     ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
 )
 def test_403_get_application_history_returns_403_when_provider_token(
-    entra_auth_client, session, provider_token
+    mock_entra_auth_client, session, provider_token
 ):
     first_application_row = session.exec(select(Application)).first()
     laa_reference = first_application_row.laa_reference
 
-    response = entra_auth_client.get(
+    response = mock_entra_auth_client.get(
         f"/applications/{laa_reference}/history",
         headers={"Authorization": f"Bearer {provider_token}"},
     )
@@ -38,7 +38,7 @@ def test_403_get_application_history_returns_403_when_provider_token(
 
 
 def test_200_get_application_history_returns_events_for_application_that_exists(
-    entra_auth_client, session
+    mock_entra_auth_client, session
 ):
     first_application_row = session.exec(select(Application)).first()
     laa_reference = first_application_row.laa_reference
@@ -55,7 +55,7 @@ def test_200_get_application_history_returns_events_for_application_that_exists(
     session.add(history_event)
     session.commit()
 
-    response = entra_auth_client.get(
+    response = mock_entra_auth_client.get(
         f"/applications/{laa_reference}/history",
         headers={"Authorization": "Bearer valid-caseworker-entra-token"},
     )
@@ -68,11 +68,11 @@ def test_200_get_application_history_returns_events_for_application_that_exists(
 
 
 def test_404_get_application_history_returns_404_for_application_that_does_not_exist(
-    entra_auth_client,
+    mock_entra_auth_client,
 ):
     non_existent_laa_reference = 999999
 
-    response = entra_auth_client.get(
+    response = mock_entra_auth_client.get(
         f"/applications/{non_existent_laa_reference}/history",
         headers={"Authorization": "Bearer valid-caseworker-entra-token"},
     )
@@ -81,12 +81,12 @@ def test_404_get_application_history_returns_404_for_application_that_does_not_e
 
 
 def test_200_get_application_history_returns_empty_list_when_no_events_exist(
-    entra_auth_client, session
+    mock_entra_auth_client, session
 ):
     first_application_row = session.exec(select(Application)).first()
     laa_reference = first_application_row.laa_reference
 
-    response = entra_auth_client.get(
+    response = mock_entra_auth_client.get(
         f"/applications/{laa_reference}/history",
         headers={"Authorization": "Bearer valid-caseworker-entra-token"},
     )
@@ -97,7 +97,7 @@ def test_200_get_application_history_returns_empty_list_when_no_events_exist(
 
 
 def test_200_get_application_history_returns_events_in_reverse_chronological_order(
-    entra_auth_client, session
+    mock_entra_auth_client, session
 ):
     first_application_row = session.exec(select(Application)).first()
     laa_reference = first_application_row.laa_reference
@@ -135,7 +135,7 @@ def test_200_get_application_history_returns_events_in_reverse_chronological_ord
     session.add(event3)
     session.commit()
 
-    response = entra_auth_client.get(
+    response = mock_entra_auth_client.get(
         f"/applications/{laa_reference}/history",
         headers={"Authorization": "Bearer valid-caseworker-entra-token"},
     )

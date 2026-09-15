@@ -39,15 +39,17 @@ def test_200_list_public_bodies_returns_results_sorted_alphabetically_ignoring_d
 
 
 def test_401_list_public_bodies_returns_401_when_no_authorization_header(
-    entra_auth_client,
+    mock_entra_auth_client,
 ):
-    response = entra_auth_client.get("/applications/public-bodies")
+    response = mock_entra_auth_client.get("/applications/public-bodies")
 
     assert response.status_code == 401
 
 
-def test_200_list_public_bodies_returns_200_when_caseworker_token(entra_auth_client):
-    response = entra_auth_client.get(
+def test_200_list_public_bodies_returns_200_when_caseworker_token(
+    mock_entra_auth_client,
+):
+    response = mock_entra_auth_client.get(
         "/applications/public-bodies",
         headers={"Authorization": "Bearer valid-caseworker-entra-token"},
     )
@@ -60,9 +62,9 @@ def test_200_list_public_bodies_returns_200_when_caseworker_token(entra_auth_cli
     ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
 )
 def test_200_list_public_bodies_returns_200_when_provider_token(
-    entra_auth_client, provider_token
+    mock_entra_auth_client, provider_token
 ):
-    response = entra_auth_client.get(
+    response = mock_entra_auth_client.get(
         "/applications/public-bodies",
         headers={"Authorization": f"Bearer {provider_token}"},
     )

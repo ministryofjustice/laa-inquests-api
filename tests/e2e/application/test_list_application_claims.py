@@ -7,6 +7,7 @@ from sqlmodel import select
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ClaimType, POAType
 from app.models.claim.index import Claim, ClaimDecision
+from tests.helpers.entra_auth import override_entra_auth_app_roles
 
 
 def _seed_claim(
@@ -69,15 +70,16 @@ def test_200_returns_empty_list_when_application_has_no_claims(
 
 
 def test_200_assessed_true_returns_only_non_submitted_claims(
-    session, client, auth_token
+    session, client, mock_entra_auth_client
 ):
+    override_entra_auth_app_roles({"Inquests - Claims caseworker"})
     laa_reference = session.exec(select(Application)).first().laa_reference
     _seed_claim(session, laa_reference, ClaimStatus.SUBMITTED)
     assessed_claim = _seed_claim(session, laa_reference, ClaimStatus.ACCEPTED)
 
     response = client.get(
         f"/applications/{laa_reference}/claims?assessed=true",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": "Bearer valid-claims-caseworker-user-token"},
     )
 
     assert response.status_code == 200
@@ -199,8 +201,10 @@ def test_401_returns_unauthorized_when_no_auth_header(session, client):
     "provider_token",
     ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
 )
-def test_403_returns_forbidden_when_provider_token(entra_auth_client, provider_token):
-    response = entra_auth_client.get(
+def test_403_returns_forbidden_when_provider_token(
+    mock_entra_auth_client, provider_token
+):
+    response = mock_entra_auth_client.get(
         "/applications/1/claims?assessed=true",
         headers={"Authorization": f"Bearer {provider_token}"},
     )

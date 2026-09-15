@@ -232,8 +232,8 @@ def client_fixture(session: Session):
     api.dependency_overrides.clear()
 
 
-@pytest.fixture(name="entra_auth_client")
-def entra_auth_client_fixture(session: Session):
+@pytest.fixture(name="mock_entra_auth_client")
+def mock_entra_auth_client_fixture(session: Session):
     from fastapi import HTTPException, status
 
     def get_session_override():

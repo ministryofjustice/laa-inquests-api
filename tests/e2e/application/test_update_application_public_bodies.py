@@ -142,9 +142,9 @@ def test_422_update_application_public_bodies_returns_unprocessable_entity_when_
 
 
 def test_401_update_application_public_bodies_returns_401_when_no_authorization_header(
-    entra_auth_client,
+    mock_entra_auth_client,
 ):
-    response = entra_auth_client.patch(
+    response = mock_entra_auth_client.patch(
         "/applications/1/public-bodies",
         json={"publicBodies": ["Ministry of Defence"]},
         headers={"Content-Type": "application/json"},
@@ -158,9 +158,9 @@ def test_401_update_application_public_bodies_returns_401_when_no_authorization_
     ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
 )
 def test_403_update_application_public_bodies_returns_403_when_provider_token(
-    entra_auth_client, provider_token
+    mock_entra_auth_client, provider_token
 ):
-    response = entra_auth_client.patch(
+    response = mock_entra_auth_client.patch(
         "/applications/1/public-bodies",
         json={"publicBodies": ["Ministry of Defence"]},
         headers={
