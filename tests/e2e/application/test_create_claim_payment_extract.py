@@ -162,7 +162,12 @@ class TestCreateClaimPaymentExtract:
             session,
             client,
             Role.PROVIDER_CLAIMS_USER.value,
-            {"poaTypeId": "EXPERT_COST"},
+            {
+                "poaTypeId": "NON_EXPERT_DISBURSEMENT",
+                "totalProfitCostNet": None,
+                "totalProfitCostGross": None,
+                "totalProfitCostVatZero": 500,
+            },
         )
 
         assert response.status_code == 201

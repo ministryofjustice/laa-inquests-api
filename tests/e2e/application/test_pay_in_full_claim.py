@@ -496,7 +496,7 @@ def test_204_pay_in_full_claim_allows_disbursement_vat_zero_net_and_gross(
 
 
 def test_204_pay_in_full_claim_sends_final_bill_paid_email_to_provider(
-    session, client, auth_token, mock_gov_notify
+    session, client, mock_gov_notify
 ):
     application = session.exec(select(Application)).first()
     claim = _seed_claim(session, application.laa_reference)
@@ -506,7 +506,7 @@ def test_204_pay_in_full_claim_sends_final_bill_paid_email_to_provider(
         json=_pay_in_full_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
         },
     )
 
@@ -528,7 +528,7 @@ def test_204_pay_in_full_claim_sends_final_bill_paid_email_to_provider(
 
 
 def test_204_pay_in_full_claim_creates_email_history_event(
-    session, client, auth_token, mock_gov_notify
+    session, client, mock_gov_notify
 ):
     application = session.exec(select(Application)).first()
     claim = _seed_claim(session, application.laa_reference)
@@ -538,7 +538,7 @@ def test_204_pay_in_full_claim_creates_email_history_event(
         json=_pay_in_full_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
         },
     )
 
@@ -567,7 +567,7 @@ def test_204_pay_in_full_claim_creates_email_history_event(
 
 
 def test_204_pay_in_full_claim_succeeds_when_final_bill_paid_email_fails(
-    session, client, auth_token, mock_gov_notify
+    session, client, mock_gov_notify
 ):
     application = session.exec(select(Application)).first()
     claim = _seed_claim(session, application.laa_reference)
@@ -580,7 +580,7 @@ def test_204_pay_in_full_claim_succeeds_when_final_bill_paid_email_fails(
         json=_pay_in_full_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
         },
     )
 
