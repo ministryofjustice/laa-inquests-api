@@ -3,6 +3,7 @@ import uuid
 from unittest.mock import MagicMock
 
 from app import api
+from app.auth.rbac import Role
 from app.routers.applications import get_sds_port
 
 
@@ -22,28 +23,32 @@ def _upload_coroners_letter_and_get_id(client, auth_token):
     return upload_response.json()["coronersLetterId"]
 
 
-def test_204_delete_coroners_letter(client, auth_token):
-    coroners_letter_id = _upload_coroners_letter_and_get_id(client, auth_token)
+def test_204_delete_coroners_letter(client):
+    coroners_letter_id = _upload_coroners_letter_and_get_id(
+        client, Role.PROVIDER_APPLICATION_USER.value
+    )
 
     delete_response = client.delete(
         f"/applications/coroners-letter/{coroners_letter_id}",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
     )
 
     assert delete_response.status_code == 204
 
 
-def test_404_delete_coroners_letter_when_unknown_id(client, auth_token):
+def test_404_delete_coroners_letter_when_unknown_id(client):
     delete_response = client.delete(
         "/applications/coroners-letter/00000000-0000-0000-0000-000000000001",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
     )
 
     assert delete_response.status_code == 404
 
 
-def test_500_delete_coroners_letter_when_sds_fails(client, auth_token):
-    coroners_letter_id = _upload_coroners_letter_and_get_id(client, auth_token)
+def test_500_delete_coroners_letter_when_sds_fails(client):
+    coroners_letter_id = _upload_coroners_letter_and_get_id(
+        client, Role.PROVIDER_APPLICATION_USER.value
+    )
 
     def get_sds_port_override_with_delete_error():
         mock_sds = MagicMock()
@@ -54,16 +59,16 @@ def test_500_delete_coroners_letter_when_sds_fails(client, auth_token):
 
     delete_response = client.delete(
         f"/applications/coroners-letter/{coroners_letter_id}",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
     )
 
     assert delete_response.status_code == 500
 
 
-def test_403_delete_coroners_letter_when_caseworker_token(entra_auth_client):
-    response = entra_auth_client.delete(
+def test_403_delete_coroners_letter_when_caseworker_token(client):
+    response = client.delete(
         f"/applications/coroners-letter/{uuid.uuid4()}",
-        headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+        headers={"Authorization": "Bearer Caseworker No Role"},
     )
 
     assert response.status_code == 403

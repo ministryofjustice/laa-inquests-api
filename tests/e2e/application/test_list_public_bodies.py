@@ -1,12 +1,12 @@
 import pytest
 
+from app.auth.rbac import Role
 
-def test_200_list_public_bodies_returns_seeded_record_with_id_and_description(
-    client, auth_token
-):
+
+def test_200_list_public_bodies_returns_seeded_record_with_id_and_description(client):
     response = client.get(
         "/applications/public-bodies",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
     )
 
     assert response.status_code == 200
@@ -21,11 +21,11 @@ def test_200_list_public_bodies_returns_seeded_record_with_id_and_description(
 
 
 def test_200_list_public_bodies_returns_results_sorted_alphabetically_ignoring_department_for_of(
-    client, auth_token
+    client,
 ):
     response = client.get(
         "/applications/public-bodies",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
     )
 
     assert response.status_code == 200
@@ -39,17 +39,19 @@ def test_200_list_public_bodies_returns_results_sorted_alphabetically_ignoring_d
 
 
 def test_401_list_public_bodies_returns_401_when_no_authorization_header(
-    entra_auth_client,
+    client,
 ):
-    response = entra_auth_client.get("/applications/public-bodies")
+    response = client.get("/applications/public-bodies")
 
     assert response.status_code == 401
 
 
-def test_200_list_public_bodies_returns_200_when_caseworker_token(entra_auth_client):
-    response = entra_auth_client.get(
+def test_200_list_public_bodies_returns_200_when_caseworker_token(
+    client,
+):
+    response = client.get(
         "/applications/public-bodies",
-        headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+        headers={"Authorization": "Bearer Caseworker No Role"},
     )
 
     assert response.status_code == 200
@@ -57,12 +59,10 @@ def test_200_list_public_bodies_returns_200_when_caseworker_token(entra_auth_cli
 
 @pytest.mark.parametrize(
     "provider_token",
-    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+    [Role.PROVIDER_APPLICATION_USER.value, Role.PROVIDER_CLAIMS_USER.value],
 )
-def test_200_list_public_bodies_returns_200_when_provider_token(
-    entra_auth_client, provider_token
-):
-    response = entra_auth_client.get(
+def test_200_list_public_bodies_returns_200_when_provider_token(client, provider_token):
+    response = client.get(
         "/applications/public-bodies",
         headers={"Authorization": f"Bearer {provider_token}"},
     )

@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 import pytest
 from sqlmodel import select
 
+from app.auth.rbac import Role
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimStatus
 from app.models.claim.index import Claim
@@ -25,7 +26,7 @@ CLAIMS_BACKLOG_REPORT_HEADERS = [
 class TestGetClaimBacklogReport:
     """E2E tests for GET /reports/claims/backlog."""
 
-    def test_200_csv_has_good_data_quality(self, session, client, auth_token):
+    def test_200_csv_has_good_data_quality(self, session, client):
         application = session.exec(select(Application)).first()
         claim = create_claim_in_db(
             session,
@@ -36,7 +37,7 @@ class TestGetClaimBacklogReport:
 
         response = client.get(
             "/reports/claims/backlog",
-            headers={"Authorization": f"Bearer {auth_token}"},
+            headers={"Authorization": f"Bearer {Role.CLAIM_WORKFLOW_REPORTING.value}"},
         )
 
         assert response.status_code == 200
@@ -58,7 +59,7 @@ class TestGetClaimBacklogReport:
         assert row["Gross total claim value"] == "120.00"
         assert row["Claim type"] == "FINAL_BILL"
 
-    def test_200_csv_excludes_non_open_claims(self, session, client, auth_token):
+    def test_200_csv_excludes_non_open_claims(self, session, client):
         application = session.exec(select(Application)).first()
 
         create_claim_in_db(
@@ -82,7 +83,7 @@ class TestGetClaimBacklogReport:
 
         response = client.get(
             "/reports/claims/backlog",
-            headers={"Authorization": f"Bearer {auth_token}"},
+            headers={"Authorization": f"Bearer {Role.CLAIM_WORKFLOW_REPORTING.value}"},
         )
 
         rows = parse_csv_rows(response.text)
@@ -93,9 +94,7 @@ class TestGetClaimBacklogReport:
         assert ClaimStatus.REJECTED not in statuses
         assert submission_dates == sorted(submission_dates)
 
-    def test_200_when_no_qualifying_claims_returns_headers_only(
-        self, session, client, auth_token
-    ):
+    def test_200_when_no_qualifying_claims_returns_headers_only(self, session, client):
         claims = session.exec(select(Claim)).all()
         for claim in claims:
             session.delete(claim)
@@ -103,7 +102,7 @@ class TestGetClaimBacklogReport:
 
         response = client.get(
             "/reports/claims/backlog",
-            headers={"Authorization": f"Bearer {auth_token}"},
+            headers={"Authorization": f"Bearer {Role.CLAIM_WORKFLOW_REPORTING.value}"},
         )
 
         assert response.status_code == 200
@@ -114,13 +113,13 @@ class TestGetClaimBacklogReport:
 class TestGetClaimBacklogReportAuth:
     """Authentication tests for GET /reports/claims/backlog."""
 
-    def test_401_returns_unauthorized_when_no_auth_header(self, entra_auth_client):
-        response = entra_auth_client.get("/reports/claims/backlog")
+    def test_401_returns_unauthorized_when_no_auth_header(self, client):
+        response = client.get("/reports/claims/backlog")
 
         assert response.status_code == 401
 
-    def test_401_returns_unauthorized_when_invalid_token(self, entra_auth_client):
-        response = entra_auth_client.get(
+    def test_401_returns_unauthorized_when_invalid_token(self, client):
+        response = client.get(
             "/reports/claims/backlog",
             headers={"Authorization": "Bearer invalid-token"},
         )
@@ -129,22 +128,20 @@ class TestGetClaimBacklogReportAuth:
 
     @pytest.mark.parametrize(
         "provider_token",
-        ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+        [Role.PROVIDER_APPLICATION_USER.value, Role.PROVIDER_CLAIMS_USER.value],
     )
-    def test_403_returns_forbidden_when_provider_token(
-        self, entra_auth_client, provider_token
-    ):
-        response = entra_auth_client.get(
+    def test_403_returns_forbidden_when_provider_token(self, client, provider_token):
+        response = client.get(
             "/reports/claims/backlog",
             headers={"Authorization": f"Bearer {provider_token}"},
         )
 
         assert response.status_code == 403
 
-    def test_200_returns_ok_when_caseworker_token(self, entra_auth_client):
-        response = entra_auth_client.get(
+    def test_200_returns_ok_when_caseworker_token(self, client):
+        response = client.get(
             "/reports/claims/backlog",
-            headers={"Authorization": "Bearer valid-caseworker-entra-token"},
+            headers={"Authorization": "Bearer Caseworker No Role"},
         )
 
         assert response.status_code == 200

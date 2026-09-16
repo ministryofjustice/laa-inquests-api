@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from sqlmodel import select
 
+from app.auth.rbac import Role
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimStatus, ClaimType, POAType
 from app.models.claim.index import Claim, ClaimDecision, ClaimDecisionAmount
@@ -58,7 +59,7 @@ def _seed_claim(
 
 
 def test_204_pay_in_full_claim_creates_decision_amount_and_updates_status(
-    session, client, auth_token
+    session, client
 ):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference)
@@ -68,7 +69,7 @@ def test_204_pay_in_full_claim_creates_decision_amount_and_updates_status(
         json=_pay_in_full_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
         },
     )
 
@@ -95,7 +96,7 @@ def test_204_pay_in_full_claim_creates_decision_amount_and_updates_status(
     assert claim.status_id == ClaimStatus.PAY_IN_FULL
 
 
-def test_204_pay_in_full_claim_creates_history_event(session, client, auth_token):
+def test_204_pay_in_full_claim_creates_history_event(session, client):
     application = session.exec(select(Application)).first()
     claim = _seed_claim(session, application.laa_reference)
 
@@ -104,7 +105,7 @@ def test_204_pay_in_full_claim_creates_history_event(session, client, auth_token
         json=_pay_in_full_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
         },
     )
 
@@ -129,9 +130,7 @@ def test_204_pay_in_full_claim_creates_history_event(session, client, auth_token
     assert history_event.event_data["disbursement_vat_zero"] == "50.00"
 
 
-def test_204_pay_in_full_claim_persists_partial_amounts_as_null(
-    session, client, auth_token
-):
+def test_204_pay_in_full_claim_persists_partial_amounts_as_null(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference)
 
@@ -149,7 +148,7 @@ def test_204_pay_in_full_claim_persists_partial_amounts_as_null(
         ),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
         },
     )
 
@@ -172,7 +171,7 @@ def test_204_pay_in_full_claim_persists_partial_amounts_as_null(
 
 
 def test_204_pay_in_full_claim_allows_re_deciding_and_creates_new_decision_and_amount(
-    session, client, auth_token
+    session, client
 ):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference)
@@ -183,7 +182,7 @@ def test_204_pay_in_full_claim_allows_re_deciding_and_creates_new_decision_and_a
             json=_pay_in_full_payload(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
             },
         )
         assert response.status_code == 204
@@ -203,13 +202,13 @@ def test_204_pay_in_full_claim_allows_re_deciding_and_creates_new_decision_and_a
     assert len(amounts) == 2
 
 
-def test_404_pay_in_full_claim_when_application_does_not_exist(client, auth_token):
+def test_404_pay_in_full_claim_when_application_does_not_exist(client):
     response = client.patch(
         "/applications/999999/claims/1/pay-in-full",
         json=_pay_in_full_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
         },
     )
 
@@ -217,7 +216,7 @@ def test_404_pay_in_full_claim_when_application_does_not_exist(client, auth_toke
     assert response.json()["detail"] == "Application not found"
 
 
-def test_404_pay_in_full_claim_when_claim_does_not_exist(session, client, auth_token):
+def test_404_pay_in_full_claim_when_claim_does_not_exist(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
 
     response = client.patch(
@@ -225,7 +224,7 @@ def test_404_pay_in_full_claim_when_claim_does_not_exist(session, client, auth_t
         json=_pay_in_full_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
         },
     )
 
@@ -234,7 +233,7 @@ def test_404_pay_in_full_claim_when_claim_does_not_exist(session, client, auth_t
 
 
 def test_404_pay_in_full_claim_when_claim_belongs_to_another_application(
-    session, client, auth_token
+    session, client
 ):
     existing = session.exec(select(Application)).first()
     other_application = create_application_in_db(session)
@@ -246,7 +245,7 @@ def test_404_pay_in_full_claim_when_claim_belongs_to_another_application(
         json=_pay_in_full_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
         },
     )
 
@@ -254,7 +253,7 @@ def test_404_pay_in_full_claim_when_claim_belongs_to_another_application(
     assert response.json()["detail"] == "Claim not found"
 
 
-def _post_pay_in_full(session, client, auth_token, overrides):
+def _post_pay_in_full(session, client, overrides):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference)
     return client.patch(
@@ -262,18 +261,15 @@ def _post_pay_in_full(session, client, auth_token, overrides):
         json=_pay_in_full_payload(overrides),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
         },
     )
 
 
-def test_422_pay_in_full_claim_when_profit_cost_net_without_gross(
-    session, client, auth_token
-):
+def test_422_pay_in_full_claim_when_profit_cost_net_without_gross(session, client):
     response = _post_pay_in_full(
         session,
         client,
-        auth_token,
         {"profitCostGross": None, "profitCostVatZero": None},
     )
 
@@ -283,13 +279,10 @@ def test_422_pay_in_full_claim_when_profit_cost_net_without_gross(
     assert detail["message"] == "Enter the gross total for profit costs including VAT"
 
 
-def test_422_pay_in_full_claim_when_profit_cost_gross_without_net(
-    session, client, auth_token
-):
+def test_422_pay_in_full_claim_when_profit_cost_gross_without_net(session, client):
     response = _post_pay_in_full(
         session,
         client,
-        auth_token,
         {"profitCostNet": None, "profitCostVatZero": None},
     )
 
@@ -299,13 +292,10 @@ def test_422_pay_in_full_claim_when_profit_cost_gross_without_net(
     assert detail["message"] == "Enter the net total for profit costs excluding VAT"
 
 
-def test_422_pay_in_full_claim_when_all_profit_cost_totals_missing(
-    session, client, auth_token
-):
+def test_422_pay_in_full_claim_when_all_profit_cost_totals_missing(session, client):
     response = _post_pay_in_full(
         session,
         client,
-        auth_token,
         {
             "profitCostNet": None,
             "profitCostGross": None,
@@ -319,13 +309,10 @@ def test_422_pay_in_full_claim_when_all_profit_cost_totals_missing(
     assert detail["message"] == "Complete the total value of the claim to continue"
 
 
-def test_422_pay_in_full_claim_when_vat_zero_mixed_with_net_and_gross(
-    session, client, auth_token
-):
+def test_422_pay_in_full_claim_when_vat_zero_mixed_with_net_and_gross(session, client):
     response = _post_pay_in_full(
         session,
         client,
-        auth_token,
         {
             "profitCostNet": "1000.00",
             "profitCostGross": "1200.00",
@@ -342,11 +329,10 @@ def test_422_pay_in_full_claim_when_vat_zero_mixed_with_net_and_gross(
     )
 
 
-def test_422_pay_in_full_claim_when_net_higher_than_gross(session, client, auth_token):
+def test_422_pay_in_full_claim_when_net_higher_than_gross(session, client):
     response = _post_pay_in_full(
         session,
         client,
-        auth_token,
         {
             "profitCostNet": "1300.00",
             "profitCostGross": "1200.00",
@@ -361,25 +347,21 @@ def test_422_pay_in_full_claim_when_net_higher_than_gross(session, client, auth_
 
 
 def test_422_pay_in_full_claim_when_profit_cost_has_more_than_two_decimal_places(
-    session, client, auth_token
+    session, client
 ):
     response = _post_pay_in_full(
         session,
         client,
-        auth_token,
         {"profitCostNet": "1000.001", "profitCostVatZero": None},
     )
 
     assert response.status_code == 422
 
 
-def test_204_pay_in_full_claim_allows_zero_profit_cost_totals(
-    session, client, auth_token
-):
+def test_204_pay_in_full_claim_allows_zero_profit_cost_totals(session, client):
     response = _post_pay_in_full(
         session,
         client,
-        auth_token,
         {
             "profitCostNet": "0.00",
             "profitCostGross": "0.00",
@@ -390,11 +372,10 @@ def test_204_pay_in_full_claim_allows_zero_profit_cost_totals(
     assert response.status_code == 204
 
 
-def test_204_pay_in_full_claim_allows_vat_zero_only(session, client, auth_token):
+def test_204_pay_in_full_claim_allows_vat_zero_only(session, client):
     response = _post_pay_in_full(
         session,
         client,
-        auth_token,
         {
             "profitCostNet": None,
             "profitCostGross": None,
@@ -405,13 +386,10 @@ def test_204_pay_in_full_claim_allows_vat_zero_only(session, client, auth_token)
     assert response.status_code == 204
 
 
-def test_422_pay_in_full_claim_when_all_disbursement_totals_missing(
-    session, client, auth_token
-):
+def test_422_pay_in_full_claim_when_all_disbursement_totals_missing(session, client):
     response = _post_pay_in_full(
         session,
         client,
-        auth_token,
         {
             "disbursementNet": None,
             "disbursementGross": None,
@@ -425,13 +403,10 @@ def test_422_pay_in_full_claim_when_all_disbursement_totals_missing(
     assert detail["message"] == "Enter the total of the claim to continue"
 
 
-def test_422_pay_in_full_claim_when_disbursement_net_without_gross(
-    session, client, auth_token
-):
+def test_422_pay_in_full_claim_when_disbursement_net_without_gross(session, client):
     response = _post_pay_in_full(
         session,
         client,
-        auth_token,
         {"disbursementGross": None, "disbursementVatZero": None},
     )
 
@@ -441,13 +416,10 @@ def test_422_pay_in_full_claim_when_disbursement_net_without_gross(
     assert detail["message"] == "Enter the gross total of the claim"
 
 
-def test_422_pay_in_full_claim_when_disbursement_gross_without_net(
-    session, client, auth_token
-):
+def test_422_pay_in_full_claim_when_disbursement_gross_without_net(session, client):
     response = _post_pay_in_full(
         session,
         client,
-        auth_token,
         {"disbursementNet": None, "disbursementVatZero": None},
     )
 
@@ -460,12 +432,11 @@ def test_422_pay_in_full_claim_when_disbursement_gross_without_net(
 
 
 def test_422_pay_in_full_claim_when_disbursement_gross_not_greater_than_total(
-    session, client, auth_token
+    session, client
 ):
     response = _post_pay_in_full(
         session,
         client,
-        auth_token,
         {
             "disbursementNet": "100.00",
             "disbursementGross": "120.00",
@@ -483,25 +454,21 @@ def test_422_pay_in_full_claim_when_disbursement_gross_not_greater_than_total(
 
 
 def test_422_pay_in_full_claim_when_disbursement_has_more_than_two_decimal_places(
-    session, client, auth_token
+    session, client
 ):
     response = _post_pay_in_full(
         session,
         client,
-        auth_token,
         {"disbursementNet": "100.001"},
     )
 
     assert response.status_code == 422
 
 
-def test_204_pay_in_full_claim_allows_disbursement_vat_zero_only(
-    session, client, auth_token
-):
+def test_204_pay_in_full_claim_allows_disbursement_vat_zero_only(session, client):
     response = _post_pay_in_full(
         session,
         client,
-        auth_token,
         {
             "disbursementNet": None,
             "disbursementGross": None,
@@ -513,12 +480,11 @@ def test_204_pay_in_full_claim_allows_disbursement_vat_zero_only(
 
 
 def test_204_pay_in_full_claim_allows_disbursement_vat_zero_net_and_gross(
-    session, client, auth_token
+    session, client
 ):
     response = _post_pay_in_full(
         session,
         client,
-        auth_token,
         {
             "disbursementNet": "100.00",
             "disbursementGross": "200.00",
@@ -530,7 +496,7 @@ def test_204_pay_in_full_claim_allows_disbursement_vat_zero_net_and_gross(
 
 
 def test_204_pay_in_full_claim_sends_final_bill_paid_email_to_provider(
-    session, client, auth_token, mock_gov_notify
+    session, client, mock_gov_notify
 ):
     application = session.exec(select(Application)).first()
     claim = _seed_claim(session, application.laa_reference)
@@ -540,7 +506,7 @@ def test_204_pay_in_full_claim_sends_final_bill_paid_email_to_provider(
         json=_pay_in_full_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
         },
     )
 
@@ -562,7 +528,7 @@ def test_204_pay_in_full_claim_sends_final_bill_paid_email_to_provider(
 
 
 def test_204_pay_in_full_claim_creates_email_history_event(
-    session, client, auth_token, mock_gov_notify
+    session, client, mock_gov_notify
 ):
     application = session.exec(select(Application)).first()
     claim = _seed_claim(session, application.laa_reference)
@@ -572,7 +538,7 @@ def test_204_pay_in_full_claim_creates_email_history_event(
         json=_pay_in_full_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
         },
     )
 
@@ -601,7 +567,7 @@ def test_204_pay_in_full_claim_creates_email_history_event(
 
 
 def test_204_pay_in_full_claim_succeeds_when_final_bill_paid_email_fails(
-    session, client, auth_token, mock_gov_notify
+    session, client, mock_gov_notify
 ):
     application = session.exec(select(Application)).first()
     claim = _seed_claim(session, application.laa_reference)
@@ -614,7 +580,7 @@ def test_204_pay_in_full_claim_succeeds_when_final_bill_paid_email_fails(
         json=_pay_in_full_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
         },
     )
 

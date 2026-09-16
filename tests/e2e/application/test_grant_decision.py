@@ -2,6 +2,7 @@ from datetime import UTC, date, datetime
 
 from sqlmodel import select
 
+from app.auth.rbac import Role
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 
@@ -13,7 +14,7 @@ def _grant_decision_payload(overrides=None):
     return payload
 
 
-def test_204_grant_decision_to_granted(session, client, auth_token):
+def test_204_grant_decision_to_granted(session, client):
     application = session.exec(select(Application)).first()
     laa_reference = application.laa_reference
     application.proceeding.merits_decision = MeritsDecision.PENDING
@@ -27,7 +28,7 @@ def test_204_grant_decision_to_granted(session, client, auth_token):
         json=_grant_decision_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
         },
     )
 
@@ -40,33 +41,33 @@ def test_204_grant_decision_to_granted(session, client, auth_token):
     assert application.proceeding.substantive_cost_limitation == 10000
 
 
-def test_404_grant_decision_application_not_found(client, auth_token):
+def test_404_grant_decision_application_not_found(client):
     response = client.patch(
         "/applications/99999/grant-decision",
         json=_grant_decision_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
         },
     )
 
     assert response.status_code == 404
 
 
-def test_422_grant_decision_missing_certificate_start_date(client, auth_token):
+def test_422_grant_decision_missing_certificate_start_date(client):
     response = client.patch(
         "/applications/1/grant-decision",
         json={},
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
         },
     )
 
     assert response.status_code == 422
 
 
-def test_422_grant_decision_certificate_start_date_in_future(client, auth_token):
+def test_422_grant_decision_certificate_start_date_in_future(client):
     future_date = date(datetime.now(UTC).year + 1, 1, 1).isoformat()
 
     response = client.patch(
@@ -74,7 +75,7 @@ def test_422_grant_decision_certificate_start_date_in_future(client, auth_token)
         json=_grant_decision_payload({"certificateStartDate": future_date}),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
         },
     )
 

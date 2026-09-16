@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from app.auth.rbac import (
     ROLE_PERMISSIONS_MAP,
     Permission,
+    Role,
     get_current_user_permissions,
     require_permission,
 )
@@ -21,33 +22,31 @@ def _user(app_roles: set[str]) -> AuthenticatedUser:
 
 def test_get_current_user_permissions_resolves_provider_application_user_role():
     permissions = get_current_user_permissions(
-        _user({"Inquests - Provider Application User"})
+        _user({Role.PROVIDER_APPLICATION_USER.value})
     )
 
-    assert permissions == ROLE_PERMISSIONS_MAP["Inquests - Provider Application User"]
+    assert permissions == ROLE_PERMISSIONS_MAP[Role.PROVIDER_APPLICATION_USER.value]
 
 
 def test_get_current_user_permissions_resolves_provider_claims_user_role():
-    permissions = get_current_user_permissions(
-        _user({"Inquests - Provider Claims User"})
-    )
+    permissions = get_current_user_permissions(_user({Role.PROVIDER_CLAIMS_USER.value}))
 
-    assert permissions == ROLE_PERMISSIONS_MAP["Inquests - Provider Claims User"]
+    assert permissions == ROLE_PERMISSIONS_MAP[Role.PROVIDER_CLAIMS_USER.value]
 
 
 def test_get_current_user_permissions_unions_multiple_roles():
     permissions = get_current_user_permissions(
         _user(
             {
-                "Inquests - Provider Application User",
-                "Inquests - Provider Claims User",
+                Role.PROVIDER_APPLICATION_USER.value,
+                Role.PROVIDER_CLAIMS_USER.value,
             }
         )
     )
 
     assert permissions == ROLE_PERMISSIONS_MAP[
-        "Inquests - Provider Application User"
-    ].union(ROLE_PERMISSIONS_MAP["Inquests - Provider Claims User"])
+        Role.PROVIDER_APPLICATION_USER.value
+    ].union(ROLE_PERMISSIONS_MAP[Role.PROVIDER_CLAIMS_USER.value])
 
 
 def test_get_current_user_permissions_ignores_unmapped_role():
@@ -79,7 +78,7 @@ def test_require_permission_raises_403_when_permission_missing():
 
 
 def test_external_provider_application_user_permission_set():
-    assert ROLE_PERMISSIONS_MAP["Inquests - Provider Application User"] == {
+    assert ROLE_PERMISSIONS_MAP[Role.PROVIDER_APPLICATION_USER.value] == {
         Permission.APPLICATION_CREATE,
         Permission.CORONERS_LETTER_UPLOAD,
         Permission.CORONERS_LETTER_DELETE,
@@ -88,7 +87,7 @@ def test_external_provider_application_user_permission_set():
 
 
 def test_external_provider_claims_user_permission_set():
-    assert ROLE_PERMISSIONS_MAP["Inquests - Provider Claims User"] == {
+    assert ROLE_PERMISSIONS_MAP[Role.PROVIDER_CLAIMS_USER.value] == {
         Permission.APPLICATION_SEARCH,
         Permission.CLAIM_CREATE,
         Permission.CLAIM_DELETE,
@@ -98,7 +97,7 @@ def test_external_provider_claims_user_permission_set():
 
 
 def test_internal_applications_caseworker_permission_set():
-    assert ROLE_PERMISSIONS_MAP["Inquests - Applications caseworker"] == {
+    assert ROLE_PERMISSIONS_MAP[Role.APPLICATIONS_CASEWORKER.value] == {
         Permission.APPLICATION_READ,
         Permission.APPLICATION_MANAGE,
         Permission.CERTIFICATE_READ,
@@ -108,7 +107,7 @@ def test_internal_applications_caseworker_permission_set():
 
 
 def test_internal_claims_caseworker_permission_set():
-    assert ROLE_PERMISSIONS_MAP["Inquests - Claims caseworker"] == {
+    assert ROLE_PERMISSIONS_MAP[Role.CLAIMS_CASEWORKER.value] == {
         Permission.APPLICATION_READ,
         Permission.CLAIM_READ,
         Permission.CLAIM_MANAGE,
@@ -119,7 +118,7 @@ def test_internal_claims_caseworker_permission_set():
 
 
 def test_internal_customer_service_agent_permission_set():
-    assert ROLE_PERMISSIONS_MAP["Inquests - Customer service agent"] == {
+    assert ROLE_PERMISSIONS_MAP[Role.CUSTOMER_SERVICE_AGENT.value] == {
         Permission.APPLICATION_READ,
         Permission.CLAIM_READ,
         Permission.CERTIFICATE_READ,
@@ -129,7 +128,7 @@ def test_internal_customer_service_agent_permission_set():
 
 
 def test_internal_assurance_permission_set():
-    assert ROLE_PERMISSIONS_MAP["Inquests - Assurance"] == {
+    assert ROLE_PERMISSIONS_MAP[Role.ASSURANCE.value] == {
         Permission.APPLICATION_READ,
         Permission.CLAIM_READ,
         Permission.CERTIFICATE_READ,
@@ -141,25 +140,25 @@ def test_internal_assurance_permission_set():
 
 
 def test_internal_application_workflow_reporting_permission_set():
-    assert ROLE_PERMISSIONS_MAP["Inquests - Application workflow reporting"] == {
+    assert ROLE_PERMISSIONS_MAP[Role.APPLICATION_WORKFLOW_REPORTING.value] == {
         Permission.REPORTS_APPLICATION_WORKFLOW_READ,
     }
 
 
 def test_internal_claim_workflow_reporting_permission_set():
-    assert ROLE_PERMISSIONS_MAP["Inquests - Claim workflow reporting"] == {
+    assert ROLE_PERMISSIONS_MAP[Role.CLAIM_WORKFLOW_REPORTING.value] == {
         Permission.REPORTS_CLAIM_WORKFLOW_READ,
     }
 
 
 def test_internal_policy_permission_set():
-    assert ROLE_PERMISSIONS_MAP["Inquests - Policy"] == {
+    assert ROLE_PERMISSIONS_MAP[Role.POLICY.value] == {
         Permission.REPORTS_MI_READ,
     }
 
 
 def test_internal_finance_permission_set():
-    assert ROLE_PERMISSIONS_MAP["Inquests - Finance"] == {
+    assert ROLE_PERMISSIONS_MAP[Role.FINANCE.value] == {
         Permission.REPORTS_MI_READ,
         Permission.REPORTS_PAYMENT_READ,
     }

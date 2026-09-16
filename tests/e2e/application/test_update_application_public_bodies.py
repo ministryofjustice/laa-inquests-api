@@ -1,6 +1,7 @@
 import pytest
 from sqlmodel import select
 
+from app.auth.rbac import Role
 from app.models.application.enums import MeritsDecision, PublicBodyId
 from app.models.application.index import Application
 from app.models.history.enums import ActorType, HistoryEventReference
@@ -8,7 +9,7 @@ from app.models.history.index import HistoryEvent
 
 
 def test_204_update_application_public_bodies_updates_the_application_public_bodies(
-    session, client, auth_token
+    session, client
 ):
     application = session.exec(select(Application)).first()
 
@@ -17,7 +18,7 @@ def test_204_update_application_public_bodies_updates_the_application_public_bod
         json={"publicBodies": ["Ministry of Defence"]},
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
         },
     )
 
@@ -32,9 +33,7 @@ def test_204_update_application_public_bodies_updates_the_application_public_bod
     )
 
 
-def test_204_update_application_public_bodies_creates_history_event(
-    session, client, auth_token
-):
+def test_204_update_application_public_bodies_creates_history_event(session, client):
     application = session.exec(select(Application)).first()
 
     response = client.patch(
@@ -42,7 +41,7 @@ def test_204_update_application_public_bodies_creates_history_event(
         json={"publicBodies": [PublicBodyId.MINISTRY_OF_DEFENCE]},
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
         },
     )
 
@@ -67,7 +66,7 @@ def test_204_update_application_public_bodies_creates_history_event(
 
 
 def test_422_update_application_public_bodies_when_application_not_granted(
-    session, client, auth_token
+    session, client
 ):
     application = session.exec(select(Application)).first()
     original_public_body_ids = [
@@ -82,7 +81,7 @@ def test_422_update_application_public_bodies_when_application_not_granted(
         json={"publicBodies": [PublicBodyId.MINISTRY_OF_DEFENCE]},
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
         },
     )
 
@@ -109,14 +108,14 @@ def test_422_update_application_public_bodies_when_application_not_granted(
 
 
 def test_404_update_application_public_bodies_returns_not_found_for_not_found_application(
-    client, auth_token
+    client,
 ):
     response = client.patch(
         "/applications/99999/public-bodies",
         json={"publicBodies": ["Ministry of Defence"]},
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
         },
     )
 
@@ -125,7 +124,7 @@ def test_404_update_application_public_bodies_returns_not_found_for_not_found_ap
 
 
 def test_422_update_application_public_bodies_returns_unprocessable_entity_when_list_is_empty(
-    session, client, auth_token
+    session, client
 ):
     application = session.exec(select(Application)).first()
     response = client.patch(
@@ -133,7 +132,7 @@ def test_422_update_application_public_bodies_returns_unprocessable_entity_when_
         json={"publicBodies": []},
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
         },
     )
 
@@ -142,9 +141,9 @@ def test_422_update_application_public_bodies_returns_unprocessable_entity_when_
 
 
 def test_401_update_application_public_bodies_returns_401_when_no_authorization_header(
-    entra_auth_client,
+    client,
 ):
-    response = entra_auth_client.patch(
+    response = client.patch(
         "/applications/1/public-bodies",
         json={"publicBodies": ["Ministry of Defence"]},
         headers={"Content-Type": "application/json"},
@@ -155,12 +154,12 @@ def test_401_update_application_public_bodies_returns_401_when_no_authorization_
 
 @pytest.mark.parametrize(
     "provider_token",
-    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+    [Role.PROVIDER_APPLICATION_USER.value, Role.PROVIDER_CLAIMS_USER.value],
 )
 def test_403_update_application_public_bodies_returns_403_when_provider_token(
-    entra_auth_client, provider_token
+    client, provider_token
 ):
-    response = entra_auth_client.patch(
+    response = client.patch(
         "/applications/1/public-bodies",
         json={"publicBodies": ["Ministry of Defence"]},
         headers={

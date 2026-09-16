@@ -12,6 +12,7 @@ from jwt.exceptions import (
 )
 
 from app.adapters.entra_auth_adapter import EntraAuthAdapter
+from app.auth.rbac import Role
 
 
 @pytest.fixture
@@ -32,7 +33,7 @@ def test_verify_token_returns_user_with_firm_code_and_name_when_token_is_valid(a
             "FIRM_CODE": "0A123B",
             "name": "Test Name",
             "oid": "some-entra-object-id",
-            "LAA_APP_ROLES": "Inquests - Provider Application User",
+            "LAA_APP_ROLES": Role.PROVIDER_APPLICATION_USER.value,
         },
     ):
         user = adapter.verify_token("valid.jwt.token")
@@ -41,7 +42,7 @@ def test_verify_token_returns_user_with_firm_code_and_name_when_token_is_valid(a
     assert user.name == "Test Name"
     assert user.entra_object_id == "some-entra-object-id"
     assert "User.Provider" in user.scopes
-    assert user.app_roles == frozenset({"Inquests - Provider Application User"})
+    assert user.app_roles == frozenset({Role.PROVIDER_APPLICATION_USER.value})
 
 
 def test_verify_token_returns_none_firm_code_when_claim_absent(adapter):
@@ -62,24 +63,24 @@ def test_verify_token_returns_none_firm_code_when_claim_absent(adapter):
     ("claim_value", "expected"),
     [
         (
-            "Inquests - Provider Application User",
-            frozenset({"Inquests - Provider Application User"}),
+            Role.PROVIDER_APPLICATION_USER.value,
+            frozenset({Role.PROVIDER_APPLICATION_USER.value}),
         ),
         (
-            "Inquests - Provider Application User, Inquests - Provider Claims User",
+            f"{Role.PROVIDER_APPLICATION_USER.value}, {Role.PROVIDER_CLAIMS_USER.value}",
             frozenset(
                 {
-                    "Inquests - Provider Application User",
-                    "Inquests - Provider Claims User",
+                    Role.PROVIDER_APPLICATION_USER.value,
+                    Role.PROVIDER_CLAIMS_USER.value,
                 }
             ),
         ),
         (
-            ["Inquests - Provider Application User", "Inquests - Provider Claims User"],
+            [Role.PROVIDER_APPLICATION_USER.value, Role.PROVIDER_CLAIMS_USER.value],
             frozenset(
                 {
-                    "Inquests - Provider Application User",
-                    "Inquests - Provider Claims User",
+                    Role.PROVIDER_APPLICATION_USER.value,
+                    Role.PROVIDER_CLAIMS_USER.value,
                 }
             ),
         ),

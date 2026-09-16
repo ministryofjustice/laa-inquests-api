@@ -1,6 +1,7 @@
 import pytest
 from sqlmodel import select
 
+from app.auth.rbac import Role
 from app.models.application.index import Application
 
 pytestmark = pytest.mark.usefixtures("mock_gov_notify")
@@ -16,7 +17,7 @@ def _refuse_decision_payload(overrides=None):
     return payload
 
 
-def test_204_refuse_decision_to_refused(session, client, auth_token):
+def test_204_refuse_decision_to_refused(session, client):
     application = session.exec(select(Application)).first()
     laa_reference = application.laa_reference
 
@@ -25,20 +26,20 @@ def test_204_refuse_decision_to_refused(session, client, auth_token):
         json=_refuse_decision_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
         },
     )
 
     assert response.status_code == 204
 
 
-def test_404_refuse_decision_application_not_found(client, auth_token):
+def test_404_refuse_decision_application_not_found(client):
     response = client.patch(
         "/applications/99999/refuse-decision",
         json=_refuse_decision_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
         },
     )
 
