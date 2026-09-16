@@ -60,16 +60,14 @@ def _build_batch_use_case(session):
     return use_case, gov_notify_port
 
 
-def _auto_approve_poa_claim(
-    session, client, auth_token, laa_reference, submission_date
-):
+def _auto_approve_poa_claim(session, client, laa_reference, submission_date):
     """Auto-approve a POA claim via the API, then pin its submission date."""
     response = client.post(
         f"/applications/{laa_reference}/claim",
         json=_make_request_body(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
         },
     )
     assert response.status_code == 201
@@ -105,7 +103,6 @@ def test_single_auto_approved_poa_claim_is_emailed_when_batch_runs(session, clie
     claim = _auto_approve_poa_claim(
         session,
         client,
-        Role.PROVIDER_CLAIMS_USER.value,
         laa_reference,
         submission_date=BATCH_RUN_TIME - timedelta(hours=24),
     )
@@ -132,7 +129,6 @@ def test_multiple_auto_approved_poa_claims_are_emailed_in_a_single_batch_run(
     first_claim = _auto_approve_poa_claim(
         session,
         client,
-        Role.PROVIDER_CLAIMS_USER.value,
         first_laa_reference,
         submission_date,
     )
@@ -149,7 +145,6 @@ def test_multiple_auto_approved_poa_claims_are_emailed_in_a_single_batch_run(
     second_claim = _auto_approve_poa_claim(
         session,
         client,
-        Role.PROVIDER_CLAIMS_USER.value,
         second_application.laa_reference,
         submission_date,
     )
@@ -174,7 +169,6 @@ def test_claim_auto_approved_outside_the_window_is_not_emailed(session, client):
     claim = _auto_approve_poa_claim(
         session,
         client,
-        Role.PROVIDER_CLAIMS_USER.value,
         laa_reference,
         submission_date=BATCH_RUN_TIME - timedelta(hours=49),
     )
