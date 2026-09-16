@@ -71,6 +71,14 @@ repos:
         stages: [prepare-commit-msg]
         always_run: true
 
+      - id: alembic-heads
+        name: Check for multiple Alembic migration heads
+        entry: /bin/bash scripts/check-migration-heads.sh
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+        always_run: true
+
       - id: pytest
         name: Run unit tests
         entry: pytest
