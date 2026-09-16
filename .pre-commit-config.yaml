@@ -71,6 +71,14 @@ repos:
         stages: [prepare-commit-msg]
         always_run: true
 
+      - id: alembic-heads
+        name: Check for multiple Alembic migration heads
+        entry: bash -c 'test "$(alembic heads | grep -c "(head)")" -le 1'
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+        always_run: true
+
       - id: pytest
         name: Run unit tests
         entry: pytest
