@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from decimal import Decimal
+from app.auth.rbac import Role
 
-import pytest
 from sqlmodel import select
 
 from app.models.application.index import Application
@@ -11,11 +11,6 @@ from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.models.notifications.enums import NotificationType
 from tests.e2e.factories import create_application_in_db
-
-
-@pytest.fixture
-def auth_token():
-    return "Inquests - Claims caseworker"
 
 
 def _reject_payload(overrides=None):
@@ -56,9 +51,7 @@ def _seed_claim(
     return claim
 
 
-def test_204_reject_claim_creates_decision_reason_and_updates_status(
-    session, client, auth_token
-):
+def test_204_reject_claim_creates_decision_reason_and_updates_status(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference)
 
@@ -67,7 +60,7 @@ def test_204_reject_claim_creates_decision_reason_and_updates_status(
         json=_reject_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
         },
     )
 
@@ -91,7 +84,7 @@ def test_204_reject_claim_creates_decision_reason_and_updates_status(
 
 
 def test_204_reject_claim_sends_rejection_email_to_claimant(
-    session, client, auth_token, mock_gov_notify
+    session, client, mock_gov_notify
 ):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference)
@@ -101,7 +94,7 @@ def test_204_reject_claim_sends_rejection_email_to_claimant(
         json=_reject_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
         },
     )
 
@@ -117,7 +110,7 @@ def test_204_reject_claim_sends_rejection_email_to_claimant(
 
 
 def test_204_reject_final_bill_claim_sends_rejection_email(
-    session, client, auth_token, mock_gov_notify
+    session, client, mock_gov_notify
 ):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference, claim_type=ClaimType.FINAL_BILL)
@@ -127,7 +120,7 @@ def test_204_reject_final_bill_claim_sends_rejection_email(
         json=_reject_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
         },
     )
 
@@ -141,9 +134,7 @@ def test_204_reject_final_bill_claim_sends_rejection_email(
     )
 
 
-def test_204_reject_claim_allows_re_rejecting_and_creates_new_decision(
-    session, client, auth_token
-):
+def test_204_reject_claim_allows_re_rejecting_and_creates_new_decision(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference)
 
@@ -153,7 +144,7 @@ def test_204_reject_claim_allows_re_rejecting_and_creates_new_decision(
             json=_reject_payload(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
             },
         )
         assert response.status_code == 204
@@ -164,13 +155,13 @@ def test_204_reject_claim_allows_re_rejecting_and_creates_new_decision(
     assert len(decisions) == 2
 
 
-def test_404_reject_claim_when_application_does_not_exist(client, auth_token):
+def test_404_reject_claim_when_application_does_not_exist(client):
     response = client.patch(
         "/applications/999999/claims/1/reject",
         json=_reject_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
         },
     )
 
@@ -178,7 +169,7 @@ def test_404_reject_claim_when_application_does_not_exist(client, auth_token):
     assert response.json()["detail"] == "Application not found"
 
 
-def test_404_reject_claim_when_claim_does_not_exist(session, client, auth_token):
+def test_404_reject_claim_when_claim_does_not_exist(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
 
     response = client.patch(
@@ -186,7 +177,7 @@ def test_404_reject_claim_when_claim_does_not_exist(session, client, auth_token)
         json=_reject_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
         },
     )
 
@@ -194,9 +185,7 @@ def test_404_reject_claim_when_claim_does_not_exist(session, client, auth_token)
     assert response.json()["detail"] == "Claim not found"
 
 
-def test_404_reject_claim_when_claim_belongs_to_another_application(
-    session, client, auth_token
-):
+def test_404_reject_claim_when_claim_belongs_to_another_application(session, client):
     existing = session.exec(select(Application)).first()
     other_application = create_application_in_db(session)
 
@@ -207,7 +196,7 @@ def test_404_reject_claim_when_claim_belongs_to_another_application(
         json=_reject_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
         },
     )
 
@@ -215,7 +204,7 @@ def test_404_reject_claim_when_claim_belongs_to_another_application(
     assert response.json()["detail"] == "Claim not found"
 
 
-def test_422_reject_claim_when_justification_missing(session, client, auth_token):
+def test_422_reject_claim_when_justification_missing(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference)
 
@@ -224,14 +213,14 @@ def test_422_reject_claim_when_justification_missing(session, client, auth_token
         json={},
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
         },
     )
 
     assert response.status_code == 422
 
 
-def test_204_reject_claim_creates_history_event(session, client, auth_token):
+def test_204_reject_claim_creates_history_event(session, client):
     application = session.exec(select(Application)).first()
     claim = _seed_claim(session, application.laa_reference)
     application = session.exec(select(Application)).first()
@@ -241,7 +230,7 @@ def test_204_reject_claim_creates_history_event(session, client, auth_token):
         json=_reject_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
         },
     )
 
@@ -266,7 +255,7 @@ def test_204_reject_claim_creates_history_event(session, client, auth_token):
     }
 
 
-def test_204_reject_final_bill_claim_creates_history_event(session, client, auth_token):
+def test_204_reject_final_bill_claim_creates_history_event(session, client):
     application = session.exec(select(Application)).first()
     claim = _seed_claim(
         session,
@@ -279,7 +268,7 @@ def test_204_reject_final_bill_claim_creates_history_event(session, client, auth
         json=_reject_payload(),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
         },
     )
 

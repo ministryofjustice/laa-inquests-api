@@ -4,18 +4,13 @@ import pytest
 from sqlmodel import select
 
 from app import api
-from app.auth.rbac import Permission, get_current_user_permissions
+from app.auth.rbac import Permission, Role, get_current_user_permissions
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 
 pytestmark = pytest.mark.usefixtures("mock_gov_notify")
-
-
-@pytest.fixture
-def auth_token():
-    return "Inquests - Provider Application User"
 
 
 def _make_request_body(client_overrides=None):
@@ -64,14 +59,14 @@ def _make_request_body(client_overrides=None):
 
 class TestCreateApplication:
     def test_201_create_application_response_contains_expected_base_properties(
-        self, client, auth_token
+        self, client
     ):
         response = client.post(
             "/applications",
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
             },
         )
         assert response.status_code == 201
@@ -87,14 +82,14 @@ class TestCreateApplication:
         assert isinstance(new_application["proceeding"], dict)
 
     def test_201_create_application_response_contains_expected_proceeding_information(
-        self, client, auth_token
+        self, client
     ):
         response = client.post(
             "/applications",
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
             },
         )
         new_application = response.json()
@@ -111,13 +106,13 @@ class TestCreateApplication:
         assert isinstance(proceeding["proceedingName"], str)
         assert isinstance(proceeding["proceedingDescription"], str)
 
-    def test_201_responds_with_expected_client_details(self, client, auth_token):
+    def test_201_responds_with_expected_client_details(self, client):
         response = client.post(
             "/applications",
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
             },
         )
         new_application = response.json()
@@ -147,14 +142,14 @@ class TestCreateApplication:
         assert not client_data["hasAppliedPreviously"]
 
     def test_201_create_application_stores_authenticated_users_firm_code(
-        self, client, auth_token, session
+        self, client, session
     ):
         response = client.post(
             "/applications",
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
             },
         )
 
@@ -165,15 +160,13 @@ class TestCreateApplication:
         ).one()
         assert application.provider.firm_code == "0A123B"
 
-    def test_201_create_application_creates_history_event(
-        self, client, auth_token, session
-    ):
+    def test_201_create_application_creates_history_event(self, client, session):
         response = client.post(
             "/applications",
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
             },
         )
 
@@ -201,9 +194,7 @@ class TestCreateApplication:
         assert history_event.event_data is None
         assert history_event.application_id == application.application_id
 
-    def test_201_create_application_can_omit_correspondence_address(
-        self, client, auth_token
-    ):
+    def test_201_create_application_can_omit_correspondence_address(self, client):
         request_body = _make_request_body(
             {"correspondenceAddressSource": "USE_CLIENT_HOME_ADDRESS"}
         )
@@ -214,7 +205,7 @@ class TestCreateApplication:
             json=request_body,
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
             },
         )
 
@@ -226,14 +217,14 @@ class TestCreateApplication:
         assert client_details["correspondenceAddress"] is None
 
     def test_201_create_application_responds_with_expected_public_body_details(
-        self, client, auth_token
+        self, client
     ):
         response = client.post(
             "/applications",
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
             },
         )
         new_application = response.json()
@@ -241,15 +232,13 @@ class TestCreateApplication:
         public_body = new_application["publicBodies"][0]
         assert public_body["publicBodyDescription"] == "Department for Transport"
 
-    def test_201_create_application_response_includes_deceased_details(
-        self, client, auth_token
-    ):
+    def test_201_create_application_response_includes_deceased_details(self, client):
         response = client.post(
             "/applications",
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
             },
         )
         new_application = response.json()
@@ -263,9 +252,7 @@ class TestCreateApplication:
         assert deceased["furtherInformation"] == "Further details to be confirmed"
         assert deceased["clientRelationshipToDeceased"] == "guardian"
 
-    def test_201_create_application_response_contains_coroners_letter(
-        self, client, auth_token
-    ):
+    def test_201_create_application_response_contains_coroners_letter(self, client):
         upload_response = client.post(
             "/applications/upload-coroners-letter",
             files={
@@ -275,7 +262,7 @@ class TestCreateApplication:
                     "application/pdf",
                 )
             },
-            headers={"Authorization": f"Bearer {auth_token}"},
+            headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
         )
         assert upload_response.status_code == 201
         coroners_letter_id = upload_response.json()["coronersLetterId"]
@@ -288,7 +275,7 @@ class TestCreateApplication:
             json=body,
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
             },
         )
         assert response.status_code == 201
@@ -297,7 +284,7 @@ class TestCreateApplication:
         assert new_application["coronersLetter"]["fileName"] == "test-file_abc123.pdf"
 
     def test_422_rejected_when_has_no_fixed_abode_is_false_and_home_address_is_absent(
-        self, client, auth_token
+        self, client
     ):
         body = _make_request_body(
             {
@@ -312,14 +299,14 @@ class TestCreateApplication:
             json=body,
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
             },
         )
 
         assert response.status_code == 422
 
     def test_422_rejected_when_has_no_fixed_abode_is_true_and_home_address_is_provided(
-        self, client, auth_token
+        self, client
     ):
         body = _make_request_body({"hasNoFixedAbode": True})
 
@@ -328,14 +315,14 @@ class TestCreateApplication:
             json=body,
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
             },
         )
 
         assert response.status_code == 422
 
     def test_201_accepted_when_has_no_fixed_abode_is_true_and_no_home_address_provided(
-        self, client, auth_token
+        self, client
     ):
         body = _make_request_body(
             {
@@ -350,7 +337,7 @@ class TestCreateApplication:
             json=body,
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
             },
         )
 
@@ -360,14 +347,14 @@ class TestCreateApplication:
         assert client_data["homeAddress"] is None
 
     def test_201_accepted_when_has_no_fixed_abode_is_false_and_home_address_is_provided(
-        self, client, auth_token
+        self, client
     ):
         response = client.post(
             "/applications",
             json=_make_request_body({"hasNoFixedAbode": False}),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
             },
         )
 
@@ -378,7 +365,7 @@ class TestCreateApplication:
         assert client_data["homeAddress"]["addressLine1"] == "1 Example Lane"
 
     def test_201_create_application_includes_explicit_correspondence_recipient(
-        self, client, auth_token
+        self, client
     ):
         body = _make_request_body()
         body["client"]["correspondenceRecipient"] = {
@@ -391,7 +378,7 @@ class TestCreateApplication:
             json=body,
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
             },
         )
 
@@ -401,24 +388,20 @@ class TestCreateApplication:
             "recipientName": "Inquests Support Org",
         }
 
-    def test_201_create_application_response_includes_provider_email(
-        self, client, auth_token
-    ):
+    def test_201_create_application_response_includes_provider_email(self, client):
         response = client.post(
             "/applications",
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
             },
         )
 
         assert response.status_code == 201
         assert response.json()["provider"]["emailAddress"] == "provider@example.com"
 
-    def test_422_create_application_rejected_when_provider_email_missing(
-        self, client, auth_token
-    ):
+    def test_422_create_application_rejected_when_provider_email_missing(self, client):
         body = _make_request_body()
         del body["provider"]["emailAddress"]
 
@@ -427,13 +410,13 @@ class TestCreateApplication:
             json=body,
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
             },
         )
 
         assert response.status_code == 422
 
-    def test_422_create_application_fails_without_provider(self, client, auth_token):
+    def test_422_create_application_fails_without_provider(self, client):
         body = _make_request_body()
         del body["provider"]
 
@@ -442,13 +425,13 @@ class TestCreateApplication:
             json=body,
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
             },
         )
 
         assert response.status_code == 422
 
-    def test_422_create_application_fails_without_office_id(self, client, auth_token):
+    def test_422_create_application_fails_without_office_id(self, client):
         body = _make_request_body()
         del body["provider"]["officeId"]
 
@@ -457,14 +440,14 @@ class TestCreateApplication:
             json=body,
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
             },
         )
 
         assert response.status_code == 422
 
     def test_500_create_application_rolls_back_when_gov_notify_fails(
-        self, client, auth_token, session, mock_gov_notify
+        self, client, session, mock_gov_notify
     ):
         """
         Test that application creation rolls back when GovNotify email sending fails.
@@ -488,7 +471,7 @@ class TestCreateApplication:
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
             },
         )
 
@@ -511,7 +494,7 @@ class TestCreateApplicationRbac:
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": "Bearer Inquests - Provider Application User",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
             },
         )
         assert response.status_code == 201
@@ -524,7 +507,7 @@ class TestCreateApplicationRbac:
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": "Bearer Inquests - Provider Claims User",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
         assert response.status_code == 403
@@ -540,7 +523,7 @@ class TestCreateApplicationRbac:
         )
         assert response.status_code == 403
 
-    def test_201_create_application_with_permission_override(self, client, auth_token):
+    def test_201_create_application_with_permission_override(self, client):
         def get_current_user_permissions_override():
             return {Permission.APPLICATION_CREATE}
 
@@ -553,14 +536,12 @@ class TestCreateApplicationRbac:
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
             },
         )
         assert response.status_code == 201
 
-    def test_403_create_application_with_empty_permission_override(
-        self, client, auth_token
-    ):
+    def test_403_create_application_with_empty_permission_override(self, client):
         def get_current_user_permissions_override():
             return set()
 
@@ -573,7 +554,7 @@ class TestCreateApplicationRbac:
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
             },
         )
         assert response.status_code == 403

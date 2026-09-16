@@ -1,4 +1,4 @@
-import pytest
+from app.auth.rbac import Role
 
 from tests.helpers.provider_details import (
     override_provider_details_port_with_error,
@@ -6,17 +6,12 @@ from tests.helpers.provider_details import (
 )
 
 
-@pytest.fixture
-def auth_token():
-    return "Inquests - Provider Application User"
-
-
-def test_200_list_provider_offices_returns_expected_response_shape(client, auth_token):
+def test_200_list_provider_offices_returns_expected_response_shape(client):
     override_provider_details_port_with_provider_offices()
 
     response = client.get(
         "/applications/provider-offices/123",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
     )
 
     assert response.status_code == 200
@@ -34,14 +29,12 @@ def test_200_list_provider_offices_returns_expected_response_shape(client, auth_
     ]
 
 
-def test_500_list_provider_offices_when_provider_details_lookup_fails(
-    client, auth_token
-):
+def test_500_list_provider_offices_when_provider_details_lookup_fails(client):
     override_provider_details_port_with_error()
 
     response = client.get(
         "/applications/provider-offices/123",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
     )
 
     assert response.status_code == 500

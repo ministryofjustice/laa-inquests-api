@@ -1,14 +1,9 @@
-import pytest
 from sqlmodel import select
+from app.auth.rbac import Role
 
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 from tests.e2e.factories import create_application_in_db
-
-
-@pytest.fixture
-def auth_token():
-    return "Inquests - Provider Claims User"
 
 
 def _seed_application_for_other_firm(session, firm_code: str = "ZZ999Z") -> int:
@@ -23,14 +18,12 @@ def _seed_application_for_other_firm(session, firm_code: str = "ZZ999Z") -> int:
     return other_application.laa_reference
 
 
-def test_200_search_application_by_reference_returns_expected_fields(
-    session, client, auth_token
-):
+def test_200_search_application_by_reference_returns_expected_fields(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
     response = client.get(
         "/applications/search",
         params={"laa_reference": laa_reference},
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
     )
 
     assert response.status_code == 200
@@ -48,27 +41,23 @@ def test_200_search_application_by_reference_returns_expected_fields(
     assert result["overallDecision"] == MeritsDecision.GRANTED
 
 
-def test_200_search_application_trims_leading_and_trailing_spaces(
-    session, client, auth_token
-):
+def test_200_search_application_trims_leading_and_trailing_spaces(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
     response = client.get(
         "/applications/search",
         params={"laa_reference": f"  {laa_reference}  "},
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
     )
 
     assert response.status_code == 200
     assert response.json()[0]["laaReference"] == laa_reference
 
 
-def test_200_search_application_returns_empty_list_for_unknown_reference(
-    client, auth_token
-):
+def test_200_search_application_returns_empty_list_for_unknown_reference(client):
     response = client.get(
         "/applications/search",
         params={"laa_reference": "99999"},
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
     )
 
     assert response.status_code == 200
@@ -76,7 +65,7 @@ def test_200_search_application_returns_empty_list_for_unknown_reference(
 
 
 def test_200_search_application_includes_pending_application_when_no_merits_filter(
-    session, client, auth_token
+    session, client
 ):
     app = session.exec(select(Application)).first()
     app.proceeding.merits_decision = MeritsDecision.PENDING
@@ -86,7 +75,7 @@ def test_200_search_application_includes_pending_application_when_no_merits_filt
     response = client.get(
         "/applications/search",
         params={"laa_reference": str(app.laa_reference)},
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
     )
 
     assert response.status_code == 200
@@ -95,7 +84,7 @@ def test_200_search_application_includes_pending_application_when_no_merits_filt
 
 
 def test_200_search_application_with_merits_filter_returns_only_granted(
-    session, client, auth_token
+    session, client
 ):
     app = session.exec(select(Application)).first()
     app.proceeding.merits_decision = MeritsDecision.GRANTED
@@ -108,7 +97,7 @@ def test_200_search_application_with_merits_filter_returns_only_granted(
             "laa_reference": str(app.laa_reference),
             "merits_decision": MeritsDecision.GRANTED.value,
         },
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
     )
 
     assert response.status_code == 200
@@ -117,7 +106,7 @@ def test_200_search_application_with_merits_filter_returns_only_granted(
 
 
 def test_200_search_application_with_granted_filter_excludes_pending_application(
-    session, client, auth_token
+    session, client
 ):
     app = session.exec(select(Application)).first()
     app.proceeding.merits_decision = MeritsDecision.PENDING
@@ -130,7 +119,7 @@ def test_200_search_application_with_granted_filter_excludes_pending_application
             "laa_reference": str(app.laa_reference),
             "merits_decision": MeritsDecision.GRANTED.value,
         },
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
     )
 
     assert response.status_code == 200
@@ -138,25 +127,25 @@ def test_200_search_application_with_granted_filter_excludes_pending_application
 
 
 def test_422_search_application_returns_unprocessable_when_laa_reference_missing(
-    client, auth_token
+    client,
 ):
     response = client.get(
         "/applications/search",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
     )
 
     assert response.status_code == 422
 
 
 def test_200_search_application_excludes_application_belonging_to_another_firm(
-    session, client, auth_token
+    session, client
 ):
     other_firm_reference = _seed_application_for_other_firm(session)
 
     response = client.get(
         "/applications/search",
         params={"laa_reference": str(other_firm_reference)},
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
     )
 
     assert response.status_code == 200

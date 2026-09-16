@@ -2,16 +2,10 @@ import io
 import uuid
 from unittest.mock import MagicMock
 
-import pytest
 
 from app import api
-from app.auth.rbac import Permission, get_current_user_permissions
+from app.auth.rbac import Permission, Role, get_current_user_permissions
 from app.routers.applications import CoronersLetterUploadError, get_sds_port
-
-
-@pytest.fixture
-def auth_token():
-    return "Inquests - Provider Application User"
 
 
 def is_valid_uuid(val):
@@ -23,9 +17,7 @@ def is_valid_uuid(val):
 
 
 class TestUploadCoronersLetter:
-    def test_201_upload_coroners_letter_returns_coroners_letter_id(
-        self, client, auth_token
-    ):
+    def test_201_upload_coroners_letter_returns_coroners_letter_id(self, client):
         response = client.post(
             "/applications/upload-coroners-letter",
             files={
@@ -35,23 +27,21 @@ class TestUploadCoronersLetter:
                     "application/pdf",
                 )
             },
-            headers={"Authorization": f"Bearer {auth_token}"},
+            headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
         )
         assert response.status_code == 201
         body = response.json()
         assert "coronersLetterId" in body
         assert is_valid_uuid(body["coronersLetterId"])
 
-    def test_422_upload_coroners_letter_with_no_file(self, client, auth_token):
+    def test_422_upload_coroners_letter_with_no_file(self, client):
         response = client.post(
             "/applications/upload-coroners-letter",
-            headers={"Authorization": f"Bearer {auth_token}"},
+            headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
         )
         assert response.status_code == 422
 
-    def test_422_upload_coroners_letter_with_failed_virus_check(
-        self, client, auth_token
-    ):
+    def test_422_upload_coroners_letter_with_failed_virus_check(self, client):
         def get_sds_port_override_with_failed_virus_check():
             mock_sds = MagicMock()
             mock_sds.virus_check_coroners_letter.return_value = False
@@ -70,11 +60,11 @@ class TestUploadCoronersLetter:
                     "application/pdf",
                 )
             },
-            headers={"Authorization": f"Bearer {auth_token}"},
+            headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
         )
         assert response.status_code == 422
 
-    def test_500_upload_coroners_letter_with_sds_server_error(self, client, auth_token):
+    def test_500_upload_coroners_letter_with_sds_server_error(self, client):
         def get_sds_port_override_with_server_error():
             mock_sds = MagicMock()
             mock_sds.virus_check_coroners_letter.side_effect = (
@@ -93,7 +83,7 @@ class TestUploadCoronersLetter:
                     "application/pdf",
                 )
             },
-            headers={"Authorization": f"Bearer {auth_token}"},
+            headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
         )
         assert response.status_code == 500
 
@@ -111,7 +101,7 @@ class TestUploadCoronersLetterRbac:
                     "application/pdf",
                 )
             },
-            headers={"Authorization": "Bearer Inquests - Provider Application User"},
+            headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
         )
         assert response.status_code == 201
 
@@ -127,7 +117,7 @@ class TestUploadCoronersLetterRbac:
                     "application/pdf",
                 )
             },
-            headers={"Authorization": "Bearer Inquests - Provider Claims User"},
+            headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
         )
         assert response.status_code == 403
 
@@ -145,9 +135,7 @@ class TestUploadCoronersLetterRbac:
         )
         assert response.status_code == 403
 
-    def test_201_upload_coroners_letter_with_permission_override(
-        self, client, auth_token
-    ):
+    def test_201_upload_coroners_letter_with_permission_override(self, client):
         def get_current_user_permissions_override():
             return {Permission.CORONERS_LETTER_UPLOAD}
 
@@ -164,13 +152,11 @@ class TestUploadCoronersLetterRbac:
                     "application/pdf",
                 )
             },
-            headers={"Authorization": f"Bearer {auth_token}"},
+            headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
         )
         assert response.status_code == 201
 
-    def test_403_upload_coroners_letter_with_empty_permission_override(
-        self, client, auth_token
-    ):
+    def test_403_upload_coroners_letter_with_empty_permission_override(self, client):
         def get_current_user_permissions_override():
             return set()
 
@@ -187,6 +173,6 @@ class TestUploadCoronersLetterRbac:
                     "application/pdf",
                 )
             },
-            headers={"Authorization": f"Bearer {auth_token}"},
+            headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
         )
         assert response.status_code == 403

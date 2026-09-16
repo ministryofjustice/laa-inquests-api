@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from decimal import Decimal
+from app.auth.rbac import Role
 
 import pytest
 from sqlmodel import select
@@ -7,11 +8,6 @@ from sqlmodel import select
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ClaimType, POAType
 from app.models.claim.index import Claim, ClaimDecision
-
-
-@pytest.fixture
-def auth_token():
-    return "Inquests - Claims caseworker"
 
 
 def _seed_claim(
@@ -59,14 +55,12 @@ def _seed_decision(
     return claim_decision
 
 
-def test_200_returns_empty_list_when_application_has_no_claims(
-    session, client, auth_token
-):
+def test_200_returns_empty_list_when_application_has_no_claims(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
 
     response = client.get(
         f"/applications/{laa_reference}/claims?assessed=true",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 200
@@ -80,7 +74,7 @@ def test_200_assessed_true_returns_only_non_submitted_claims(session, client):
 
     response = client.get(
         f"/applications/{laa_reference}/claims?assessed=true",
-        headers={"Authorization": "Bearer Inquests - Claims caseworker"},
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 200
@@ -100,90 +94,86 @@ def test_200_assessed_true_returns_only_non_submitted_claims(session, client):
     }
 
 
-def test_200_includes_claim_status_for_each_claim(session, client, auth_token):
+def test_200_includes_claim_status_for_each_claim(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
     _seed_claim(session, laa_reference, ClaimStatus.ACCEPTED)
 
     response = client.get(
         f"/applications/{laa_reference}/claims?assessed=true",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 200
     assert response.json()[0]["statusId"] == "ACCEPTED"
 
 
-def test_200_includes_claim_decision_status_when_a_decision_exists(
-    session, client, auth_token
-):
+def test_200_includes_claim_decision_status_when_a_decision_exists(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference, ClaimStatus.REJECTED)
     _seed_decision(session, claim.claim_id, ClaimDecisionStatus.REJECT)
 
     response = client.get(
         f"/applications/{laa_reference}/claims?assessed=true",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 200
     assert response.json()[0]["claimDecisionStatus"] == "REJECT"
 
 
-def test_200_claim_decision_status_is_null_when_no_decision_exists(
-    session, client, auth_token
-):
+def test_200_claim_decision_status_is_null_when_no_decision_exists(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
     _seed_claim(session, laa_reference, ClaimStatus.ACCEPTED)
 
     response = client.get(
         f"/applications/{laa_reference}/claims?assessed=true",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 200
     assert response.json()[0]["claimDecisionStatus"] is None
 
 
-def test_200_assessed_false_returns_only_submitted_claims(session, client, auth_token):
+def test_200_assessed_false_returns_only_submitted_claims(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
     submitted_claim = _seed_claim(session, laa_reference, ClaimStatus.SUBMITTED)
     _seed_claim(session, laa_reference, ClaimStatus.ACCEPTED)
 
     response = client.get(
         f"/applications/{laa_reference}/claims?assessed=false",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 200
     assert [c["claimId"] for c in response.json()] == [submitted_claim.claim_id]
 
 
-def test_422_when_assessed_query_param_is_missing(session, client, auth_token):
+def test_422_when_assessed_query_param_is_missing(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
 
     response = client.get(
         f"/applications/{laa_reference}/claims",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 422
 
 
-def test_422_when_assessed_query_param_is_not_a_boolean(session, client, auth_token):
+def test_422_when_assessed_query_param_is_not_a_boolean(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
 
     response = client.get(
         f"/applications/{laa_reference}/claims?assessed=maybe",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 422
 
 
-def test_404_when_application_does_not_exist(client, auth_token):
+def test_404_when_application_does_not_exist(client):
     response = client.get(
         "/applications/999999/claims?assessed=true",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 404
@@ -200,7 +190,7 @@ def test_401_returns_unauthorized_when_no_auth_header(session, client):
 
 @pytest.mark.parametrize(
     "provider_token",
-    ["Inquests - Provider Application User", "Inquests - Provider Claims User"],
+    [Role.PROVIDER_APPLICATION_USER.value, Role.PROVIDER_CLAIMS_USER.value],
 )
 def test_403_returns_forbidden_when_provider_token(client, provider_token):
     response = client.get(

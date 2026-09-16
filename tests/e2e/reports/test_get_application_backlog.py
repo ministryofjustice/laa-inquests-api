@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from app.auth.rbac import Role
 
 import pytest
 from sqlmodel import select
@@ -10,18 +11,15 @@ from tests.e2e.factories import create_application_in_db
 from tests.helpers.csv_helpers import parse_csv_rows
 
 
-@pytest.fixture
-def auth_token():
-    return "Inquests - Application workflow reporting"
-
-
 class TestGetApplicationBacklogReport:
     """E2E tests for GET /reports/applications/backlog."""
 
-    def test_200_returns_csv_with_pending_applications(self, client, auth_token):
+    def test_200_returns_csv_with_pending_applications(self, client):
         response = client.get(
             "/reports/applications/backlog",
-            headers={"Authorization": f"Bearer {auth_token}"},
+            headers={
+                "Authorization": f"Bearer {Role.APPLICATION_WORKFLOW_REPORTING.value}"
+            },
         )
 
         assert response.status_code == 200
@@ -29,7 +27,7 @@ class TestGetApplicationBacklogReport:
         assert "attachment" in response.headers["content-disposition"]
         assert ".csv" in response.headers["content-disposition"]
 
-    def test_200_csv_contains_expected_headers(self, session, client, auth_token):
+    def test_200_csv_contains_expected_headers(self, session, client):
         application = session.exec(select(Application)).first()
         application.proceeding.merits_decision = MeritsDecision.PENDING
         session.add(application.proceeding)
@@ -37,7 +35,9 @@ class TestGetApplicationBacklogReport:
 
         response = client.get(
             "/reports/applications/backlog",
-            headers={"Authorization": f"Bearer {auth_token}"},
+            headers={
+                "Authorization": f"Bearer {Role.APPLICATION_WORKFLOW_REPORTING.value}"
+            },
         )
 
         rows = parse_csv_rows(response.text)
@@ -45,7 +45,7 @@ class TestGetApplicationBacklogReport:
         assert list(rows[0].keys()) == APPLICATION_BACKLOG_REPORT_HEADERS
 
     def test_200_csv_row_contains_expected_data_for_pending_application(
-        self, session, client, auth_token
+        self, session, client
     ):
         application = session.exec(select(Application)).first()
         application.proceeding.merits_decision = MeritsDecision.PENDING
@@ -54,7 +54,9 @@ class TestGetApplicationBacklogReport:
 
         response = client.get(
             "/reports/applications/backlog",
-            headers={"Authorization": f"Bearer {auth_token}"},
+            headers={
+                "Authorization": f"Bearer {Role.APPLICATION_WORKFLOW_REPORTING.value}"
+            },
         )
 
         rows = parse_csv_rows(response.text)
@@ -64,9 +66,7 @@ class TestGetApplicationBacklogReport:
         for header in APPLICATION_BACKLOG_REPORT_HEADERS:
             assert row[header] != "", f"Expected '{header}' to be non-empty"
 
-    def test_200_csv_excludes_non_pending_applications(
-        self, session, client, auth_token
-    ):
+    def test_200_csv_excludes_non_pending_applications(self, session, client):
         create_application_in_db(
             session,
             provider_overrides={"firm_code": "XGRANT"},
@@ -81,7 +81,9 @@ class TestGetApplicationBacklogReport:
 
         response = client.get(
             "/reports/applications/backlog",
-            headers={"Authorization": f"Bearer {auth_token}"},
+            headers={
+                "Authorization": f"Bearer {Role.APPLICATION_WORKFLOW_REPORTING.value}"
+            },
         )
 
         rows = parse_csv_rows(response.text)
@@ -91,7 +93,7 @@ class TestGetApplicationBacklogReport:
         assert MeritsDecision.REFUSED not in status
 
     def test_200_csv_ordered_by_application_received_date_ascending(
-        self, session, client, auth_token
+        self, session, client
     ):
         application = session.exec(select(Application)).first()
         application.proceeding.merits_decision = MeritsDecision.PENDING
@@ -112,7 +114,9 @@ class TestGetApplicationBacklogReport:
 
         response = client.get(
             "/reports/applications/backlog",
-            headers={"Authorization": f"Bearer {auth_token}"},
+            headers={
+                "Authorization": f"Bearer {Role.APPLICATION_WORKFLOW_REPORTING.value}"
+            },
         )
 
         rows = parse_csv_rows(response.text)
@@ -143,7 +147,7 @@ class TestGetApplicationBacklogReportAuth:
 
     @pytest.mark.parametrize(
         "provider_token",
-        ["Inquests - Provider Application User", "Inquests - Provider Claims User"],
+        [Role.PROVIDER_APPLICATION_USER.value, Role.PROVIDER_CLAIMS_USER.value],
     )
     def test_403_returns_forbidden_when_provider_token(self, client, provider_token):
         response = client.get(

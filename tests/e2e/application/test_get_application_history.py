@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from app.auth.rbac import Role
 
 import pytest
 from sqlmodel import select
@@ -21,7 +22,7 @@ def test_401_get_application_history_returns_401_when_no_authorization_header(
 
 @pytest.mark.parametrize(
     "provider_token",
-    ["Inquests - Provider Application User", "Inquests - Provider Claims User"],
+    [Role.PROVIDER_APPLICATION_USER.value, Role.PROVIDER_CLAIMS_USER.value],
 )
 def test_403_get_application_history_returns_403_when_provider_token(
     client, session, provider_token

@@ -213,7 +213,7 @@ def client_fixture(session: Session):
     def get_entra_auth_port_override():
         mock_auth = MagicMock()
 
-        # Pass in role you want (e.g. Inquests - Provider Application User) or Provider/Caseworker No Role
+        # Pass in a Role.value (e.g. Role.PROVIDER_APPLICATION_USER.value) or Provider/Caseworker No Role
         def verify_token(
             role: str, required_scopes: set[str] | None = None
         ) -> AuthenticatedUser:

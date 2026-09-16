@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from app.auth.rbac import Role
 
 import pytest
 from sqlmodel import select
@@ -7,14 +8,7 @@ from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 
 
-@pytest.fixture
-def auth_token():
-    return "Inquests - Applications caseworker"
-
-
-def test_200_read_certificate_returns_expected_certificate_context(
-    session, client, auth_token
-):
+def test_200_read_certificate_returns_expected_certificate_context(session, client):
     application = session.exec(select(Application)).first()
     application.proceeding.merits_decision = MeritsDecision.GRANTED
     session.add(application)
@@ -24,7 +18,7 @@ def test_200_read_certificate_returns_expected_certificate_context(
         f"/applications/{application.laa_reference}/certificate",
         headers={
             "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
         },
     )
 
@@ -42,14 +36,12 @@ def test_200_read_certificate_returns_expected_certificate_context(
     assert body["effectiveDate"] == datetime.now(tz=UTC).date().isoformat()
 
 
-def test_404_read_certificate_returns_404_when_application_not_found(
-    client, auth_token
-):
+def test_404_read_certificate_returns_404_when_application_not_found(client):
     response = client.get(
         "/applications/99999/certificate",
         headers={
             "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
         },
     )
 
@@ -64,7 +56,7 @@ def test_401_read_certificate_returns_401_when_no_authorization_header(client):
 
 @pytest.mark.parametrize(
     "provider_token",
-    ["Inquests - Provider Application User", "Inquests - Provider Claims User"],
+    [Role.PROVIDER_APPLICATION_USER.value, Role.PROVIDER_CLAIMS_USER.value],
 )
 def test_403_read_certificate_returns_403_when_provider_token(client, provider_token):
     response = client.get(

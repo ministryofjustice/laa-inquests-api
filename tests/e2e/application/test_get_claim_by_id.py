@@ -1,8 +1,8 @@
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
+from app.auth.rbac import Role
 
-import pytest
 from sqlmodel import select
 
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
@@ -25,11 +25,6 @@ from app.models.claim.index import (
     DecisionReason,
 )
 from tests.e2e.factories import create_application_in_db
-
-
-@pytest.fixture
-def auth_token():
-    return "Inquests - Claims caseworker"
 
 
 def _seed_claim(
@@ -95,15 +90,13 @@ def _seed_decision(session, claim_id: int) -> ClaimDecision:
     return decision
 
 
-def test_200_get_claim_by_id_returns_expected_base_properties(
-    session, client, auth_token
-):
+def test_200_get_claim_by_id_returns_expected_base_properties(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference)
 
     response = client.get(
         f"/applications/{laa_reference}/claims/{claim.claim_id}",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 200
@@ -141,7 +134,7 @@ def test_200_get_claim_by_id_returns_expected_base_properties(
     }
 
 
-def test_200_get_claim_by_id_returns_final_bill_details(session, client, auth_token):
+def test_200_get_claim_by_id_returns_final_bill_details(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = Claim(
         application_id=session.exec(
@@ -168,7 +161,7 @@ def test_200_get_claim_by_id_returns_final_bill_details(session, client, auth_to
 
     response = client.get(
         f"/applications/{laa_reference}/claims/{claim.claim_id}",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 200
@@ -184,24 +177,20 @@ def test_200_get_claim_by_id_returns_final_bill_details(session, client, auth_to
     assert body["numberOfCounselInstructed"] == "2"
 
 
-def test_200_get_claim_by_id_includes_substantive_cost_limitation(
-    session, client, auth_token
-):
+def test_200_get_claim_by_id_includes_substantive_cost_limitation(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference)
 
     response = client.get(
         f"/applications/{laa_reference}/claims/{claim.claim_id}",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 200
     assert response.json()["substantiveCostLimitation"] == 10000
 
 
-def test_200_get_claim_by_id_returns_stored_total_funds_remaining(
-    session, client, auth_token
-):
+def test_200_get_claim_by_id_returns_stored_total_funds_remaining(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(
         session, laa_reference, total_funds_remaining_after_claim=Decimal("8800.00")
@@ -209,7 +198,7 @@ def test_200_get_claim_by_id_returns_stored_total_funds_remaining(
 
     response = client.get(
         f"/applications/{laa_reference}/claims/{claim.claim_id}",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 200
@@ -217,14 +206,14 @@ def test_200_get_claim_by_id_returns_stored_total_funds_remaining(
 
 
 def test_200_get_claim_by_id_total_funds_remaining_defaults_to_certificate_amount(
-    session, client, auth_token
+    session, client
 ):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference)
 
     response = client.get(
         f"/applications/{laa_reference}/claims/{claim.claim_id}",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 200
@@ -233,14 +222,14 @@ def test_200_get_claim_by_id_total_funds_remaining_defaults_to_certificate_amoun
     )
 
 
-def test_200_get_claim_by_id_includes_claim_evidence(session, client, auth_token):
+def test_200_get_claim_by_id_includes_claim_evidence(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference)
     evidence = _seed_evidence(session, claim.claim_id)
 
     response = client.get(
         f"/applications/{laa_reference}/claims/{claim.claim_id}",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 200
@@ -251,30 +240,28 @@ def test_200_get_claim_by_id_includes_claim_evidence(session, client, auth_token
 
 
 def test_200_get_claim_by_id_returns_empty_claim_evidence_when_none_linked(
-    session, client, auth_token
+    session, client
 ):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference)
 
     response = client.get(
         f"/applications/{laa_reference}/claims/{claim.claim_id}",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 200
     assert response.json()["claimEvidence"] == []
 
 
-def test_200_get_claim_by_id_includes_claim_decision_when_one_exists(
-    session, client, auth_token
-):
+def test_200_get_claim_by_id_includes_claim_decision_when_one_exists(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference)
     decision = _seed_decision(session, claim.claim_id)
 
     response = client.get(
         f"/applications/{laa_reference}/claims/{claim.claim_id}",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 200
@@ -289,24 +276,20 @@ def test_200_get_claim_by_id_includes_claim_decision_when_one_exists(
     ]
 
 
-def test_200_get_claim_by_id_claim_decision_is_null_when_none_exists(
-    session, client, auth_token
-):
+def test_200_get_claim_by_id_claim_decision_is_null_when_none_exists(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference)
 
     response = client.get(
         f"/applications/{laa_reference}/claims/{claim.claim_id}",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 200
     assert response.json()["claimDecision"] is None
 
 
-def test_200_get_claim_by_id_includes_inquest_outcomes_as_enum_names(
-    session, client, auth_token
-):
+def test_200_get_claim_by_id_includes_inquest_outcomes_as_enum_names(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference, claim_type=ClaimType.FINAL_BILL)
     session.add_all(
@@ -325,7 +308,7 @@ def test_200_get_claim_by_id_includes_inquest_outcomes_as_enum_names(
 
     response = client.get(
         f"/applications/{laa_reference}/claims/{claim.claim_id}",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 200
@@ -336,21 +319,21 @@ def test_200_get_claim_by_id_includes_inquest_outcomes_as_enum_names(
 
 
 def test_200_get_claim_by_id_returns_empty_inquest_outcomes_when_none_linked(
-    session, client, auth_token
+    session, client
 ):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference)
 
     response = client.get(
         f"/applications/{laa_reference}/claims/{claim.claim_id}",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 200
     assert response.json()["inquestOutcomes"] == []
 
 
-def test_200_get_claim_by_id_includes_cost_template_file(session, client, auth_token):
+def test_200_get_claim_by_id_includes_cost_template_file(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference, claim_type=ClaimType.FINAL_BILL)
     file_id = uuid.uuid4()
@@ -365,7 +348,7 @@ def test_200_get_claim_by_id_includes_cost_template_file(session, client, auth_t
 
     response = client.get(
         f"/applications/{laa_reference}/claims/{claim.claim_id}",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 200
@@ -377,43 +360,43 @@ def test_200_get_claim_by_id_includes_cost_template_file(session, client, auth_t
 
 
 def test_200_get_claim_by_id_returns_null_cost_template_file_when_none_linked(
-    session, client, auth_token
+    session, client
 ):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference)
 
     response = client.get(
         f"/applications/{laa_reference}/claims/{claim.claim_id}",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 200
     assert response.json()["claimCostTemplateFile"] is None
 
 
-def test_404_when_claim_does_not_exist(session, client, auth_token):
+def test_404_when_claim_does_not_exist(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
 
     response = client.get(
         f"/applications/{laa_reference}/claims/999999",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Claim not found"
 
 
-def test_404_when_application_does_not_exist(client, auth_token):
+def test_404_when_application_does_not_exist(client):
     response = client.get(
         "/applications/999999/claims/1",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Application not found"
 
 
-def test_404_when_claim_belongs_to_another_application(session, client, auth_token):
+def test_404_when_claim_belongs_to_another_application(session, client):
     existing = session.exec(select(Application)).first()
     other_application = create_application_in_db(session)
 
@@ -421,7 +404,7 @@ def test_404_when_claim_belongs_to_another_application(session, client, auth_tok
 
     response = client.get(
         f"/applications/{other_application.laa_reference}/claims/{claim.claim_id}",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 404
@@ -440,7 +423,7 @@ def test_401_returns_unauthorized_when_no_auth_header(session, client):
 def test_403_returns_forbidden_when_provider_application_token(client):
     response = client.get(
         "/applications/1/claims/1",
-        headers={"Authorization": "Bearer Inquests - Provider Application User"},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
     )
 
     assert response.status_code == 403

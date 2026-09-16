@@ -2,16 +2,10 @@ import io
 import uuid
 from unittest.mock import MagicMock
 
-import pytest
 
 from app import api
-from app.auth.rbac import Permission, get_current_user_permissions
+from app.auth.rbac import Permission, Role, get_current_user_permissions
 from app.routers.claims import get_sds_port
-
-
-@pytest.fixture
-def auth_token():
-    return "Inquests - Provider Claims User"
 
 
 def is_valid_uuid(val):
@@ -22,7 +16,7 @@ def is_valid_uuid(val):
         return False
 
 
-def test_201_upload_claim_evidence_returns_claim_evidence_id(client, auth_token):
+def test_201_upload_claim_evidence_returns_claim_evidence_id(client):
     response = client.post(
         "/claims/evidence",
         files={
@@ -32,7 +26,7 @@ def test_201_upload_claim_evidence_returns_claim_evidence_id(client, auth_token)
                 "application/pdf",
             )
         },
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
     )
     assert response.status_code == 201
     body = response.json()
@@ -40,7 +34,7 @@ def test_201_upload_claim_evidence_returns_claim_evidence_id(client, auth_token)
     assert is_valid_uuid(body["claimEvidenceId"])
 
 
-def test_201_upload_claim_evidence_accepts_xlsx(client, auth_token):
+def test_201_upload_claim_evidence_accepts_xlsx(client):
     response = client.post(
         "/claims/evidence",
         files={
@@ -50,7 +44,7 @@ def test_201_upload_claim_evidence_accepts_xlsx(client, auth_token):
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
         },
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
     )
     assert response.status_code == 201
     body = response.json()
@@ -58,7 +52,7 @@ def test_201_upload_claim_evidence_accepts_xlsx(client, auth_token):
     assert is_valid_uuid(body["claimEvidenceId"])
 
 
-def test_201_upload_claim_evidence_accepts_xls(client, auth_token):
+def test_201_upload_claim_evidence_accepts_xls(client):
     response = client.post(
         "/claims/evidence",
         files={
@@ -68,7 +62,7 @@ def test_201_upload_claim_evidence_accepts_xls(client, auth_token):
                 "application/vnd.ms-excel",
             )
         },
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
     )
     assert response.status_code == 201
     body = response.json()
@@ -76,15 +70,15 @@ def test_201_upload_claim_evidence_accepts_xls(client, auth_token):
     assert is_valid_uuid(body["claimEvidenceId"])
 
 
-def test_422_upload_claim_evidence_with_no_file(client, auth_token):
+def test_422_upload_claim_evidence_with_no_file(client):
     response = client.post(
         "/claims/evidence",
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
     )
     assert response.status_code == 422
 
 
-def test_422_upload_claim_evidence_with_failed_virus_check(client, auth_token):
+def test_422_upload_claim_evidence_with_failed_virus_check(client):
     def get_sds_port_override_with_failed_virus_check():
         mock_sds = MagicMock()
         mock_sds.virus_check_claim_evidence.return_value = False
@@ -103,12 +97,12 @@ def test_422_upload_claim_evidence_with_failed_virus_check(client, auth_token):
                 "application/pdf",
             )
         },
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
     )
     assert response.status_code == 422
 
 
-def test_500_upload_claim_evidence_with_sds_server_error(client, auth_token):
+def test_500_upload_claim_evidence_with_sds_server_error(client):
     def get_sds_port_override_with_server_error():
         mock_sds = MagicMock()
         mock_sds.virus_check_claim_evidence.side_effect = Exception("SDS server error")
@@ -125,12 +119,12 @@ def test_500_upload_claim_evidence_with_sds_server_error(client, auth_token):
                 "application/pdf",
             )
         },
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
     )
     assert response.status_code == 500
 
 
-def test_201_upload_claim_evidence_allows_multiple_uploads(client, auth_token):
+def test_201_upload_claim_evidence_allows_multiple_uploads(client):
     first = client.post(
         "/claims/evidence",
         files={
@@ -140,7 +134,7 @@ def test_201_upload_claim_evidence_allows_multiple_uploads(client, auth_token):
                 "application/pdf",
             )
         },
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
     )
     second = client.post(
         "/claims/evidence",
@@ -151,7 +145,7 @@ def test_201_upload_claim_evidence_allows_multiple_uploads(client, auth_token):
                 "application/pdf",
             )
         },
-        headers={"Authorization": f"Bearer {auth_token}"},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
     )
 
     assert first.status_code == 201
@@ -175,7 +169,7 @@ class TestUploadClaimEvidenceRbac:
                     "application/pdf",
                 )
             },
-            headers={"Authorization": "Bearer Inquests - Provider Claims User"},
+            headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
         )
 
         assert response.status_code == 201
@@ -192,12 +186,12 @@ class TestUploadClaimEvidenceRbac:
                     "application/pdf",
                 )
             },
-            headers={"Authorization": "Bearer Inquests - Provider Application User"},
+            headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
         )
 
         assert response.status_code == 403
 
-    def test_201_upload_claim_evidence_with_upload_permission(self, client, auth_token):
+    def test_201_upload_claim_evidence_with_upload_permission(self, client):
         def get_current_user_permissions_override():
             return {Permission.CLAIM_EVIDENCE_UPLOAD}
 
@@ -214,7 +208,7 @@ class TestUploadClaimEvidenceRbac:
                     "application/pdf",
                 )
             },
-            headers={"Authorization": f"Bearer {auth_token}"},
+            headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
         )
 
         assert response.status_code == 201
