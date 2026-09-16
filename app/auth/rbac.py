@@ -109,6 +109,12 @@ ROLE_PERMISSIONS_MAP: dict[Role, set[Permission]] = {
 }
 
 
+# TODO: test that require_permission does depend on verify_entra_token, so that
+# we know we have the 401 checking. For that, call verify_entra_token directly in
+# get_current_user_permissions, rather than using Depends and relying on FastAPI to do that
+# which makes it harder to unit test the 401 behaviour.
+
+
 def get_current_user_permissions(
     user: Annotated[AuthenticatedUser, Depends(verify_entra_token)],
 ) -> set[Permission]:
@@ -118,14 +124,26 @@ def get_current_user_permissions(
     return permissions
 
 
-def require_permission(required_permission: Permission):
-    def permission_checker(
-        permissions: Annotated[set[Permission], Depends(get_current_user_permissions)],
+class PermissionChecker:
+    def __init__(self, required_permission: Permission) -> None:
+        self.required_permission = required_permission
+
+    def __call__(
+        self,
+        permissions: Annotated[
+            set[Permission],
+            Depends(get_current_user_permissions),
+        ],
     ) -> None:
-        if required_permission not in permissions:
+        if self.required_permission not in permissions:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Forbidden: Missing required permission '{required_permission.value}'",
+                detail=(
+                    "Forbidden: Missing required permission "
+                    f"'{self.required_permission.value}'"
+                ),
             )
 
-    return permission_checker
+
+def require_permission(required_permission: Permission) -> PermissionChecker:
+    return PermissionChecker(required_permission)
