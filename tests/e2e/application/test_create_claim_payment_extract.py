@@ -23,14 +23,14 @@ def _make_request_body(overrides=None):
     return body
 
 
-def _post_claim(session, client, auth_token, overrides=None):
+def _post_claim(session, client, overrides=None):
     laa_reference = session.exec(select(Application)).first().laa_reference
     return client.post(
         f"/applications/{laa_reference}/claim",
         json=_make_request_body(overrides),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
         },
     )
 
@@ -51,7 +51,7 @@ def _payment_extracts(session, claim_id):
 
 class TestCreateClaimPaymentExtract:
     def test_201_profit_cost_vat_claim_persists_payment_extract(self, session, client):
-        response = _post_claim(session, client, Role.PROVIDER_CLAIMS_USER.value)
+        response = _post_claim(session, client)
 
         assert response.status_code == 201
         claim_id = response.json()["claimId"]
@@ -73,7 +73,6 @@ class TestCreateClaimPaymentExtract:
         response = _post_claim(
             session,
             client,
-            Role.PROVIDER_CLAIMS_USER.value,
             {
                 "totalProfitCostNet": None,
                 "totalProfitCostGross": None,
@@ -98,7 +97,6 @@ class TestCreateClaimPaymentExtract:
         response = _post_claim(
             session,
             client,
-            Role.PROVIDER_CLAIMS_USER.value,
             {
                 "poaTypeId": "EXPERT_COST",
                 "totalProfitCostNet": None,
@@ -137,7 +135,6 @@ class TestCreateClaimPaymentExtract:
         response = _post_claim(
             session,
             client,
-            Role.PROVIDER_CLAIMS_USER.value,
             {
                 "poaTypeId": "EXPERT_COST",
                 "totalProfitCostNet": None,
@@ -161,7 +158,6 @@ class TestCreateClaimPaymentExtract:
         response = _post_claim(
             session,
             client,
-            Role.PROVIDER_CLAIMS_USER.value,
             {
                 "poaTypeId": "NON_EXPERT_DISBURSEMENT",
                 "totalProfitCostNet": None,
