@@ -18,6 +18,8 @@ from app.ports.claim.create_claim_decision_port import CreateClaimDecisionPort
 from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.ports.claim.update_claim_status_port import UpdateClaimStatusPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
+from app.ports.gov_notify_port import GovNotifyPort
+from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
     ClaimNotFoundError,
@@ -80,6 +82,10 @@ def _build_use_case(claim=None, application=None):
     update_status_port = MagicMock(spec=UpdateClaimStatusPort)
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
 
+    provider_details_port = MagicMock(spec=ProviderDetailsPort)
+    provider_details_port.get_firm_name.return_value = "Test Firm Name"
+    gov_notify_port = MagicMock(spec=GovNotifyPort)
+
     use_case = PayInFullClaimUseCase(
         application_lookup_port=lookup_port,
         get_claim_by_id_port=get_claim_port,
@@ -87,6 +93,8 @@ def _build_use_case(claim=None, application=None):
         create_claim_decision_amount_port=create_decision_amount_port,
         update_claim_status_port=update_status_port,
         create_history_event_port=create_history_event_port,
+        provider_details_port=provider_details_port,
+        gov_notify_port=gov_notify_port,
     )
     return (
         use_case,

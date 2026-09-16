@@ -527,9 +527,7 @@ def test_204_pay_in_full_claim_sends_final_bill_paid_email_to_provider(
     assert call_kwargs["decision_amounts"].disbursement_vat_zero == Decimal("50.00")
 
 
-def test_204_pay_in_full_claim_creates_email_history_event(
-    session, client, mock_gov_notify
-):
+def test_204_pay_in_full_claim_creates_email_history_event(session, client):
     application = session.exec(select(Application)).first()
     claim = _seed_claim(session, application.laa_reference)
 
@@ -566,7 +564,7 @@ def test_204_pay_in_full_claim_creates_email_history_event(
     }
 
 
-def test_204_pay_in_full_claim_succeeds_when_final_bill_paid_email_fails(
+def test_500_pay_in_full_claim_fails_when_final_bill_paid_email_fails(
     session, client, mock_gov_notify
 ):
     application = session.exec(select(Application)).first()
@@ -584,12 +582,12 @@ def test_204_pay_in_full_claim_succeeds_when_final_bill_paid_email_fails(
         },
     )
 
-    assert response.status_code == 204
+    assert response.status_code == 500
 
     decision = session.exec(
         select(ClaimDecision).where(ClaimDecision.claim_id == claim.claim_id)
-    ).one()
-    assert decision.decision == "PAY_IN_FULL"
+    ).one_or_none()
+    assert decision is None
 
     session.refresh(claim)
-    assert claim.status_id == ClaimStatus.PAY_IN_FULL
+    assert claim.status_id == ClaimStatus.SUBMITTED
