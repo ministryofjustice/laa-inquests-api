@@ -73,10 +73,10 @@ repos:
 
       - id: alembic-heads
         name: Check for multiple Alembic migration heads
-        entry: /bin/bash scripts/check-migration-heads.sh
+        entry: bash -c 'test "$(alembic heads | grep -c "(head)")" -le 1'
         language: system
         pass_filenames: false
-        stages: [pre-commit]
+        stages: [pre-push]
         always_run: true
 
       - id: pytest
