@@ -149,37 +149,6 @@ def session_fixture():
         yield db_session
 
 
-def get_sds_port_override_temp():
-    mock_sds = MagicMock()
-    mock_sds.virus_check_coroners_letter.return_value = True
-    mock_sds.save_coroners_letter.return_value = SDSUploadCoronersLetterResponse(
-        sds_file_name="test-file_abc123.pdf",
-        status="SUCCESS",
-    )
-    mock_sds.virus_check_claim_evidence.return_value = True
-    mock_sds.save_claim_evidence.return_value = SDSUploadClaimEvidenceResponse(
-        sds_file_name="test-claim-evidence_abc123.pdf",
-        status="SUCCESS",
-    )
-    mock_sds.retrieve_coroners_letter.return_value = iter([b"file bytes"])
-    mock_sds.retrieve_claim_evidence.return_value = iter([b"file bytes"])
-    return mock_sds
-
-
-def get_provider_details_port_override_temp():
-    mock_port = MagicMock()
-    mock_port.get_firm_name.return_value = "Test Firm Name"
-    mock_port.get_firms_by_ids.side_effect = lambda firm_ids: [
-        {"firmNumber": fid, "firmName": f"Firm {fid}"} for fid in firm_ids
-    ]
-    mock_port.get_office_address.return_value = Address(
-        address_line_1="Test Office Street",
-        town_or_city="Test City",
-        postcode="TE1 1ST",
-    )
-    return mock_port
-
-
 @pytest.fixture(name="client")
 def client_fixture(session: Session):
     mock_pdf_generation_port = MagicMock()
@@ -199,7 +168,17 @@ def client_fixture(session: Session):
         return session
 
     def get_provider_details_port_override():
-        return get_provider_details_port_override_temp()
+        mock_port = MagicMock()
+        mock_port.get_firm_name.return_value = "Test Firm Name"
+        mock_port.get_firms_by_ids.side_effect = lambda firm_ids: [
+            {"firmNumber": fid, "firmName": f"Firm {fid}"} for fid in firm_ids
+        ]
+        mock_port.get_office_address.return_value = Address(
+            address_line_1="Test Office Street",
+            town_or_city="Test City",
+            postcode="TE1 1ST",
+        )
+        return mock_port
 
     def get_gov_notify_port_override():
         return mock_gov_notify_port
@@ -208,7 +187,20 @@ def client_fixture(session: Session):
         return mock_pdf_generation_port
 
     def get_sds_port_override():
-        return get_sds_port_override_temp()
+        mock_sds = MagicMock()
+        mock_sds.virus_check_coroners_letter.return_value = True
+        mock_sds.save_coroners_letter.return_value = SDSUploadCoronersLetterResponse(
+            sds_file_name="test-file_abc123.pdf",
+            status="SUCCESS",
+        )
+        mock_sds.virus_check_claim_evidence.return_value = True
+        mock_sds.save_claim_evidence.return_value = SDSUploadClaimEvidenceResponse(
+            sds_file_name="test-claim-evidence_abc123.pdf",
+            status="SUCCESS",
+        )
+        mock_sds.retrieve_coroners_letter.return_value = iter([b"file bytes"])
+        mock_sds.retrieve_claim_evidence.return_value = iter([b"file bytes"])
+        return mock_sds
 
     def get_entra_auth_port_override():
         mock_auth = MagicMock()
