@@ -1,9 +1,9 @@
 import io
 import uuid
 from unittest.mock import MagicMock
-from app.auth.rbac import Role
 
 from app import api
+from app.auth.rbac import Role
 from app.routers.applications import get_sds_port
 
 

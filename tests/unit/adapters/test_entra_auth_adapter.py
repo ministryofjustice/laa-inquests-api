@@ -1,7 +1,6 @@
 """Unit tests for EntraAuthAdapter."""
 
 from unittest.mock import MagicMock, patch
-from app.auth.rbac import Role
 
 import pytest
 from fastapi import HTTPException
@@ -13,6 +12,7 @@ from jwt.exceptions import (
 )
 
 from app.adapters.entra_auth_adapter import EntraAuthAdapter
+from app.auth.rbac import Role
 
 
 @pytest.fixture

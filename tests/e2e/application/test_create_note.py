@@ -1,10 +1,10 @@
 from unittest.mock import patch
-from app.auth.rbac import Role
 
 import pytest
 from sqlmodel import select
 
 from app.adapters.history_event_repository_adapter import HistoryEventRepositoryAdapter
+from app.auth.rbac import Role
 from app.models.application.index import Application
 from app.models.history.enums import ActorType
 from app.models.history.index import HistoryEvent

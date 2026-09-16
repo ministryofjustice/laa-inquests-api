@@ -1,10 +1,10 @@
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
-from app.auth.rbac import Role
 
 from sqlmodel import select
 
+from app.auth.rbac import Role
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
 from app.models.application.index import Application
 from app.models.claim.enums import (

@@ -1,8 +1,8 @@
 from datetime import UTC, date, datetime
-from app.auth.rbac import Role
 
 from sqlmodel import select
 
+from app.auth.rbac import Role
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 

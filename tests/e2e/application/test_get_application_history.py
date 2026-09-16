@@ -1,9 +1,9 @@
 from datetime import UTC, datetime
-from app.auth.rbac import Role
 
 import pytest
 from sqlmodel import select
 
+from app.auth.rbac import Role
 from app.models.application.index import Application
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent

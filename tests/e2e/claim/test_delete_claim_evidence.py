@@ -1,9 +1,9 @@
 import io
 import uuid
 from unittest.mock import MagicMock
-from app.auth.rbac import Role
 
 from app import api
+from app.auth.rbac import Role
 from app.models.claim.index import ClaimEvidence
 from app.routers.claims import get_sds_port
 

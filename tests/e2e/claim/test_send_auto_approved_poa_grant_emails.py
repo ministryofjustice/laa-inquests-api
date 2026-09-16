@@ -3,12 +3,12 @@
 import uuid
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
-from app.auth.rbac import Role
 
 from sqlmodel import select
 
 from app.adapters.claim_repository_adapter import ClaimRepositoryAdapter
 from app.adapters.history_event_repository_adapter import HistoryEventRepositoryAdapter
+from app.auth.rbac import Role
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimStatus

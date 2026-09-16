@@ -1,8 +1,8 @@
 """E2E tests for sending grant letter print pack via Gov Notify precompiled letter."""
 
 from sqlmodel import select
-from app.auth.rbac import Role
 
+from app.auth.rbac import Role
 from app.models.application.index import Application
 
 

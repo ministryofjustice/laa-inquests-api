@@ -2,7 +2,6 @@ import io
 import uuid
 from unittest.mock import MagicMock
 
-
 from app import api
 from app.auth.rbac import Permission, Role, get_current_user_permissions
 from app.routers.applications import CoronersLetterUploadError, get_sds_port

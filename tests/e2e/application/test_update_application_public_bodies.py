@@ -1,7 +1,7 @@
 import pytest
 from sqlmodel import select
-from app.auth.rbac import Role
 
+from app.auth.rbac import Role
 from app.models.application.enums import MeritsDecision, PublicBodyId
 from app.models.application.index import Application
 from app.models.history.enums import ActorType, HistoryEventReference

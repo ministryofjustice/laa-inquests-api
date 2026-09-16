@@ -1,10 +1,10 @@
 from datetime import UTC, datetime
 from decimal import Decimal
-from app.auth.rbac import Role
 
 import pytest
 from sqlmodel import select
 
+from app.auth.rbac import Role
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ClaimType, POAType
 from app.models.claim.index import Claim, ClaimDecision

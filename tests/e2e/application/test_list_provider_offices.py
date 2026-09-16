@@ -1,5 +1,4 @@
 from app.auth.rbac import Role
-
 from tests.helpers.provider_details import (
     override_provider_details_port_with_error,
     override_provider_details_port_with_provider_offices,

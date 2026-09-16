@@ -1,10 +1,10 @@
 import io
 import uuid
-from app.auth.rbac import Role
 
 import pytest
 from sqlmodel import select
 
+from app.auth.rbac import Role
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application, CoronersLetter
 from app.models.claim.index import ClaimEvidence
