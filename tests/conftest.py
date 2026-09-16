@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock
 
 import pytest
+from fastapi import HTTPException, status
 from fastapi.testclient import TestClient
 from passlib.hash import argon2
 from sqlalchemy.orm import sessionmaker
@@ -209,67 +210,13 @@ def client_fixture(session: Session):
     def get_sds_port_override():
         return get_sds_port_override_temp()
 
-    def get_entra_auth_port_bypass():
-        mock_auth = MagicMock()
-        mock_auth.verify_token.return_value = AuthenticatedUser(
-            firm_code="0A123B",
-            scopes=frozenset(
-                {
-                    "User.Provider",
-                    "User.Caseworker",
-                }
-            ),
-            app_roles=frozenset(
-                {
-                    "Inquests - Provider Application User",
-                    "Inquests - Provider Claims User",
-                }
-            ),
-            name="Test Name",
-            entra_object_id="some-entra-object-id",
-        )
-        return mock_auth
-
-    api.dependency_overrides[get_session] = get_session_override
-    api.dependency_overrides[get_provider_details_port] = (
-        get_provider_details_port_override
-    )
-    api.dependency_overrides[get_gov_notify_port] = get_gov_notify_port_override
-    api.dependency_overrides[get_pdf_generation_port] = get_pdf_generation_port_override
-    api.dependency_overrides[get_sds_port] = get_sds_port_override
-    api.dependency_overrides[get_entra_auth_port] = get_entra_auth_port_bypass
-
-    client = TestClient(api, raise_server_exceptions=False)
-    yield client
-    api.dependency_overrides.clear()
-
-
-@pytest.fixture(name="mock_entra_auth_client")
-def mock_entra_auth_client_fixture(session: Session):
-    from fastapi import HTTPException, status
-
-    def get_session_override():
-        return session
-
-    def get_provider_details_port_override():
-        return get_provider_details_port_override_temp()
-
-    def get_gov_notify_port_override():
-        return MagicMock()
-
-    def get_pdf_generation_port_override():
-        mock_port = MagicMock()
-        mock_port.generate_pdf.return_value = b"%PDF-1.4\n%Mock PDF content"
-        return mock_port
-
-    def get_sds_port_override():
-        return get_sds_port_override_temp()
-
     def get_entra_auth_port_override():
         mock_auth = MagicMock()
 
         # Pass in role you want (e.g. Inquests - Provider Application User) or Provider/Caseworker No Role
-        def verify_token(role: str, required_scopes: set[str] | None = None) -> None:
+        def verify_token(
+            role: str, required_scopes: set[str] | None = None
+        ) -> AuthenticatedUser:
             app_roles: frozenset
             scopes: frozenset
 
@@ -316,18 +263,9 @@ def mock_entra_auth_client_fixture(session: Session):
     api.dependency_overrides[get_sds_port] = get_sds_port_override
     api.dependency_overrides[get_entra_auth_port] = get_entra_auth_port_override
 
-    yield TestClient(api, raise_server_exceptions=False)
+    client = TestClient(api, raise_server_exceptions=False)
+    yield client
     api.dependency_overrides.clear()
-
-
-@pytest.fixture
-def auth_token(client):
-    return "test-token"
-
-
-@pytest.fixture
-def auth_token_disabled_user(client):
-    return "disabled-user-test-token"
 
 
 @pytest.fixture

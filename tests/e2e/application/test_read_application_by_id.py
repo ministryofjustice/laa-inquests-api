@@ -8,6 +8,11 @@ from app.models.application.index import Application, CoronersLetter
 pytestmark = pytest.mark.usefixtures("mock_gov_notify")
 
 
+@pytest.fixture
+def auth_token():
+    return "Inquests - Applications caseworker"
+
+
 def test_200_read_application_by_reference_returns_expected_application(
     session, client, auth_token
 ):
@@ -141,7 +146,7 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
         },
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": "Bearer Inquests - Provider Application User",
         },
     )
 

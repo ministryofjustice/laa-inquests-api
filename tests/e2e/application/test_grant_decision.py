@@ -1,9 +1,15 @@
 from datetime import UTC, date, datetime
 
+import pytest
 from sqlmodel import select
 
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
+
+
+@pytest.fixture
+def auth_token():
+    return "Inquests - Applications caseworker"
 
 
 def _grant_decision_payload(overrides=None):

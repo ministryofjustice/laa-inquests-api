@@ -4,6 +4,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
+import pytest
 from sqlmodel import select
 
 from app.adapters.claim_repository_adapter import ClaimRepositoryAdapter
@@ -22,6 +23,11 @@ from tests.e2e.factories import create_application_in_db
 FIRM_NAME = "Test Firm Name"
 BATCH_RUN_TIME = datetime(2026, 9, 7, 9, 0, tzinfo=UTC)
 FIRM_CODE = "0A123B"
+
+
+@pytest.fixture
+def auth_token():
+    return "Inquests - Provider Claims User"
 
 
 def _make_request_body(overrides=None):

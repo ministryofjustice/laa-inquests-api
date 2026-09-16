@@ -1,8 +1,14 @@
+import pytest
 from sqlmodel import select
 
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 from tests.e2e.factories import create_application_in_db
+
+
+@pytest.fixture
+def auth_token():
+    return "Inquests - Provider Claims User"
 
 
 def _seed_application_for_other_firm(session, firm_code: str = "ZZ999Z") -> int:

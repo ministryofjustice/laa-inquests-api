@@ -7,6 +7,11 @@ from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 
 
+@pytest.fixture
+def auth_token():
+    return "Inquests - Applications caseworker"
+
+
 def test_200_read_certificate_returns_expected_certificate_context(
     session, client, auth_token
 ):
@@ -61,10 +66,8 @@ def test_401_read_certificate_returns_401_when_no_authorization_header(client):
     "provider_token",
     ["Inquests - Provider Application User", "Inquests - Provider Claims User"],
 )
-def test_403_read_certificate_returns_403_when_provider_token(
-    mock_entra_auth_client, provider_token
-):
-    response = mock_entra_auth_client.get(
+def test_403_read_certificate_returns_403_when_provider_token(client, provider_token):
+    response = client.get(
         "/applications/1/certificate",
         headers={"Authorization": f"Bearer {provider_token}"},
     )

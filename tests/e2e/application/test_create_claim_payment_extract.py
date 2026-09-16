@@ -1,11 +1,17 @@
 import uuid
 from decimal import Decimal
 
+import pytest
 from sqlmodel import select
 
 from app.models.application.index import Application
 from app.models.claim.enums import InvoiceTypeCode, TaxCode
 from app.models.claim.index import Claim, ClaimPaymentExtract
+
+
+@pytest.fixture
+def auth_token():
+    return "Inquests - Provider Claims User"
 
 
 def _make_request_body(overrides=None):

@@ -14,10 +14,15 @@ def application(session) -> Application:
     return session.exec(select(Application)).first()
 
 
+@pytest.fixture
+def auth_token():
+    return "Inquests - Applications caseworker"
+
+
 def _caseworker_headers(auth_token: str) -> dict[str, str]:
     return {
         "Content-Type": "application/json",
-        "Authorization": "Bearer Inquests - Provider Application User",
+        "Authorization": f"Bearer {auth_token}",
     }
 
 
@@ -102,8 +107,8 @@ def test_404_create_note_returns_not_found_for_missing_application(client, auth_
     assert response.json() == {"detail": "Application not found"}
 
 
-def test_401_create_note_requires_authorization(mock_entra_auth_client, application):
-    response = mock_entra_auth_client.post(
+def test_401_create_note_requires_authorization(client, application):
+    response = client.post(
         f"/applications/{application.laa_reference}/note",
         json={"noteText": "Case note"},
         headers={"Content-Type": "application/json"},
@@ -116,10 +121,8 @@ def test_401_create_note_requires_authorization(mock_entra_auth_client, applicat
     "provider_token",
     ["Inquests - Provider Application User", "Inquests - Provider Claims User"],
 )
-def test_403_create_note_rejects_provider_token(
-    mock_entra_auth_client, application, provider_token
-):
-    response = mock_entra_auth_client.post(
+def test_403_create_note_rejects_provider_token(client, application, provider_token):
+    response = client.post(
         f"/applications/{application.laa_reference}/note",
         json={"noteText": "Case note"},
         headers={

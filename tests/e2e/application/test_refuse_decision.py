@@ -6,6 +6,11 @@ from app.models.application.index import Application
 pytestmark = pytest.mark.usefixtures("mock_gov_notify")
 
 
+@pytest.fixture
+def auth_token():
+    return "Inquests - Applications caseworker"
+
+
 def _refuse_decision_payload(overrides=None):
     payload = {
         "reasonForRefusal": "NOT_IN_SCOPE",

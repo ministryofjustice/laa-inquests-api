@@ -13,6 +13,11 @@ from app.models.history.index import HistoryEvent
 pytestmark = pytest.mark.usefixtures("mock_gov_notify")
 
 
+@pytest.fixture
+def auth_token():
+    return "Inquests - Provider Application User"
+
+
 def _make_request_body(client_overrides=None):
     client = {
         "clientFirstName": "Test",
@@ -499,7 +504,7 @@ class TestCreateApplication:
 
 class TestCreateApplicationRbac:
     def test_201_create_application_with_provider_application_user_app_role(
-        self, client, mock_entra_auth_client
+        self, client
     ):
         response = client.post(
             "/applications",
@@ -512,7 +517,7 @@ class TestCreateApplicationRbac:
         assert response.status_code == 201
 
     def test_403_create_application_with_app_role_missing_create_permission(
-        self, client, mock_entra_auth_client
+        self, client
     ):
         response = client.post(
             "/applications",
@@ -524,9 +529,7 @@ class TestCreateApplicationRbac:
         )
         assert response.status_code == 403
 
-    def test_403_create_application_with_unmapped_app_role(
-        self, client, mock_entra_auth_client
-    ):
+    def test_403_create_application_with_unmapped_app_role(self, client):
         response = client.post(
             "/applications",
             json=_make_request_body(),

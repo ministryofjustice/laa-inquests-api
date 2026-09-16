@@ -10,6 +10,11 @@ from tests.e2e.factories import create_application_in_db
 from tests.helpers.csv_helpers import parse_csv_rows
 
 
+@pytest.fixture
+def auth_token():
+    return "Inquests - Application workflow reporting"
+
+
 class TestGetApplicationBacklogReport:
     """E2E tests for GET /reports/applications/backlog."""
 
@@ -123,13 +128,13 @@ class TestGetApplicationBacklogReport:
 class TestGetApplicationBacklogReportAuth:
     """Authentication tests for GET /reports/applications/backlog."""
 
-    def test_401_returns_unauthorized_when_no_auth_header(self, mock_entra_auth_client):
-        response = mock_entra_auth_client.get("/reports/applications/backlog")
+    def test_401_returns_unauthorized_when_no_auth_header(self, client):
+        response = client.get("/reports/applications/backlog")
 
         assert response.status_code == 401
 
-    def test_401_returns_unauthorized_when_invalid_token(self, mock_entra_auth_client):
-        response = mock_entra_auth_client.get(
+    def test_401_returns_unauthorized_when_invalid_token(self, client):
+        response = client.get(
             "/reports/applications/backlog",
             headers={"Authorization": "Bearer invalid-token"},
         )
@@ -140,17 +145,15 @@ class TestGetApplicationBacklogReportAuth:
         "provider_token",
         ["Inquests - Provider Application User", "Inquests - Provider Claims User"],
     )
-    def test_403_returns_forbidden_when_provider_token(
-        self, mock_entra_auth_client, provider_token
-    ):
-        response = mock_entra_auth_client.get(
+    def test_403_returns_forbidden_when_provider_token(self, client, provider_token):
+        response = client.get(
             "/reports/applications/backlog",
             headers={"Authorization": f"Bearer {provider_token}"},
         )
         assert response.status_code == 403
 
-    def test_200_returns_ok_when_caseworker_token(self, mock_entra_auth_client):
-        response = mock_entra_auth_client.get(
+    def test_200_returns_ok_when_caseworker_token(self, client):
+        response = client.get(
             "/reports/applications/backlog",
             headers={"Authorization": "Bearer Caseworker No Role"},
         )

@@ -2,8 +2,15 @@ import io
 import uuid
 from unittest.mock import MagicMock
 
+import pytest
+
 from app import api
 from app.routers.applications import get_sds_port
+
+
+@pytest.fixture
+def auth_token():
+    return "Inquests - Provider Application User"
 
 
 def _upload_coroners_letter_and_get_id(client, auth_token):
@@ -60,8 +67,8 @@ def test_500_delete_coroners_letter_when_sds_fails(client, auth_token):
     assert delete_response.status_code == 500
 
 
-def test_403_delete_coroners_letter_when_caseworker_token(mock_entra_auth_client):
-    response = mock_entra_auth_client.delete(
+def test_403_delete_coroners_letter_when_caseworker_token(client):
+    response = client.delete(
         f"/applications/coroners-letter/{uuid.uuid4()}",
         headers={"Authorization": "Bearer Caseworker No Role"},
     )

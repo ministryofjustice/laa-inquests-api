@@ -1,3 +1,11 @@
+import pytest
+
+
+@pytest.fixture
+def auth_token():
+    return "Inquests - Applications caseworker"
+
+
 def test_200_read_all_applications_returns_expected_base_properties_for_each(
     client, auth_token
 ):

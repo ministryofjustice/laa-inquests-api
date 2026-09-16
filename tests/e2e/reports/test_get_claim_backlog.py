@@ -22,6 +22,11 @@ CLAIMS_BACKLOG_REPORT_HEADERS = [
 ]
 
 
+@pytest.fixture
+def auth_token():
+    return "Inquests - Claim workflow reporting"
+
+
 class TestGetClaimBacklogReport:
     """E2E tests for GET /reports/claims/backlog."""
 
@@ -114,13 +119,13 @@ class TestGetClaimBacklogReport:
 class TestGetClaimBacklogReportAuth:
     """Authentication tests for GET /reports/claims/backlog."""
 
-    def test_401_returns_unauthorized_when_no_auth_header(self, mock_entra_auth_client):
-        response = mock_entra_auth_client.get("/reports/claims/backlog")
+    def test_401_returns_unauthorized_when_no_auth_header(self, client):
+        response = client.get("/reports/claims/backlog")
 
         assert response.status_code == 401
 
-    def test_401_returns_unauthorized_when_invalid_token(self, mock_entra_auth_client):
-        response = mock_entra_auth_client.get(
+    def test_401_returns_unauthorized_when_invalid_token(self, client):
+        response = client.get(
             "/reports/claims/backlog",
             headers={"Authorization": "Bearer invalid-token"},
         )
@@ -131,18 +136,16 @@ class TestGetClaimBacklogReportAuth:
         "provider_token",
         ["Inquests - Provider Application User", "Inquests - Provider Claims User"],
     )
-    def test_403_returns_forbidden_when_provider_token(
-        self, mock_entra_auth_client, provider_token
-    ):
-        response = mock_entra_auth_client.get(
+    def test_403_returns_forbidden_when_provider_token(self, client, provider_token):
+        response = client.get(
             "/reports/claims/backlog",
             headers={"Authorization": f"Bearer {provider_token}"},
         )
 
         assert response.status_code == 403
 
-    def test_200_returns_ok_when_caseworker_token(self, mock_entra_auth_client):
-        response = mock_entra_auth_client.get(
+    def test_200_returns_ok_when_caseworker_token(self, client):
+        response = client.get(
             "/reports/claims/backlog",
             headers={"Authorization": "Bearer Caseworker No Role"},
         )

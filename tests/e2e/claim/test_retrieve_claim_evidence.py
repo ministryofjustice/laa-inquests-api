@@ -1,9 +1,15 @@
 import uuid
 
+import pytest
 from sqlmodel import select
 
 from app.models.application.index import Application
 from app.models.claim.index import Claim, ClaimEvidence
+
+
+@pytest.fixture
+def auth_token():
+    return "Inquests - Provider Claims User"
 
 
 def _create_claim_evidence(session, claim_id: int | None = None) -> ClaimEvidence:

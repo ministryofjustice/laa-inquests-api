@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 from decimal import Decimal
 
+import pytest
 from sqlmodel import select
 
 from app.models.application.index import Application
@@ -10,6 +11,11 @@ from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.models.notifications.enums import NotificationType
 from tests.e2e.factories import create_application_in_db
+
+
+@pytest.fixture
+def auth_token():
+    return "Inquests - Claims caseworker"
 
 
 def _pay_in_full_payload(overrides=None):

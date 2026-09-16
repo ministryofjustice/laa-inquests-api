@@ -2,9 +2,16 @@ import io
 import uuid
 from unittest.mock import MagicMock
 
+import pytest
+
 from app import api
 from app.auth.rbac import Permission, get_current_user_permissions
 from app.routers.claims import get_sds_port
+
+
+@pytest.fixture
+def auth_token():
+    return "Inquests - Provider Claims User"
 
 
 def is_valid_uuid(val):
@@ -158,9 +165,7 @@ def test_201_upload_claim_evidence_allows_multiple_uploads(client, auth_token):
 
 
 class TestUploadClaimEvidenceRbac:
-    def test_201_upload_claim_evidence_with_provider_claims_user_app_role(
-        self, client, mock_entra_auth_client
-    ):
+    def test_201_upload_claim_evidence_with_provider_claims_user_app_role(self, client):
         response = client.post(
             "/claims/evidence",
             files={
@@ -176,7 +181,7 @@ class TestUploadClaimEvidenceRbac:
         assert response.status_code == 201
 
     def test_403_upload_claim_evidence_with_app_role_missing_upload_permission(
-        self, client, mock_entra_auth_client
+        self, client
     ):
         response = client.post(
             "/claims/evidence",
@@ -214,9 +219,7 @@ class TestUploadClaimEvidenceRbac:
 
         assert response.status_code == 201
 
-    def test_403_upload_claim_evidence_with_unmapped_app_role(
-        self, client, mock_entra_auth_client
-    ):
+    def test_403_upload_claim_evidence_with_unmapped_app_role(self, client):
         response = client.post(
             "/claims/evidence",
             files={

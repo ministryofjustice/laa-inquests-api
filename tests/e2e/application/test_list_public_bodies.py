@@ -1,6 +1,11 @@
 import pytest
 
 
+@pytest.fixture
+def auth_token():
+    return "Inquests - Provider Application User"
+
+
 def test_200_list_public_bodies_returns_seeded_record_with_id_and_description(
     client, auth_token
 ):
@@ -39,17 +44,17 @@ def test_200_list_public_bodies_returns_results_sorted_alphabetically_ignoring_d
 
 
 def test_401_list_public_bodies_returns_401_when_no_authorization_header(
-    mock_entra_auth_client,
+    client,
 ):
-    response = mock_entra_auth_client.get("/applications/public-bodies")
+    response = client.get("/applications/public-bodies")
 
     assert response.status_code == 401
 
 
 def test_200_list_public_bodies_returns_200_when_caseworker_token(
-    mock_entra_auth_client,
+    client,
 ):
-    response = mock_entra_auth_client.get(
+    response = client.get(
         "/applications/public-bodies",
         headers={"Authorization": "Bearer Caseworker No Role"},
     )
@@ -61,10 +66,8 @@ def test_200_list_public_bodies_returns_200_when_caseworker_token(
     "provider_token",
     ["Inquests - Provider Application User", "Inquests - Provider Claims User"],
 )
-def test_200_list_public_bodies_returns_200_when_provider_token(
-    mock_entra_auth_client, provider_token
-):
-    response = mock_entra_auth_client.get(
+def test_200_list_public_bodies_returns_200_when_provider_token(client, provider_token):
+    response = client.get(
         "/applications/public-bodies",
         headers={"Authorization": f"Bearer {provider_token}"},
     )

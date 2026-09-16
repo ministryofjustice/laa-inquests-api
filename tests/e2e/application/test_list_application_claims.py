@@ -9,6 +9,11 @@ from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ClaimType, 
 from app.models.claim.index import Claim, ClaimDecision
 
 
+@pytest.fixture
+def auth_token():
+    return "Inquests - Claims caseworker"
+
+
 def _seed_claim(
     session,
     laa_reference: int,
@@ -68,9 +73,7 @@ def test_200_returns_empty_list_when_application_has_no_claims(
     assert response.json() == []
 
 
-def test_200_assessed_true_returns_only_non_submitted_claims(
-    session, client, mock_entra_auth_client
-):
+def test_200_assessed_true_returns_only_non_submitted_claims(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
     _seed_claim(session, laa_reference, ClaimStatus.SUBMITTED)
     assessed_claim = _seed_claim(session, laa_reference, ClaimStatus.ACCEPTED)
@@ -199,10 +202,8 @@ def test_401_returns_unauthorized_when_no_auth_header(session, client):
     "provider_token",
     ["Inquests - Provider Application User", "Inquests - Provider Claims User"],
 )
-def test_403_returns_forbidden_when_provider_token(
-    mock_entra_auth_client, provider_token
-):
-    response = mock_entra_auth_client.get(
+def test_403_returns_forbidden_when_provider_token(client, provider_token):
+    response = client.get(
         "/applications/1/claims?assessed=true",
         headers={"Authorization": f"Bearer {provider_token}"},
     )

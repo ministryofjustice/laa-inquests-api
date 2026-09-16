@@ -7,6 +7,11 @@ from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 
 
+@pytest.fixture
+def auth_token():
+    return "Inquests - Applications caseworker"
+
+
 def test_204_update_application_public_bodies_updates_the_application_public_bodies(
     session, client, auth_token
 ):
@@ -142,9 +147,9 @@ def test_422_update_application_public_bodies_returns_unprocessable_entity_when_
 
 
 def test_401_update_application_public_bodies_returns_401_when_no_authorization_header(
-    mock_entra_auth_client,
+    client,
 ):
-    response = mock_entra_auth_client.patch(
+    response = client.patch(
         "/applications/1/public-bodies",
         json={"publicBodies": ["Ministry of Defence"]},
         headers={"Content-Type": "application/json"},
@@ -158,9 +163,9 @@ def test_401_update_application_public_bodies_returns_401_when_no_authorization_
     ["Inquests - Provider Application User", "Inquests - Provider Claims User"],
 )
 def test_403_update_application_public_bodies_returns_403_when_provider_token(
-    mock_entra_auth_client, provider_token
+    client, provider_token
 ):
-    response = mock_entra_auth_client.patch(
+    response = client.patch(
         "/applications/1/public-bodies",
         json={"publicBodies": ["Ministry of Defence"]},
         headers={

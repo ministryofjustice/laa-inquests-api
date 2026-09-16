@@ -1,8 +1,14 @@
 """E2E tests for sending grant letter print pack via Gov Notify precompiled letter."""
 
+import pytest
 from sqlmodel import select
 
 from app.models.application.index import Application
+
+
+@pytest.fixture
+def auth_token():
+    return "Inquests - Applications caseworker"
 
 
 def _grant_decision_payload():

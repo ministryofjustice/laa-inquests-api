@@ -1,7 +1,14 @@
+import pytest
+
 from tests.helpers.provider_details import (
     override_provider_details_port_with_error,
     override_provider_details_port_with_provider_offices,
 )
+
+
+@pytest.fixture
+def auth_token():
+    return "Inquests - Provider Application User"
 
 
 def test_200_list_provider_offices_returns_expected_response_shape(client, auth_token):
@@ -44,8 +51,8 @@ def test_500_list_provider_offices_when_provider_details_lookup_fails(
     )
 
 
-def test_403_list_provider_offices_when_caseworker_token(mock_entra_auth_client):
-    response = mock_entra_auth_client.get(
+def test_403_list_provider_offices_when_caseworker_token(client):
+    response = client.get(
         "/applications/provider-offices/123",
         headers={"Authorization": "Bearer Caseworker No Role"},
     )
