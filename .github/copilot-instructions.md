@@ -1,3 +1,4 @@
+TODO: update with new instructions about 401 and 403 e2e tests
 # GitHub Copilot Instructions — laa-inquests-api
 
 ## 1. Before Starting Any Feature
