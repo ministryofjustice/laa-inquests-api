@@ -1,5 +1,7 @@
 import pytest
 from fastapi import HTTPException
+from fastapi.dependencies.utils import get_dependant
+
 
 from app.auth.rbac import (
     ROLE_PERMISSIONS_MAP,
@@ -9,6 +11,7 @@ from app.auth.rbac import (
     require_permission,
 )
 from app.ports.entra_auth_port import AuthenticatedUser
+from app.routers.dependencies.entra_auth import verify_entra_token
 
 
 def _user(app_roles: set[str]) -> AuthenticatedUser:
@@ -75,6 +78,23 @@ def test_require_permission_raises_403_when_permission_missing():
 
     assert exc_info.value.status_code == 403
     assert "claim:create" in exc_info.value.detail
+
+
+def test_require_permission_depends_on_get_current_user_permissions():
+    permission_checker = require_permission(Permission.CLAIM_CREATE)
+
+    dependant = get_dependant(path="/test", call=permission_checker)
+
+    # Confirms the DI wiring, not a runtime call - FastAPI resolves this
+    # dependency itself; calling permission_checker directly bypasses it.
+    assert [sub.call for sub in dependant.dependencies] == [
+        get_current_user_permissions
+    ]
+
+
+def test_get_current_user_permissions_depends_on_verify_entra_token():
+    dependant = get_dependant(path="/test", call=get_current_user_permissions)
+    assert [sub.call for sub in dependant.dependencies] == [verify_entra_token]
 
 
 def test_external_provider_application_user_permission_set():
