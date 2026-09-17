@@ -13,7 +13,7 @@ WORKDIR /home/app/laa-inquests-api
 COPY requirements/system-packages.txt /tmp/system-packages.txt
 RUN apt-get update && \
     apt-get install -y --no-install-recommends --only-upgrade \
-        libsqlite3-0 perl-base gzip && \
+        libsqlite3-0 perl-base gzip libpcre2-8-0 && \
     grep -vE '^\s*(#|$)' /tmp/system-packages.txt | \
         xargs apt-get install -y --no-install-recommends && \
     rm -rf /var/lib/apt/lists/* /tmp/system-packages.txt
