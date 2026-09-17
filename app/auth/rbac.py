@@ -109,12 +109,6 @@ ROLE_PERMISSIONS_MAP: dict[Role, set[Permission]] = {
 }
 
 
-# TODO: test that require_permission does depend on verify_entra_token, so that
-# we know we have the 401 checking. For that, call verify_entra_token directly in
-# get_current_user_permissions, rather than using Depends and relying on FastAPI to do that
-# which makes it harder to unit test the 401 behaviour.
-
-
 def get_current_user_permissions(
     user: Annotated[AuthenticatedUser, Depends(verify_entra_token)],
 ) -> set[Permission]:
