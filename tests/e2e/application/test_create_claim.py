@@ -5,7 +5,7 @@ from decimal import Decimal
 from sqlmodel import select
 
 from app import api
-from app.auth.rbac import Permission, get_current_user_permissions
+from app.auth.rbac import Permission, Role, get_current_user_permissions
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 from app.models.claim.enums import (
@@ -28,7 +28,6 @@ from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.models.notifications.enums import NotificationType
 from tests.e2e.factories import create_application_in_db
-from tests.helpers.entra_auth import override_entra_auth_app_roles
 
 
 def _make_request_body(overrides=None):
@@ -130,7 +129,7 @@ def _seed_approved_claim(
 
 class TestCreateClaimBaseBehaviour:
     def test_404_create_claim_when_application_belongs_to_another_firm(
-        self, session, client, auth_token
+        self, session, client
     ):
         other_application = create_application_in_db(
             session,
@@ -146,7 +145,7 @@ class TestCreateClaimBaseBehaviour:
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -154,7 +153,7 @@ class TestCreateClaimBaseBehaviour:
         assert response.json()["detail"] == "Application not found"
 
     def test_201_create_claim_response_contains_only_claim_id_when_not_rejected(
-        self, session, client, auth_token
+        self, session, client
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
@@ -163,7 +162,7 @@ class TestCreateClaimBaseBehaviour:
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -173,7 +172,7 @@ class TestCreateClaimBaseBehaviour:
         assert set(claim.keys()) == {"claimId"}
 
     def test_201_create_claim_sends_submission_confirmation_email_to_provider(
-        self, session, client, auth_token, mock_gov_notify
+        self, session, client, mock_gov_notify
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
@@ -182,7 +181,7 @@ class TestCreateClaimBaseBehaviour:
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -200,7 +199,7 @@ class TestCreateClaimBaseBehaviour:
         assert recipient_email == application.provider.email_address
 
     def test_201_create_claim_creates_submission_confirmation_comms_history_event(
-        self, session, client, auth_token
+        self, session, client
     ):
         application = session.exec(select(Application)).first()
         laa_reference = application.laa_reference
@@ -210,7 +209,7 @@ class TestCreateClaimBaseBehaviour:
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -239,7 +238,7 @@ class TestCreateClaimBaseBehaviour:
         assert history_event.application_id == application.application_id
 
     def test_201_create_claim_creates_claim_submitted_history_event(
-        self, session, client, auth_token
+        self, session, client
     ):
         application = session.exec(select(Application)).first()
         laa_reference = application.laa_reference
@@ -250,7 +249,7 @@ class TestCreateClaimBaseBehaviour:
             json=request_body,
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -275,7 +274,7 @@ class TestCreateClaimBaseBehaviour:
 
 class TestCreateClaimFundsAndPersistence:
     def test_201_create_claim_auto_approves_payment_on_account_when_eligible(
-        self, session, client, auth_token
+        self, session, client
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
@@ -284,7 +283,7 @@ class TestCreateClaimFundsAndPersistence:
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -303,7 +302,7 @@ class TestCreateClaimFundsAndPersistence:
         assert decision.decision == "PAY_IN_FULL"
 
     def test_201_create_claim_auto_approval_persists_profit_cost_decision_amount(
-        self, session, client, auth_token
+        self, session, client
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
@@ -314,7 +313,7 @@ class TestCreateClaimFundsAndPersistence:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -338,7 +337,7 @@ class TestCreateClaimFundsAndPersistence:
         assert decision_amount.disbursement_vat_zero is None
 
     def test_201_create_claim_auto_approval_persists_disbursement_decision_amount(
-        self, session, client, auth_token
+        self, session, client
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
@@ -353,7 +352,7 @@ class TestCreateClaimFundsAndPersistence:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -380,7 +379,7 @@ class TestCreateClaimFundsAndPersistence:
         assert decision_amount.profit_cost_vat_zero is None
 
     def test_201_create_claim_stores_provisional_total_funds_remaining_for_approved_claim(
-        self, session, client, auth_token
+        self, session, client
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
@@ -389,7 +388,7 @@ class TestCreateClaimFundsAndPersistence:
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -401,7 +400,7 @@ class TestCreateClaimFundsAndPersistence:
         assert stored_claim.total_funds_remaining_after_claim == Decimal("8800.00")
 
     def test_201_create_claim_deducts_new_claim_amount_from_total_funds_available_when_not_approved(
-        self, session, client, auth_token
+        self, session, client
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
@@ -431,7 +430,7 @@ class TestCreateClaimFundsAndPersistence:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -444,7 +443,7 @@ class TestCreateClaimFundsAndPersistence:
         assert stored_claim.total_funds_remaining_after_claim == Decimal("8800.00")
 
     def test_201_create_claim_deducts_cumulative_approved_and_new_claim_amount(
-        self, session, client, auth_token
+        self, session, client
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
         _seed_approved_claim(
@@ -467,7 +466,7 @@ class TestCreateClaimFundsAndPersistence:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -480,13 +479,13 @@ class TestCreateClaimFundsAndPersistence:
 
         get_response = client.get(
             f"/applications/{laa_reference}/claims/{claim_id}",
-            headers={"Authorization": f"Bearer {auth_token}"},
+            headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
         )
         assert get_response.status_code == 200
         assert get_response.json()["totalFundsRemainingAfterClaim"] == "5500.00"
 
     def test_201_created_claim_returns_total_funds_remaining_on_get_by_id(
-        self, session, client, auth_token
+        self, session, client
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
@@ -495,22 +494,20 @@ class TestCreateClaimFundsAndPersistence:
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
         claim_id = create_response.json()["claimId"]
 
         get_response = client.get(
             f"/applications/{laa_reference}/claims/{claim_id}",
-            headers={"Authorization": f"Bearer {auth_token}"},
+            headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
         )
 
         assert get_response.status_code == 200
         assert get_response.json()["totalFundsRemainingAfterClaim"] == "8800.00"
 
-    def test_201_create_claim_without_optional_fields(
-        self, session, client, auth_token
-    ):
+    def test_201_create_claim_without_optional_fields(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -539,7 +536,7 @@ class TestCreateClaimFundsAndPersistence:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -547,9 +544,7 @@ class TestCreateClaimFundsAndPersistence:
         claim = response.json()
         assert set(claim.keys()) == {"claimId"}
 
-    def test_201_create_claim_persists_claim_to_database(
-        self, session, client, auth_token
-    ):
+    def test_201_create_claim_persists_claim_to_database(self, session, client):
         application = session.exec(select(Application)).first()
         laa_reference = application.laa_reference
 
@@ -558,7 +553,7 @@ class TestCreateClaimFundsAndPersistence:
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -568,7 +563,7 @@ class TestCreateClaimFundsAndPersistence:
         assert stored_claim.application_id == application.application_id
 
     def test_201_create_claim_links_provided_evidence_ids_to_claim(
-        self, session, client, auth_token
+        self, session, client
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
         evidence = ClaimEvidence(sds_file_name="stored.pdf", file_name="original.pdf")
@@ -583,7 +578,7 @@ class TestCreateClaimFundsAndPersistence:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -595,7 +590,7 @@ class TestCreateClaimFundsAndPersistence:
 
 class TestCreateClaimValidation:
     def test_422_create_claim_with_empty_evidence_ids_returns_error(
-        self, session, client, auth_token
+        self, session, client
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
@@ -604,16 +599,14 @@ class TestCreateClaimValidation:
             json=_make_request_body({"claimEvidenceIds": []}),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
         assert response.status_code == 422
         assert response.json()["detail"]["errorCode"] == "MISSING_CLAIM_EVIDENCE"
 
-    def test_422_payment_on_account_without_poa_type_id(
-        self, session, client, auth_token
-    ):
+    def test_422_payment_on_account_without_poa_type_id(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -621,7 +614,7 @@ class TestCreateClaimValidation:
             json=_make_request_body({"poaTypeId": None}),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -631,9 +624,7 @@ class TestCreateClaimValidation:
             == "MISSING_POA_TYPE_FOR_PAYMENT_ON_ACCOUNT"
         )
 
-    def test_422_non_payment_on_account_with_poa_type_id(
-        self, session, client, auth_token
-    ):
+    def test_422_non_payment_on_account_with_poa_type_id(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -643,7 +634,7 @@ class TestCreateClaimValidation:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -654,7 +645,7 @@ class TestCreateClaimValidation:
         )
 
     def test_201_create_final_bill_claim_persists_inquest_outcome_links(
-        self, session, client, auth_token
+        self, session, client
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
@@ -683,7 +674,7 @@ class TestCreateClaimValidation:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -699,7 +690,7 @@ class TestCreateClaimValidation:
         }
 
     def test_201_create_nil_bill_claim_persists_inquest_outcome_links(
-        self, session, client, auth_token
+        self, session, client
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
@@ -726,7 +717,7 @@ class TestCreateClaimValidation:
             json=body,
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -741,9 +732,7 @@ class TestCreateClaimValidation:
         ).all()
         assert {row.inquest_outcome_id.name for row in stored} == {"OPEN_CONCLUSION"}
 
-    def test_422_final_bill_claim_without_inquest_outcomes(
-        self, session, client, auth_token
-    ):
+    def test_422_final_bill_claim_without_inquest_outcomes(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -761,16 +750,14 @@ class TestCreateClaimValidation:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
         assert response.status_code == 422
         assert response.json()["detail"]["errorCode"] == "MISSING_INQUEST_OUTCOMES"
 
-    def test_422_payment_on_account_claim_with_inquest_outcomes(
-        self, session, client, auth_token
-    ):
+    def test_422_payment_on_account_claim_with_inquest_outcomes(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -778,16 +765,14 @@ class TestCreateClaimValidation:
             json=_make_request_body({"inquestOutcomes": ["NATURAL_CAUSES"]}),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
         assert response.status_code == 422
         assert response.json()["detail"]["errorCode"] == "INQUEST_OUTCOMES_NOT_ALLOWED"
 
-    def test_422_create_claim_with_invalid_inquest_outcome_name(
-        self, session, client, auth_token
-    ):
+    def test_422_create_claim_with_invalid_inquest_outcome_name(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -805,14 +790,14 @@ class TestCreateClaimValidation:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
         assert response.status_code == 422
 
     def test_201_create_final_bill_claim_persists_cost_template_file(
-        self, session, client, auth_token
+        self, session, client
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
         file_id = uuid.uuid4()
@@ -842,7 +827,7 @@ class TestCreateClaimValidation:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -856,9 +841,7 @@ class TestCreateClaimValidation:
         assert stored[0].claim_cost_template_file_id == file_id
         assert stored[0].claim_cost_template_file_name == "final_bill_costs.xlsx"
 
-    def test_422_nil_bill_claim_with_cost_template_file(
-        self, session, client, auth_token
-    ):
+    def test_422_nil_bill_claim_with_cost_template_file(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         body = _make_request_body(
@@ -886,7 +869,7 @@ class TestCreateClaimValidation:
             json=body,
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -895,7 +878,7 @@ class TestCreateClaimValidation:
             response.json()["detail"]["errorCode"] == "COST_TEMPLATE_FILE_NOT_ALLOWED"
         )
 
-    def test_422_nil_bill_claim_with_claim_evidence(self, session, client, auth_token):
+    def test_422_nil_bill_claim_with_claim_evidence(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -917,14 +900,14 @@ class TestCreateClaimValidation:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
         assert response.status_code == 422
         assert response.json()["detail"]["errorCode"] == "CLAIM_EVIDENCE_NOT_ALLOWED"
 
-    def test_422_nil_bill_claim_with_counsel_details(self, session, client, auth_token):
+    def test_422_nil_bill_claim_with_counsel_details(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         body = _make_request_body(
@@ -950,16 +933,14 @@ class TestCreateClaimValidation:
             json=body,
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
         assert response.status_code == 422
         assert response.json()["detail"]["errorCode"] == "COUNSEL_DETAILS_NOT_ALLOWED"
 
-    def test_422_final_bill_claim_without_cost_template_file(
-        self, session, client, auth_token
-    ):
+    def test_422_final_bill_claim_without_cost_template_file(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -973,7 +954,7 @@ class TestCreateClaimValidation:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -981,7 +962,7 @@ class TestCreateClaimValidation:
         assert response.json()["detail"]["errorCode"] == "MISSING_COST_TEMPLATE_FILE"
 
     def test_422_payment_on_account_claim_with_cost_template_file(
-        self, session, client, auth_token
+        self, session, client
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
@@ -997,7 +978,7 @@ class TestCreateClaimValidation:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1006,7 +987,7 @@ class TestCreateClaimValidation:
             response.json()["detail"]["errorCode"] == "COST_TEMPLATE_FILE_NOT_ALLOWED"
         )
 
-    def test_422_profit_cost_with_no_cost_fields(self, session, client, auth_token):
+    def test_422_profit_cost_with_no_cost_fields(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -1020,7 +1001,7 @@ class TestCreateClaimValidation:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1028,7 +1009,7 @@ class TestCreateClaimValidation:
         assert response.json()["detail"]["errorCode"] == "MISSING_TOTAL_CLAIM_COST"
 
     def test_201_create_final_bill_claim_persists_final_bill_details(
-        self, session, client, auth_token
+        self, session, client
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
@@ -1057,7 +1038,7 @@ class TestCreateClaimValidation:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1077,9 +1058,7 @@ class TestCreateClaimValidation:
         assert stored.paying_party == "Test Council"
         assert stored.number_of_counsel_instructed == NumberOfCounselInstructed.TWO
 
-    def test_422_final_bill_claim_without_final_bill_details(
-        self, session, client, auth_token
-    ):
+    def test_422_final_bill_claim_without_final_bill_details(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -1097,7 +1076,7 @@ class TestCreateClaimValidation:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1105,7 +1084,7 @@ class TestCreateClaimValidation:
         assert response.json()["detail"]["errorCode"] == "MISSING_FINAL_BILL_DETAILS"
 
     def test_422_payment_on_account_claim_with_final_bill_details(
-        self, session, client, auth_token
+        self, session, client
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
@@ -1124,7 +1103,7 @@ class TestCreateClaimValidation:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1133,9 +1112,7 @@ class TestCreateClaimValidation:
             response.json()["detail"]["errorCode"] == "FINAL_BILL_DETAILS_NOT_ALLOWED"
         )
 
-    def test_422_payment_on_account_claim_with_counsel_details(
-        self, session, client, auth_token
-    ):
+    def test_422_payment_on_account_claim_with_counsel_details(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -1148,14 +1125,14 @@ class TestCreateClaimValidation:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
         assert response.status_code == 422
         assert response.json()["detail"]["errorCode"] == "COUNSEL_DETAILS_NOT_ALLOWED"
 
-    def test_422_final_bill_claim_with_net_total(self, session, client, auth_token):
+    def test_422_final_bill_claim_with_net_total(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -1163,7 +1140,7 @@ class TestCreateClaimValidation:
             json=_make_final_bill_body({"totalProfitCostNet": 100}),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1172,7 +1149,7 @@ class TestCreateClaimValidation:
             response.json()["detail"]["errorCode"] == "NET_TOTAL_NOT_ALLOWED_FOR_BILL"
         )
 
-    def test_422_nil_bill_claim_with_net_total(self, session, client, auth_token):
+    def test_422_nil_bill_claim_with_net_total(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -1180,7 +1157,7 @@ class TestCreateClaimValidation:
             json=_make_nil_bill_body({"totalProfitCostNet": 0}),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1189,9 +1166,7 @@ class TestCreateClaimValidation:
             response.json()["detail"]["errorCode"] == "NET_TOTAL_NOT_ALLOWED_FOR_BILL"
         )
 
-    def test_422_final_bill_claim_with_vat_zero_total(
-        self, session, client, auth_token
-    ):
+    def test_422_final_bill_claim_with_vat_zero_total(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -1199,7 +1174,7 @@ class TestCreateClaimValidation:
             json=_make_final_bill_body({"totalProfitCostVatZero": 100}),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1209,9 +1184,7 @@ class TestCreateClaimValidation:
             == "VAT_ZERO_TOTAL_NOT_ALLOWED_FOR_BILL"
         )
 
-    def test_422_final_bill_claim_without_gross_total(
-        self, session, client, auth_token
-    ):
+    def test_422_final_bill_claim_without_gross_total(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -1219,16 +1192,14 @@ class TestCreateClaimValidation:
             json=_make_final_bill_body({"totalProfitCostGross": None}),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
         assert response.status_code == 422
         assert response.json()["detail"]["errorCode"] == "MISSING_GROSS_TOTAL_FOR_BILL"
 
-    def test_422_final_bill_claim_with_zero_gross_total(
-        self, session, client, auth_token
-    ):
+    def test_422_final_bill_claim_with_zero_gross_total(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -1236,7 +1207,7 @@ class TestCreateClaimValidation:
             json=_make_final_bill_body({"totalProfitCostGross": 0}),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1246,9 +1217,7 @@ class TestCreateClaimValidation:
             == "FINAL_BILL_GROSS_MUST_BE_POSITIVE"
         )
 
-    def test_422_nil_bill_claim_with_non_zero_gross_total(
-        self, session, client, auth_token
-    ):
+    def test_422_nil_bill_claim_with_non_zero_gross_total(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -1256,16 +1225,14 @@ class TestCreateClaimValidation:
             json=_make_nil_bill_body({"totalProfitCostGross": 100}),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
         assert response.status_code == 422
         assert response.json()["detail"]["errorCode"] == "NIL_BILL_GROSS_MUST_BE_ZERO"
 
-    def test_201_final_bill_claim_with_positive_gross_only(
-        self, session, client, auth_token
-    ):
+    def test_201_final_bill_claim_with_positive_gross_only(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -1273,7 +1240,7 @@ class TestCreateClaimValidation:
             json=_make_final_bill_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1282,7 +1249,7 @@ class TestCreateClaimValidation:
         assert stored_claim.total_profit_cost_net is None
         assert stored_claim.total_profit_cost_gross == Decimal("1200.00")
 
-    def test_201_nil_bill_claim_with_zero_gross_only(self, session, client, auth_token):
+    def test_201_nil_bill_claim_with_zero_gross_only(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -1290,7 +1257,7 @@ class TestCreateClaimValidation:
             json=_make_nil_bill_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1299,9 +1266,7 @@ class TestCreateClaimValidation:
         assert stored_claim.total_profit_cost_net is None
         assert stored_claim.total_profit_cost_gross == Decimal("0.00")
 
-    def test_422_profit_cost_with_net_higher_than_gross(
-        self, session, client, auth_token
-    ):
+    def test_422_profit_cost_with_net_higher_than_gross(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -1311,7 +1276,7 @@ class TestCreateClaimValidation:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1321,7 +1286,7 @@ class TestCreateClaimValidation:
             == "NET_TOTAL_HIGHER_THAN_GROSS_TOTAL"
         )
 
-    def test_201_profit_cost_with_vat_zero_only(self, session, client, auth_token):
+    def test_201_profit_cost_with_vat_zero_only(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -1335,13 +1300,13 @@ class TestCreateClaimValidation:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
         assert response.status_code == 201
 
-    def test_422_profit_cost_mixing_vat_zero_and_net(self, session, client, auth_token):
+    def test_422_profit_cost_mixing_vat_zero_and_net(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -1351,7 +1316,7 @@ class TestCreateClaimValidation:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1359,7 +1324,7 @@ class TestCreateClaimValidation:
         assert response.json()["detail"]["errorCode"] == "PROFIT_COST_MIXED_VAT"
 
     def test_201_non_profit_cost_with_vat_zero_only_defaults_missing_totals(
-        self, session, client, auth_token
+        self, session, client
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
@@ -1375,7 +1340,7 @@ class TestCreateClaimValidation:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1391,7 +1356,7 @@ class TestCreateClaimValidation:
             "150.00"
         )
 
-    def test_422_non_profit_cost_with_no_cost_fields(self, session, client, auth_token):
+    def test_422_non_profit_cost_with_no_cost_fields(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -1406,7 +1371,7 @@ class TestCreateClaimValidation:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1417,9 +1382,7 @@ class TestCreateClaimValidation:
             == "Please complete the total value of your claim to continue"
         )
 
-    def test_422_non_profit_cost_with_net_higher_than_gross(
-        self, session, client, auth_token
-    ):
+    def test_422_non_profit_cost_with_net_higher_than_gross(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -1434,7 +1397,7 @@ class TestCreateClaimValidation:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1449,7 +1412,7 @@ class TestCreateClaimValidation:
         )
 
     def test_create_claim_with_missing_claimant_id_returns_422(
-        self, session, client, auth_token, mock_gov_notify
+        self, session, client, mock_gov_notify
     ):
         application = session.exec(select(Application)).first()
         laa_reference = application.laa_reference
@@ -1462,7 +1425,7 @@ class TestCreateClaimValidation:
             json=request_body,
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1472,7 +1435,7 @@ class TestCreateClaimValidation:
 
 class TestCreateClaimAutoDecisionRules:
     def test_201_create_claim_when_existing_claims_push_application_total_over_limit(
-        self, session, client, auth_token
+        self, session, client
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
@@ -1483,7 +1446,7 @@ class TestCreateClaimAutoDecisionRules:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1494,14 +1457,14 @@ class TestCreateClaimAutoDecisionRules:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
         assert response.status_code == 201
 
     def test_201_create_claim_auto_reject_returns_reason_and_updates_decision_status(
-        self, session, client, auth_token
+        self, session, client
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
@@ -1516,7 +1479,7 @@ class TestCreateClaimAutoDecisionRules:
                 ),
                 headers={
                     "Content-Type": "application/json",
-                    "Authorization": f"Bearer {auth_token}",
+                    "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
                 },
             )
             assert seed_response.status_code == 201
@@ -1531,7 +1494,7 @@ class TestCreateClaimAutoDecisionRules:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1556,7 +1519,7 @@ class TestCreateClaimAutoDecisionRules:
         assert decision_reasons[0].reason_code == "MAX_POA_CLAIMS_EXCEEDED"
 
     def test_201_create_claim_does_not_count_rejected_profit_cost_poa_towards_max_limit(
-        self, session, client, auth_token
+        self, session, client
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
@@ -1572,7 +1535,7 @@ class TestCreateClaimAutoDecisionRules:
                 ),
                 headers={
                     "Content-Type": "application/json",
-                    "Authorization": f"Bearer {auth_token}",
+                    "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
                 },
             )
             assert seed_response.status_code == 201
@@ -1593,7 +1556,7 @@ class TestCreateClaimAutoDecisionRules:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1610,7 +1573,7 @@ class TestCreateClaimAutoDecisionRules:
         assert decision.decision == "PAY_IN_FULL"
 
     def test_201_create_claim_that_passes_rejection_rules_auto_approves(
-        self, session, client, auth_token
+        self, session, client
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
@@ -1624,7 +1587,7 @@ class TestCreateClaimAutoDecisionRules:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1645,7 +1608,7 @@ class TestCreateClaimAutoDecisionRules:
         assert decision.decision == "PAY_IN_FULL"
 
     def test_201_create_claim_does_not_auto_approve_when_amount_exceeds_50000(
-        self, session, client, auth_token
+        self, session, client
     ):
         application = session.exec(select(Application)).first()
         application_proceeding = application.proceeding
@@ -1665,7 +1628,7 @@ class TestCreateClaimAutoDecisionRules:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1683,7 +1646,7 @@ class TestCreateClaimAutoDecisionRules:
         assert decision is None
 
     def test_201_create_claim_does_not_auto_approve_when_application_status_is_withdrawn(
-        self, session, client, auth_token
+        self, session, client
     ):
         application = session.exec(select(Application)).first()
         application_proceeding = application.proceeding
@@ -1705,7 +1668,7 @@ class TestCreateClaimAutoDecisionRules:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1722,9 +1685,7 @@ class TestCreateClaimAutoDecisionRules:
         ).first()
         assert decision is None
 
-    def test_422_create_claim_when_application_not_granted(
-        self, session, client, auth_token
-    ):
+    def test_422_create_claim_when_application_not_granted(self, session, client):
         application = session.exec(select(Application)).first()
         application.proceeding.merits_decision = MeritsDecision.PENDING
         session.add(application.proceeding)
@@ -1740,7 +1701,7 @@ class TestCreateClaimAutoDecisionRules:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1753,7 +1714,7 @@ class TestCreateClaimAutoDecisionRules:
         assert stored_claims == []
 
     def test_201_create_claim_auto_reject_returns_multiple_reasons_for_rejection_when_applicable(
-        self, session, client, auth_token
+        self, session, client
     ):
         application = session.exec(select(Application)).first()
         laa_reference = application.laa_reference
@@ -1772,7 +1733,7 @@ class TestCreateClaimAutoDecisionRules:
                 ),
                 headers={
                     "Content-Type": "application/json",
-                    "Authorization": f"Bearer {auth_token}",
+                    "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
                 },
             )
             assert seed_response.status_code == 201
@@ -1795,7 +1756,7 @@ class TestCreateClaimAutoDecisionRules:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1827,7 +1788,7 @@ class TestCreateClaimAutoDecisionRules:
         assert {r.reason_code for r in decision_reasons} == expected_reasons
 
     def test_201_create_claim_auto_approves_subsequent_claim_after_one_is_rejected(
-        self, session, client, auth_token
+        self, session, client
     ):
         application = session.exec(select(Application)).first()
         laa_reference = application.laa_reference
@@ -1842,7 +1803,7 @@ class TestCreateClaimAutoDecisionRules:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
         assert rejected_response.status_code == 201
@@ -1860,7 +1821,7 @@ class TestCreateClaimAutoDecisionRules:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1872,7 +1833,7 @@ class TestCreateClaimAutoDecisionRules:
         assert approved_stored.status_id == "PAY_IN_FULL"
 
     def test_201_create_claim_holds_for_manual_review_when_cumulative_approved_claims_exceed_limit(
-        self, session, client, auth_token
+        self, session, client
     ):
         application = session.exec(select(Application)).first()
         laa_reference = application.laa_reference
@@ -1888,7 +1849,7 @@ class TestCreateClaimAutoDecisionRules:
                 ),
                 headers={
                     "Content-Type": "application/json",
-                    "Authorization": f"Bearer {auth_token}",
+                    "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
                 },
             )
             assert approved.status_code == 201
@@ -1901,7 +1862,7 @@ class TestCreateClaimAutoDecisionRules:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1919,7 +1880,7 @@ class TestCreateClaimAutoDecisionRules:
         assert decision is None
 
     def test_201_create_claim_rejects_when_single_poa_exceeds_cost_limit_even_over_50000(
-        self, session, client, auth_token
+        self, session, client
     ):
         application = session.exec(select(Application)).first()
         application_proceeding = application.proceeding
@@ -1937,7 +1898,7 @@ class TestCreateClaimAutoDecisionRules:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1957,7 +1918,7 @@ class TestCreateClaimAutoDecisionRules:
         assert decision.decision == "REJECT"
 
     def test_201_create_claim_holds_for_manual_review_when_poa_over_50000_within_cost_limit(
-        self, session, client, auth_token
+        self, session, client
     ):
         application = session.exec(select(Application)).first()
         application_proceeding = application.proceeding
@@ -1975,7 +1936,7 @@ class TestCreateClaimAutoDecisionRules:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -1993,7 +1954,7 @@ class TestCreateClaimAutoDecisionRules:
         assert decision is None
 
     def test_201_create_claim_still_rejects_profit_cost_poa_over_50000_when_max_poa_count_exceeded(
-        self, session, client, auth_token
+        self, session, client
     ):
         application = session.exec(select(Application)).first()
         laa_reference = application.laa_reference
@@ -2013,7 +1974,7 @@ class TestCreateClaimAutoDecisionRules:
                 ),
                 headers={
                     "Content-Type": "application/json",
-                    "Authorization": f"Bearer {auth_token}",
+                    "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
                 },
             )
             assert seed_response.status_code == 201
@@ -2025,7 +1986,7 @@ class TestCreateClaimAutoDecisionRules:
             ),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
 
@@ -2045,10 +2006,7 @@ class TestCreateClaimAutoDecisionRules:
 
 
 class TestCreateClaimRbac:
-    def test_201_create_claim_with_provider_claims_user_app_role(
-        self, session, client, auth_token
-    ):
-        override_entra_auth_app_roles({"Inquests - Provider Claims User"})
+    def test_201_create_claim_with_provider_claims_user_app_role(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -2056,15 +2014,14 @@ class TestCreateClaimRbac:
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
         assert response.status_code == 201
 
     def test_403_create_claim_with_app_role_missing_create_permission(
-        self, session, client, auth_token
+        self, session, client
     ):
-        override_entra_auth_app_roles({"Inquests - Provider Application User"})
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -2072,13 +2029,12 @@ class TestCreateClaimRbac:
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
             },
         )
         assert response.status_code == 403
 
-    def test_403_create_claim_with_unmapped_app_role(self, session, client, auth_token):
-        override_entra_auth_app_roles({"Some Unknown Role"})
+    def test_403_create_claim_with_unmapped_app_role(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
         response = client.post(
@@ -2086,14 +2042,12 @@ class TestCreateClaimRbac:
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": "Bearer Provider No Role",
             },
         )
         assert response.status_code == 403
 
-    def test_201_create_claim_with_permission_override(
-        self, session, client, auth_token
-    ):
+    def test_201_create_claim_with_permission_override(self, session, client):
         def get_current_user_permissions_override():
             return {Permission.CLAIM_CREATE}
 
@@ -2107,14 +2061,12 @@ class TestCreateClaimRbac:
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
         assert response.status_code == 201
 
-    def test_403_create_claim_with_empty_permission_override(
-        self, session, client, auth_token
-    ):
+    def test_403_create_claim_with_empty_permission_override(self, session, client):
         def get_current_user_permissions_override():
             return set()
 
@@ -2128,7 +2080,7 @@ class TestCreateClaimRbac:
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {auth_token}",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
         assert response.status_code == 403

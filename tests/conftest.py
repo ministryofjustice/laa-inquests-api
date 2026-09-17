@@ -1,12 +1,14 @@
 from unittest.mock import MagicMock
 
 import pytest
+from fastapi import HTTPException, status
 from fastapi.testclient import TestClient
 from passlib.hash import argon2
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session, SQLModel, StaticPool, create_engine
 
 from app import api
+from app.auth.rbac import ROLE_PERMISSIONS_MAP
 from app.db import get_session
 from app.db.session import CustomSession
 from app.models import User
@@ -150,6 +152,8 @@ def session_fixture():
 @pytest.fixture(name="client")
 def client_fixture(session: Session):
     mock_pdf_generation_port = MagicMock()
+    mock_pdf_generation_port.generate_pdf.return_value = b"%PDF-1.4\n%Mock PDF content"
+
     mock_gov_notify_port = MagicMock()
 
     mock_gov_notify_port.send_application_submit_confirmation_email.return_value = None
@@ -198,121 +202,34 @@ def client_fixture(session: Session):
         mock_sds.retrieve_claim_evidence.return_value = iter([b"file bytes"])
         return mock_sds
 
-    def get_entra_auth_port_bypass():
-        mock_auth = MagicMock()
-        mock_auth.verify_token.return_value = AuthenticatedUser(
-            firm_code="0A123B",
-            scopes=frozenset(
-                {
-                    "User.Provider",
-                    "User.Caseworker",
-                }
-            ),
-            app_roles=frozenset(
-                {
-                    "Inquests - Provider Application User",
-                    "Inquests - Provider Claims User",
-                }
-            ),
-            name="Test Name",
-            entra_object_id="some-entra-object-id",
-        )
-        return mock_auth
-
-    api.dependency_overrides[get_session] = get_session_override
-    api.dependency_overrides[get_provider_details_port] = (
-        get_provider_details_port_override
-    )
-    api.dependency_overrides[get_gov_notify_port] = get_gov_notify_port_override
-    api.dependency_overrides[get_pdf_generation_port] = get_pdf_generation_port_override
-    api.dependency_overrides[get_sds_port] = get_sds_port_override
-    api.dependency_overrides[get_entra_auth_port] = get_entra_auth_port_bypass
-
-    client = TestClient(api, raise_server_exceptions=False)
-    yield client
-    api.dependency_overrides.clear()
-
-
-@pytest.fixture(name="entra_auth_client")
-def entra_auth_client_fixture(session: Session):
-    from fastapi import HTTPException, status
-
-    def get_session_override():
-        return session
-
-    def get_provider_details_port_override():
-        mock_port = MagicMock()
-        mock_port.get_firm_name.return_value = "Test Firm Name"
-        mock_port.get_firms_by_ids.side_effect = lambda firm_ids: [
-            {"firmNumber": fid, "firmName": f"Firm {fid}"} for fid in firm_ids
-        ]
-        mock_port.get_office_address.return_value = Address(
-            address_line_1="Test Office Street",
-            town_or_city="Test City",
-            postcode="TE1 1ST",
-        )
-        return mock_port
-
-    def get_gov_notify_port_override():
-        return MagicMock()
-
-    def get_pdf_generation_port_override():
-        mock_port = MagicMock()
-        mock_port.generate_pdf.return_value = b"%PDF-1.4\n%Mock PDF content"
-        return mock_port
-
-    def get_sds_port_override():
-        mock_sds = MagicMock()
-        mock_sds.virus_check_coroners_letter.return_value = True
-        mock_sds.save_coroners_letter.return_value = SDSUploadCoronersLetterResponse(
-            sds_file_name="test-file_abc123.pdf",
-            status="SUCCESS",
-        )
-        mock_sds.virus_check_claim_evidence.return_value = True
-        mock_sds.save_claim_evidence.return_value = SDSUploadClaimEvidenceResponse(
-            sds_file_name="test-claim-evidence_abc123.pdf",
-            status="SUCCESS",
-        )
-        mock_sds.retrieve_coroners_letter.return_value = iter([b"file bytes"])
-        mock_sds.retrieve_claim_evidence.return_value = iter([b"file bytes"])
-        return mock_sds
-
     def get_entra_auth_port_override():
         mock_auth = MagicMock()
-        # Single source of truth for test tokens: each token declares the scopes
-        # and RBAC app roles it carries, mirroring a real Entra JWT payload.
-        tokens = {
-            "valid-caseworker-entra-token": {
-                "scopes": {"User.Caseworker"},
-                "app_roles": set(),
-            },
-            "valid-provider-application-user-token": {
-                "scopes": {"User.Provider"},
-                "app_roles": {"Inquests - Provider Application User"},
-            },
-            "valid-provider-claims-user-token": {
-                "scopes": {"User.Provider"},
-                "app_roles": {"Inquests - Provider Claims User"},
-            },
-        }
 
-        def verify_token(token: str, required_scopes: set[str] | None = None) -> None:
-            if token == "invalid-token":
+        # Pass in a Role.value (e.g. Role.PROVIDER_APPLICATION_USER.value) or Provider/Caseworker No Role
+        def verify_token(
+            role: str, required_scopes: set[str] | None = None
+        ) -> AuthenticatedUser:
+            app_roles: frozenset
+            scopes: frozenset
+
+            if role in ROLE_PERMISSIONS_MAP:
+                app_roles = frozenset([role])
+                scopes = frozenset(
+                    ["User.Provider" if "Provider" in role else "User.Caseworker"]
+                )
+            elif "No Role" in role:
+                app_roles = frozenset()
+                scopes = frozenset(
+                    ["User.Provider" if "Provider" in role else "User.Caseworker"]
+                )
+            else:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Could not validate credentials",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
 
-            if token not in tokens:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Could not validate credentials",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-
-            token_scopes = tokens[token]["scopes"]
-            if required_scopes and required_scopes.isdisjoint(token_scopes):
+            if required_scopes and required_scopes.isdisjoint(scopes):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Insufficient permissions",
@@ -321,9 +238,9 @@ def entra_auth_client_fixture(session: Session):
 
             return AuthenticatedUser(
                 firm_code="0A123B",
-                scopes=frozenset(token_scopes),
+                scopes=scopes,
                 name="Test Name",
-                app_roles=frozenset(tokens[token]["app_roles"]),
+                app_roles=app_roles,
             )
 
         mock_auth.verify_token.side_effect = verify_token
@@ -338,18 +255,9 @@ def entra_auth_client_fixture(session: Session):
     api.dependency_overrides[get_sds_port] = get_sds_port_override
     api.dependency_overrides[get_entra_auth_port] = get_entra_auth_port_override
 
-    yield TestClient(api, raise_server_exceptions=False)
+    client = TestClient(api, raise_server_exceptions=False)
+    yield client
     api.dependency_overrides.clear()
-
-
-@pytest.fixture
-def auth_token(client):
-    return "test-token"
-
-
-@pytest.fixture
-def auth_token_disabled_user(client):
-    return "disabled-user-test-token"
 
 
 @pytest.fixture

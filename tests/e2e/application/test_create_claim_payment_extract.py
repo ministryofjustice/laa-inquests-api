@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from sqlmodel import select
 
+from app.auth.rbac import Role
 from app.models.application.index import Application
 from app.models.claim.enums import InvoiceTypeCode, TaxCode
 from app.models.claim.index import Claim, ClaimPaymentExtract
@@ -22,14 +23,14 @@ def _make_request_body(overrides=None):
     return body
 
 
-def _post_claim(session, client, auth_token, overrides=None):
+def _post_claim(session, client, overrides=None):
     laa_reference = session.exec(select(Application)).first().laa_reference
     return client.post(
         f"/applications/{laa_reference}/claim",
         json=_make_request_body(overrides),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
         },
     )
 
@@ -49,10 +50,8 @@ def _payment_extracts(session, claim_id):
 
 
 class TestCreateClaimPaymentExtract:
-    def test_201_profit_cost_vat_claim_persists_payment_extract(
-        self, session, client, auth_token
-    ):
-        response = _post_claim(session, client, auth_token)
+    def test_201_profit_cost_vat_claim_persists_payment_extract(self, session, client):
+        response = _post_claim(session, client)
 
         assert response.status_code == 201
         claim_id = response.json()["claimId"]
@@ -69,12 +68,11 @@ class TestCreateClaimPaymentExtract:
         assert payment_extract.tax_code == TaxCode.GB_VAT_20
 
     def test_201_profit_cost_zero_vat_claim_persists_payment_extract(
-        self, session, client, auth_token
+        self, session, client
     ):
         response = _post_claim(
             session,
             client,
-            auth_token,
             {
                 "totalProfitCostNet": None,
                 "totalProfitCostGross": None,
@@ -94,12 +92,11 @@ class TestCreateClaimPaymentExtract:
         assert payment_extract.tax_code == TaxCode.ZERO_VAT
 
     def test_201_expert_cost_gross_and_vat_zero_persists_two_payment_extracts(
-        self, session, client, auth_token
+        self, session, client
     ):
         response = _post_claim(
             session,
             client,
-            auth_token,
             {
                 "poaTypeId": "EXPERT_COST",
                 "totalProfitCostNet": None,
@@ -133,12 +130,11 @@ class TestCreateClaimPaymentExtract:
         assert vat_zero_line.tax_code == TaxCode.ZERO_VAT
 
     def test_201_expert_cost_gross_only_persists_single_standard_extract(
-        self, session, client, auth_token
+        self, session, client
     ):
         response = _post_claim(
             session,
             client,
-            auth_token,
             {
                 "poaTypeId": "EXPERT_COST",
                 "totalProfitCostNet": None,
@@ -157,12 +153,11 @@ class TestCreateClaimPaymentExtract:
         assert extracts[0].tax_code == TaxCode.GB_VAT_20
 
     def test_201_non_expert_disbursement_vat_zero_only_persists_single_zero_extract(
-        self, session, client, auth_token
+        self, session, client
     ):
         response = _post_claim(
             session,
             client,
-            auth_token,
             {
                 "poaTypeId": "NON_EXPERT_DISBURSEMENT",
                 "totalProfitCostNet": None,

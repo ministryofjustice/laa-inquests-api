@@ -4,6 +4,7 @@ import pytest
 from sqlmodel import select
 
 from app.adapters.history_event_repository_adapter import HistoryEventRepositoryAdapter
+from app.auth.rbac import Role
 from app.models.application.index import Application
 from app.models.history.enums import ActorType
 from app.models.history.index import HistoryEvent
@@ -21,15 +22,13 @@ def _caseworker_headers(auth_token: str) -> dict[str, str]:
     }
 
 
-def test_204_create_note_adds_caseworker_history_event(
-    session, client, auth_token, application
-):
+def test_204_create_note_adds_caseworker_history_event(session, client, application):
     note_text = "Case note with useful information."
 
     response = client.post(
         f"/applications/{application.laa_reference}/note",
         json={"noteText": note_text},
-        headers=_caseworker_headers(auth_token),
+        headers=_caseworker_headers(Role.APPLICATIONS_CASEWORKER.value),
     )
 
     assert response.status_code == 204
@@ -50,15 +49,13 @@ def test_204_create_note_adds_caseworker_history_event(
     assert history_event.event_data == {"note_text": note_text}
 
 
-def test_204_create_note_accepts_10_000_characters(
-    session, client, auth_token, application
-):
+def test_204_create_note_accepts_10_000_characters(session, client, application):
     note_text = "a" * 10_000
 
     response = client.post(
         f"/applications/{application.laa_reference}/note",
         json={"noteText": note_text},
-        headers=_caseworker_headers(auth_token),
+        headers=_caseworker_headers(Role.APPLICATIONS_CASEWORKER.value),
     )
 
     assert response.status_code == 204
@@ -79,31 +76,29 @@ def test_204_create_note_accepts_10_000_characters(
         {"noteText": "a" * 10_001},
     ],
 )
-def test_422_create_note_rejects_invalid_note_text(
-    client, auth_token, application, request_body
-):
+def test_422_create_note_rejects_invalid_note_text(client, application, request_body):
     response = client.post(
         f"/applications/{application.laa_reference}/note",
         json=request_body,
-        headers=_caseworker_headers(auth_token),
+        headers=_caseworker_headers(Role.APPLICATIONS_CASEWORKER.value),
     )
 
     assert response.status_code == 422
 
 
-def test_404_create_note_returns_not_found_for_missing_application(client, auth_token):
+def test_404_create_note_returns_not_found_for_missing_application(client):
     response = client.post(
         "/applications/99999/note",
         json={"noteText": "Case note"},
-        headers=_caseworker_headers(auth_token),
+        headers=_caseworker_headers(Role.APPLICATIONS_CASEWORKER.value),
     )
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Application not found"}
 
 
-def test_401_create_note_requires_authorization(entra_auth_client, application):
-    response = entra_auth_client.post(
+def test_401_create_note_requires_authorization(client, application):
+    response = client.post(
         f"/applications/{application.laa_reference}/note",
         json={"noteText": "Case note"},
         headers={"Content-Type": "application/json"},
@@ -114,12 +109,10 @@ def test_401_create_note_requires_authorization(entra_auth_client, application):
 
 @pytest.mark.parametrize(
     "provider_token",
-    ["valid-provider-application-user-token", "valid-provider-claims-user-token"],
+    [Role.PROVIDER_APPLICATION_USER.value, Role.PROVIDER_CLAIMS_USER.value],
 )
-def test_403_create_note_rejects_provider_token(
-    entra_auth_client, application, provider_token
-):
-    response = entra_auth_client.post(
+def test_403_create_note_rejects_provider_token(client, application, provider_token):
+    response = client.post(
         f"/applications/{application.laa_reference}/note",
         json={"noteText": "Case note"},
         headers={
@@ -132,7 +125,7 @@ def test_403_create_note_rejects_provider_token(
 
 
 def test_500_create_note_returns_generic_error_when_history_event_cannot_be_saved(
-    session, client, auth_token, application
+    session, client, application
 ):
     with patch.object(
         HistoryEventRepositoryAdapter,
@@ -142,7 +135,7 @@ def test_500_create_note_returns_generic_error_when_history_event_cannot_be_save
         response = client.post(
             f"/applications/{application.laa_reference}/note",
             json={"noteText": "Case note"},
-            headers=_caseworker_headers(auth_token),
+            headers=_caseworker_headers(Role.APPLICATIONS_CASEWORKER.value),
         )
 
     assert response.status_code == 500

@@ -35,28 +35,41 @@ class Permission(str, Enum):
     REPORTS_CLAIM_WORKFLOW_READ = "reports-claim-workflow:read"
 
 
-ROLE_PERMISSIONS_MAP: dict[str, set[Permission]] = {
-    "Inquests - Provider Application User": {
+class Role(str, Enum):
+    PROVIDER_APPLICATION_USER = "Inquests - Provider Application User"
+    PROVIDER_CLAIMS_USER = "Inquests - Provider Claims User"
+    APPLICATIONS_CASEWORKER = "Inquests - Applications caseworker"
+    CLAIMS_CASEWORKER = "Inquests - Claims caseworker"
+    CUSTOMER_SERVICE_AGENT = "Inquests - Customer service agent"
+    ASSURANCE = "Inquests - Assurance"
+    APPLICATION_WORKFLOW_REPORTING = "Inquests - Application workflow reporting"
+    CLAIM_WORKFLOW_REPORTING = "Inquests - Claim workflow reporting"
+    POLICY = "Inquests - Policy"
+    FINANCE = "Inquests - Finance"
+
+
+ROLE_PERMISSIONS_MAP: dict[Role, set[Permission]] = {
+    Role.PROVIDER_APPLICATION_USER: {
         Permission.APPLICATION_CREATE,
         Permission.CORONERS_LETTER_UPLOAD,
         Permission.CORONERS_LETTER_DELETE,
         Permission.PROVIDER_OFFICES_READ,
     },
-    "Inquests - Provider Claims User": {
+    Role.PROVIDER_CLAIMS_USER: {
         Permission.APPLICATION_SEARCH,
         Permission.CLAIM_CREATE,
         Permission.CLAIM_DELETE,
         Permission.CLAIM_EVIDENCE_UPLOAD,
         Permission.PROVIDER_OFFICES_READ,
     },
-    "Inquests - Applications caseworker": {
+    Role.APPLICATIONS_CASEWORKER: {
         Permission.APPLICATION_READ,
         Permission.APPLICATION_MANAGE,
         Permission.CERTIFICATE_READ,
         Permission.HISTORY_READ,
         Permission.CASE_NOTE_CREATE,
     },
-    "Inquests - Claims caseworker": {
+    Role.CLAIMS_CASEWORKER: {
         Permission.APPLICATION_READ,
         Permission.CLAIM_READ,
         Permission.CLAIM_MANAGE,
@@ -64,14 +77,14 @@ ROLE_PERMISSIONS_MAP: dict[str, set[Permission]] = {
         Permission.HISTORY_READ,
         Permission.CASE_NOTE_CREATE,
     },
-    "Inquests - Customer service agent": {
+    Role.CUSTOMER_SERVICE_AGENT: {
         Permission.APPLICATION_READ,
         Permission.CLAIM_READ,
         Permission.CERTIFICATE_READ,
         Permission.CASE_NOTE_CREATE,
         Permission.HISTORY_READ,
     },
-    "Inquests - Assurance": {
+    Role.ASSURANCE: {
         Permission.APPLICATION_READ,
         Permission.CLAIM_READ,
         Permission.CERTIFICATE_READ,
@@ -80,16 +93,16 @@ ROLE_PERMISSIONS_MAP: dict[str, set[Permission]] = {
         Permission.REPORTS_MI_READ,
         Permission.REPORTS_PAYMENT_READ,
     },
-    "Inquests - Application workflow reporting": {
+    Role.APPLICATION_WORKFLOW_REPORTING: {
         Permission.REPORTS_APPLICATION_WORKFLOW_READ,
     },
-    "Inquests - Claim workflow reporting": {
+    Role.CLAIM_WORKFLOW_REPORTING: {
         Permission.REPORTS_CLAIM_WORKFLOW_READ,
     },
-    "Inquests - Policy": {
+    Role.POLICY: {
         Permission.REPORTS_MI_READ,
     },
-    "Inquests - Finance": {
+    Role.FINANCE: {
         Permission.REPORTS_MI_READ,
         Permission.REPORTS_PAYMENT_READ,
     },

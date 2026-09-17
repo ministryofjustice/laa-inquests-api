@@ -3,13 +3,14 @@ import uuid
 import pytest
 from sqlmodel import select
 
+from app.auth.rbac import Role
 from app.models.application.index import Application, CoronersLetter
 
 pytestmark = pytest.mark.usefixtures("mock_gov_notify")
 
 
 def test_200_read_application_by_reference_returns_expected_application(
-    session, client, auth_token
+    session, client
 ):
     first_application_row = session.exec(select(Application)).first()
     first_application_laa_reference = first_application_row.laa_reference
@@ -18,7 +19,7 @@ def test_200_read_application_by_reference_returns_expected_application(
         f"/applications/{first_application_laa_reference}",
         headers={
             "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
         },
     )
 
@@ -26,9 +27,7 @@ def test_200_read_application_by_reference_returns_expected_application(
     assert requested_application["laaReference"] == first_application_laa_reference
 
 
-def test_200_proceeding_details_included_on_application_response(
-    session, client, auth_token
-):
+def test_200_proceeding_details_included_on_application_response(session, client):
     first_application_row = session.exec(select(Application)).first()
     first_application_laa_reference = first_application_row.laa_reference
 
@@ -36,7 +35,7 @@ def test_200_proceeding_details_included_on_application_response(
         f"/applications/{first_application_laa_reference}",
         headers={
             "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
         },
     )
 
@@ -47,9 +46,7 @@ def test_200_proceeding_details_included_on_application_response(
     assert isinstance(proceeding["proceedingDescription"], str)
 
 
-def test_200_client_addresses_included_on_application_response(
-    session, client, auth_token
-):
+def test_200_client_addresses_included_on_application_response(session, client):
     first_application_row = session.exec(select(Application)).first()
     first_application_laa_reference = first_application_row.laa_reference
 
@@ -57,7 +54,7 @@ def test_200_client_addresses_included_on_application_response(
         f"/applications/{first_application_laa_reference}",
         headers={
             "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
         },
     )
 
@@ -75,7 +72,7 @@ def test_200_client_addresses_included_on_application_response(
 
 
 def test_200_returns_client_correspondence_recipient_flag_when_client_is_recipient(
-    session, client, auth_token
+    session, client
 ):
     first_application_row = session.exec(select(Application)).first()
     first_application_laa_reference = first_application_row.laa_reference
@@ -84,7 +81,7 @@ def test_200_returns_client_correspondence_recipient_flag_when_client_is_recipie
         f"/applications/{first_application_laa_reference}",
         headers={
             "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
         },
     )
 
@@ -92,9 +89,7 @@ def test_200_returns_client_correspondence_recipient_flag_when_client_is_recipie
     assert requested_application["client"]["correspondenceRecipient"] is None
 
 
-def test_200_returns_explicit_correspondence_recipient_from_stored_application(
-    client, auth_token
-):
+def test_200_returns_explicit_correspondence_recipient_from_stored_application(client):
     create_response = client.post(
         "/applications",
         json={
@@ -141,7 +136,7 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
         },
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
         },
     )
 
@@ -153,7 +148,7 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
         f"/applications/{laa_reference}",
         headers={
             "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
         },
     )
 
@@ -164,19 +159,19 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(
     }
 
 
-def test_404_read_application_returns_404_when_not_found(client, auth_token):
+def test_404_read_application_returns_404_when_not_found(client):
     response = client.get(
         "/applications/99999",
         headers={
             "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
         },
     )
 
     assert response.status_code == 404
 
 
-def test_200_get_application_includes_provider_email(session, client, auth_token):
+def test_200_get_application_includes_provider_email(session, client):
     first_application_row = session.exec(select(Application)).first()
     laa_reference = first_application_row.laa_reference
 
@@ -184,7 +179,7 @@ def test_200_get_application_includes_provider_email(session, client, auth_token
         f"/applications/{laa_reference}",
         headers={
             "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
         },
     )
 
@@ -192,9 +187,7 @@ def test_200_get_application_includes_provider_email(session, client, auth_token
     assert response.json()["provider"]["emailAddress"] == "test@example.com"
 
 
-def test_200_provider_details_included_on_application_response(
-    session, client, auth_token
-):
+def test_200_provider_details_included_on_application_response(session, client):
     first_application_row = session.exec(select(Application)).first()
     first_application_laa_reference = first_application_row.laa_reference
 
@@ -202,7 +195,7 @@ def test_200_provider_details_included_on_application_response(
         f"/applications/{first_application_laa_reference}",
         headers={
             "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
         },
     )
 
@@ -211,9 +204,7 @@ def test_200_provider_details_included_on_application_response(
     assert provider["accountNumber"] == "0U651L"
 
 
-def test_200_provider_fields_are_null_when_provider_api_unavailable(
-    session, auth_token
-):
+def test_200_provider_fields_are_null_when_provider_api_unavailable(session):
     from unittest.mock import MagicMock
 
     from fastapi.testclient import TestClient
@@ -236,7 +227,7 @@ def test_200_provider_fields_are_null_when_provider_api_unavailable(
                 f"/applications/{first_application_row.laa_reference}",
                 headers={
                     "Content-Type": "application/x-www-form-urlencoded",
-                    "Authorization": f"Bearer {auth_token}",
+                    "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
                 },
             )
     finally:
@@ -246,7 +237,7 @@ def test_200_provider_fields_are_null_when_provider_api_unavailable(
 
 
 def test_200_read_application_response_coroners_letter_is_none_when_no_letter_exists(
-    session, client, auth_token
+    session, client
 ):
     first_application_row = session.exec(select(Application)).first()
     laa_reference = first_application_row.laa_reference
@@ -255,7 +246,7 @@ def test_200_read_application_response_coroners_letter_is_none_when_no_letter_ex
         f"/applications/{laa_reference}",
         headers={
             "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
         },
     )
 
@@ -264,7 +255,7 @@ def test_200_read_application_response_coroners_letter_is_none_when_no_letter_ex
 
 
 def test_200_read_application_response_includes_coroners_letter_file_name(
-    session, client, auth_token
+    session, client
 ):
     first_application_row = session.exec(select(Application)).first()
     laa_reference = first_application_row.laa_reference
@@ -285,7 +276,7 @@ def test_200_read_application_response_includes_coroners_letter_file_name(
         f"/applications/{laa_reference}",
         headers={
             "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": f"Bearer {auth_token}",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
         },
     )
 

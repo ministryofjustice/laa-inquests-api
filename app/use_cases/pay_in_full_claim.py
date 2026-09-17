@@ -128,6 +128,16 @@ class PayInFullClaimUseCase:
                 },
             )
 
+            firm_name = self.provider_details_port.get_firm_name(
+                application.provider.firm_code
+            )
+            self.gov_notify_port.send_claim_final_bill_paid_decision_email(
+                claim=claim,
+                application=application,
+                recipient_email=application.provider.email_address,
+                firm_name=firm_name,
+                decision_amounts=decision_amounts,
+            )
             self.create_history_event_port.create_history_event(
                 event_reference=HistoryEventReference.CLAIM_FINAL_BILL_PAID_EMAIL,
                 actor=ActorType.SYSTEM,
@@ -143,22 +153,3 @@ class PayInFullClaimUseCase:
         except Exception:
             self.update_claim_status_port.rollback()
             raise
-
-        if self.gov_notify_port is not None and self.provider_details_port is not None:
-            try:
-                firm_name = self.provider_details_port.get_firm_name(
-                    application.provider.firm_code
-                )
-                self.gov_notify_port.send_claim_final_bill_paid_decision_email(
-                    claim=claim,
-                    application=application,
-                    recipient_email=application.provider.email_address,
-                    firm_name=firm_name,
-                    decision_amounts=decision_amounts,
-                )
-            except Exception:
-                logger.warning(
-                    "Failed to send final bill paid email for claim %s",
-                    command.claim_id,
-                    exc_info=True,
-                )
