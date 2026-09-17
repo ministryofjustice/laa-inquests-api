@@ -42,6 +42,23 @@ def test_403_permission_dependency_rejects_request_without_required_permission(
     }
 
 
+# This is our representative test that exercises the FastAPI verify_entra_token dependency
+# It verifies that an unauthorized request to a protected endpoint is rejected with a 401 status code.
+def test_401_verify_entra_token_dependency_rejects_unauthorized_request(
+    client,
+):
+    response = client.post(
+        "/applications",
+        json=make_application_request_body(),
+        headers={
+            "Content-Type": "application/json",
+        },
+    )
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": ("Not authenticated")}
+
+
 def test_200_read_all_applications_returns_200_when_valid_entra_token(
     client,
 ):
