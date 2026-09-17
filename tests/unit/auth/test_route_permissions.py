@@ -12,49 +12,49 @@ EXPECTED_ROUTE_PERMISSIONS: dict[
     tuple[str, str],
     Permission | None,
 ] = {
-    ("GET", "/applications/search"): Permission.APPLICATION_SEARCH,
-    (
-        "GET",
-        "/applications/provider-offices/{firm_id}",
-    ): Permission.PROVIDER_OFFICES_READ,
-    (
-        "POST",
-        "/applications/upload-coroners-letter",
-    ): Permission.CORONERS_LETTER_UPLOAD,
     (
         "DELETE",
         "/applications/coroners-letter/{coroners_letter_id}",
     ): Permission.CORONERS_LETTER_DELETE,
-    ("POST", "/applications/"): Permission.APPLICATION_CREATE,
-    (
-        "POST",
-        "/applications/{laa_reference}/claim",
-    ): Permission.CLAIM_CREATE,
-    ("POST", "/claims/evidence"): Permission.CLAIM_EVIDENCE_UPLOAD,
-    (
-        "DELETE",
-        "/claims/{claim_evidence_id}",
-    ): Permission.CLAIM_DELETE,
-    ("POST", "/notifications/callback"): PUBLIC,
     ("GET", "/applications/"): None,
-    ("GET", "/applications/public-bodies"): None,
     ("GET", "/applications/{laa_reference}"): None,
     ("GET", "/applications/{laa_reference}/certificate"): None,
     ("GET", "/applications/{laa_reference}/claims"): None,
     ("GET", "/applications/{laa_reference}/claims/{claim_id}"): None,
     ("GET", "/applications/{laa_reference}/coroners-letter"): None,
     ("GET", "/applications/{laa_reference}/history"): None,
-    ("GET", "/claims/{claim_evidence_id}"): None,
-    ("GET", "/reports/applications/backlog"): None,
-    ("GET", "/reports/claims/backlog"): None,
+    (
+        "GET",
+        "/applications/provider-offices/{firm_id}",
+    ): Permission.PROVIDER_OFFICES_READ,
+    ("GET", "/applications/public-bodies"): None,
+    ("GET", "/applications/search"): Permission.APPLICATION_SEARCH,
     ("PATCH", "/applications/{laa_reference}/claims/{claim_id}/pay-in-full"): None,
     ("PATCH", "/applications/{laa_reference}/claims/{claim_id}/reject"): None,
     ("PATCH", "/applications/{laa_reference}/grant-decision"): None,
     ("PATCH", "/applications/{laa_reference}/public-bodies"): None,
     ("PATCH", "/applications/{laa_reference}/refuse-decision"): None,
+    ("POST", "/applications/"): Permission.APPLICATION_CREATE,
+    (
+        "POST",
+        "/applications/{laa_reference}/claim",
+    ): Permission.CLAIM_CREATE,
     ("POST", "/applications/{laa_reference}/note"): None,
+    (
+        "POST",
+        "/applications/upload-coroners-letter",
+    ): Permission.CORONERS_LETTER_UPLOAD,
+    (
+        "DELETE",
+        "/claims/{claim_evidence_id}",
+    ): Permission.CLAIM_DELETE,
+    ("GET", "/claims/{claim_evidence_id}"): None,
+    ("POST", "/claims/evidence"): Permission.CLAIM_EVIDENCE_UPLOAD,
     ("GET", "/health"): PUBLIC,
     ("GET", "/status"): PUBLIC,
+    ("GET", "/reports/applications/backlog"): None,
+    ("GET", "/reports/claims/backlog"): None,
+    ("POST", "/notifications/callback"): PUBLIC,
 }
 
 
