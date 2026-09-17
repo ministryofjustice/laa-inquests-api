@@ -53,6 +53,8 @@ EXPECTED_ROUTE_PERMISSIONS: dict[
     ("PATCH", "/applications/{laa_reference}/public-bodies"): None,
     ("PATCH", "/applications/{laa_reference}/refuse-decision"): None,
     ("POST", "/applications/{laa_reference}/note"): None,
+    ("GET", "/health"): PUBLIC,
+    ("GET", "/status"): PUBLIC,
 }
 
 
