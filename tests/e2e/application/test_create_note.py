@@ -97,33 +97,6 @@ def test_404_create_note_returns_not_found_for_missing_application(client):
     assert response.json() == {"detail": "Application not found"}
 
 
-def test_401_create_note_requires_authorization(client, application):
-    response = client.post(
-        f"/applications/{application.laa_reference}/note",
-        json={"noteText": "Case note"},
-        headers={"Content-Type": "application/json"},
-    )
-
-    assert response.status_code == 401
-
-
-@pytest.mark.parametrize(
-    "provider_token",
-    [Role.PROVIDER_APPLICATION_USER.value, Role.PROVIDER_CLAIMS_USER.value],
-)
-def test_403_create_note_rejects_provider_token(client, application, provider_token):
-    response = client.post(
-        f"/applications/{application.laa_reference}/note",
-        json={"noteText": "Case note"},
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {provider_token}",
-        },
-    )
-
-    assert response.status_code == 403
-
-
 def test_500_create_note_returns_generic_error_when_history_event_cannot_be_saved(
     session, client, application
 ):

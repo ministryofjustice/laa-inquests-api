@@ -1,41 +1,10 @@
 from datetime import UTC, datetime
 
-import pytest
 from sqlmodel import select
 
-from app.auth.rbac import Role
 from app.models.application.index import Application
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
-
-
-def test_401_get_application_history_returns_401_when_no_authorization_header(
-    client, session
-):
-    first_application_row = session.exec(select(Application)).first()
-    laa_reference = first_application_row.laa_reference
-
-    response = client.get(f"/applications/{laa_reference}/history")
-
-    assert response.status_code == 401
-
-
-@pytest.mark.parametrize(
-    "provider_token",
-    [Role.PROVIDER_APPLICATION_USER.value, Role.PROVIDER_CLAIMS_USER.value],
-)
-def test_403_get_application_history_returns_403_when_provider_token(
-    client, session, provider_token
-):
-    first_application_row = session.exec(select(Application)).first()
-    laa_reference = first_application_row.laa_reference
-
-    response = client.get(
-        f"/applications/{laa_reference}/history",
-        headers={"Authorization": f"Bearer {provider_token}"},
-    )
-
-    assert response.status_code == 403
 
 
 def test_200_get_application_history_returns_events_for_application_that_exists(

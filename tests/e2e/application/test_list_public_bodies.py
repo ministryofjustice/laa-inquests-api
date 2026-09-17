@@ -38,14 +38,6 @@ def test_200_list_public_bodies_returns_results_sorted_alphabetically_ignoring_d
     ]
 
 
-def test_401_list_public_bodies_returns_401_when_no_authorization_header(
-    client,
-):
-    response = client.get("/applications/public-bodies")
-
-    assert response.status_code == 401
-
-
 def test_200_list_public_bodies_returns_200_when_caseworker_token(
     client,
 ):

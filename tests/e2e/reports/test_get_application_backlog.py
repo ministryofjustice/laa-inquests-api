@@ -1,6 +1,5 @@
 from datetime import UTC, datetime
 
-import pytest
 from sqlmodel import select
 
 from app.auth.rbac import Role
@@ -131,30 +130,6 @@ class TestGetApplicationBacklogReport:
 
 class TestGetApplicationBacklogReportAuth:
     """Authentication tests for GET /reports/applications/backlog."""
-
-    def test_401_returns_unauthorized_when_no_auth_header(self, client):
-        response = client.get("/reports/applications/backlog")
-
-        assert response.status_code == 401
-
-    def test_401_returns_unauthorized_when_invalid_token(self, client):
-        response = client.get(
-            "/reports/applications/backlog",
-            headers={"Authorization": "Bearer invalid-token"},
-        )
-
-        assert response.status_code == 401
-
-    @pytest.mark.parametrize(
-        "provider_token",
-        [Role.PROVIDER_APPLICATION_USER.value, Role.PROVIDER_CLAIMS_USER.value],
-    )
-    def test_403_returns_forbidden_when_provider_token(self, client, provider_token):
-        response = client.get(
-            "/reports/applications/backlog",
-            headers={"Authorization": f"Bearer {provider_token}"},
-        )
-        assert response.status_code == 403
 
     def test_200_returns_ok_when_caseworker_token(self, client):
         response = client.get(

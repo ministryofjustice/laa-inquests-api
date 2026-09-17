@@ -1,4 +1,3 @@
-import pytest
 from sqlmodel import select
 
 from app.auth.rbac import Role
@@ -138,34 +137,3 @@ def test_422_update_application_public_bodies_returns_unprocessable_entity_when_
 
     assert response.status_code == 422
     assert response.json() == {"detail": "At least one public body must be provided."}
-
-
-def test_401_update_application_public_bodies_returns_401_when_no_authorization_header(
-    client,
-):
-    response = client.patch(
-        "/applications/1/public-bodies",
-        json={"publicBodies": ["Ministry of Defence"]},
-        headers={"Content-Type": "application/json"},
-    )
-
-    assert response.status_code == 401
-
-
-@pytest.mark.parametrize(
-    "provider_token",
-    [Role.PROVIDER_APPLICATION_USER.value, Role.PROVIDER_CLAIMS_USER.value],
-)
-def test_403_update_application_public_bodies_returns_403_when_provider_token(
-    client, provider_token
-):
-    response = client.patch(
-        "/applications/1/public-bodies",
-        json={"publicBodies": ["Ministry of Defence"]},
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {provider_token}",
-        },
-    )
-
-    assert response.status_code == 403

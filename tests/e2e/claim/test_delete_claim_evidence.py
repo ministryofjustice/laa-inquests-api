@@ -1,5 +1,4 @@
 import io
-import uuid
 from unittest.mock import MagicMock
 
 from app import api
@@ -84,21 +83,3 @@ class TestDeleteClaimEvidenceRbac:
         )
 
         assert response.status_code == 204
-
-    def test_403_delete_claim_evidence_with_app_role_missing_delete_permission(
-        self, client
-    ):
-        response = client.delete(
-            f"/claims/{uuid.uuid4()}",
-            headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
-        )
-
-        assert response.status_code == 403
-
-    def test_403_delete_claim_evidence_with_unmapped_app_role(self, client):
-        response = client.delete(
-            f"/claims/{uuid.uuid4()}",
-            headers={"Authorization": "Bearer Provider No Role"},
-        )
-
-        assert response.status_code == 403

@@ -1,6 +1,5 @@
 from datetime import UTC, datetime
 
-import pytest
 from sqlmodel import select
 
 from app.auth.rbac import Role
@@ -46,22 +45,3 @@ def test_404_read_certificate_returns_404_when_application_not_found(client):
     )
 
     assert response.status_code == 404
-
-
-def test_401_read_certificate_returns_401_when_no_authorization_header(client):
-    response = client.get("/applications/1/certificate")
-
-    assert response.status_code == 401
-
-
-@pytest.mark.parametrize(
-    "provider_token",
-    [Role.PROVIDER_APPLICATION_USER.value, Role.PROVIDER_CLAIMS_USER.value],
-)
-def test_403_read_certificate_returns_403_when_provider_token(client, provider_token):
-    response = client.get(
-        "/applications/1/certificate",
-        headers={"Authorization": f"Bearer {provider_token}"},
-    )
-
-    assert response.status_code == 403

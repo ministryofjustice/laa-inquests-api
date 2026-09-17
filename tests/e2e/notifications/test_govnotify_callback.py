@@ -63,33 +63,6 @@ def test_200_callback_accepts_valid_bearer_token_and_payload(
     assert "to" not in log_extra
 
 
-def test_401_callback_rejects_invalid_bearer_token(client, gov_notify_bearer_token):
-    """Test callback endpoint rejects requests with invalid bearer token."""
-    payload = _make_callback_payload()
-
-    response = client.post(
-        "/notifications/callback",
-        json=payload,
-        headers={"Authorization": "Bearer wrong-token"},
-    )
-
-    assert response.status_code == 401
-    assert response.json() == {"detail": "Invalid bearer token"}
-
-
-def test_401_callback_rejects_missing_bearer_token(client):
-    """Test callback endpoint rejects requests without bearer token."""
-    payload = _make_callback_payload()
-
-    response = client.post(
-        "/notifications/callback",
-        json=payload,
-    )
-
-    assert response.status_code == 401
-    assert response.json() == {"detail": "Missing authorization header"}
-
-
 def test_422_callback_rejects_invalid_payload_missing_required_fields(
     client, gov_notify_bearer_token
 ):

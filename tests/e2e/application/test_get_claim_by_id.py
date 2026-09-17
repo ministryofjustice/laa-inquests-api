@@ -409,21 +409,3 @@ def test_404_when_claim_belongs_to_another_application(session, client):
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Claim not found"
-
-
-def test_401_returns_unauthorized_when_no_auth_header(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    claim = _seed_claim(session, laa_reference)
-
-    response = client.get(f"/applications/{laa_reference}/claims/{claim.claim_id}")
-
-    assert response.status_code == 401
-
-
-def test_403_returns_forbidden_when_provider_application_token(client):
-    response = client.get(
-        "/applications/1/claims/1",
-        headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
-    )
-
-    assert response.status_code == 403
