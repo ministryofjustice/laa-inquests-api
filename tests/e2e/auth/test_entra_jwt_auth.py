@@ -4,7 +4,8 @@ import uuid
 import pytest
 from sqlmodel import select
 
-from app.auth.rbac import Role
+from app.auth.rbac import get_current_user_permissions, Role
+from app import api
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application, CoronersLetter
 from app.models.claim.index import ClaimEvidence
@@ -12,6 +13,33 @@ from tests.helpers.application_payloads import create_application_payload
 from tests.helpers.provider_details import (
     override_provider_details_port_with_provider_offices,
 )
+from tests.e2e.application.test_create_application import (
+    _make_request_body as make_application_request_body,
+)
+
+
+# This is our representative test that exercises the FastAPI permission dependency
+# It verifies that a request without the required permission is rejected with a 403 status code.
+# We do this once, and shouldn't need other 403 tests as we have a unit test that all endpoints
+# have the relevant permission check in place as a dependency
+def test_403_permission_dependency_rejects_request_without_required_permission(
+    client,
+):
+    api.dependency_overrides[get_current_user_permissions] = lambda: set()
+
+    response = client.post(
+        "/applications",
+        json=make_application_request_body(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": "Bearer valid-token",
+        },
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {
+        "detail": ("Forbidden: Missing required permission 'application:create'")
+    }
 
 
 def test_200_read_all_applications_returns_200_when_valid_entra_token(
