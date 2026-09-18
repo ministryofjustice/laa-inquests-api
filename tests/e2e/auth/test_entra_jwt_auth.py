@@ -5,7 +5,6 @@ from sqlmodel import select
 
 from app import api
 from app.auth.rbac import Role, get_current_user_permissions
-from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application, CoronersLetter
 from app.models.claim.index import ClaimEvidence
 from tests.e2e.application.test_create_application import (
@@ -89,27 +88,6 @@ def test_201_upload_coroners_letter_returns_201_when_provider_application_user_t
     )
 
     assert response.status_code == 201
-
-
-def test_204_refuse_decision_returns_204_when_caseworker_token(
-    session,
-    client,
-):
-    application = session.exec(select(Application)).first()
-    response = client.patch(
-        f"/applications/{application.laa_reference}/refuse-decision",
-        json={
-            "meritsDecision": MeritsDecision.REFUSED,
-            "reasonForRefusal": "NOT_IN_SCOPE",
-            "justification": "The matter does not meet scope requirements.",
-        },
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": "Bearer Caseworker No Role",
-        },
-    )
-
-    assert response.status_code == 204
 
 
 class TestSearchApplicationAuth:

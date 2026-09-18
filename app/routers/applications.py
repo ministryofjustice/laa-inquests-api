@@ -67,7 +67,6 @@ from app.ports.claim.update_claim_status_port import (
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.delete_coroners_letter_port import DeleteCoronersLetterPort
-from app.ports.entra_auth_port import AuthenticatedUser
 from app.ports.get_application_history_port import GetApplicationHistoryPort
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.get_coroners_letter_port import GetCoronersLetterPort
@@ -85,7 +84,6 @@ from app.routers.dependencies import (
     get_claim_db_adapter,
     get_current_provider_firm_code,
     get_sds_port,
-    verify_entra_caseworker_token,
 )
 from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
@@ -994,12 +992,15 @@ def update_application_public_bodies(
     return Response(status_code=204)
 
 
-@router.patch("/{laa_reference}/refuse-decision", status_code=204)
+@router.patch(
+    "/{laa_reference}/refuse-decision",
+    status_code=204,
+    dependencies=[Depends(require_permission(Permission.APPLICATION_MANAGE))],
+)
 def refuse_decision(
     laa_reference: str,
     request: RefuseApplicationUpdate,
     use_case: RefuseDecisionUseCase = Depends(get_make_merits_decision_use_case),
-    _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
 ) -> Response:
     """Set the merits decision on the single proceeding for a given application."""
     try:
