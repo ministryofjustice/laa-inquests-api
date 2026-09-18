@@ -1,5 +1,6 @@
+from collections.abc import Iterable
 from enum import Enum
-from typing import Annotated, Iterable
+from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 

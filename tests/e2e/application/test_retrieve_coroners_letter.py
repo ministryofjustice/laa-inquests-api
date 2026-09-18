@@ -1,6 +1,7 @@
+from sqlmodel import select
+
 from app.auth.rbac import Role
 from app.models.application.index import Application
-from sqlmodel import select
 
 
 def test_200_retrieve_coroners_letter(session, client):
