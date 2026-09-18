@@ -506,7 +506,7 @@ def create_application(
     "/upload-coroners-letter",
     response_model=UploadCoronersLetterResponse,
     status_code=201,
-    dependencies=[Depends(require_permission_from(Permission.CORONERS_LETTER_UPLOAD))],
+    dependencies=[Depends(require_permission_from(Permission.APPLICATION_CREATE))],
 )
 async def upload_coroners_letter(
     file: UploadFile = File(...),
@@ -1020,7 +1020,7 @@ def refuse_decision(
 @router.delete(
     "/coroners-letter/{coroners_letter_id}",
     status_code=204,
-    dependencies=[Depends(require_permission_from(Permission.CORONERS_LETTER_DELETE))],
+    dependencies=[Depends(require_permission_from(Permission.APPLICATION_CREATE))],
 )
 def delete_coroners_letter(
     coroners_letter_id: uuid.UUID,

@@ -175,7 +175,7 @@ class TestUploadClaimEvidenceRbac:
 
     def test_201_upload_claim_evidence_with_upload_permission(self, client):
         def get_current_user_permissions_override():
-            return {Permission.CLAIM_EVIDENCE_UPLOAD}
+            return {Permission.CLAIM_CREATE}
 
         api.dependency_overrides[get_current_user_permissions] = (
             get_current_user_permissions_override

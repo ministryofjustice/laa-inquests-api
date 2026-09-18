@@ -94,7 +94,7 @@ def get_delete_claim_evidence_use_case(
     "/evidence",
     response_model=UploadClaimEvidenceResponse,
     status_code=201,
-    dependencies=[Depends(require_permission_from(Permission.CLAIM_EVIDENCE_UPLOAD))],
+    dependencies=[Depends(require_permission_from(Permission.CLAIM_CREATE))],
 )
 async def upload_claim_evidence(
     file: UploadFile = File(...),
@@ -207,7 +207,7 @@ def retrieve_claim_evidence(
 @router.delete(
     "/{claim_evidence_id}",
     status_code=204,
-    dependencies=[Depends(require_permission_from(Permission.CLAIM_DELETE))],
+    dependencies=[Depends(require_permission_from(Permission.CLAIM_CREATE))],
 )
 def delete_claim_evidence(
     claim_evidence_id: uuid.UUID,

@@ -106,7 +106,7 @@ class TestUploadCoronersLetterRbac:
 
     def test_201_upload_coroners_letter_with_permission_override(self, client):
         def get_current_user_permissions_override():
-            return {Permission.CORONERS_LETTER_UPLOAD}
+            return {Permission.APPLICATION_CREATE}
 
         api.dependency_overrides[get_current_user_permissions] = (
             get_current_user_permissions_override

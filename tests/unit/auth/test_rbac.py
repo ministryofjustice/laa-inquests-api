@@ -98,8 +98,6 @@ def test_get_current_user_permissions_depends_on_verify_entra_token():
 def test_external_provider_application_user_permission_set():
     assert ROLE_PERMISSIONS_MAP[Role.PROVIDER_APPLICATION_USER.value] == {
         Permission.APPLICATION_CREATE,
-        Permission.CORONERS_LETTER_UPLOAD,
-        Permission.CORONERS_LETTER_DELETE,
         Permission.PROVIDER_OFFICES_READ,
     }
 
@@ -109,7 +107,6 @@ def test_external_provider_claims_user_permission_set():
         Permission.APPLICATION_SEARCH,
         Permission.CLAIM_CREATE,
         Permission.CLAIM_DELETE,
-        Permission.CLAIM_EVIDENCE_UPLOAD,
         Permission.PROVIDER_OFFICES_READ,
     }
 

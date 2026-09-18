@@ -17,15 +17,11 @@ class Permission(str, Enum):
     CLAIM_READ = "claim:read"
     CLAIM_MANAGE = "claim:manage"
     CLAIM_DELETE = "claim:delete"
-    CLAIM_EVIDENCE_UPLOAD = "claim-evidence:upload"
 
     CASE_NOTE_CREATE = "case-note:create"
     HISTORY_READ = "history:read"
 
     CERTIFICATE_READ = "certificate:read"
-
-    CORONERS_LETTER_UPLOAD = "coroners-letter:upload"
-    CORONERS_LETTER_DELETE = "coroners-letter:delete"
 
     PROVIDER_OFFICES_READ = "provider-offices:read"
 
@@ -51,15 +47,12 @@ class Role(str, Enum):
 ROLE_PERMISSIONS_MAP: dict[Role, set[Permission]] = {
     Role.PROVIDER_APPLICATION_USER: {
         Permission.APPLICATION_CREATE,
-        Permission.CORONERS_LETTER_UPLOAD,
-        Permission.CORONERS_LETTER_DELETE,
         Permission.PROVIDER_OFFICES_READ,
     },
     Role.PROVIDER_CLAIMS_USER: {
         Permission.APPLICATION_SEARCH,
         Permission.CLAIM_CREATE,
         Permission.CLAIM_DELETE,
-        Permission.CLAIM_EVIDENCE_UPLOAD,
         Permission.PROVIDER_OFFICES_READ,
     },
     Role.APPLICATIONS_CASEWORKER: {

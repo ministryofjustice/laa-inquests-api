@@ -17,7 +17,7 @@ EXPECTED_ROUTE_PERMISSIONS: dict[
     (
         "POST",
         "/applications/upload-coroners-letter",
-    ): Permission.CORONERS_LETTER_UPLOAD,
+    ): Permission.APPLICATION_CREATE,
     (
         "POST",
         "/applications/{laa_reference}/claim",
@@ -65,14 +65,14 @@ EXPECTED_ROUTE_PERMISSIONS: dict[
     (
         "DELETE",
         "/applications/coroners-letter/{coroners_letter_id}",
-    ): Permission.CORONERS_LETTER_DELETE,
+    ): Permission.APPLICATION_CREATE,
     # Claims
-    ("POST", "/claims/evidence"): Permission.CLAIM_EVIDENCE_UPLOAD,
+    ("POST", "/claims/evidence"): Permission.CLAIM_CREATE,
     ("GET", "/claims/{claim_evidence_id}"): None,
     (
         "DELETE",
         "/claims/{claim_evidence_id}",
-    ): Permission.CLAIM_DELETE,
+    ): Permission.CLAIM_CREATE,
     # Notifications
     ("POST", "/notifications/callback"): PUBLIC,
     # Reports
