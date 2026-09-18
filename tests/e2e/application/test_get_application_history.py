@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 
 from sqlmodel import select
 
+from app.auth.rbac import Role
 from app.models.application.index import Application
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
@@ -27,7 +28,7 @@ def test_200_get_application_history_returns_events_for_application_that_exists(
 
     response = client.get(
         f"/applications/{laa_reference}/history",
-        headers={"Authorization": "Bearer Caseworker No Role"},
+        headers={"Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 200
@@ -44,7 +45,7 @@ def test_404_get_application_history_returns_404_for_application_that_does_not_e
 
     response = client.get(
         f"/applications/{non_existent_laa_reference}/history",
-        headers={"Authorization": "Bearer Caseworker No Role"},
+        headers={"Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 404
@@ -58,7 +59,7 @@ def test_200_get_application_history_returns_empty_list_when_no_events_exist(
 
     response = client.get(
         f"/applications/{laa_reference}/history",
-        headers={"Authorization": "Bearer Caseworker No Role"},
+        headers={"Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 200
@@ -107,7 +108,7 @@ def test_200_get_application_history_returns_events_in_reverse_chronological_ord
 
     response = client.get(
         f"/applications/{laa_reference}/history",
-        headers={"Authorization": "Bearer Caseworker No Role"},
+        headers={"Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 200

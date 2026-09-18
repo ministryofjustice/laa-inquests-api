@@ -236,24 +236,6 @@ def test_200_provider_fields_are_null_when_provider_api_unavailable(session):
     assert response.json()["provider"]["firmName"] is None
 
 
-def test_200_read_application_response_coroners_letter_is_none_when_no_letter_exists(
-    session, client
-):
-    first_application_row = session.exec(select(Application)).first()
-    laa_reference = first_application_row.laa_reference
-
-    response = client.get(
-        f"/applications/{laa_reference}",
-        headers={
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
-        },
-    )
-
-    assert response.status_code == 200
-    assert response.json()["coronersLetter"] is None
-
-
 def test_200_read_application_response_includes_coroners_letter_file_name(
     session, client
 ):

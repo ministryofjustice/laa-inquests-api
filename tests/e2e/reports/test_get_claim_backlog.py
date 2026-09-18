@@ -115,7 +115,7 @@ class TestGetClaimBacklogReportAuth:
     def test_200_returns_ok_when_caseworker_token(self, client):
         response = client.get(
             "/reports/claims/backlog",
-            headers={"Authorization": "Bearer Caseworker No Role"},
+            headers={"Authorization": f"Bearer {Role.CLAIM_WORKFLOW_REPORTING.value}"},
         )
 
         assert response.status_code == 200

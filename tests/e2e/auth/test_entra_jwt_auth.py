@@ -1,12 +1,10 @@
 import io
 
 import pytest
-from sqlmodel import select
 
 from app import api
 from app.auth.rbac import Role, get_current_user_permissions
-from app.models.application.enums import MeritsDecision
-from app.models.application.index import Application, CoronersLetter
+from app.models.application.index import CoronersLetter
 from app.models.claim.index import ClaimEvidence
 from tests.e2e.application.test_create_application import (
     _make_request_body as make_application_request_body,
@@ -36,9 +34,7 @@ def test_403_permission_dependency_rejects_request_without_required_permission(
     )
 
     assert response.status_code == 403
-    assert response.json() == {
-        "detail": ("Forbidden: Missing required permission 'application:create'")
-    }
+    assert response.json() == {"detail": ("Forbidden: Missing required permission")}
 
 
 # This is our representative test that exercises the FastAPI verify_entra_token dependency
@@ -56,30 +52,6 @@ def test_401_verify_entra_token_dependency_rejects_unauthorized_request(
 
     assert response.status_code == 401
     assert response.json() == {"detail": ("Not authenticated")}
-
-
-def test_200_read_all_applications_returns_200_when_valid_entra_token(
-    client,
-):
-    response = client.get(
-        "/applications",
-        headers={"Authorization": "Bearer Caseworker No Role"},
-    )
-
-    assert response.status_code == 200
-
-
-def test_200_read_application_by_id_returns_200_when_caseworker_token(
-    session,
-    client,
-):
-    application = session.exec(select(Application)).first()
-    response = client.get(
-        f"/applications/{application.laa_reference}",
-        headers={"Authorization": "Bearer Caseworker No Role"},
-    )
-
-    assert response.status_code == 200
 
 
 def test_201_create_application_returns_201_when_provider_application_user_token(
@@ -113,44 +85,6 @@ def test_201_upload_coroners_letter_returns_201_when_provider_application_user_t
     )
 
     assert response.status_code == 201
-
-
-def test_204_refuse_decision_returns_204_when_caseworker_token(
-    session,
-    client,
-):
-    application = session.exec(select(Application)).first()
-    response = client.patch(
-        f"/applications/{application.laa_reference}/refuse-decision",
-        json={
-            "meritsDecision": MeritsDecision.REFUSED,
-            "reasonForRefusal": "NOT_IN_SCOPE",
-            "justification": "The matter does not meet scope requirements.",
-        },
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": "Bearer Caseworker No Role",
-        },
-    )
-
-    assert response.status_code == 204
-
-
-def test_204_grant_decision_returns_204_when_caseworker_token(
-    session,
-    client,
-):
-    application = session.exec(select(Application)).first()
-    response = client.patch(
-        f"/applications/{application.laa_reference}/grant-decision",
-        json={"certificateStartDate": "2000-01-01"},
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": "Bearer Caseworker No Role",
-        },
-    )
-
-    assert response.status_code == 204
 
 
 class TestSearchApplicationAuth:
@@ -247,89 +181,3 @@ class TestDeleteCoronersLetterAuth:
         )
 
         assert response.status_code == 204
-
-
-def test_200_retrieve_coroners_letter_returns_200_when_caseworker_token(
-    session, client
-):
-    application = session.exec(select(Application)).first()
-    coroners_letter = CoronersLetter(
-        sds_file_name="stored-file_abc123.pdf",
-        file_name="coroners_letter.pdf",
-    )
-    session.add(coroners_letter)
-    session.commit()
-    session.refresh(coroners_letter)
-
-    application.coroners_letter_id = coroners_letter.coroners_letter_id
-    session.add(application)
-    session.commit()
-
-    response = client.get(
-        f"/applications/{application.laa_reference}/coroners-letter",
-        headers={"Authorization": "Bearer Caseworker No Role"},
-    )
-
-    assert response.status_code == 200
-
-
-def test_200_list_public_bodies_returns_200_when_caseworker_token(
-    client,
-):
-    response = client.get(
-        "/applications/public-bodies",
-        headers={"Authorization": "Bearer Caseworker No Role"},
-    )
-
-    assert response.status_code == 200
-
-
-@pytest.mark.parametrize(
-    "provider_token",
-    [Role.PROVIDER_APPLICATION_USER.value, Role.PROVIDER_CLAIMS_USER.value],
-)
-def test_200_list_public_bodies_returns_200_when_application_provider_token(
-    client, provider_token
-):
-    response = client.get(
-        "/applications/public-bodies",
-        headers={"Authorization": f"Bearer {provider_token}"},
-    )
-
-    assert response.status_code == 200
-
-
-def test_200_retrieve_claim_evidence_returns_200_when_caseworker_token(session, client):
-    claim_evidence = ClaimEvidence(
-        sds_file_name="stored-claim-evidence_abc123.pdf",
-        file_name="claim_evidence.pdf",
-    )
-    session.add(claim_evidence)
-    session.commit()
-    session.refresh(claim_evidence)
-
-    response = client.get(
-        f"/claims/{claim_evidence.claim_evidence_id}",
-        headers={"Authorization": "Bearer Caseworker No Role"},
-    )
-
-    assert response.status_code == 200
-
-
-def test_200_retrieve_claim_evidence_returns_200_when_provider_claims_token(
-    session, client
-):
-    claim_evidence = ClaimEvidence(
-        sds_file_name="stored-claim-evidence_abc123.pdf",
-        file_name="claim_evidence.pdf",
-    )
-    session.add(claim_evidence)
-    session.commit()
-    session.refresh(claim_evidence)
-
-    response = client.get(
-        f"/claims/{claim_evidence.claim_evidence_id}",
-        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
-    )
-
-    assert response.status_code == 200

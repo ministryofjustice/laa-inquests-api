@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from enum import Enum
 from typing import Annotated
 
@@ -17,15 +18,11 @@ class Permission(str, Enum):
     CLAIM_READ = "claim:read"
     CLAIM_MANAGE = "claim:manage"
     CLAIM_DELETE = "claim:delete"
-    CLAIM_EVIDENCE_UPLOAD = "claim-evidence:upload"
 
     CASE_NOTE_CREATE = "case-note:create"
     HISTORY_READ = "history:read"
 
     CERTIFICATE_READ = "certificate:read"
-
-    CORONERS_LETTER_UPLOAD = "coroners-letter:upload"
-    CORONERS_LETTER_DELETE = "coroners-letter:delete"
 
     PROVIDER_OFFICES_READ = "provider-offices:read"
 
@@ -51,15 +48,12 @@ class Role(str, Enum):
 ROLE_PERMISSIONS_MAP: dict[Role, set[Permission]] = {
     Role.PROVIDER_APPLICATION_USER: {
         Permission.APPLICATION_CREATE,
-        Permission.CORONERS_LETTER_UPLOAD,
-        Permission.CORONERS_LETTER_DELETE,
         Permission.PROVIDER_OFFICES_READ,
     },
     Role.PROVIDER_CLAIMS_USER: {
         Permission.APPLICATION_SEARCH,
         Permission.CLAIM_CREATE,
         Permission.CLAIM_DELETE,
-        Permission.CLAIM_EVIDENCE_UPLOAD,
         Permission.PROVIDER_OFFICES_READ,
     },
     Role.APPLICATIONS_CASEWORKER: {
@@ -119,8 +113,11 @@ def get_current_user_permissions(
 
 
 class PermissionChecker:
-    def __init__(self, required_permission: Permission) -> None:
-        self.required_permission = required_permission
+    def __init__(self, possible_permissions: Iterable[Permission] | Permission) -> None:
+        if isinstance(possible_permissions, Permission):
+            self.possible_permissions = [possible_permissions]
+        else:
+            self.possible_permissions = possible_permissions
 
     def __call__(
         self,
@@ -129,15 +126,16 @@ class PermissionChecker:
             Depends(get_current_user_permissions),
         ],
     ) -> None:
-        if self.required_permission not in permissions:
+        if not any(
+            permission in permissions for permission in self.possible_permissions
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=(
-                    "Forbidden: Missing required permission "
-                    f"'{self.required_permission.value}'"
-                ),
+                detail=("Forbidden: Missing required permission"),
             )
 
 
-def require_permission(required_permission: Permission) -> PermissionChecker:
-    return PermissionChecker(required_permission)
+def require_permission_from(
+    possible_permissions: Iterable[Permission] | Permission,
+) -> PermissionChecker:
+    return PermissionChecker(possible_permissions)

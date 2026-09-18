@@ -19,6 +19,7 @@ from app.models.application.index import (
     ApplicationProceeding,
     ApplicationPublicBody,
     Client,
+    CoronersLetter,
     Deceased,
     Proceeding,
     ProceedingId,
@@ -141,6 +142,16 @@ def session_fixture():
             provider_id=new_provider.provider_id,
             laa_reference="INQ-123-456",
         )
+
+        coroners_letter = CoronersLetter(
+            sds_file_name="test_sds_file.pdf", file_name="test_file.pdf"
+        )
+
+        db_session.add(coroners_letter)
+        db_session.commit()
+        db_session.refresh(coroners_letter)
+
+        new_application.coroners_letter_id = coroners_letter.coroners_letter_id
 
         db_session.add(new_application)
         db_session.commit()

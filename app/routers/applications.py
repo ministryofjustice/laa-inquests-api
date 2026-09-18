@@ -22,7 +22,7 @@ from app.adapters.gov_notify import GovNotifyAdapter
 from app.adapters.history_event_repository_adapter import HistoryEventRepositoryAdapter
 from app.adapters.pdf_generator_adapter import PdfGeneratorAdapter
 from app.adapters.provider_details_adapter import ProviderDetailsAdapter
-from app.auth.rbac import Permission, require_permission
+from app.auth.rbac import Permission, require_permission_from
 from app.config import Config
 from app.db import get_session
 from app.logging_utils import build_log_extra
@@ -67,7 +67,6 @@ from app.ports.claim.update_claim_status_port import (
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.delete_coroners_letter_port import DeleteCoronersLetterPort
-from app.ports.entra_auth_port import AuthenticatedUser
 from app.ports.get_application_history_port import GetApplicationHistoryPort
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.get_coroners_letter_port import GetCoronersLetterPort
@@ -85,8 +84,6 @@ from app.routers.dependencies import (
     get_claim_db_adapter,
     get_current_provider_firm_code,
     get_sds_port,
-    verify_entra_caseworker_token,
-    verify_entra_provider_or_caseworker_token,
 )
 from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
@@ -493,7 +490,7 @@ def get_delete_coroners_letter_use_case(
     "/",
     response_model=ApplicationResponse,
     status_code=201,
-    dependencies=[Depends(require_permission(Permission.APPLICATION_CREATE))],
+    dependencies=[Depends(require_permission_from(Permission.APPLICATION_CREATE))],
 )
 def create_application(
     request: ApplicationCreate,
@@ -509,7 +506,7 @@ def create_application(
     "/upload-coroners-letter",
     response_model=UploadCoronersLetterResponse,
     status_code=201,
-    dependencies=[Depends(require_permission(Permission.CORONERS_LETTER_UPLOAD))],
+    dependencies=[Depends(require_permission_from(Permission.APPLICATION_CREATE))],
 )
 async def upload_coroners_letter(
     file: UploadFile = File(...),
@@ -560,7 +557,7 @@ async def upload_coroners_letter(
     "/{laa_reference}/claim",
     response_model=ClaimResponse,
     status_code=201,
-    dependencies=[Depends(require_permission(Permission.CLAIM_CREATE))],
+    dependencies=[Depends(require_permission_from(Permission.CLAIM_CREATE))],
 )
 def create_claim(
     laa_reference: str,
@@ -624,12 +621,15 @@ def create_claim(
         )
 
 
-@router.post("/{laa_reference}/note", status_code=204)
+@router.post(
+    "/{laa_reference}/note",
+    status_code=204,
+    dependencies=[Depends(require_permission_from(Permission.CASE_NOTE_CREATE))],
+)
 def create_note(
     laa_reference: str,
     request: CreateNoteRequest,
     use_case: CreateNoteUseCase = Depends(get_create_note_use_case),
-    _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
 ) -> Response:
     """Add a caseworker note to an application's history."""
     try:
@@ -640,20 +640,32 @@ def create_note(
     return Response(status_code=204)
 
 
-@router.get("/")
+@router.get(
+    "/",
+    response_model=list[Application],
+    dependencies=[Depends(require_permission_from(Permission.APPLICATION_READ))],
+)
 async def read_all_applications(
     use_case: ListApplicationsUseCase = Depends(get_list_applications_use_case),
-    _: None = Depends(verify_entra_caseworker_token),
 ) -> Sequence[Application]:
     """Read all the applications currently in the database."""
     applications = use_case.execute()
     return applications
 
 
-@router.get("/public-bodies", response_model=list[PublicBodyResponse])
+@router.get(
+    "/public-bodies",
+    response_model=list[PublicBodyResponse],
+    dependencies=[
+        Depends(
+            require_permission_from(
+                [Permission.APPLICATION_CREATE, Permission.APPLICATION_MANAGE]
+            )
+        )
+    ],
+)
 def list_public_bodies(
     use_case: ListPublicBodiesUseCase = Depends(get_list_public_bodies_use_case),
-    _: None = Depends(verify_entra_provider_or_caseworker_token),
 ) -> list[PublicBody]:
     public_bodies = use_case.execute()
     return public_bodies
@@ -662,7 +674,7 @@ def list_public_bodies(
 @router.get(
     "/search",
     response_model=list[ApplicationSearchResponse],
-    dependencies=[Depends(require_permission(Permission.APPLICATION_SEARCH))],
+    dependencies=[Depends(require_permission_from(Permission.APPLICATION_SEARCH))],
 )
 async def search_application(
     laa_reference: str,
@@ -696,7 +708,7 @@ async def search_application(
 @router.get(
     "/provider-offices/{firm_id}",
     response_model=list[ProviderOfficeResponse],
-    dependencies=[Depends(require_permission(Permission.PROVIDER_OFFICES_READ))],
+    dependencies=[Depends(require_permission_from(Permission.PROVIDER_OFFICES_READ))],
 )
 async def list_provider_offices(
     firm_id: str,
@@ -723,11 +735,14 @@ async def list_provider_offices(
         )
 
 
-@router.get("/{laa_reference}", response_model=ApplicationResponse)
+@router.get(
+    "/{laa_reference}",
+    response_model=ApplicationResponse,
+    dependencies=[Depends(require_permission_from(Permission.APPLICATION_READ))],
+)
 async def read_application(
     laa_reference: str,
     use_case: GetApplicationUseCase = Depends(get_get_application_use_case),
-    _: None = Depends(verify_entra_caseworker_token),
 ) -> ApplicationResponse:
     """Get information about a given application."""
     try:
@@ -740,11 +755,11 @@ async def read_application(
 @router.get(
     "/{laa_reference}/certificate",
     response_model=ApplicationCertificateResponse,
+    dependencies=[Depends(require_permission_from(Permission.CERTIFICATE_READ))],
 )
 def read_certificate(
     laa_reference: str,
     use_case: RetrieveCertificateUseCase = Depends(get_retrieve_certificate_use_case),
-    _: None = Depends(verify_entra_caseworker_token),
 ) -> ApplicationCertificateResponse:
     """Get the populated certificate context for a given application."""
     try:
@@ -767,6 +782,7 @@ def read_certificate(
 @router.get(
     "/{laa_reference}/claims",
     response_model=list[ClaimSummaryResponse],
+    dependencies=[Depends(require_permission_from(Permission.CLAIM_READ))],
 )
 def list_application_claims(
     laa_reference: str,
@@ -774,7 +790,6 @@ def list_application_claims(
     use_case: ListApplicationClaimsUseCase = Depends(
         get_list_application_claims_use_case
     ),
-    _: None = Depends(verify_entra_caseworker_token),
 ) -> list[ClaimSummaryResponse]:
     """List claims for an application, filtered by assessed status."""
     try:
@@ -787,12 +802,12 @@ def list_application_claims(
 @router.get(
     "/{laa_reference}/claims/{claim_id}",
     response_model=ClaimByIdResponse,
+    dependencies=[Depends(require_permission_from(Permission.CLAIM_READ))],
 )
 def read_claim(
     laa_reference: str,
     claim_id: int,
     use_case: GetClaimUseCase = Depends(get_get_claim_use_case),
-    _: None = Depends(verify_entra_caseworker_token),
 ) -> ClaimByIdResponse:
     """Get a single claim by ID for a given application."""
     try:
@@ -820,11 +835,11 @@ def get_coroners_letter_use_case(
     "/{laa_reference}/coroners-letter",
     response_class=StreamingResponse,
     responses={200: {"content": {"image/png": {}}}},
+    dependencies=[Depends(require_permission_from(Permission.APPLICATION_READ))],
 )
 def retrieve_coroners_letter(
     laa_reference: str,
     use_case: RetrieveCoronersLetterUseCase = Depends(get_coroners_letter_use_case),
-    _: None = Depends(verify_entra_caseworker_token),
 ) -> StreamingResponse:
     """Stream the coroner's letter for a given application."""
     try:
@@ -859,11 +874,11 @@ def retrieve_coroners_letter(
 @router.get(
     "/{laa_reference}/history",
     response_model=list[HistoryEventResponse],
+    dependencies=[Depends(require_permission_from(Permission.HISTORY_READ))],
 )
 def get_application_history(
     laa_reference: str,
     use_case: GetApplicationHistoryUseCase = Depends(get_application_history_use_case),
-    _: None = Depends(verify_entra_caseworker_token),
 ) -> list[HistoryEventResponse]:
     """Get the history of a given application."""
     try:
@@ -873,13 +888,16 @@ def get_application_history(
         raise HTTPException(status_code=404, detail="Application not found")
 
 
-@router.patch("/{laa_reference}/claims/{claim_id}/pay-in-full", status_code=204)
+@router.patch(
+    "/{laa_reference}/claims/{claim_id}/pay-in-full",
+    status_code=204,
+    dependencies=[Depends(require_permission_from(Permission.CLAIM_MANAGE))],
+)
 def pay_in_full_claim(
     laa_reference: str,
     claim_id: int,
     request: PayInFullClaimRequest,
     use_case: PayInFullClaimUseCase = Depends(get_pay_in_full_claim_use_case),
-    _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
 ) -> Response:
     """Record a pay-in-full decision against a claim, with approved amounts."""
     try:
@@ -907,13 +925,16 @@ def pay_in_full_claim(
     return Response(status_code=204)
 
 
-@router.patch("/{laa_reference}/claims/{claim_id}/reject", status_code=204)
+@router.patch(
+    "/{laa_reference}/claims/{claim_id}/reject",
+    status_code=204,
+    dependencies=[Depends(require_permission_from(Permission.CLAIM_MANAGE))],
+)
 def reject_claim(
     laa_reference: str,
     claim_id: int,
     request: RejectClaimRequest,
     use_case: RejectClaimUseCase = Depends(get_reject_claim_use_case),
-    _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
 ) -> Response:
     """Reject a claim, recording a manual rejection decision against it."""
     try:
@@ -932,12 +953,15 @@ def reject_claim(
     return Response(status_code=204)
 
 
-@router.patch("/{laa_reference}/grant-decision", status_code=204)
+@router.patch(
+    "/{laa_reference}/grant-decision",
+    status_code=204,
+    dependencies=[Depends(require_permission_from(Permission.APPLICATION_MANAGE))],
+)
 def grant_decision(
     laa_reference: str,
     request: GrantApplicationUpdate,
     use_case: GrantDecisionUseCase = Depends(get_grant_decision_use_case),
-    _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
 ) -> Response:
     """Grant the merits decision on the single proceeding for a given application."""
     try:
@@ -949,14 +973,17 @@ def grant_decision(
     return Response(status_code=204)
 
 
-@router.patch("/{laa_reference}/public-bodies", status_code=204)
+@router.patch(
+    "/{laa_reference}/public-bodies",
+    status_code=204,
+    dependencies=[Depends(require_permission_from(Permission.APPLICATION_MANAGE))],
+)
 def update_application_public_bodies(
     laa_reference: str,
     request: UpdateApplicationPublicBodiesRequest,
     use_case: UpdatePublicBodiesUseCase = Depends(
         get_update_application_public_bodies_use_case
     ),
-    _: None = Depends(verify_entra_caseworker_token),
 ) -> Response:
     """Update the public bodies associated with an application."""
     try:
@@ -971,12 +998,15 @@ def update_application_public_bodies(
     return Response(status_code=204)
 
 
-@router.patch("/{laa_reference}/refuse-decision", status_code=204)
+@router.patch(
+    "/{laa_reference}/refuse-decision",
+    status_code=204,
+    dependencies=[Depends(require_permission_from(Permission.APPLICATION_MANAGE))],
+)
 def refuse_decision(
     laa_reference: str,
     request: RefuseApplicationUpdate,
     use_case: RefuseDecisionUseCase = Depends(get_make_merits_decision_use_case),
-    _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
 ) -> Response:
     """Set the merits decision on the single proceeding for a given application."""
     try:
@@ -990,7 +1020,7 @@ def refuse_decision(
 @router.delete(
     "/coroners-letter/{coroners_letter_id}",
     status_code=204,
-    dependencies=[Depends(require_permission(Permission.CORONERS_LETTER_DELETE))],
+    dependencies=[Depends(require_permission_from(Permission.APPLICATION_CREATE))],
 )
 def delete_coroners_letter(
     coroners_letter_id: uuid.UUID,

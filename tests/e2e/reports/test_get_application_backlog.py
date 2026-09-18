@@ -134,7 +134,9 @@ class TestGetApplicationBacklogReportAuth:
     def test_200_returns_ok_when_caseworker_token(self, client):
         response = client.get(
             "/reports/applications/backlog",
-            headers={"Authorization": "Bearer Caseworker No Role"},
+            headers={
+                "Authorization": f"Bearer {Role.APPLICATION_WORKFLOW_REPORTING.value}"
+            },
         )
 
         assert response.status_code == 200

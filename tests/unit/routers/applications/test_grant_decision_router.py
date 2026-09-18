@@ -17,20 +17,16 @@ def _grant_request() -> GrantApplicationUpdate:
 def test_grant_decision_calls_use_case_with_expected_arguments():
     use_case = MagicMock()
     request = _grant_request()
-    user = MagicMock()
-    user.name = "Caseworker"
 
-    grant_decision("1", request=request, use_case=use_case, _=user)
+    grant_decision("1", request=request, use_case=use_case)
 
     use_case.execute.assert_called_once_with("1", request)
 
 
 def test_grant_decision_returns_204_on_success():
     use_case = MagicMock()
-    user = MagicMock()
-    user.name = "Caseworker"
 
-    response = grant_decision("1", request=_grant_request(), use_case=use_case, _=user)
+    response = grant_decision("1", request=_grant_request(), use_case=use_case)
 
     assert isinstance(response, Response)
     assert response.status_code == 204
@@ -39,11 +35,9 @@ def test_grant_decision_returns_204_on_success():
 def test_grant_decision_raises_404_when_application_not_found():
     use_case = MagicMock()
     use_case.execute.side_effect = ApplicationNotFoundError()
-    user = MagicMock()
-    user.name = "Caseworker"
 
     with pytest.raises(HTTPException) as exception:
-        grant_decision("1", request=_grant_request(), use_case=use_case, _=user)
+        grant_decision("1", request=_grant_request(), use_case=use_case)
 
     assert exception.value.status_code == 404
     assert exception.value.detail == "Application not found"

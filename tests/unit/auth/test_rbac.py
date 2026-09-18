@@ -7,7 +7,7 @@ from app.auth.rbac import (
     Permission,
     Role,
     get_current_user_permissions,
-    require_permission,
+    require_permission_from,
 )
 from app.ports.entra_auth_port import AuthenticatedUser
 from app.routers.dependencies.entra_auth import verify_entra_token
@@ -63,24 +63,23 @@ def test_get_current_user_permissions_returns_empty_set_for_no_roles():
     assert permissions == set()
 
 
-def test_require_permission_allows_access_when_permission_present():
-    permission_checker = require_permission(Permission.CLAIM_CREATE)
+def test_require_permission_from_allows_access_when_permission_present():
+    permission_checker = require_permission_from(Permission.CLAIM_CREATE)
 
     assert permission_checker(permissions={Permission.CLAIM_CREATE}) is None
 
 
-def test_require_permission_raises_403_when_permission_missing():
-    permission_checker = require_permission(Permission.CLAIM_CREATE)
+def test_require_permission_from_raises_403_when_permission_missing():
+    permission_checker = require_permission_from(Permission.CLAIM_CREATE)
 
     with pytest.raises(HTTPException) as exc_info:
         permission_checker(permissions={Permission.CLAIM_READ})
 
     assert exc_info.value.status_code == 403
-    assert "claim:create" in exc_info.value.detail
 
 
-def test_require_permission_depends_on_get_current_user_permissions():
-    permission_checker = require_permission(Permission.CLAIM_CREATE)
+def test_require_permission_from_depends_on_get_current_user_permissions():
+    permission_checker = require_permission_from(Permission.CLAIM_CREATE)
 
     dependant = get_dependant(path="/test", call=permission_checker)
 
@@ -99,8 +98,6 @@ def test_get_current_user_permissions_depends_on_verify_entra_token():
 def test_external_provider_application_user_permission_set():
     assert ROLE_PERMISSIONS_MAP[Role.PROVIDER_APPLICATION_USER.value] == {
         Permission.APPLICATION_CREATE,
-        Permission.CORONERS_LETTER_UPLOAD,
-        Permission.CORONERS_LETTER_DELETE,
         Permission.PROVIDER_OFFICES_READ,
     }
 
@@ -110,7 +107,6 @@ def test_external_provider_claims_user_permission_set():
         Permission.APPLICATION_SEARCH,
         Permission.CLAIM_CREATE,
         Permission.CLAIM_DELETE,
-        Permission.CLAIM_EVIDENCE_UPLOAD,
         Permission.PROVIDER_OFFICES_READ,
     }
 

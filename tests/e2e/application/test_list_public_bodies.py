@@ -38,25 +38,14 @@ def test_200_list_public_bodies_returns_results_sorted_alphabetically_ignoring_d
     ]
 
 
-def test_200_list_public_bodies_returns_200_when_caseworker_token(
-    client,
-):
-    response = client.get(
-        "/applications/public-bodies",
-        headers={"Authorization": "Bearer Caseworker No Role"},
-    )
-
-    assert response.status_code == 200
-
-
 @pytest.mark.parametrize(
-    "provider_token",
-    [Role.PROVIDER_APPLICATION_USER.value, Role.PROVIDER_CLAIMS_USER.value],
+    "role",
+    [Role.PROVIDER_APPLICATION_USER.value, Role.APPLICATIONS_CASEWORKER.value],
 )
-def test_200_list_public_bodies_returns_200_when_provider_token(client, provider_token):
+def test_200_list_public_bodies_returns_200_when_role_has_access(client, role):
     response = client.get(
         "/applications/public-bodies",
-        headers={"Authorization": f"Bearer {provider_token}"},
+        headers={"Authorization": f"Bearer {role}"},
     )
 
     assert response.status_code == 200

@@ -14,7 +14,7 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 
-from app.auth.rbac import Permission, require_permission
+from app.auth.rbac import Permission, require_permission_from
 from app.logging_utils import build_log_extra
 from app.models.claim.index import UploadClaimEvidenceResponse
 from app.ports.claim.delete_claim_evidence_port import DeleteClaimEvidencePort
@@ -24,7 +24,6 @@ from app.ports.sds_port import SdsPort
 from app.routers.dependencies import (
     get_claim_db_adapter,
     get_sds_port,
-    verify_entra_provider_or_caseworker_token,
 )
 from app.use_cases.delete_claim_evidence import DeleteClaimEvidenceUseCase
 from app.use_cases.exceptions import (
@@ -94,7 +93,7 @@ def get_delete_claim_evidence_use_case(
     "/evidence",
     response_model=UploadClaimEvidenceResponse,
     status_code=201,
-    dependencies=[Depends(require_permission(Permission.CLAIM_EVIDENCE_UPLOAD))],
+    dependencies=[Depends(require_permission_from(Permission.CLAIM_CREATE))],
 )
 async def upload_claim_evidence(
     file: UploadFile = File(...),
@@ -144,13 +143,17 @@ async def upload_claim_evidence(
     "/{claim_evidence_id}",
     response_class=StreamingResponse,
     responses={200: {"content": {"image/png": {}}}},
+    dependencies=[
+        Depends(
+            require_permission_from([Permission.CLAIM_CREATE, Permission.CLAIM_READ])
+        )
+    ],
 )
 def retrieve_claim_evidence(
     claim_evidence_id: uuid.UUID,
     disposition: Literal["inline", "attachment"] = "inline",
     use_case: RetrieveClaimEvidenceUseCase = Depends(get_claim_evidence_use_case),
     request: Request = None,
-    _: None = Depends(verify_entra_provider_or_caseworker_token),
 ) -> StreamingResponse:
     """Stream a piece of claim evidence, independent of whether it is linked to a claim yet."""
     try:
@@ -207,7 +210,7 @@ def retrieve_claim_evidence(
 @router.delete(
     "/{claim_evidence_id}",
     status_code=204,
-    dependencies=[Depends(require_permission(Permission.CLAIM_DELETE))],
+    dependencies=[Depends(require_permission_from(Permission.CLAIM_CREATE))],
 )
 def delete_claim_evidence(
     claim_evidence_id: uuid.UUID,
