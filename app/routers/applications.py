@@ -489,237 +489,20 @@ def get_delete_coroners_letter_use_case(
     )
 
 
-@router.get(
-    "/search",
-    response_model=list[ApplicationSearchResponse],
-    dependencies=[Depends(require_permission(Permission.APPLICATION_SEARCH))],
+@router.post(
+    "/",
+    response_model=ApplicationResponse,
+    status_code=201,
+    dependencies=[Depends(require_permission(Permission.APPLICATION_CREATE))],
 )
-async def search_application(
-    laa_reference: str,
+def create_application(
+    request: ApplicationCreate,
     firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
-    merits_decision: MeritsDecision | None = None,
-    request: Request = None,
-    use_case: SearchApplicationUseCase = Depends(get_search_application_use_case),
-) -> list[ApplicationSearchResponse]:
-    """Search for an application by exact LAA reference number."""
-    try:
-        results = use_case.execute(laa_reference, firm_code, merits_decision)
-        return results
-    except ProviderDetailsRetrievalError:
-        logger.warning(
-            "Application search failed",
-            extra=build_log_extra(
-                event="application_search_failed",
-                route=_route(request),
-                method=_method(request),
-                status_code=500,
-                laa_reference=laa_reference,
-                firm_code=firm_code,
-            ),
-        )
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to retrieve firm name from provider details service",
-        )
-
-
-@router.get(
-    "/provider-offices/{firm_id}",
-    response_model=list[ProviderOfficeResponse],
-    dependencies=[Depends(require_permission(Permission.PROVIDER_OFFICES_READ))],
-)
-async def list_provider_offices(
-    firm_id: str,
-    use_case: ListProviderOfficesUseCase = Depends(get_list_provider_offices_use_case),
-    request: Request = None,
-) -> list[dict]:
-    try:
-        provider_offices = use_case.execute(firm_id)
-        return provider_offices
-    except ProviderDetailsRetrievalError:
-        logger.warning(
-            "Provider office lookup failed",
-            extra=build_log_extra(
-                event="provider_office_lookup_failed",
-                route=_route(request),
-                method=_method(request),
-                status_code=500,
-                firm_id=firm_id,
-            ),
-        )
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to retrieve provider offices from provider details service",
-        )
-
-
-@router.get("/public-bodies", response_model=list[PublicBodyResponse])
-def list_public_bodies(
-    use_case: ListPublicBodiesUseCase = Depends(get_list_public_bodies_use_case),
-    _: None = Depends(verify_entra_provider_or_caseworker_token),
-) -> list[PublicBody]:
-    public_bodies = use_case.execute()
-    return public_bodies
-
-
-def get_coroners_letter_use_case(
-    application_lookup_port: ApplicationLookupPort = Depends(
-        get_application_db_adapter
-    ),
-    sds_port: SdsPort = Depends(get_sds_port),
-) -> RetrieveCoronersLetterUseCase:
-    return RetrieveCoronersLetterUseCase(
-        application_lookup_port=application_lookup_port,
-        sds_port=sds_port,
-    )
-
-
-@router.get(
-    "/{laa_reference}/coroners-letter",
-    response_class=StreamingResponse,
-    responses={200: {"content": {"image/png": {}}}},
-)
-def retrieve_coroners_letter(
-    laa_reference: str,
-    use_case: RetrieveCoronersLetterUseCase = Depends(get_coroners_letter_use_case),
-    _: None = Depends(verify_entra_caseworker_token),
-) -> StreamingResponse:
-    """Stream the coroner's letter for a given application."""
-    try:
-        result = use_case.execute(laa_reference)
-    except CoronersLetterNotFoundError:
-        raise HTTPException(status_code=404, detail="Coroners letter not found")
-    except InvalidCoronersLetterDocumentIdError:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid coroners letter document id",
-        )
-    except CoronersLetterRetrievalError:
-        raise HTTPException(
-            status_code=500, detail="Failed to retrieve coroners letter"
-        )
-
-    mime_type = guess_type(result.file_name)
-    supported_mime_types = ["image/png", "image/jpeg", "image/bmp", "application/pdf"]
-    if mime_type[0] not in supported_mime_types:
-        raise HTTPException(
-            status_code=415,
-            detail="Returned file type is not supported for streaming. Supported file types are: .png, .jpg, .jpeg, .bmp, .pdf",
-        )
-
-    return StreamingResponse(
-        result.content,
-        media_type=mime_type[0],
-        headers={"Content-Disposition": f'inline; filename="{result.file_name}"'},
-    )
-
-
-@router.get(
-    "/{laa_reference}/claims",
-    response_model=list[ClaimSummaryResponse],
-)
-def list_application_claims(
-    laa_reference: str,
-    assessed: bool,
-    use_case: ListApplicationClaimsUseCase = Depends(
-        get_list_application_claims_use_case
-    ),
-    _: None = Depends(verify_entra_caseworker_token),
-) -> list[ClaimSummaryResponse]:
-    """List claims for an application, filtered by assessed status."""
-    try:
-        claims = use_case.execute(laa_reference, assessed)
-        return claims
-    except ApplicationNotFoundError:
-        raise HTTPException(status_code=404, detail="Application not found")
-
-
-@router.get(
-    "/{laa_reference}/claims/{claim_id}",
-    response_model=ClaimByIdResponse,
-)
-def read_claim(
-    laa_reference: str,
-    claim_id: int,
-    use_case: GetClaimUseCase = Depends(get_get_claim_use_case),
-    _: None = Depends(verify_entra_caseworker_token),
-) -> ClaimByIdResponse:
-    """Get a single claim by ID for a given application."""
-    try:
-        claim = use_case.execute(laa_reference, claim_id)
-        return claim
-    except ApplicationNotFoundError:
-        raise HTTPException(status_code=404, detail="Application not found")
-    except ClaimNotFoundError:
-        raise HTTPException(status_code=404, detail="Claim not found")
-
-
-@router.get("/{laa_reference}", response_model=ApplicationResponse)
-async def read_application(
-    laa_reference: str,
-    use_case: GetApplicationUseCase = Depends(get_get_application_use_case),
-    _: None = Depends(verify_entra_caseworker_token),
-) -> ApplicationResponse:
-    """Get information about a given application."""
-    try:
-        application = use_case.execute(laa_reference)
-        return application
-    except ApplicationNotFoundError:
-        raise HTTPException(status_code=404, detail="Application not found")
-
-
-@router.get(
-    "/{laa_reference}/certificate",
-    response_model=ApplicationCertificateResponse,
-)
-def read_certificate(
-    laa_reference: str,
-    use_case: RetrieveCertificateUseCase = Depends(get_retrieve_certificate_use_case),
-    _: None = Depends(verify_entra_caseworker_token),
-) -> ApplicationCertificateResponse:
-    """Get the populated certificate context for a given application."""
-    try:
-        certificate = use_case.execute(laa_reference)
-        return ApplicationCertificateResponse.model_validate(certificate)
-    except ApplicationNotFoundError:
-        raise HTTPException(status_code=404, detail="Application not found")
-    except ApplicationNotGrantedError:
-        raise HTTPException(
-            status_code=422,
-            detail="Application is not granted",
-        )
-    except ProviderDetailsRetrievalError:
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to retrieve firm name from provider details service",
-        )
-
-
-@router.get(
-    "/{laa_reference}/history",
-    response_model=list[HistoryEventResponse],
-)
-def get_application_history(
-    laa_reference: str,
-    use_case: GetApplicationHistoryUseCase = Depends(get_application_history_use_case),
-    _: None = Depends(verify_entra_caseworker_token),
-) -> list[HistoryEventResponse]:
-    """Get the history of a given application."""
-    try:
-        history = use_case.execute(laa_reference)
-        return history
-    except ApplicationNotFoundError:
-        raise HTTPException(status_code=404, detail="Application not found")
-
-
-@router.get("/")
-async def read_all_applications(
-    use_case: ListApplicationsUseCase = Depends(get_list_applications_use_case),
-    _: None = Depends(verify_entra_caseworker_token),
-) -> Sequence[Application]:
-    """Read all the applications currently in the database."""
-    applications = use_case.execute()
-    return applications
+    use_case: CreateApplicationUseCase = Depends(get_create_application_use_case),
+) -> Application:
+    """Creates a new application with proceedings and public bodies."""
+    application = use_case.execute(request, firm_code)
+    return application
 
 
 @router.post(
@@ -771,65 +554,6 @@ async def upload_coroners_letter(
     return UploadCoronersLetterResponse(
         coroners_letter_id=coroners_letter_id, coroners_letter_file_name=file_name
     )
-
-
-@router.delete(
-    "/coroners-letter/{coroners_letter_id}",
-    status_code=204,
-    dependencies=[Depends(require_permission(Permission.CORONERS_LETTER_DELETE))],
-)
-def delete_coroners_letter(
-    coroners_letter_id: uuid.UUID,
-    use_case: DeleteCoronersLetterUseCase = Depends(
-        get_delete_coroners_letter_use_case
-    ),
-    request: Request = None,
-) -> Response:
-    """Delete an uploaded coroner's letter from document storage and the database."""
-    try:
-        use_case.execute(coroners_letter_id)
-    except CoronersLetterNotFoundError:
-        logger.warning(
-            "Coroners letter delete failed: not found",
-            extra=build_log_extra(
-                event="coroners_letter_deleted_failed",
-                route=_route(request),
-                method=_method(request),
-                status_code=404,
-                coroners_letter_id=str(coroners_letter_id),
-            ),
-        )
-        raise HTTPException(status_code=404, detail="Coroners letter not found")
-    except CoronersLetterDeleteError:
-        logger.warning(
-            "Coroners letter delete failed",
-            extra=build_log_extra(
-                event="coroners_letter_deleted_failed",
-                route=_route(request),
-                method=_method(request),
-                status_code=500,
-                coroners_letter_id=str(coroners_letter_id),
-            ),
-        )
-        raise HTTPException(status_code=500, detail="Failed to delete coroners letter")
-
-    return Response(status_code=204)
-
-
-@router.post(
-    "/",
-    response_model=ApplicationResponse,
-    status_code=201,
-    dependencies=[Depends(require_permission(Permission.APPLICATION_CREATE))],
-)
-def create_application(
-    request: ApplicationCreate,
-    firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
-    use_case: CreateApplicationUseCase = Depends(get_create_application_use_case),
-) -> Application:
-    """Creates a new application with proceedings and public bodies."""
-    application = use_case.execute(request, firm_code)
-    return application
 
 
 @router.post(
@@ -916,51 +640,237 @@ def create_note(
     return Response(status_code=204)
 
 
-@router.patch("/{laa_reference}/public-bodies", status_code=204)
-def update_application_public_bodies(
-    laa_reference: str,
-    request: UpdateApplicationPublicBodiesRequest,
-    use_case: UpdatePublicBodiesUseCase = Depends(
-        get_update_application_public_bodies_use_case
-    ),
+@router.get("/")
+async def read_all_applications(
+    use_case: ListApplicationsUseCase = Depends(get_list_applications_use_case),
     _: None = Depends(verify_entra_caseworker_token),
-) -> Response:
-    """Update the public bodies associated with an application."""
+) -> Sequence[Application]:
+    """Read all the applications currently in the database."""
+    applications = use_case.execute()
+    return applications
+
+
+@router.get("/public-bodies", response_model=list[PublicBodyResponse])
+def list_public_bodies(
+    use_case: ListPublicBodiesUseCase = Depends(get_list_public_bodies_use_case),
+    _: None = Depends(verify_entra_provider_or_caseworker_token),
+) -> list[PublicBody]:
+    public_bodies = use_case.execute()
+    return public_bodies
+
+
+@router.get(
+    "/search",
+    response_model=list[ApplicationSearchResponse],
+    dependencies=[Depends(require_permission(Permission.APPLICATION_SEARCH))],
+)
+async def search_application(
+    laa_reference: str,
+    firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
+    merits_decision: MeritsDecision | None = None,
+    request: Request = None,
+    use_case: SearchApplicationUseCase = Depends(get_search_application_use_case),
+) -> list[ApplicationSearchResponse]:
+    """Search for an application by exact LAA reference number."""
     try:
-        use_case.execute(laa_reference, request.public_bodies)
+        results = use_case.execute(laa_reference, firm_code, merits_decision)
+        return results
+    except ProviderDetailsRetrievalError:
+        logger.warning(
+            "Application search failed",
+            extra=build_log_extra(
+                event="application_search_failed",
+                route=_route(request),
+                method=_method(request),
+                status_code=500,
+                laa_reference=laa_reference,
+                firm_code=firm_code,
+            ),
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve firm name from provider details service",
+        )
+
+
+@router.get(
+    "/provider-offices/{firm_id}",
+    response_model=list[ProviderOfficeResponse],
+    dependencies=[Depends(require_permission(Permission.PROVIDER_OFFICES_READ))],
+)
+async def list_provider_offices(
+    firm_id: str,
+    use_case: ListProviderOfficesUseCase = Depends(get_list_provider_offices_use_case),
+    request: Request = None,
+) -> list[dict]:
+    try:
+        provider_offices = use_case.execute(firm_id)
+        return provider_offices
+    except ProviderDetailsRetrievalError:
+        logger.warning(
+            "Provider office lookup failed",
+            extra=build_log_extra(
+                event="provider_office_lookup_failed",
+                route=_route(request),
+                method=_method(request),
+                status_code=500,
+                firm_id=firm_id,
+            ),
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve provider offices from provider details service",
+        )
+
+
+@router.get("/{laa_reference}", response_model=ApplicationResponse)
+async def read_application(
+    laa_reference: str,
+    use_case: GetApplicationUseCase = Depends(get_get_application_use_case),
+    _: None = Depends(verify_entra_caseworker_token),
+) -> ApplicationResponse:
+    """Get information about a given application."""
+    try:
+        application = use_case.execute(laa_reference)
+        return application
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+
+@router.get(
+    "/{laa_reference}/certificate",
+    response_model=ApplicationCertificateResponse,
+)
+def read_certificate(
+    laa_reference: str,
+    use_case: RetrieveCertificateUseCase = Depends(get_retrieve_certificate_use_case),
+    _: None = Depends(verify_entra_caseworker_token),
+) -> ApplicationCertificateResponse:
+    """Get the populated certificate context for a given application."""
+    try:
+        certificate = use_case.execute(laa_reference)
+        return ApplicationCertificateResponse.model_validate(certificate)
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
     except ApplicationNotGrantedError:
-        raise HTTPException(status_code=422, detail="Application is not granted")
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
+        raise HTTPException(
+            status_code=422,
+            detail="Application is not granted",
+        )
+    except ProviderDetailsRetrievalError:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve firm name from provider details service",
+        )
 
-    return Response(status_code=204)
+
+@router.get(
+    "/{laa_reference}/claims",
+    response_model=list[ClaimSummaryResponse],
+)
+def list_application_claims(
+    laa_reference: str,
+    assessed: bool,
+    use_case: ListApplicationClaimsUseCase = Depends(
+        get_list_application_claims_use_case
+    ),
+    _: None = Depends(verify_entra_caseworker_token),
+) -> list[ClaimSummaryResponse]:
+    """List claims for an application, filtered by assessed status."""
+    try:
+        claims = use_case.execute(laa_reference, assessed)
+        return claims
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
 
 
-@router.patch("/{laa_reference}/claims/{claim_id}/reject", status_code=204)
-def reject_claim(
+@router.get(
+    "/{laa_reference}/claims/{claim_id}",
+    response_model=ClaimByIdResponse,
+)
+def read_claim(
     laa_reference: str,
     claim_id: int,
-    request: RejectClaimRequest,
-    use_case: RejectClaimUseCase = Depends(get_reject_claim_use_case),
-    _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
-) -> Response:
-    """Reject a claim, recording a manual rejection decision against it."""
+    use_case: GetClaimUseCase = Depends(get_get_claim_use_case),
+    _: None = Depends(verify_entra_caseworker_token),
+) -> ClaimByIdResponse:
+    """Get a single claim by ID for a given application."""
     try:
-        use_case.execute(
-            RejectClaimCommand(
-                laa_reference=laa_reference,
-                claim_id=claim_id,
-                justification=request.justification,
-            ),
-        )
+        claim = use_case.execute(laa_reference, claim_id)
+        return claim
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
     except ClaimNotFoundError:
         raise HTTPException(status_code=404, detail="Claim not found")
 
-    return Response(status_code=204)
+
+def get_coroners_letter_use_case(
+    application_lookup_port: ApplicationLookupPort = Depends(
+        get_application_db_adapter
+    ),
+    sds_port: SdsPort = Depends(get_sds_port),
+) -> RetrieveCoronersLetterUseCase:
+    return RetrieveCoronersLetterUseCase(
+        application_lookup_port=application_lookup_port,
+        sds_port=sds_port,
+    )
+
+
+@router.get(
+    "/{laa_reference}/coroners-letter",
+    response_class=StreamingResponse,
+    responses={200: {"content": {"image/png": {}}}},
+)
+def retrieve_coroners_letter(
+    laa_reference: str,
+    use_case: RetrieveCoronersLetterUseCase = Depends(get_coroners_letter_use_case),
+    _: None = Depends(verify_entra_caseworker_token),
+) -> StreamingResponse:
+    """Stream the coroner's letter for a given application."""
+    try:
+        result = use_case.execute(laa_reference)
+    except CoronersLetterNotFoundError:
+        raise HTTPException(status_code=404, detail="Coroners letter not found")
+    except InvalidCoronersLetterDocumentIdError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid coroners letter document id",
+        )
+    except CoronersLetterRetrievalError:
+        raise HTTPException(
+            status_code=500, detail="Failed to retrieve coroners letter"
+        )
+
+    mime_type = guess_type(result.file_name)
+    supported_mime_types = ["image/png", "image/jpeg", "image/bmp", "application/pdf"]
+    if mime_type[0] not in supported_mime_types:
+        raise HTTPException(
+            status_code=415,
+            detail="Returned file type is not supported for streaming. Supported file types are: .png, .jpg, .jpeg, .bmp, .pdf",
+        )
+
+    return StreamingResponse(
+        result.content,
+        media_type=mime_type[0],
+        headers={"Content-Disposition": f'inline; filename="{result.file_name}"'},
+    )
+
+
+@router.get(
+    "/{laa_reference}/history",
+    response_model=list[HistoryEventResponse],
+)
+def get_application_history(
+    laa_reference: str,
+    use_case: GetApplicationHistoryUseCase = Depends(get_application_history_use_case),
+    _: None = Depends(verify_entra_caseworker_token),
+) -> list[HistoryEventResponse]:
+    """Get the history of a given application."""
+    try:
+        history = use_case.execute(laa_reference)
+        return history
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
 
 
 @router.patch("/{laa_reference}/claims/{claim_id}/pay-in-full", status_code=204)
@@ -997,18 +907,27 @@ def pay_in_full_claim(
     return Response(status_code=204)
 
 
-@router.patch("/{laa_reference}/refuse-decision", status_code=204)
-def refuse_decision(
+@router.patch("/{laa_reference}/claims/{claim_id}/reject", status_code=204)
+def reject_claim(
     laa_reference: str,
-    request: RefuseApplicationUpdate,
-    use_case: RefuseDecisionUseCase = Depends(get_make_merits_decision_use_case),
+    claim_id: int,
+    request: RejectClaimRequest,
+    use_case: RejectClaimUseCase = Depends(get_reject_claim_use_case),
     _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
 ) -> Response:
-    """Set the merits decision on the single proceeding for a given application."""
+    """Reject a claim, recording a manual rejection decision against it."""
     try:
-        use_case.execute(laa_reference, request)
+        use_case.execute(
+            RejectClaimCommand(
+                laa_reference=laa_reference,
+                claim_id=claim_id,
+                justification=request.justification,
+            ),
+        )
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
+    except ClaimNotFoundError:
+        raise HTTPException(status_code=404, detail="Claim not found")
 
     return Response(status_code=204)
 
@@ -1026,5 +945,86 @@ def grant_decision(
 
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
+
+    return Response(status_code=204)
+
+
+@router.patch("/{laa_reference}/public-bodies", status_code=204)
+def update_application_public_bodies(
+    laa_reference: str,
+    request: UpdateApplicationPublicBodiesRequest,
+    use_case: UpdatePublicBodiesUseCase = Depends(
+        get_update_application_public_bodies_use_case
+    ),
+    _: None = Depends(verify_entra_caseworker_token),
+) -> Response:
+    """Update the public bodies associated with an application."""
+    try:
+        use_case.execute(laa_reference, request.public_bodies)
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
+    except ApplicationNotGrantedError:
+        raise HTTPException(status_code=422, detail="Application is not granted")
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+    return Response(status_code=204)
+
+
+@router.patch("/{laa_reference}/refuse-decision", status_code=204)
+def refuse_decision(
+    laa_reference: str,
+    request: RefuseApplicationUpdate,
+    use_case: RefuseDecisionUseCase = Depends(get_make_merits_decision_use_case),
+    _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
+) -> Response:
+    """Set the merits decision on the single proceeding for a given application."""
+    try:
+        use_case.execute(laa_reference, request)
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    return Response(status_code=204)
+
+
+@router.delete(
+    "/coroners-letter/{coroners_letter_id}",
+    status_code=204,
+    dependencies=[Depends(require_permission(Permission.CORONERS_LETTER_DELETE))],
+)
+def delete_coroners_letter(
+    coroners_letter_id: uuid.UUID,
+    use_case: DeleteCoronersLetterUseCase = Depends(
+        get_delete_coroners_letter_use_case
+    ),
+    request: Request = None,
+) -> Response:
+    """Delete an uploaded coroner's letter from document storage and the database."""
+    try:
+        use_case.execute(coroners_letter_id)
+    except CoronersLetterNotFoundError:
+        logger.warning(
+            "Coroners letter delete failed: not found",
+            extra=build_log_extra(
+                event="coroners_letter_deleted_failed",
+                route=_route(request),
+                method=_method(request),
+                status_code=404,
+                coroners_letter_id=str(coroners_letter_id),
+            ),
+        )
+        raise HTTPException(status_code=404, detail="Coroners letter not found")
+    except CoronersLetterDeleteError:
+        logger.warning(
+            "Coroners letter delete failed",
+            extra=build_log_extra(
+                event="coroners_letter_deleted_failed",
+                route=_route(request),
+                method=_method(request),
+                status_code=500,
+                coroners_letter_id=str(coroners_letter_id),
+            ),
+        )
+        raise HTTPException(status_code=500, detail="Failed to delete coroners letter")
 
     return Response(status_code=204)

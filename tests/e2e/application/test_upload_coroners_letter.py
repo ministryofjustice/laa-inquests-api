@@ -104,36 +104,6 @@ class TestUploadCoronersLetterRbac:
         )
         assert response.status_code == 201
 
-    def test_403_upload_coroners_letter_with_app_role_missing_upload_permission(
-        self, client
-    ):
-        response = client.post(
-            "/applications/upload-coroners-letter",
-            files={
-                "file": (
-                    "coroners_letter.pdf",
-                    io.BytesIO(b"test content"),
-                    "application/pdf",
-                )
-            },
-            headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
-        )
-        assert response.status_code == 403
-
-    def test_403_upload_coroners_letter_with_unmapped_app_role(self, client):
-        response = client.post(
-            "/applications/upload-coroners-letter",
-            files={
-                "file": (
-                    "coroners_letter.pdf",
-                    io.BytesIO(b"test content"),
-                    "application/pdf",
-                )
-            },
-            headers={"Authorization": "Bearer Provider No Role"},
-        )
-        assert response.status_code == 403
-
     def test_201_upload_coroners_letter_with_permission_override(self, client):
         def get_current_user_permissions_override():
             return {Permission.CORONERS_LETTER_UPLOAD}
@@ -154,24 +124,3 @@ class TestUploadCoronersLetterRbac:
             headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
         )
         assert response.status_code == 201
-
-    def test_403_upload_coroners_letter_with_empty_permission_override(self, client):
-        def get_current_user_permissions_override():
-            return set()
-
-        api.dependency_overrides[get_current_user_permissions] = (
-            get_current_user_permissions_override
-        )
-
-        response = client.post(
-            "/applications/upload-coroners-letter",
-            files={
-                "file": (
-                    "coroners_letter.pdf",
-                    io.BytesIO(b"test content"),
-                    "application/pdf",
-                )
-            },
-            headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
-        )
-        assert response.status_code == 403

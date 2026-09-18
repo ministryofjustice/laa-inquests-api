@@ -50,8 +50,9 @@ This project is a **FastAPI REST API** using **SQLModel** (SQLAlchemy + Pydantic
 2. Add an `APIRouter` in `app/routers/[resource].py` with route handlers that map HTTP input/output and call use cases only.
 3. Register the new router in `app/main.py`.
 4. Generate an Alembic migration if the schema changed.
-5. Write E2E tests in `tests/e2e/[resource]/test_[operation].py`.
-6. Write unit tests in `tests/unit/` if there is logic to test in isolation.
+5. Write authorization and authentication tests (401 and 403 responses) by adding to the route map in `tests/unit/auth/test_route_permissions.py`. E2E tests per endpoint are not needed as the logic is covered by unit tests.
+6. Write E2E tests in `tests/e2e/[resource]/test_[operation].py`.
+7. Write unit tests in `tests/unit/` if there is logic to test in isolation.
 
 ## 4. Coding Conventions
 

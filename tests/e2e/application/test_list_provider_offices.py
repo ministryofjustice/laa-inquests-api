@@ -41,12 +41,3 @@ def test_500_list_provider_offices_when_provider_details_lookup_fails(client):
         response.json()["detail"]
         == "Failed to retrieve provider offices from provider details service"
     )
-
-
-def test_403_list_provider_offices_when_caseworker_token(client):
-    response = client.get(
-        "/applications/provider-offices/123",
-        headers={"Authorization": "Bearer Caseworker No Role"},
-    )
-
-    assert response.status_code == 403

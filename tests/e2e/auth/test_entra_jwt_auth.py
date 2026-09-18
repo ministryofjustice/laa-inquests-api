@@ -1,17 +1,61 @@
 import io
-import uuid
 
 import pytest
 from sqlmodel import select
 
-from app.auth.rbac import Role
+from app import api
+from app.auth.rbac import Role, get_current_user_permissions
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application, CoronersLetter
 from app.models.claim.index import ClaimEvidence
+from tests.e2e.application.test_create_application import (
+    _make_request_body as make_application_request_body,
+)
 from tests.helpers.application_payloads import create_application_payload
 from tests.helpers.provider_details import (
     override_provider_details_port_with_provider_offices,
 )
+
+
+# This is our representative test that exercises the FastAPI permission dependency
+# It verifies that a request without the required permission is rejected with a 403 status code.
+# We do this once, and shouldn't need other 403 tests as we have a unit test that all endpoints
+# have the relevant permission check in place as a dependency
+def test_403_permission_dependency_rejects_request_without_required_permission(
+    client,
+):
+    api.dependency_overrides[get_current_user_permissions] = lambda: set()
+
+    response = client.post(
+        "/applications",
+        json=make_application_request_body(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": "Bearer valid-token",
+        },
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {
+        "detail": ("Forbidden: Missing required permission 'application:create'")
+    }
+
+
+# This is our representative test that exercises the FastAPI verify_entra_token dependency
+# It verifies that an unauthorized request to a protected endpoint is rejected with a 401 status code.
+def test_401_verify_entra_token_dependency_rejects_unauthorized_request(
+    client,
+):
+    response = client.post(
+        "/applications",
+        json=make_application_request_body(),
+        headers={
+            "Content-Type": "application/json",
+        },
+    )
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": ("Not authenticated")}
 
 
 def test_200_read_all_applications_returns_200_when_valid_entra_token(
@@ -23,40 +67,6 @@ def test_200_read_all_applications_returns_200_when_valid_entra_token(
     )
 
     assert response.status_code == 200
-
-
-def test_401_read_all_applications_returns_401_when_no_authorization_header(
-    client,
-):
-    response = client.get("/applications")
-
-    assert response.status_code == 401
-
-
-def test_401_read_all_applications_returns_401_when_bearer_token_is_invalid(
-    client,
-):
-    response = client.get(
-        "/applications",
-        headers={"Authorization": "Bearer invalid-token"},
-    )
-
-    assert response.status_code == 401
-
-
-@pytest.mark.parametrize(
-    "provider_token",
-    [Role.PROVIDER_APPLICATION_USER.value, Role.PROVIDER_CLAIMS_USER.value],
-)
-def test_403_read_all_applications_returns_403_when_scope_is_not_caseworker(
-    client, provider_token
-):
-    response = client.get(
-        "/applications",
-        headers={"Authorization": f"Bearer {provider_token}"},
-    )
-
-    assert response.status_code == 403
 
 
 def test_200_read_application_by_id_returns_200_when_caseworker_token(
@@ -72,21 +82,6 @@ def test_200_read_application_by_id_returns_200_when_caseworker_token(
     assert response.status_code == 200
 
 
-@pytest.mark.parametrize(
-    "provider_token",
-    [Role.PROVIDER_APPLICATION_USER.value, Role.PROVIDER_CLAIMS_USER.value],
-)
-def test_403_read_application_by_id_returns_403_when_provider_token(
-    client, provider_token
-):
-    response = client.get(
-        "/applications/1",
-        headers={"Authorization": f"Bearer {provider_token}"},
-    )
-
-    assert response.status_code == 403
-
-
 def test_201_create_application_returns_201_when_provider_application_user_token(
     client,
 ):
@@ -100,36 +95,6 @@ def test_201_create_application_returns_201_when_provider_application_user_token
     )
 
     assert response.status_code == 201
-
-
-def test_403_create_application_returns_403_when_provider_token_missing_permission(
-    client,
-):
-    response = client.post(
-        "/applications",
-        json=create_application_payload(),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
-        },
-    )
-
-    assert response.status_code == 403
-
-
-def test_403_create_application_returns_403_when_caseworker_token(
-    client,
-):
-    response = client.post(
-        "/applications",
-        json=create_application_payload(),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": "Bearer Caseworker No Role",
-        },
-    )
-
-    assert response.status_code == 403
 
 
 def test_201_upload_coroners_letter_returns_201_when_provider_application_user_token(
@@ -148,42 +113,6 @@ def test_201_upload_coroners_letter_returns_201_when_provider_application_user_t
     )
 
     assert response.status_code == 201
-
-
-def test_403_upload_coroners_letter_returns_403_when_provider_token_missing_permission(
-    client,
-):
-    response = client.post(
-        "/applications/upload-coroners-letter",
-        files={
-            "file": (
-                "coroners_letter.pdf",
-                io.BytesIO(b"test content"),
-                "application/pdf",
-            )
-        },
-        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
-    )
-
-    assert response.status_code == 403
-
-
-def test_403_upload_coroners_letter_returns_403_when_caseworker_token(
-    client,
-):
-    response = client.post(
-        "/applications/upload-coroners-letter",
-        files={
-            "file": (
-                "coroners_letter.pdf",
-                io.BytesIO(b"test content"),
-                "application/pdf",
-            )
-        },
-        headers={"Authorization": "Bearer Caseworker No Role"},
-    )
-
-    assert response.status_code == 403
 
 
 def test_204_refuse_decision_returns_204_when_caseworker_token(
@@ -207,27 +136,6 @@ def test_204_refuse_decision_returns_204_when_caseworker_token(
     assert response.status_code == 204
 
 
-@pytest.mark.parametrize(
-    "provider_token",
-    [Role.PROVIDER_APPLICATION_USER.value, Role.PROVIDER_CLAIMS_USER.value],
-)
-def test_403_refuse_decision_returns_403_when_provider_token(client, provider_token):
-    response = client.patch(
-        "/applications/1/refuse-decision",
-        json={
-            "meritsDecision": MeritsDecision.REFUSED,
-            "reasonForRefusal": "NOT_IN_SCOPE",
-            "justification": "The matter does not meet scope requirements.",
-        },
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {provider_token}",
-        },
-    )
-
-    assert response.status_code == 403
-
-
 def test_204_grant_decision_returns_204_when_caseworker_token(
     session,
     client,
@@ -245,23 +153,6 @@ def test_204_grant_decision_returns_204_when_caseworker_token(
     assert response.status_code == 204
 
 
-@pytest.mark.parametrize(
-    "provider_token",
-    [Role.PROVIDER_APPLICATION_USER.value, Role.PROVIDER_CLAIMS_USER.value],
-)
-def test_403_grant_decision_returns_403_when_provider_token(client, provider_token):
-    response = client.patch(
-        "/applications/1/grant-decision",
-        json={"certificateStartDate": "2000-01-01"},
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {provider_token}",
-        },
-    )
-
-    assert response.status_code == 403
-
-
 class TestSearchApplicationAuth:
     def test_200_search_application_returns_200_when_provider_claims_user_token(
         self,
@@ -274,64 +165,6 @@ class TestSearchApplicationAuth:
         )
 
         assert response.status_code == 200
-
-    def test_403_search_application_returns_403_when_provider_application_user_token(
-        self,
-        client,
-    ):
-        response = client.get(
-            "/applications/search",
-            params={"laa_reference": "1"},
-            headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
-        )
-
-        assert response.status_code == 403
-
-    def test_403_search_application_returns_403_when_provider_token_missing_permission(
-        self, client
-    ):
-        response = client.get(
-            "/applications/search",
-            params={"laa_reference": "1"},
-            headers={"Authorization": "Bearer Provider No Role"},
-        )
-
-        assert response.status_code == 403
-
-    def test_401_search_application_returns_401_when_no_authorization_header(
-        self,
-        client,
-    ):
-        response = client.get(
-            "/applications/search",
-            params={"laa_reference": "1"},
-        )
-
-        assert response.status_code == 401
-
-    def test_401_search_application_returns_401_when_bearer_token_is_invalid(
-        self,
-        client,
-    ):
-        response = client.get(
-            "/applications/search",
-            params={"laa_reference": "1"},
-            headers={"Authorization": "Bearer invalid-token"},
-        )
-
-        assert response.status_code == 401
-
-    def test_403_search_application_returns_403_when_caseworker_token(
-        self,
-        client,
-    ):
-        response = client.get(
-            "/applications/search",
-            params={"laa_reference": "1"},
-            headers={"Authorization": "Bearer Caseworker No Role"},
-        )
-
-        assert response.status_code == 403
 
 
 class TestUploadClaimEvidenceAuth:
@@ -352,95 +185,6 @@ class TestUploadClaimEvidenceAuth:
         )
 
         assert response.status_code == 201
-
-    def test_403_upload_claim_evidence_when_provider_application_user_token(
-        self,
-        client,
-    ):
-        response = client.post(
-            "/claims/evidence",
-            files={
-                "file": (
-                    "claim_evidence.pdf",
-                    io.BytesIO(b"test content"),
-                    "application/pdf",
-                )
-            },
-            headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
-        )
-
-        assert response.status_code == 403
-
-    def test_403_upload_claim_evidence_when_provider_token_missing_permission(
-        self,
-        client,
-    ):
-        response = client.post(
-            "/claims/evidence",
-            files={
-                "file": (
-                    "claim_evidence.pdf",
-                    io.BytesIO(b"test content"),
-                    "application/pdf",
-                )
-            },
-            headers={"Authorization": "Bearer Provider No Role"},
-        )
-
-        assert response.status_code == 403
-
-    def test_403_upload_claim_evidence_when_caseworker_token(
-        self,
-        client,
-    ):
-        response = client.post(
-            "/claims/evidence",
-            files={
-                "file": (
-                    "claim_evidence.pdf",
-                    io.BytesIO(b"test content"),
-                    "application/pdf",
-                )
-            },
-            headers={"Authorization": "Bearer Caseworker No Role"},
-        )
-
-        assert response.status_code == 403
-
-    def test_401_upload_claim_evidence_when_no_authorization_header(
-        self,
-        client,
-    ):
-        response = client.post(
-            "/claims/evidence",
-            files={
-                "file": (
-                    "claim_evidence.pdf",
-                    io.BytesIO(b"test content"),
-                    "application/pdf",
-                )
-            },
-        )
-
-        assert response.status_code == 401
-
-    def test_401_upload_claim_evidence_when_bearer_token_is_invalid(
-        self,
-        client,
-    ):
-        response = client.post(
-            "/claims/evidence",
-            files={
-                "file": (
-                    "claim_evidence.pdf",
-                    io.BytesIO(b"test content"),
-                    "application/pdf",
-                )
-            },
-            headers={"Authorization": "Bearer invalid-token"},
-        )
-
-        assert response.status_code == 401
 
 
 class TestDeleteClaimEvidenceAuth:
@@ -464,58 +208,6 @@ class TestDeleteClaimEvidenceAuth:
 
         assert response.status_code == 204
 
-    def test_403_delete_claim_evidence_when_provider_application_user_token(
-        self,
-        client,
-    ):
-        response = client.delete(
-            f"/claims/{uuid.uuid4()}",
-            headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
-        )
-
-        assert response.status_code == 403
-
-    def test_403_delete_claim_evidence_when_provider_token_missing_permission(
-        self,
-        client,
-    ):
-        response = client.delete(
-            f"/claims/{uuid.uuid4()}",
-            headers={"Authorization": "Bearer Provider No Role"},
-        )
-
-        assert response.status_code == 403
-
-    def test_403_delete_claim_evidence_when_caseworker_token(
-        self,
-        client,
-    ):
-        response = client.delete(
-            f"/claims/{uuid.uuid4()}",
-            headers={"Authorization": "Bearer Caseworker No Role"},
-        )
-
-        assert response.status_code == 403
-
-    def test_401_delete_claim_evidence_when_no_authorization_header(
-        self,
-        client,
-    ):
-        response = client.delete(f"/claims/{uuid.uuid4()}")
-
-        assert response.status_code == 401
-
-    def test_401_delete_claim_evidence_when_bearer_token_is_invalid(
-        self,
-        client,
-    ):
-        response = client.delete(
-            f"/claims/{uuid.uuid4()}",
-            headers={"Authorization": "Bearer invalid-token"},
-        )
-
-        assert response.status_code == 401
-
 
 class TestListProviderOfficesAuth:
     @pytest.mark.parametrize(
@@ -533,55 +225,6 @@ class TestListProviderOfficesAuth:
         )
 
         assert response.status_code == 200
-
-    def test_401_list_provider_offices_returns_401_when_no_authorization_header(
-        self,
-        client,
-    ):
-        override_provider_details_port_with_provider_offices()
-
-        response = client.get("/applications/provider-offices/123")
-
-        assert response.status_code == 401
-
-    def test_401_list_provider_offices_returns_401_when_bearer_token_is_invalid(
-        self,
-        client,
-    ):
-        override_provider_details_port_with_provider_offices()
-
-        response = client.get(
-            "/applications/provider-offices/123",
-            headers={"Authorization": "Bearer invalid-token"},
-        )
-
-        assert response.status_code == 401
-
-    def test_403_list_provider_offices_returns_403_when_caseworker_token(
-        self,
-        client,
-    ):
-        override_provider_details_port_with_provider_offices()
-
-        response = client.get(
-            "/applications/provider-offices/123",
-            headers={"Authorization": "Bearer Caseworker No Role"},
-        )
-
-        assert response.status_code == 403
-
-    def test_403_list_provider_offices_returns_403_when_provider_token_missing_permission(
-        self,
-        client,
-    ):
-        override_provider_details_port_with_provider_offices()
-
-        response = client.get(
-            "/applications/provider-offices/123",
-            headers={"Authorization": "Bearer Provider No Role"},
-        )
-
-        assert response.status_code == 403
 
 
 class TestDeleteCoronersLetterAuth:
@@ -604,47 +247,6 @@ class TestDeleteCoronersLetterAuth:
         )
 
         assert response.status_code == 204
-
-    def test_403_delete_coroners_letter_when_provider_token_missing_permission(
-        self,
-        client,
-    ):
-        response = client.delete(
-            f"/applications/coroners-letter/{uuid.uuid4()}",
-            headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
-        )
-
-        assert response.status_code == 403
-
-    def test_403_delete_coroners_letter_when_caseworker_token(
-        self,
-        client,
-    ):
-        response = client.delete(
-            f"/applications/coroners-letter/{uuid.uuid4()}",
-            headers={"Authorization": "Bearer Caseworker No Role"},
-        )
-
-        assert response.status_code == 403
-
-    def test_401_delete_coroners_letter_returns_401_when_no_authorization_header(
-        self,
-        client,
-    ):
-        response = client.delete(f"/applications/coroners-letter/{uuid.uuid4()}")
-
-        assert response.status_code == 401
-
-    def test_401_delete_coroners_letter_when_bearer_token_is_invalid(
-        self,
-        client,
-    ):
-        response = client.delete(
-            f"/applications/coroners-letter/{uuid.uuid4()}",
-            headers={"Authorization": "Bearer invalid-token"},
-        )
-
-        assert response.status_code == 401
 
 
 def test_200_retrieve_coroners_letter_returns_200_when_caseworker_token(
@@ -671,40 +273,6 @@ def test_200_retrieve_coroners_letter_returns_200_when_caseworker_token(
     assert response.status_code == 200
 
 
-def test_401_retrieve_coroners_letter_returns_401_when_no_authorization_header(
-    client,
-):
-    response = client.get("/applications/1/coroners-letter")
-
-    assert response.status_code == 401
-
-
-def test_401_retrieve_coroners_letter_returns_401_when_bearer_token_is_invalid(
-    client,
-):
-    response = client.get(
-        "/applications/1/coroners-letter",
-        headers={"Authorization": "Bearer invalid-token"},
-    )
-
-    assert response.status_code == 401
-
-
-@pytest.mark.parametrize(
-    "provider_token",
-    [Role.PROVIDER_APPLICATION_USER.value, Role.PROVIDER_CLAIMS_USER.value],
-)
-def test_403_retrieve_coroners_letter_returns_403_when_provider_token(
-    client, provider_token
-):
-    response = client.get(
-        "/applications/1/coroners-letter",
-        headers={"Authorization": f"Bearer {provider_token}"},
-    )
-
-    assert response.status_code == 403
-
-
 def test_200_list_public_bodies_returns_200_when_caseworker_token(
     client,
 ):
@@ -729,25 +297,6 @@ def test_200_list_public_bodies_returns_200_when_application_provider_token(
     )
 
     assert response.status_code == 200
-
-
-def test_401_list_public_bodies_returns_401_when_no_authorization_header(
-    client,
-):
-    response = client.get("/applications/public-bodies")
-
-    assert response.status_code == 401
-
-
-def test_401_list_public_bodies_returns_401_when_bearer_token_is_invalid(
-    client,
-):
-    response = client.get(
-        "/applications/public-bodies",
-        headers={"Authorization": "Bearer invalid-token"},
-    )
-
-    assert response.status_code == 401
 
 
 def test_200_retrieve_claim_evidence_returns_200_when_caseworker_token(session, client):
@@ -784,47 +333,3 @@ def test_200_retrieve_claim_evidence_returns_200_when_provider_claims_token(
     )
 
     assert response.status_code == 200
-
-
-def test_401_retrieve_claim_evidence_returns_401_when_no_authorization_header(
-    client,
-):
-    response = client.get(f"/claims/{uuid.uuid4()}")
-
-    assert response.status_code == 401
-
-
-def test_401_retrieve_claim_evidence_returns_401_when_bearer_token_is_invalid(
-    client,
-):
-    response = client.get(
-        f"/claims/{uuid.uuid4()}",
-        headers={"Authorization": "Bearer invalid-token"},
-    )
-
-    assert response.status_code == 401
-
-
-def test_401_reject_claim_returns_401_when_no_authorization_header(
-    client,
-):
-    response = client.patch(
-        "/applications/1/claims/1/reject",
-        json={"justification": "Claim rejected following manual assessment."},
-    )
-
-    assert response.status_code == 401
-
-
-@pytest.mark.parametrize(
-    "provider_token",
-    [Role.PROVIDER_APPLICATION_USER.value, Role.PROVIDER_CLAIMS_USER.value],
-)
-def test_403_reject_claim_returns_403_when_provider_token(client, provider_token):
-    response = client.patch(
-        "/applications/1/claims/1/reject",
-        json={"justification": "Claim rejected following manual assessment."},
-        headers={"Authorization": f"Bearer {provider_token}"},
-    )
-
-    assert response.status_code == 403

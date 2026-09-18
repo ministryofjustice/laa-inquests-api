@@ -1,7 +1,6 @@
 from datetime import UTC, datetime
 from decimal import Decimal
 
-import pytest
 from sqlmodel import select
 
 from app.auth.rbac import Role
@@ -178,24 +177,3 @@ def test_404_when_application_does_not_exist(client):
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Application not found"
-
-
-def test_401_returns_unauthorized_when_no_auth_header(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-
-    response = client.get(f"/applications/{laa_reference}/claims?assessed=true")
-
-    assert response.status_code == 401
-
-
-@pytest.mark.parametrize(
-    "provider_token",
-    [Role.PROVIDER_APPLICATION_USER.value, Role.PROVIDER_CLAIMS_USER.value],
-)
-def test_403_returns_forbidden_when_provider_token(client, provider_token):
-    response = client.get(
-        "/applications/1/claims?assessed=true",
-        headers={"Authorization": f"Bearer {provider_token}"},
-    )
-
-    assert response.status_code == 403

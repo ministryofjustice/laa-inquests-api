@@ -2019,34 +2019,6 @@ class TestCreateClaimRbac:
         )
         assert response.status_code == 201
 
-    def test_403_create_claim_with_app_role_missing_create_permission(
-        self, session, client
-    ):
-        laa_reference = session.exec(select(Application)).first().laa_reference
-
-        response = client.post(
-            f"/applications/{laa_reference}/claim",
-            json=_make_request_body(),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
-            },
-        )
-        assert response.status_code == 403
-
-    def test_403_create_claim_with_unmapped_app_role(self, session, client):
-        laa_reference = session.exec(select(Application)).first().laa_reference
-
-        response = client.post(
-            f"/applications/{laa_reference}/claim",
-            json=_make_request_body(),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": "Bearer Provider No Role",
-            },
-        )
-        assert response.status_code == 403
-
     def test_201_create_claim_with_permission_override(self, session, client):
         def get_current_user_permissions_override():
             return {Permission.CLAIM_CREATE}
@@ -2065,22 +2037,3 @@ class TestCreateClaimRbac:
             },
         )
         assert response.status_code == 201
-
-    def test_403_create_claim_with_empty_permission_override(self, session, client):
-        def get_current_user_permissions_override():
-            return set()
-
-        api.dependency_overrides[get_current_user_permissions] = (
-            get_current_user_permissions_override
-        )
-        laa_reference = session.exec(select(Application)).first().laa_reference
-
-        response = client.post(
-            f"/applications/{laa_reference}/claim",
-            json=_make_request_body(),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
-            },
-        )
-        assert response.status_code == 403

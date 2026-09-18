@@ -173,23 +173,6 @@ class TestUploadClaimEvidenceRbac:
 
         assert response.status_code == 201
 
-    def test_403_upload_claim_evidence_with_app_role_missing_upload_permission(
-        self, client
-    ):
-        response = client.post(
-            "/claims/evidence",
-            files={
-                "file": (
-                    "claim_evidence.pdf",
-                    io.BytesIO(b"test content"),
-                    "application/pdf",
-                )
-            },
-            headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
-        )
-
-        assert response.status_code == 403
-
     def test_201_upload_claim_evidence_with_upload_permission(self, client):
         def get_current_user_permissions_override():
             return {Permission.CLAIM_EVIDENCE_UPLOAD}
@@ -211,18 +194,3 @@ class TestUploadClaimEvidenceRbac:
         )
 
         assert response.status_code == 201
-
-    def test_403_upload_claim_evidence_with_unmapped_app_role(self, client):
-        response = client.post(
-            "/claims/evidence",
-            files={
-                "file": (
-                    "claim_evidence.pdf",
-                    io.BytesIO(b"test content"),
-                    "application/pdf",
-                )
-            },
-            headers={"Authorization": "Bearer Provider No Role"},
-        )
-
-        assert response.status_code == 403

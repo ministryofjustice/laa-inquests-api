@@ -1,5 +1,4 @@
 import io
-import uuid
 from unittest.mock import MagicMock
 
 from app import api
@@ -63,12 +62,3 @@ def test_500_delete_coroners_letter_when_sds_fails(client):
     )
 
     assert delete_response.status_code == 500
-
-
-def test_403_delete_coroners_letter_when_caseworker_token(client):
-    response = client.delete(
-        f"/applications/coroners-letter/{uuid.uuid4()}",
-        headers={"Authorization": "Bearer Caseworker No Role"},
-    )
-
-    assert response.status_code == 403
