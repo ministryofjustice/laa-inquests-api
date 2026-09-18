@@ -30,7 +30,7 @@ EXPECTED_ROUTE_PERMISSIONS: dict[
         "GET",
         "/applications/provider-offices/{firm_id}",
     ): Permission.PROVIDER_OFFICES_READ,
-    ("GET", "/applications/{laa_reference}"): None,
+    ("GET", "/applications/{laa_reference}"): Permission.APPLICATION_READ,
     ("GET", "/applications/{laa_reference}/certificate"): None,
     ("GET", "/applications/{laa_reference}/claims"): None,
     ("GET", "/applications/{laa_reference}/claims/{claim_id}"): None,

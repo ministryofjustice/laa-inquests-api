@@ -731,11 +731,14 @@ async def list_provider_offices(
         )
 
 
-@router.get("/{laa_reference}", response_model=ApplicationResponse)
+@router.get(
+    "/{laa_reference}",
+    response_model=ApplicationResponse,
+    dependencies=[Depends(require_permission(Permission.APPLICATION_READ))],
+)
 async def read_application(
     laa_reference: str,
     use_case: GetApplicationUseCase = Depends(get_get_application_use_case),
-    _: None = Depends(verify_entra_caseworker_token),
 ) -> ApplicationResponse:
     """Get information about a given application."""
     try:
