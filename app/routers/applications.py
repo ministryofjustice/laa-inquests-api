@@ -751,11 +751,11 @@ async def read_application(
 @router.get(
     "/{laa_reference}/certificate",
     response_model=ApplicationCertificateResponse,
+    dependencies=[Depends(require_permission(Permission.CERTIFICATE_READ))],
 )
 def read_certificate(
     laa_reference: str,
     use_case: RetrieveCertificateUseCase = Depends(get_retrieve_certificate_use_case),
-    _: None = Depends(verify_entra_caseworker_token),
 ) -> ApplicationCertificateResponse:
     """Get the populated certificate context for a given application."""
     try:
