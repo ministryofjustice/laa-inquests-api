@@ -43,7 +43,10 @@ EXPECTED_ROUTE_PERMISSIONS: dict[
         "PATCH",
         "/applications/{laa_reference}/claims/{claim_id}/pay-in-full",
     ): Permission.CLAIM_MANAGE,
-    ("PATCH", "/applications/{laa_reference}/claims/{claim_id}/reject"): None,
+    (
+        "PATCH",
+        "/applications/{laa_reference}/claims/{claim_id}/reject",
+    ): Permission.CLAIM_MANAGE,
     ("PATCH", "/applications/{laa_reference}/grant-decision"): None,
     ("PATCH", "/applications/{laa_reference}/public-bodies"): None,
     ("PATCH", "/applications/{laa_reference}/refuse-decision"): None,

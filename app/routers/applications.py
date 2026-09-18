@@ -921,13 +921,16 @@ def pay_in_full_claim(
     return Response(status_code=204)
 
 
-@router.patch("/{laa_reference}/claims/{claim_id}/reject", status_code=204)
+@router.patch(
+    "/{laa_reference}/claims/{claim_id}/reject",
+    status_code=204,
+    dependencies=[Depends(require_permission(Permission.CLAIM_MANAGE))],
+)
 def reject_claim(
     laa_reference: str,
     claim_id: int,
     request: RejectClaimRequest,
     use_case: RejectClaimUseCase = Depends(get_reject_claim_use_case),
-    _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
 ) -> Response:
     """Reject a claim, recording a manual rejection decision against it."""
     try:
