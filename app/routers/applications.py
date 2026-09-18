@@ -489,6 +489,92 @@ def get_delete_coroners_letter_use_case(
     )
 
 
+@router.post(
+    "/",
+    response_model=ApplicationResponse,
+    status_code=201,
+    dependencies=[Depends(require_permission(Permission.APPLICATION_CREATE))],
+)
+def create_application(
+    request: ApplicationCreate,
+    firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
+    use_case: CreateApplicationUseCase = Depends(get_create_application_use_case),
+) -> Application:
+    """Creates a new application with proceedings and public bodies."""
+    application = use_case.execute(request, firm_code)
+    return application
+
+
+@router.get("/")
+async def read_all_applications(
+    use_case: ListApplicationsUseCase = Depends(get_list_applications_use_case),
+    _: None = Depends(verify_entra_caseworker_token),
+) -> Sequence[Application]:
+    """Read all the applications currently in the database."""
+    applications = use_case.execute()
+    return applications
+
+
+@router.post(
+    "/upload-coroners-letter",
+    response_model=UploadCoronersLetterResponse,
+    status_code=201,
+    dependencies=[Depends(require_permission(Permission.CORONERS_LETTER_UPLOAD))],
+)
+async def upload_coroners_letter(
+    file: UploadFile = File(...),
+    use_case: UploadCoronersLetterUseCase = Depends(
+        get_upload_coroners_letter_use_case
+    ),
+    request: Request = None,
+) -> UploadCoronersLetterResponse:
+    """Upload a coroner's letter to document storage and return its file ID."""
+    contents = await file.read()
+    file_name = file.filename
+    try:
+        coroners_letter_id = use_case.execute(
+            contents,
+            file_name,
+        )
+    except CoronersLetterVirusDetectedError:
+        logger.warning(
+            "Coroners letter upload failed virus check",
+            extra=build_log_extra(
+                event="coroners_letter_uploaded_failed",
+                route=_route(request),
+                method=_method(request),
+                status_code=422,
+                file_name=file_name,
+            ),
+        )
+        raise HTTPException(status_code=422, detail="Uploaded file failed virus check")
+    except CoronersLetterUploadError:
+        logger.warning(
+            "Coroners letter upload failed",
+            extra=build_log_extra(
+                event="coroners_letter_uploaded_failed",
+                route=_route(request),
+                method=_method(request),
+                status_code=500,
+                file_name=file_name,
+            ),
+        )
+        raise HTTPException(status_code=500, detail="Failed to upload coroners letter")
+
+    return UploadCoronersLetterResponse(
+        coroners_letter_id=coroners_letter_id, coroners_letter_file_name=file_name
+    )
+
+
+@router.get("/public-bodies", response_model=list[PublicBodyResponse])
+def list_public_bodies(
+    use_case: ListPublicBodiesUseCase = Depends(get_list_public_bodies_use_case),
+    _: None = Depends(verify_entra_provider_or_caseworker_token),
+) -> list[PublicBody]:
+    public_bodies = use_case.execute()
+    return public_bodies
+
+
 @router.get(
     "/search",
     response_model=list[ApplicationSearchResponse],
@@ -553,13 +639,85 @@ async def list_provider_offices(
         )
 
 
-@router.get("/public-bodies", response_model=list[PublicBodyResponse])
-def list_public_bodies(
-    use_case: ListPublicBodiesUseCase = Depends(get_list_public_bodies_use_case),
-    _: None = Depends(verify_entra_provider_or_caseworker_token),
-) -> list[PublicBody]:
-    public_bodies = use_case.execute()
-    return public_bodies
+@router.get("/{laa_reference}", response_model=ApplicationResponse)
+async def read_application(
+    laa_reference: str,
+    use_case: GetApplicationUseCase = Depends(get_get_application_use_case),
+    _: None = Depends(verify_entra_caseworker_token),
+) -> ApplicationResponse:
+    """Get information about a given application."""
+    try:
+        application = use_case.execute(laa_reference)
+        return application
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+
+@router.get(
+    "/{laa_reference}/certificate",
+    response_model=ApplicationCertificateResponse,
+)
+def read_certificate(
+    laa_reference: str,
+    use_case: RetrieveCertificateUseCase = Depends(get_retrieve_certificate_use_case),
+    _: None = Depends(verify_entra_caseworker_token),
+) -> ApplicationCertificateResponse:
+    """Get the populated certificate context for a given application."""
+    try:
+        certificate = use_case.execute(laa_reference)
+        return ApplicationCertificateResponse.model_validate(certificate)
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
+    except ApplicationNotGrantedError:
+        raise HTTPException(
+            status_code=422,
+            detail="Application is not granted",
+        )
+    except ProviderDetailsRetrievalError:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve firm name from provider details service",
+        )
+
+
+@router.get(
+    "/{laa_reference}/claims",
+    response_model=list[ClaimSummaryResponse],
+)
+def list_application_claims(
+    laa_reference: str,
+    assessed: bool,
+    use_case: ListApplicationClaimsUseCase = Depends(
+        get_list_application_claims_use_case
+    ),
+    _: None = Depends(verify_entra_caseworker_token),
+) -> list[ClaimSummaryResponse]:
+    """List claims for an application, filtered by assessed status."""
+    try:
+        claims = use_case.execute(laa_reference, assessed)
+        return claims
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+
+@router.get(
+    "/{laa_reference}/claims/{claim_id}",
+    response_model=ClaimByIdResponse,
+)
+def read_claim(
+    laa_reference: str,
+    claim_id: int,
+    use_case: GetClaimUseCase = Depends(get_get_claim_use_case),
+    _: None = Depends(verify_entra_caseworker_token),
+) -> ClaimByIdResponse:
+    """Get a single claim by ID for a given application."""
+    try:
+        claim = use_case.execute(laa_reference, claim_id)
+        return claim
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
+    except ClaimNotFoundError:
+        raise HTTPException(status_code=404, detail="Claim not found")
 
 
 def get_coroners_letter_use_case(
@@ -615,87 +773,6 @@ def retrieve_coroners_letter(
 
 
 @router.get(
-    "/{laa_reference}/claims",
-    response_model=list[ClaimSummaryResponse],
-)
-def list_application_claims(
-    laa_reference: str,
-    assessed: bool,
-    use_case: ListApplicationClaimsUseCase = Depends(
-        get_list_application_claims_use_case
-    ),
-    _: None = Depends(verify_entra_caseworker_token),
-) -> list[ClaimSummaryResponse]:
-    """List claims for an application, filtered by assessed status."""
-    try:
-        claims = use_case.execute(laa_reference, assessed)
-        return claims
-    except ApplicationNotFoundError:
-        raise HTTPException(status_code=404, detail="Application not found")
-
-
-@router.get(
-    "/{laa_reference}/claims/{claim_id}",
-    response_model=ClaimByIdResponse,
-)
-def read_claim(
-    laa_reference: str,
-    claim_id: int,
-    use_case: GetClaimUseCase = Depends(get_get_claim_use_case),
-    _: None = Depends(verify_entra_caseworker_token),
-) -> ClaimByIdResponse:
-    """Get a single claim by ID for a given application."""
-    try:
-        claim = use_case.execute(laa_reference, claim_id)
-        return claim
-    except ApplicationNotFoundError:
-        raise HTTPException(status_code=404, detail="Application not found")
-    except ClaimNotFoundError:
-        raise HTTPException(status_code=404, detail="Claim not found")
-
-
-@router.get("/{laa_reference}", response_model=ApplicationResponse)
-async def read_application(
-    laa_reference: str,
-    use_case: GetApplicationUseCase = Depends(get_get_application_use_case),
-    _: None = Depends(verify_entra_caseworker_token),
-) -> ApplicationResponse:
-    """Get information about a given application."""
-    try:
-        application = use_case.execute(laa_reference)
-        return application
-    except ApplicationNotFoundError:
-        raise HTTPException(status_code=404, detail="Application not found")
-
-
-@router.get(
-    "/{laa_reference}/certificate",
-    response_model=ApplicationCertificateResponse,
-)
-def read_certificate(
-    laa_reference: str,
-    use_case: RetrieveCertificateUseCase = Depends(get_retrieve_certificate_use_case),
-    _: None = Depends(verify_entra_caseworker_token),
-) -> ApplicationCertificateResponse:
-    """Get the populated certificate context for a given application."""
-    try:
-        certificate = use_case.execute(laa_reference)
-        return ApplicationCertificateResponse.model_validate(certificate)
-    except ApplicationNotFoundError:
-        raise HTTPException(status_code=404, detail="Application not found")
-    except ApplicationNotGrantedError:
-        raise HTTPException(
-            status_code=422,
-            detail="Application is not granted",
-        )
-    except ProviderDetailsRetrievalError:
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to retrieve firm name from provider details service",
-        )
-
-
-@router.get(
     "/{laa_reference}/history",
     response_model=list[HistoryEventResponse],
 )
@@ -710,126 +787,6 @@ def get_application_history(
         return history
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
-
-
-@router.get("/")
-async def read_all_applications(
-    use_case: ListApplicationsUseCase = Depends(get_list_applications_use_case),
-    _: None = Depends(verify_entra_caseworker_token),
-) -> Sequence[Application]:
-    """Read all the applications currently in the database."""
-    applications = use_case.execute()
-    return applications
-
-
-@router.post(
-    "/upload-coroners-letter",
-    response_model=UploadCoronersLetterResponse,
-    status_code=201,
-    dependencies=[Depends(require_permission(Permission.CORONERS_LETTER_UPLOAD))],
-)
-async def upload_coroners_letter(
-    file: UploadFile = File(...),
-    use_case: UploadCoronersLetterUseCase = Depends(
-        get_upload_coroners_letter_use_case
-    ),
-    request: Request = None,
-) -> UploadCoronersLetterResponse:
-    """Upload a coroner's letter to document storage and return its file ID."""
-    contents = await file.read()
-    file_name = file.filename
-    try:
-        coroners_letter_id = use_case.execute(
-            contents,
-            file_name,
-        )
-    except CoronersLetterVirusDetectedError:
-        logger.warning(
-            "Coroners letter upload failed virus check",
-            extra=build_log_extra(
-                event="coroners_letter_uploaded_failed",
-                route=_route(request),
-                method=_method(request),
-                status_code=422,
-                file_name=file_name,
-            ),
-        )
-        raise HTTPException(status_code=422, detail="Uploaded file failed virus check")
-    except CoronersLetterUploadError:
-        logger.warning(
-            "Coroners letter upload failed",
-            extra=build_log_extra(
-                event="coroners_letter_uploaded_failed",
-                route=_route(request),
-                method=_method(request),
-                status_code=500,
-                file_name=file_name,
-            ),
-        )
-        raise HTTPException(status_code=500, detail="Failed to upload coroners letter")
-
-    return UploadCoronersLetterResponse(
-        coroners_letter_id=coroners_letter_id, coroners_letter_file_name=file_name
-    )
-
-
-@router.delete(
-    "/coroners-letter/{coroners_letter_id}",
-    status_code=204,
-    dependencies=[Depends(require_permission(Permission.CORONERS_LETTER_DELETE))],
-)
-def delete_coroners_letter(
-    coroners_letter_id: uuid.UUID,
-    use_case: DeleteCoronersLetterUseCase = Depends(
-        get_delete_coroners_letter_use_case
-    ),
-    request: Request = None,
-) -> Response:
-    """Delete an uploaded coroner's letter from document storage and the database."""
-    try:
-        use_case.execute(coroners_letter_id)
-    except CoronersLetterNotFoundError:
-        logger.warning(
-            "Coroners letter delete failed: not found",
-            extra=build_log_extra(
-                event="coroners_letter_deleted_failed",
-                route=_route(request),
-                method=_method(request),
-                status_code=404,
-                coroners_letter_id=str(coroners_letter_id),
-            ),
-        )
-        raise HTTPException(status_code=404, detail="Coroners letter not found")
-    except CoronersLetterDeleteError:
-        logger.warning(
-            "Coroners letter delete failed",
-            extra=build_log_extra(
-                event="coroners_letter_deleted_failed",
-                route=_route(request),
-                method=_method(request),
-                status_code=500,
-                coroners_letter_id=str(coroners_letter_id),
-            ),
-        )
-        raise HTTPException(status_code=500, detail="Failed to delete coroners letter")
-
-    return Response(status_code=204)
-
-
-@router.post(
-    "/",
-    response_model=ApplicationResponse,
-    status_code=201,
-    dependencies=[Depends(require_permission(Permission.APPLICATION_CREATE))],
-)
-def create_application(
-    request: ApplicationCreate,
-    firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
-    use_case: CreateApplicationUseCase = Depends(get_create_application_use_case),
-) -> Application:
-    """Creates a new application with proceedings and public bodies."""
-    application = use_case.execute(request, firm_code)
-    return application
 
 
 @router.post(
@@ -916,53 +873,6 @@ def create_note(
     return Response(status_code=204)
 
 
-@router.patch("/{laa_reference}/public-bodies", status_code=204)
-def update_application_public_bodies(
-    laa_reference: str,
-    request: UpdateApplicationPublicBodiesRequest,
-    use_case: UpdatePublicBodiesUseCase = Depends(
-        get_update_application_public_bodies_use_case
-    ),
-    _: None = Depends(verify_entra_caseworker_token),
-) -> Response:
-    """Update the public bodies associated with an application."""
-    try:
-        use_case.execute(laa_reference, request.public_bodies)
-    except ApplicationNotFoundError:
-        raise HTTPException(status_code=404, detail="Application not found")
-    except ApplicationNotGrantedError:
-        raise HTTPException(status_code=422, detail="Application is not granted")
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
-
-    return Response(status_code=204)
-
-
-@router.patch("/{laa_reference}/claims/{claim_id}/reject", status_code=204)
-def reject_claim(
-    laa_reference: str,
-    claim_id: int,
-    request: RejectClaimRequest,
-    use_case: RejectClaimUseCase = Depends(get_reject_claim_use_case),
-    _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
-) -> Response:
-    """Reject a claim, recording a manual rejection decision against it."""
-    try:
-        use_case.execute(
-            RejectClaimCommand(
-                laa_reference=laa_reference,
-                claim_id=claim_id,
-                justification=request.justification,
-            ),
-        )
-    except ApplicationNotFoundError:
-        raise HTTPException(status_code=404, detail="Application not found")
-    except ClaimNotFoundError:
-        raise HTTPException(status_code=404, detail="Claim not found")
-
-    return Response(status_code=204)
-
-
 @router.patch("/{laa_reference}/claims/{claim_id}/pay-in-full", status_code=204)
 def pay_in_full_claim(
     laa_reference: str,
@@ -997,18 +907,27 @@ def pay_in_full_claim(
     return Response(status_code=204)
 
 
-@router.patch("/{laa_reference}/refuse-decision", status_code=204)
-def refuse_decision(
+@router.patch("/{laa_reference}/claims/{claim_id}/reject", status_code=204)
+def reject_claim(
     laa_reference: str,
-    request: RefuseApplicationUpdate,
-    use_case: RefuseDecisionUseCase = Depends(get_make_merits_decision_use_case),
+    claim_id: int,
+    request: RejectClaimRequest,
+    use_case: RejectClaimUseCase = Depends(get_reject_claim_use_case),
     _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
 ) -> Response:
-    """Set the merits decision on the single proceeding for a given application."""
+    """Reject a claim, recording a manual rejection decision against it."""
     try:
-        use_case.execute(laa_reference, request)
+        use_case.execute(
+            RejectClaimCommand(
+                laa_reference=laa_reference,
+                claim_id=claim_id,
+                justification=request.justification,
+            ),
+        )
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
+    except ClaimNotFoundError:
+        raise HTTPException(status_code=404, detail="Claim not found")
 
     return Response(status_code=204)
 
@@ -1026,5 +945,86 @@ def grant_decision(
 
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
+
+    return Response(status_code=204)
+
+
+@router.patch("/{laa_reference}/public-bodies", status_code=204)
+def update_application_public_bodies(
+    laa_reference: str,
+    request: UpdateApplicationPublicBodiesRequest,
+    use_case: UpdatePublicBodiesUseCase = Depends(
+        get_update_application_public_bodies_use_case
+    ),
+    _: None = Depends(verify_entra_caseworker_token),
+) -> Response:
+    """Update the public bodies associated with an application."""
+    try:
+        use_case.execute(laa_reference, request.public_bodies)
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
+    except ApplicationNotGrantedError:
+        raise HTTPException(status_code=422, detail="Application is not granted")
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+    return Response(status_code=204)
+
+
+@router.patch("/{laa_reference}/refuse-decision", status_code=204)
+def refuse_decision(
+    laa_reference: str,
+    request: RefuseApplicationUpdate,
+    use_case: RefuseDecisionUseCase = Depends(get_make_merits_decision_use_case),
+    _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
+) -> Response:
+    """Set the merits decision on the single proceeding for a given application."""
+    try:
+        use_case.execute(laa_reference, request)
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    return Response(status_code=204)
+
+
+@router.delete(
+    "/coroners-letter/{coroners_letter_id}",
+    status_code=204,
+    dependencies=[Depends(require_permission(Permission.CORONERS_LETTER_DELETE))],
+)
+def delete_coroners_letter(
+    coroners_letter_id: uuid.UUID,
+    use_case: DeleteCoronersLetterUseCase = Depends(
+        get_delete_coroners_letter_use_case
+    ),
+    request: Request = None,
+) -> Response:
+    """Delete an uploaded coroner's letter from document storage and the database."""
+    try:
+        use_case.execute(coroners_letter_id)
+    except CoronersLetterNotFoundError:
+        logger.warning(
+            "Coroners letter delete failed: not found",
+            extra=build_log_extra(
+                event="coroners_letter_deleted_failed",
+                route=_route(request),
+                method=_method(request),
+                status_code=404,
+                coroners_letter_id=str(coroners_letter_id),
+            ),
+        )
+        raise HTTPException(status_code=404, detail="Coroners letter not found")
+    except CoronersLetterDeleteError:
+        logger.warning(
+            "Coroners letter delete failed",
+            extra=build_log_extra(
+                event="coroners_letter_deleted_failed",
+                route=_route(request),
+                method=_method(request),
+                status_code=500,
+                coroners_letter_id=str(coroners_letter_id),
+            ),
+        )
+        raise HTTPException(status_code=500, detail="Failed to delete coroners letter")
 
     return Response(status_code=204)

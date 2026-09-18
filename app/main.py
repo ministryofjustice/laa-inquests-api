@@ -80,8 +80,8 @@ def create_app():
 
     app.include_router(applications)
     app.include_router(claims)
+    app.include_router(monitoring)
     app.include_router(notifications)
     app.include_router(reports)
-    app.include_router(monitoring)
 
     return app
