@@ -831,11 +831,11 @@ def get_coroners_letter_use_case(
     "/{laa_reference}/coroners-letter",
     response_class=StreamingResponse,
     responses={200: {"content": {"image/png": {}}}},
+    dependencies=[Depends(require_permission(Permission.APPLICATION_READ))],
 )
 def retrieve_coroners_letter(
     laa_reference: str,
     use_case: RetrieveCoronersLetterUseCase = Depends(get_coroners_letter_use_case),
-    _: None = Depends(verify_entra_caseworker_token),
 ) -> StreamingResponse:
     """Stream the coroner's letter for a given application."""
     try:

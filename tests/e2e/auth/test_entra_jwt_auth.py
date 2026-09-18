@@ -243,7 +243,9 @@ def test_200_retrieve_coroners_letter_returns_200_when_caseworker_token(
 
     response = client.get(
         f"/applications/{application.laa_reference}/coroners-letter",
-        headers={"Authorization": "Bearer Caseworker No Role"},
+        headers={
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}"
+        },  # TODO: Add E2E tests for get coroners letter endpoint
     )
 
     assert response.status_code == 200
