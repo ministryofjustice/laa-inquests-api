@@ -32,7 +32,7 @@ EXPECTED_ROUTE_PERMISSIONS: dict[
     ): Permission.PROVIDER_OFFICES_READ,
     ("GET", "/applications/{laa_reference}"): Permission.APPLICATION_READ,
     ("GET", "/applications/{laa_reference}/certificate"): Permission.CERTIFICATE_READ,
-    ("GET", "/applications/{laa_reference}/claims"): None,
+    ("GET", "/applications/{laa_reference}/claims"): Permission.CLAIM_READ,
     ("GET", "/applications/{laa_reference}/claims/{claim_id}"): None,
     ("GET", "/applications/{laa_reference}/coroners-letter"): None,
     ("GET", "/applications/{laa_reference}/history"): None,
