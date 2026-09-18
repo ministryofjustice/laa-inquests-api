@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Annotated
+from typing import Annotated, Iterable
 
 from fastapi import Depends, HTTPException, status
 
@@ -123,8 +123,11 @@ def get_current_user_permissions(
 
 
 class PermissionChecker:
-    def __init__(self, required_permission: Permission) -> None:
-        self.required_permission = required_permission
+    def __init__(self, possible_permissions: Iterable[Permission] | Permission) -> None:
+        if isinstance(possible_permissions, Permission):
+            self.possible_permissions = [possible_permissions]
+        else:
+            self.possible_permissions = possible_permissions
 
     def __call__(
         self,
@@ -133,15 +136,16 @@ class PermissionChecker:
             Depends(get_current_user_permissions),
         ],
     ) -> None:
-        if self.required_permission not in permissions:
+        if not any(
+            permission in permissions for permission in self.possible_permissions
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=(
-                    "Forbidden: Missing required permission "
-                    f"'{self.required_permission.value}'"
-                ),
+                detail=("Forbidden: Missing required permission"),
             )
 
 
-def require_permission(required_permission: Permission) -> PermissionChecker:
-    return PermissionChecker(required_permission)
+def require_permission_from(
+    possible_permissions: Iterable[Permission] | Permission,
+) -> PermissionChecker:
+    return PermissionChecker(possible_permissions)

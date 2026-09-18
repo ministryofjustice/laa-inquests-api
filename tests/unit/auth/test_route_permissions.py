@@ -87,25 +87,24 @@ def _walk_dependencies(dependant: Dependant) -> Iterator[Dependant]:
         yield from _walk_dependencies(dependency)
 
 
-def _configured_permission(route: APIRoute) -> Permission | None:
+def _configured_permissions(route: APIRoute) -> list[Permission] | Permission | None:
     permissions = [
-        dependency.call.required_permission
+        permission
         for dependency in _walk_dependencies(route.dependant)
         if isinstance(dependency.call, PermissionChecker)
+        for permission in dependency.call.possible_permissions
     ]
 
-    assert len(permissions) <= 1, (
-        f"{route.path} has multiple permission dependencies: {permissions}"
-    )
-
-    return permissions[0] if permissions else PUBLIC
+    if not permissions:
+        return PUBLIC
+    return permissions if len(permissions) > 1 else permissions[0]
 
 
 def test_every_route_has_the_expected_permission():
     app = create_app()
 
     actual = {
-        (method, route.path): _configured_permission(route)
+        (method, route.path): _configured_permissions(route)
         for route in app.routes
         if isinstance(route, APIRoute)
         for method in route.methods

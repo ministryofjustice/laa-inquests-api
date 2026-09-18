@@ -35,9 +35,7 @@ def test_403_permission_dependency_rejects_request_without_required_permission(
     )
 
     assert response.status_code == 403
-    assert response.json() == {
-        "detail": ("Forbidden: Missing required permission 'application:create'")
-    }
+    assert response.json() == {"detail": ("Forbidden: Missing required permission")}
 
 
 # This is our representative test that exercises the FastAPI verify_entra_token dependency
