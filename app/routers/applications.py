@@ -949,12 +949,15 @@ def reject_claim(
     return Response(status_code=204)
 
 
-@router.patch("/{laa_reference}/grant-decision", status_code=204)
+@router.patch(
+    "/{laa_reference}/grant-decision",
+    status_code=204,
+    dependencies=[Depends(require_permission(Permission.APPLICATION_MANAGE))],
+)
 def grant_decision(
     laa_reference: str,
     request: GrantApplicationUpdate,
     use_case: GrantDecisionUseCase = Depends(get_grant_decision_use_case),
-    _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
 ) -> Response:
     """Grant the merits decision on the single proceeding for a given application."""
     try:

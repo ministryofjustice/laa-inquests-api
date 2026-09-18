@@ -112,23 +112,6 @@ def test_204_refuse_decision_returns_204_when_caseworker_token(
     assert response.status_code == 204
 
 
-def test_204_grant_decision_returns_204_when_caseworker_token(
-    session,
-    client,
-):
-    application = session.exec(select(Application)).first()
-    response = client.patch(
-        f"/applications/{application.laa_reference}/grant-decision",
-        json={"certificateStartDate": "2000-01-01"},
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": "Bearer Caseworker No Role",
-        },
-    )
-
-    assert response.status_code == 204
-
-
 class TestSearchApplicationAuth:
     def test_200_search_application_returns_200_when_provider_claims_user_token(
         self,
