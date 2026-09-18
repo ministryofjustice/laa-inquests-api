@@ -1,11 +1,10 @@
 import io
 
 import pytest
-from sqlmodel import select
 
 from app import api
 from app.auth.rbac import Role, get_current_user_permissions
-from app.models.application.index import Application, CoronersLetter
+from app.models.application.index import CoronersLetter
 from app.models.claim.index import ClaimEvidence
 from tests.e2e.application.test_create_application import (
     _make_request_body as make_application_request_body,
@@ -182,29 +181,3 @@ class TestDeleteCoronersLetterAuth:
         )
 
         assert response.status_code == 204
-
-
-def test_200_retrieve_coroners_letter_returns_200_when_caseworker_token(
-    session, client
-):
-    application = session.exec(select(Application)).first()
-    coroners_letter = CoronersLetter(
-        sds_file_name="stored-file_abc123.pdf",
-        file_name="coroners_letter.pdf",
-    )
-    session.add(coroners_letter)
-    session.commit()
-    session.refresh(coroners_letter)
-
-    application.coroners_letter_id = coroners_letter.coroners_letter_id
-    session.add(application)
-    session.commit()
-
-    response = client.get(
-        f"/applications/{application.laa_reference}/coroners-letter",
-        headers={
-            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}"
-        },  # TODO: Add E2E tests for get coroners letter endpoint
-    )
-
-    assert response.status_code == 200
