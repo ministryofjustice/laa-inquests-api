@@ -798,12 +798,12 @@ def list_application_claims(
 @router.get(
     "/{laa_reference}/claims/{claim_id}",
     response_model=ClaimByIdResponse,
+    dependencies=[Depends(require_permission(Permission.CLAIM_READ))],
 )
 def read_claim(
     laa_reference: str,
     claim_id: int,
     use_case: GetClaimUseCase = Depends(get_get_claim_use_case),
-    _: None = Depends(verify_entra_caseworker_token),
 ) -> ClaimByIdResponse:
     """Get a single claim by ID for a given application."""
     try:
