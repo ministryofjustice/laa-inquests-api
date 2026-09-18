@@ -68,7 +68,10 @@ EXPECTED_ROUTE_PERMISSIONS: dict[
     ): Permission.APPLICATION_CREATE,
     # Claims
     ("POST", "/claims/evidence"): Permission.CLAIM_CREATE,
-    ("GET", "/claims/{claim_evidence_id}"): None,
+    ("GET", "/claims/{claim_evidence_id}"): [
+        Permission.CLAIM_CREATE,
+        Permission.CLAIM_READ,
+    ],
     (
         "DELETE",
         "/claims/{claim_evidence_id}",

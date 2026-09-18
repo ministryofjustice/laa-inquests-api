@@ -208,39 +208,3 @@ def test_200_retrieve_coroners_letter_returns_200_when_caseworker_token(
     )
 
     assert response.status_code == 200
-
-
-def test_200_retrieve_claim_evidence_returns_200_when_caseworker_token(session, client):
-    claim_evidence = ClaimEvidence(
-        sds_file_name="stored-claim-evidence_abc123.pdf",
-        file_name="claim_evidence.pdf",
-    )
-    session.add(claim_evidence)
-    session.commit()
-    session.refresh(claim_evidence)
-
-    response = client.get(
-        f"/claims/{claim_evidence.claim_evidence_id}",
-        headers={"Authorization": "Bearer Caseworker No Role"},
-    )
-
-    assert response.status_code == 200
-
-
-def test_200_retrieve_claim_evidence_returns_200_when_provider_claims_token(
-    session, client
-):
-    claim_evidence = ClaimEvidence(
-        sds_file_name="stored-claim-evidence_abc123.pdf",
-        file_name="claim_evidence.pdf",
-    )
-    session.add(claim_evidence)
-    session.commit()
-    session.refresh(claim_evidence)
-
-    response = client.get(
-        f"/claims/{claim_evidence.claim_evidence_id}",
-        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
-    )
-
-    assert response.status_code == 200
