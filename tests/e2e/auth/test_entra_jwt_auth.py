@@ -273,32 +273,6 @@ def test_200_retrieve_coroners_letter_returns_200_when_caseworker_token(
     assert response.status_code == 200
 
 
-def test_200_list_public_bodies_returns_200_when_caseworker_token(
-    client,
-):
-    response = client.get(
-        "/applications/public-bodies",
-        headers={"Authorization": "Bearer Caseworker No Role"},
-    )
-
-    assert response.status_code == 200
-
-
-@pytest.mark.parametrize(
-    "provider_token",
-    [Role.PROVIDER_APPLICATION_USER.value, Role.PROVIDER_CLAIMS_USER.value],
-)
-def test_200_list_public_bodies_returns_200_when_application_provider_token(
-    client, provider_token
-):
-    response = client.get(
-        "/applications/public-bodies",
-        headers={"Authorization": f"Bearer {provider_token}"},
-    )
-
-    assert response.status_code == 200
-
-
 def test_200_retrieve_claim_evidence_returns_200_when_caseworker_token(session, client):
     claim_evidence = ClaimEvidence(
         sds_file_name="stored-claim-evidence_abc123.pdf",

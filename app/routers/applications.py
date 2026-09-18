@@ -86,7 +86,6 @@ from app.routers.dependencies import (
     get_current_provider_firm_code,
     get_sds_port,
     verify_entra_caseworker_token,
-    verify_entra_provider_or_caseworker_token,
 )
 from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
@@ -624,12 +623,15 @@ def create_claim(
         )
 
 
-@router.post("/{laa_reference}/note", status_code=204)
+@router.post(
+    "/{laa_reference}/note",
+    status_code=204,
+    dependencies=[Depends(require_permission(Permission.CASE_NOTE_CREATE))],
+)
 def create_note(
     laa_reference: str,
     request: CreateNoteRequest,
     use_case: CreateNoteUseCase = Depends(get_create_note_use_case),
-    _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
 ) -> Response:
     """Add a caseworker note to an application's history."""
     try:
@@ -650,10 +652,13 @@ async def read_all_applications(
     return applications
 
 
-@router.get("/public-bodies", response_model=list[PublicBodyResponse])
+@router.get(
+    "/public-bodies",
+    response_model=list[PublicBodyResponse],
+    dependencies=[Depends(require_permission(Permission.PUBLIC_BODIES_READ))],
+)
 def list_public_bodies(
     use_case: ListPublicBodiesUseCase = Depends(get_list_public_bodies_use_case),
-    _: None = Depends(verify_entra_provider_or_caseworker_token),
 ) -> list[PublicBody]:
     public_bodies = use_case.execute()
     return public_bodies

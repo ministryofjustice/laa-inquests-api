@@ -102,6 +102,7 @@ def test_external_provider_application_user_permission_set():
         Permission.CORONERS_LETTER_UPLOAD,
         Permission.CORONERS_LETTER_DELETE,
         Permission.PROVIDER_OFFICES_READ,
+        Permission.PUBLIC_BODIES_READ,
     }
 
 
@@ -122,6 +123,7 @@ def test_internal_applications_caseworker_permission_set():
         Permission.CERTIFICATE_READ,
         Permission.HISTORY_READ,
         Permission.CASE_NOTE_CREATE,
+        Permission.PUBLIC_BODIES_READ,
     }
 
 
