@@ -505,16 +505,6 @@ def create_application(
     return application
 
 
-@router.get("/")
-async def read_all_applications(
-    use_case: ListApplicationsUseCase = Depends(get_list_applications_use_case),
-    _: None = Depends(verify_entra_caseworker_token),
-) -> Sequence[Application]:
-    """Read all the applications currently in the database."""
-    applications = use_case.execute()
-    return applications
-
-
 @router.post(
     "/upload-coroners-letter",
     response_model=UploadCoronersLetterResponse,
@@ -564,6 +554,100 @@ async def upload_coroners_letter(
     return UploadCoronersLetterResponse(
         coroners_letter_id=coroners_letter_id, coroners_letter_file_name=file_name
     )
+
+
+@router.post(
+    "/{laa_reference}/claim",
+    response_model=ClaimResponse,
+    status_code=201,
+    dependencies=[Depends(require_permission(Permission.CLAIM_CREATE))],
+)
+def create_claim(
+    laa_reference: str,
+    request: ClaimCreate,
+    firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
+    use_case: CreateClaimUseCase = Depends(get_create_claim_use_case),
+) -> ClaimResponse:
+    """Creates a new claim against an application."""
+    try:
+        command = CreateClaimCommand(
+            laa_reference=laa_reference,
+            firm_code=firm_code,
+            claim_type=request.claim_type,
+            poa_type=request.poa_type_id,
+            net=request.total_profit_cost_net,
+            gross=request.total_profit_cost_gross,
+            vat_zero_total=request.total_profit_cost_vat_zero,
+            claimant_id=request.claimant_id,
+            claim_evidence_ids=request.claim_evidence_ids,
+            inquest_outcomes=request.inquest_outcomes,
+            cost_template_file_id=(
+                request.claim_cost_template_file.claim_cost_template_file_id
+                if request.claim_cost_template_file is not None
+                else None
+            ),
+            cost_template_file_name=(
+                request.claim_cost_template_file.claim_cost_template_file_name
+                if request.claim_cost_template_file is not None
+                else None
+            ),
+            has_counsel_been_paid=request.has_counsel_been_paid,
+            has_alternative_funding=request.has_alternative_funding,
+            has_recovery_costs_awarded=request.has_recovery_costs_awarded,
+            financial_recovery_previous_pre_certificate_costs=(
+                request.financial_recovery_previous_pre_certificate_costs
+            ),
+            financial_recovery_cost=request.financial_recovery_cost,
+            financial_recovery_damages=request.financial_recovery_damages,
+            financial_recovery_interest=request.financial_recovery_interest,
+            paying_party=request.paying_party,
+            number_of_counsel_instructed=request.number_of_counsel_instructed,
+        )
+        result = use_case.execute(command)
+        response = ClaimResponse(claim_id=result.claim.claim_id)
+        if result.rejection_reasons is not None:
+            response = response.model_copy(
+                update={"rejection_reasons": result.rejection_reasons}
+            )
+            payload = response.model_dump(by_alias=True)
+        else:
+            payload = response.model_dump(
+                by_alias=True,
+                exclude={"rejection_reasons"},
+            )
+        return JSONResponse(content=jsonable_encoder(payload), status_code=201)
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
+    except InvalidClaimError as e:
+        raise HTTPException(
+            status_code=422, detail={"errorCode": e.code, "message": e.message}
+        )
+
+
+@router.post("/{laa_reference}/note", status_code=204)
+def create_note(
+    laa_reference: str,
+    request: CreateNoteRequest,
+    use_case: CreateNoteUseCase = Depends(get_create_note_use_case),
+    _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
+) -> Response:
+    """Add a caseworker note to an application's history."""
+    try:
+        use_case.execute(laa_reference, request.note_text)
+    except ApplicationNotFoundError:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    return Response(status_code=204)
+
+
+@router.get("/")
+async def read_all_applications(
+    use_case: ListApplicationsUseCase = Depends(get_list_applications_use_case),
+    _: None = Depends(verify_entra_caseworker_token),
+) -> Sequence[Application]:
+    """Read all the applications currently in the database."""
+    applications = use_case.execute()
+    return applications
 
 
 @router.get("/public-bodies", response_model=list[PublicBodyResponse])
@@ -787,90 +871,6 @@ def get_application_history(
         return history
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
-
-
-@router.post(
-    "/{laa_reference}/claim",
-    response_model=ClaimResponse,
-    status_code=201,
-    dependencies=[Depends(require_permission(Permission.CLAIM_CREATE))],
-)
-def create_claim(
-    laa_reference: str,
-    request: ClaimCreate,
-    firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
-    use_case: CreateClaimUseCase = Depends(get_create_claim_use_case),
-) -> ClaimResponse:
-    """Creates a new claim against an application."""
-    try:
-        command = CreateClaimCommand(
-            laa_reference=laa_reference,
-            firm_code=firm_code,
-            claim_type=request.claim_type,
-            poa_type=request.poa_type_id,
-            net=request.total_profit_cost_net,
-            gross=request.total_profit_cost_gross,
-            vat_zero_total=request.total_profit_cost_vat_zero,
-            claimant_id=request.claimant_id,
-            claim_evidence_ids=request.claim_evidence_ids,
-            inquest_outcomes=request.inquest_outcomes,
-            cost_template_file_id=(
-                request.claim_cost_template_file.claim_cost_template_file_id
-                if request.claim_cost_template_file is not None
-                else None
-            ),
-            cost_template_file_name=(
-                request.claim_cost_template_file.claim_cost_template_file_name
-                if request.claim_cost_template_file is not None
-                else None
-            ),
-            has_counsel_been_paid=request.has_counsel_been_paid,
-            has_alternative_funding=request.has_alternative_funding,
-            has_recovery_costs_awarded=request.has_recovery_costs_awarded,
-            financial_recovery_previous_pre_certificate_costs=(
-                request.financial_recovery_previous_pre_certificate_costs
-            ),
-            financial_recovery_cost=request.financial_recovery_cost,
-            financial_recovery_damages=request.financial_recovery_damages,
-            financial_recovery_interest=request.financial_recovery_interest,
-            paying_party=request.paying_party,
-            number_of_counsel_instructed=request.number_of_counsel_instructed,
-        )
-        result = use_case.execute(command)
-        response = ClaimResponse(claim_id=result.claim.claim_id)
-        if result.rejection_reasons is not None:
-            response = response.model_copy(
-                update={"rejection_reasons": result.rejection_reasons}
-            )
-            payload = response.model_dump(by_alias=True)
-        else:
-            payload = response.model_dump(
-                by_alias=True,
-                exclude={"rejection_reasons"},
-            )
-        return JSONResponse(content=jsonable_encoder(payload), status_code=201)
-    except ApplicationNotFoundError:
-        raise HTTPException(status_code=404, detail="Application not found")
-    except InvalidClaimError as e:
-        raise HTTPException(
-            status_code=422, detail={"errorCode": e.code, "message": e.message}
-        )
-
-
-@router.post("/{laa_reference}/note", status_code=204)
-def create_note(
-    laa_reference: str,
-    request: CreateNoteRequest,
-    use_case: CreateNoteUseCase = Depends(get_create_note_use_case),
-    _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
-) -> Response:
-    """Add a caseworker note to an application's history."""
-    try:
-        use_case.execute(laa_reference, request.note_text)
-    except ApplicationNotFoundError:
-        raise HTTPException(status_code=404, detail="Application not found")
-
-    return Response(status_code=204)
 
 
 @router.patch("/{laa_reference}/claims/{claim_id}/pay-in-full", status_code=204)

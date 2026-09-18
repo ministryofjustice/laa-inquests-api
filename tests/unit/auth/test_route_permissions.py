@@ -12,12 +12,18 @@ EXPECTED_ROUTE_PERMISSIONS: dict[
     tuple[str, str],
     Permission | None,
 ] = {
+    # Applications
     ("POST", "/applications/"): Permission.APPLICATION_CREATE,
-    ("GET", "/applications/"): None,
     (
         "POST",
         "/applications/upload-coroners-letter",
     ): Permission.CORONERS_LETTER_UPLOAD,
+    (
+        "POST",
+        "/applications/{laa_reference}/claim",
+    ): Permission.CLAIM_CREATE,
+    ("POST", "/applications/{laa_reference}/note"): None,
+    ("GET", "/applications/"): None,
     ("GET", "/applications/public-bodies"): None,
     ("GET", "/applications/search"): Permission.APPLICATION_SEARCH,
     (
@@ -30,11 +36,6 @@ EXPECTED_ROUTE_PERMISSIONS: dict[
     ("GET", "/applications/{laa_reference}/claims/{claim_id}"): None,
     ("GET", "/applications/{laa_reference}/coroners-letter"): None,
     ("GET", "/applications/{laa_reference}/history"): None,
-    (
-        "POST",
-        "/applications/{laa_reference}/claim",
-    ): Permission.CLAIM_CREATE,
-    ("POST", "/applications/{laa_reference}/note"): None,
     ("PATCH", "/applications/{laa_reference}/claims/{claim_id}/pay-in-full"): None,
     ("PATCH", "/applications/{laa_reference}/claims/{claim_id}/reject"): None,
     ("PATCH", "/applications/{laa_reference}/grant-decision"): None,
@@ -44,17 +45,21 @@ EXPECTED_ROUTE_PERMISSIONS: dict[
         "DELETE",
         "/applications/coroners-letter/{coroners_letter_id}",
     ): Permission.CORONERS_LETTER_DELETE,
+    # Claims
     ("POST", "/claims/evidence"): Permission.CLAIM_EVIDENCE_UPLOAD,
     ("GET", "/claims/{claim_evidence_id}"): None,
     (
         "DELETE",
         "/claims/{claim_evidence_id}",
     ): Permission.CLAIM_DELETE,
-    ("GET", "/health"): PUBLIC,
-    ("GET", "/status"): PUBLIC,
+    # Notifications
     ("POST", "/notifications/callback"): PUBLIC,
+    # Reports
     ("GET", "/reports/applications/backlog"): None,
     ("GET", "/reports/claims/backlog"): None,
+    # Monitoring
+    ("GET", "/health"): PUBLIC,
+    ("GET", "/status"): PUBLIC,
 }
 
 
@@ -89,3 +94,4 @@ def test_every_route_has_the_expected_permission():
     }
 
     assert actual == EXPECTED_ROUTE_PERMISSIONS
+    assert list(actual.items()) == list(EXPECTED_ROUTE_PERMISSIONS.items())

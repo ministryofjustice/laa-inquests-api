@@ -8,12 +8,12 @@ from app.auth.rbac import Role, get_current_user_permissions
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application, CoronersLetter
 from app.models.claim.index import ClaimEvidence
+from tests.e2e.application.test_create_application import (
+    _make_request_body as make_application_request_body,
+)
 from tests.helpers.application_payloads import create_application_payload
 from tests.helpers.provider_details import (
     override_provider_details_port_with_provider_offices,
-)
-from tests.e2e.application.test_create_application import (
-    _make_request_body as make_application_request_body,
 )
 
 
