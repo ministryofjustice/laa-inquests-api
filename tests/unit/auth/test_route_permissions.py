@@ -79,8 +79,11 @@ EXPECTED_ROUTE_PERMISSIONS: dict[
     # Notifications
     ("POST", "/notifications/callback"): PUBLIC,
     # Reports
-    ("GET", "/reports/applications/backlog"): None,
-    ("GET", "/reports/claims/backlog"): None,
+    (
+        "GET",
+        "/reports/applications/backlog",
+    ): Permission.REPORTS_APPLICATION_WORKFLOW_READ,
+    ("GET", "/reports/claims/backlog"): Permission.REPORTS_CLAIM_WORKFLOW_READ,
     # Monitoring
     ("GET", "/health"): PUBLIC,
     ("GET", "/status"): PUBLIC,
