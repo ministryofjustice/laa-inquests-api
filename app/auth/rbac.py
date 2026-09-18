@@ -29,8 +29,6 @@ class Permission(str, Enum):
 
     PROVIDER_OFFICES_READ = "provider-offices:read"
 
-    PUBLIC_BODIES_READ = "public-bodies:read"
-
     REPORTS_MI_READ = "reports-mi:read"
     REPORTS_PAYMENT_READ = "reports-payment:read"
     REPORTS_APPLICATION_WORKFLOW_READ = "reports-application-workflow:read"
@@ -56,7 +54,6 @@ ROLE_PERMISSIONS_MAP: dict[Role, set[Permission]] = {
         Permission.CORONERS_LETTER_UPLOAD,
         Permission.CORONERS_LETTER_DELETE,
         Permission.PROVIDER_OFFICES_READ,
-        Permission.PUBLIC_BODIES_READ,
     },
     Role.PROVIDER_CLAIMS_USER: {
         Permission.APPLICATION_SEARCH,
@@ -71,7 +68,6 @@ ROLE_PERMISSIONS_MAP: dict[Role, set[Permission]] = {
         Permission.CERTIFICATE_READ,
         Permission.HISTORY_READ,
         Permission.CASE_NOTE_CREATE,
-        Permission.PUBLIC_BODIES_READ,
     },
     Role.CLAIMS_CASEWORKER: {
         Permission.APPLICATION_READ,

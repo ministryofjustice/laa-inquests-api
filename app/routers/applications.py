@@ -656,7 +656,13 @@ async def read_all_applications(
 @router.get(
     "/public-bodies",
     response_model=list[PublicBodyResponse],
-    dependencies=[Depends(require_permission_from(Permission.PUBLIC_BODIES_READ))],
+    dependencies=[
+        Depends(
+            require_permission_from(
+                [Permission.APPLICATION_CREATE, Permission.APPLICATION_MANAGE]
+            )
+        )
+    ],
 )
 def list_public_bodies(
     use_case: ListPublicBodiesUseCase = Depends(get_list_public_bodies_use_case),

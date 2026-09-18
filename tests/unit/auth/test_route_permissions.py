@@ -24,7 +24,10 @@ EXPECTED_ROUTE_PERMISSIONS: dict[
     ): Permission.CLAIM_CREATE,
     ("POST", "/applications/{laa_reference}/note"): Permission.CASE_NOTE_CREATE,
     ("GET", "/applications/"): Permission.APPLICATION_READ,
-    ("GET", "/applications/public-bodies"): Permission.PUBLIC_BODIES_READ,
+    ("GET", "/applications/public-bodies"): [
+        Permission.APPLICATION_CREATE,
+        Permission.APPLICATION_MANAGE,
+    ],
     ("GET", "/applications/search"): Permission.APPLICATION_SEARCH,
     (
         "GET",
