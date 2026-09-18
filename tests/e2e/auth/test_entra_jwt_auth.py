@@ -3,8 +3,8 @@ import io
 import pytest
 from sqlmodel import select
 
-from app.auth.rbac import get_current_user_permissions, Role
 from app import api
+from app.auth.rbac import Role, get_current_user_permissions
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application, CoronersLetter
 from app.models.claim.index import ClaimEvidence

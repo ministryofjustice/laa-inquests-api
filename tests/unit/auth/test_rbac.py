@@ -2,7 +2,6 @@ import pytest
 from fastapi import HTTPException
 from fastapi.dependencies.utils import get_dependant
 
-
 from app.auth.rbac import (
     ROLE_PERMISSIONS_MAP,
     Permission,
