@@ -58,17 +58,6 @@ def test_401_verify_entra_token_dependency_rejects_unauthorized_request(
     assert response.json() == {"detail": ("Not authenticated")}
 
 
-def test_200_read_all_applications_returns_200_when_valid_entra_token(
-    client,
-):
-    response = client.get(
-        "/applications",
-        headers={"Authorization": "Bearer Caseworker No Role"},
-    )
-
-    assert response.status_code == 200
-
-
 def test_200_read_application_by_id_returns_200_when_caseworker_token(
     session,
     client,

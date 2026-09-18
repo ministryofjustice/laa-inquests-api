@@ -642,10 +642,13 @@ def create_note(
     return Response(status_code=204)
 
 
-@router.get("/")
+@router.get(
+    "/",
+    response_model=list[Application],
+    dependencies=[Depends(require_permission(Permission.APPLICATION_READ))],
+)
 async def read_all_applications(
     use_case: ListApplicationsUseCase = Depends(get_list_applications_use_case),
-    _: None = Depends(verify_entra_caseworker_token),
 ) -> Sequence[Application]:
     """Read all the applications currently in the database."""
     applications = use_case.execute()
