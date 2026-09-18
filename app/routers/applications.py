@@ -870,11 +870,11 @@ def retrieve_coroners_letter(
 @router.get(
     "/{laa_reference}/history",
     response_model=list[HistoryEventResponse],
+    dependencies=[Depends(require_permission(Permission.HISTORY_READ))],
 )
 def get_application_history(
     laa_reference: str,
     use_case: GetApplicationHistoryUseCase = Depends(get_application_history_use_case),
-    _: None = Depends(verify_entra_caseworker_token),
 ) -> list[HistoryEventResponse]:
     """Get the history of a given application."""
     try:

@@ -38,7 +38,7 @@ EXPECTED_ROUTE_PERMISSIONS: dict[
         "GET",
         "/applications/{laa_reference}/coroners-letter",
     ): Permission.APPLICATION_READ,
-    ("GET", "/applications/{laa_reference}/history"): None,
+    ("GET", "/applications/{laa_reference}/history"): Permission.HISTORY_READ,
     ("PATCH", "/applications/{laa_reference}/claims/{claim_id}/pay-in-full"): None,
     ("PATCH", "/applications/{laa_reference}/claims/{claim_id}/reject"): None,
     ("PATCH", "/applications/{laa_reference}/grant-decision"): None,
