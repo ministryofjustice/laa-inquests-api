@@ -969,14 +969,17 @@ def grant_decision(
     return Response(status_code=204)
 
 
-@router.patch("/{laa_reference}/public-bodies", status_code=204)
+@router.patch(
+    "/{laa_reference}/public-bodies",
+    status_code=204,
+    dependencies=[Depends(require_permission(Permission.APPLICATION_MANAGE))],
+)
 def update_application_public_bodies(
     laa_reference: str,
     request: UpdateApplicationPublicBodiesRequest,
     use_case: UpdatePublicBodiesUseCase = Depends(
         get_update_application_public_bodies_use_case
     ),
-    _: None = Depends(verify_entra_caseworker_token),
 ) -> Response:
     """Update the public bodies associated with an application."""
     try:

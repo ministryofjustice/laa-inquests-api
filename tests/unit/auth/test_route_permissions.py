@@ -51,7 +51,10 @@ EXPECTED_ROUTE_PERMISSIONS: dict[
         "PATCH",
         "/applications/{laa_reference}/grant-decision",
     ): Permission.APPLICATION_MANAGE,
-    ("PATCH", "/applications/{laa_reference}/public-bodies"): None,
+    (
+        "PATCH",
+        "/applications/{laa_reference}/public-bodies",
+    ): Permission.APPLICATION_MANAGE,
     ("PATCH", "/applications/{laa_reference}/refuse-decision"): None,
     (
         "DELETE",
