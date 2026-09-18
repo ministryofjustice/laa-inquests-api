@@ -884,13 +884,16 @@ def get_application_history(
         raise HTTPException(status_code=404, detail="Application not found")
 
 
-@router.patch("/{laa_reference}/claims/{claim_id}/pay-in-full", status_code=204)
+@router.patch(
+    "/{laa_reference}/claims/{claim_id}/pay-in-full",
+    status_code=204,
+    dependencies=[Depends(require_permission(Permission.CLAIM_MANAGE))],
+)
 def pay_in_full_claim(
     laa_reference: str,
     claim_id: int,
     request: PayInFullClaimRequest,
     use_case: PayInFullClaimUseCase = Depends(get_pay_in_full_claim_use_case),
-    _: AuthenticatedUser = Depends(verify_entra_caseworker_token),
 ) -> Response:
     """Record a pay-in-full decision against a claim, with approved amounts."""
     try:
