@@ -244,8 +244,9 @@ class ClaimRepositoryAdapter(
 
     def _random_chars(self) -> str:
         return "".join(
-            random.choice(self.reference_rules.allowed_characters) for _ in range(4)
-        )  # nosec: Not used for cryptographic purposes
+            random.choice(self.reference_rules.allowed_characters)  # nosec B311
+            for _ in range(4)
+        )
 
     def list_auto_approved_poa_claims(
         self, start: datetime, end: datetime

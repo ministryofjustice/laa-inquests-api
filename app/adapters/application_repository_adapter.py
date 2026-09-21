@@ -244,8 +244,9 @@ class ApplicationRepositoryAdapter(
 
     def _random_chars(self):
         return "".join(
-            random.choice(self.reference_rules.allowed_characters) for _ in range(3)
-        )  # nosec: Not used for cryptographic purposes
+            random.choice(self.reference_rules.allowed_characters)  # nosec B311
+            for _ in range(3)
+        )
 
     def commit(self) -> None:
         self.session.commit()
