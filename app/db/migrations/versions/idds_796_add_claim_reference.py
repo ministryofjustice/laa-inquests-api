@@ -1,7 +1,7 @@
 """IDDS-796 add claim_reference field to claim
 
 Revision ID: idds_796_claim_reference
-Revises: b6b2a2fe79d7
+Revises: 696fce63e2b7
 Create Date: 2026-09-21 00:00:00.000000
 
 """
@@ -18,7 +18,7 @@ from app.adapters.claim_repository_adapter import ClaimRepositoryAdapter
 
 # revision identifiers, used by Alembic.
 revision: str = "idds_796_claim_reference"
-down_revision: Union[str, None] = "b6b2a2fe79d7"
+down_revision: Union[str, None] = "696fce63e2b7"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
