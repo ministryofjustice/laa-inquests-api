@@ -54,8 +54,11 @@ class TestCreateClaimPaymentExtract:
         response = _post_claim(session, client)
 
         assert response.status_code == 201
-        claim_id = response.json()["claimId"]
-        stored_claim = session.get(Claim, claim_id)
+        claim_reference = response.json()["claimReference"]
+        stored_claim = session.exec(
+            select(Claim).where(Claim.claim_reference == claim_reference)
+        ).one()
+        claim_id = stored_claim.claim_id
         payment_extract = _payment_extract(session, claim_id)
 
         # 80% of net (1000) plus 20% VAT = 1000 * 0.8 * 1.2 = 960.00
@@ -81,7 +84,12 @@ class TestCreateClaimPaymentExtract:
         )
 
         assert response.status_code == 201
-        claim_id = response.json()["claimId"]
+        claim_reference = response.json()["claimReference"]
+        claim_id = (
+            session.exec(select(Claim).where(Claim.claim_reference == claim_reference))
+            .one()
+            .claim_id
+        )
         payment_extract = _payment_extract(session, claim_id)
 
         # 80% of zero-rated value (1000) = 800.00, no VAT added
@@ -106,8 +114,11 @@ class TestCreateClaimPaymentExtract:
         )
 
         assert response.status_code == 201
-        claim_id = response.json()["claimId"]
-        stored_claim = session.get(Claim, claim_id)
+        claim_reference = response.json()["claimReference"]
+        stored_claim = session.exec(
+            select(Claim).where(Claim.claim_reference == claim_reference)
+        ).one()
+        claim_id = stored_claim.claim_id
         extracts = _payment_extracts(session, claim_id)
 
         assert len(extracts) == 2
@@ -143,7 +154,12 @@ class TestCreateClaimPaymentExtract:
         )
 
         assert response.status_code == 201
-        claim_id = response.json()["claimId"]
+        claim_reference = response.json()["claimReference"]
+        claim_id = (
+            session.exec(select(Claim).where(Claim.claim_reference == claim_reference))
+            .one()
+            .claim_id
+        )
         extracts = _payment_extracts(session, claim_id)
 
         assert len(extracts) == 1
@@ -167,7 +183,12 @@ class TestCreateClaimPaymentExtract:
         )
 
         assert response.status_code == 201
-        claim_id = response.json()["claimId"]
+        claim_reference = response.json()["claimReference"]
+        claim_id = (
+            session.exec(select(Claim).where(Claim.claim_reference == claim_reference))
+            .one()
+            .claim_id
+        )
         extracts = _payment_extracts(session, claim_id)
 
         assert len(extracts) == 1

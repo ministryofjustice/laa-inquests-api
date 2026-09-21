@@ -1,3 +1,4 @@
+import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -44,6 +45,7 @@ def _seed_claim(
         total_profit_cost_vat_zero=Decimal("500.00"),
         poa_type_id=POAType.PROFIT_COST,
         claimant_id=claimant_id,
+        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
     )
     session.add(claim)
     session.commit()
@@ -56,7 +58,7 @@ def test_204_reject_claim_creates_decision_reason_and_updates_status(session, cl
     claim = _seed_claim(session, laa_reference)
 
     response = client.patch(
-        f"/applications/{laa_reference}/claims/{claim.claim_id}/reject",
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}/reject",
         json=_reject_payload(),
         headers={
             "Content-Type": "application/json",
@@ -90,7 +92,7 @@ def test_204_reject_claim_sends_rejection_email_to_claimant(
     claim = _seed_claim(session, laa_reference)
 
     response = client.patch(
-        f"/applications/{laa_reference}/claims/{claim.claim_id}/reject",
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}/reject",
         json=_reject_payload(),
         headers={
             "Content-Type": "application/json",
@@ -116,7 +118,7 @@ def test_204_reject_final_bill_claim_sends_rejection_email(
     claim = _seed_claim(session, laa_reference, claim_type=ClaimType.FINAL_BILL)
 
     response = client.patch(
-        f"/applications/{laa_reference}/claims/{claim.claim_id}/reject",
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}/reject",
         json=_reject_payload(),
         headers={
             "Content-Type": "application/json",
@@ -140,7 +142,7 @@ def test_204_reject_claim_allows_re_rejecting_and_creates_new_decision(session, 
 
     for _ in range(2):
         response = client.patch(
-            f"/applications/{laa_reference}/claims/{claim.claim_id}/reject",
+            f"/applications/{laa_reference}/claims/{claim.claim_reference}/reject",
             json=_reject_payload(),
             headers={
                 "Content-Type": "application/json",
@@ -192,7 +194,7 @@ def test_404_reject_claim_when_claim_belongs_to_another_application(session, cli
     claim = _seed_claim(session, existing.laa_reference)
 
     response = client.patch(
-        f"/applications/{other_application.laa_reference}/claims/{claim.claim_id}/reject",
+        f"/applications/{other_application.laa_reference}/claims/{claim.claim_reference}/reject",
         json=_reject_payload(),
         headers={
             "Content-Type": "application/json",
@@ -209,7 +211,7 @@ def test_422_reject_claim_when_justification_missing(session, client):
     claim = _seed_claim(session, laa_reference)
 
     response = client.patch(
-        f"/applications/{laa_reference}/claims/{claim.claim_id}/reject",
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}/reject",
         json={},
         headers={
             "Content-Type": "application/json",
@@ -226,7 +228,7 @@ def test_204_reject_claim_creates_history_event(session, client):
     application = session.exec(select(Application)).first()
 
     response = client.patch(
-        f"/applications/{application.laa_reference}/claims/{claim.claim_id}/reject",
+        f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/reject",
         json=_reject_payload(),
         headers={
             "Content-Type": "application/json",
@@ -264,7 +266,7 @@ def test_204_reject_final_bill_claim_creates_history_event(session, client):
     )
 
     response = client.patch(
-        f"/applications/{application.laa_reference}/claims/{claim.claim_id}/reject",
+        f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/reject",
         json=_reject_payload(),
         headers={
             "Content-Type": "application/json",

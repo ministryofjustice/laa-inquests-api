@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 @dataclass(frozen=True)
 class RejectClaimCommand:
     laa_reference: str
-    claim_id: int
+    claim_reference: str
     justification: str
 
 
@@ -53,13 +53,15 @@ class RejectClaimUseCase:
         if application is None:
             raise ApplicationNotFoundError(command.laa_reference)
 
-        claim = self.get_claim_by_id_port.get_claim_by_id(command.claim_id)
+        claim = self.get_claim_by_id_port.get_claim_by_reference(
+            command.claim_reference
+        )
         if claim is None or claim.application_id != application.application_id:
-            raise ClaimNotFoundError(command.claim_id)
+            raise ClaimNotFoundError(command.claim_reference)
 
         try:
             claim_decision = self.create_claim_decision_port.create_claim_decision(
-                claim_id=command.claim_id,
+                claim_id=claim.claim_id,
                 decision_status=ClaimDecisionStatus.REJECT,
             )
             self.create_decision_reason_port.create_decision_reason(
@@ -68,7 +70,7 @@ class RejectClaimUseCase:
                 justification=command.justification,
             )
             self.update_claim_status_port.update_claim_status(
-                claim_id=command.claim_id,
+                claim_id=claim.claim_id,
                 status=ClaimStatus.REJECTED,
             )
 
@@ -117,6 +119,6 @@ class RejectClaimUseCase:
             except Exception:
                 logger.warning(
                     "Failed to send claim rejection email for claim %s",
-                    command.claim_id,
+                    command.claim_reference,
                     exc_info=True,
                 )

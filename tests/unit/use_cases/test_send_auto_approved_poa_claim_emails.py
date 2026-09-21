@@ -18,15 +18,16 @@ from app.use_cases.send_auto_approved_poa_claim_emails import (
 )
 
 
-def _event(reference: HistoryEventReference, claim_id: int) -> SimpleNamespace:
+def _event(reference: HistoryEventReference, claim_reference: str) -> SimpleNamespace:
     return SimpleNamespace(
-        event_reference=reference, event_data={"claim_reference": claim_id}
+        event_reference=reference, event_data={"claim_reference": claim_reference}
     )
 
 
 def _claim(claim_id: int = 7) -> MagicMock:
     claim = MagicMock(spec=Claim)
     claim.claim_id = claim_id
+    claim.claim_reference = f"INQC-TEST-{claim_id:04d}"
     application = SimpleNamespace(
         application_id=12345,
         provider=SimpleNamespace(
@@ -83,7 +84,7 @@ def test_sends_grant_email_for_auto_approved_claim(
     claim = _claim()
     list_port.list_auto_approved_poa_claims.return_value = [claim]
     history_port.get_application_history.return_value = [
-        _event(HistoryEventReference.POA_AUTO_APPROVED, claim.claim_id)
+        _event(HistoryEventReference.POA_AUTO_APPROVED, claim.claim_reference)
     ]
 
     use_case.execute()
@@ -121,8 +122,8 @@ def test_skips_claim_when_email_already_sent(
     claim = _claim()
     list_port.list_auto_approved_poa_claims.return_value = [claim]
     history_port.get_application_history.return_value = [
-        _event(HistoryEventReference.POA_AUTO_APPROVED, claim.claim_id),
-        _event(HistoryEventReference.CLAIM_APPROVED_EMAIL, claim.claim_id),
+        _event(HistoryEventReference.POA_AUTO_APPROVED, claim.claim_reference),
+        _event(HistoryEventReference.CLAIM_APPROVED_EMAIL, claim.claim_reference),
     ]
 
     use_case.execute()
@@ -138,8 +139,8 @@ def test_one_claim_failure_does_not_block_others(
     succeeding = _claim(claim_id=2)
     list_port.list_auto_approved_poa_claims.return_value = [failing, succeeding]
     history_port.get_application_history.side_effect = lambda _app_id: [
-        _event(HistoryEventReference.POA_AUTO_APPROVED, 1),
-        _event(HistoryEventReference.POA_AUTO_APPROVED, 2),
+        _event(HistoryEventReference.POA_AUTO_APPROVED, failing.claim_reference),
+        _event(HistoryEventReference.POA_AUTO_APPROVED, succeeding.claim_reference),
     ]
     gov_notify_port.send_claim_granted_decision_email.side_effect = [
         Exception("boom"),

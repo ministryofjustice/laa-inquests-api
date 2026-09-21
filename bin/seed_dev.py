@@ -135,6 +135,7 @@ def seed_dev():
 
         claim = Claim(
             application_id=application.application_id,
+            claim_reference="INQC-YYYY-YYYY",
             claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
             status_id=ClaimStatus.SUBMITTED,
             total_profit_cost_net=Decimal("1000.00"),

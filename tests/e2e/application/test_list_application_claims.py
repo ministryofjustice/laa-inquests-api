@@ -1,3 +1,4 @@
+import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -32,6 +33,7 @@ def _seed_claim(
         total_profit_cost_vat_zero=Decimal("500.00"),
         total_funds_remaining_after_claim=Decimal("8800.00"),
         poa_type_id=POAType.PROFIT_COST,
+        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
     )
     session.add(claim)
     session.commit()
@@ -78,9 +80,9 @@ def test_200_assessed_true_returns_only_non_submitted_claims(session, client):
 
     assert response.status_code == 200
     body = response.json()
-    assert [c["claimId"] for c in body] == [assessed_claim.claim_id]
+    assert [c["claimReference"] for c in body] == [assessed_claim.claim_reference]
     assert set(body[0].keys()) == {
-        "claimId",
+        "claimReference",
         "claimTypeId",
         "submissionDate",
         "totalProfitCostNet",
@@ -144,7 +146,9 @@ def test_200_assessed_false_returns_only_submitted_claims(session, client):
     )
 
     assert response.status_code == 200
-    assert [c["claimId"] for c in response.json()] == [submitted_claim.claim_id]
+    assert [c["claimReference"] for c in response.json()] == [
+        submitted_claim.claim_reference
+    ]
 
 
 def test_422_when_assessed_query_param_is_missing(session, client):

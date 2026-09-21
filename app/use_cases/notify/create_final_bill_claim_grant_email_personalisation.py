@@ -49,7 +49,7 @@ def create_final_bill_claim_grant_email_personalisation(
         client_last_name=application.client.client_last_name,
         date_of_claim=format_date(claim.submission_date),
         claim_type=format_claim_type(claim.claim_type_id),
-        claim_ref=str(claim.claim_id),
+        claim_ref=str(claim.claim_reference),
         claimed_amount=format_amount(profit_total + disbursement_total),
         net_profit_costs=format_amount(
             _amount_or_zero(decision_amounts.profit_cost_net)

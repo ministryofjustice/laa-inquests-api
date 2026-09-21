@@ -62,7 +62,7 @@ def _build_use_case(claim=None, application=None):
     lookup_port.get_application_by_laa_reference.return_value = application
 
     get_claim_port = MagicMock(spec=GetClaimByIdPort)
-    get_claim_port.get_claim_by_id.return_value = claim
+    get_claim_port.get_claim_by_reference.return_value = claim
 
     create_decision_port = MagicMock(spec=CreateClaimDecisionPort)
     create_decision_port.create_claim_decision.return_value = ClaimDecision(
@@ -109,14 +109,14 @@ def test_raises_application_not_found_when_application_missing():
     use_case, *_ = _build_use_case(claim=_claim(), application=None)
 
     with pytest.raises(ApplicationNotFoundError):
-        use_case.execute(PayInFullClaimCommand("999999", 1))
+        use_case.execute(PayInFullClaimCommand("999999", "INQC-0000-0001"))
 
 
 def test_raises_claim_not_found_when_claim_missing():
     use_case, *_ = _build_use_case(claim=None, application=_application())
 
     with pytest.raises(ClaimNotFoundError):
-        use_case.execute(PayInFullClaimCommand("1", 999999))
+        use_case.execute(PayInFullClaimCommand("1", "INQC-9999-9999"))
 
 
 def test_raises_claim_not_found_when_claim_belongs_to_another_application():
@@ -126,7 +126,7 @@ def test_raises_claim_not_found_when_claim_belongs_to_another_application():
     )
 
     with pytest.raises(ClaimNotFoundError):
-        use_case.execute(PayInFullClaimCommand("2", 1))
+        use_case.execute(PayInFullClaimCommand("2", "INQC-0000-0001"))
 
 
 def test_creates_pay_in_full_decision_amount_updates_status_and_commits():
@@ -143,7 +143,7 @@ def test_creates_pay_in_full_decision_amount_updates_status_and_commits():
     use_case.execute(
         PayInFullClaimCommand(
             laa_reference="1",
-            claim_id=5,
+            claim_reference="INQC-0000-0005",
             profit_cost_net=Decimal("1000.00"),
             profit_cost_gross=Decimal("1200.00"),
             profit_cost_vat_zero=None,
@@ -219,7 +219,7 @@ def test_history_event_not_created_when_update_claim_status_fails():
         use_case.execute(
             PayInFullClaimCommand(
                 "1",
-                5,
+                "INQC-0000-0005",
                 profit_cost_net=Decimal("1000.00"),
                 profit_cost_gross=Decimal("1200.00"),
                 disbursement_net=Decimal("100.00"),
@@ -257,7 +257,7 @@ def test_pay_in_full_claim_not_committed_when_create_history_event_fails():
         use_case.execute(
             PayInFullClaimCommand(
                 "1",
-                5,
+                "INQC-0000-0005",
                 profit_cost_net=Decimal("1000.00"),
                 profit_cost_gross=Decimal("1200.00"),
                 disbursement_net=Decimal("100.00"),
@@ -282,7 +282,7 @@ def test_raises_invalid_claim_error_when_profit_cost_totals_invalid():
         use_case.execute(
             PayInFullClaimCommand(
                 "1",
-                5,
+                "INQC-0000-0005",
                 profit_cost_net=Decimal("1000.00"),
             )
         )
@@ -305,7 +305,7 @@ def test_raises_invalid_claim_error_when_disbursement_totals_invalid():
         use_case.execute(
             PayInFullClaimCommand(
                 "1",
-                5,
+                "INQC-0000-0005",
                 profit_cost_net=Decimal("1000.00"),
                 profit_cost_gross=Decimal("1200.00"),
                 disbursement_net=Decimal("100.00"),

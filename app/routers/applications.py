@@ -601,7 +601,7 @@ def create_claim(
             number_of_counsel_instructed=request.number_of_counsel_instructed,
         )
         result = use_case.execute(command)
-        response = ClaimResponse(claim_id=result.claim.claim_id)
+        response = ClaimResponse(claim_reference=result.claim.claim_reference)
         if result.rejection_reasons is not None:
             response = response.model_copy(
                 update={"rejection_reasons": result.rejection_reasons}
@@ -800,18 +800,18 @@ def list_application_claims(
 
 
 @router.get(
-    "/{laa_reference}/claims/{claim_id}",
+    "/{laa_reference}/claims/{claim_reference}",
     response_model=ClaimByIdResponse,
     dependencies=[Depends(require_permission_from(Permission.CLAIM_READ))],
 )
 def read_claim(
     laa_reference: str,
-    claim_id: int,
+    claim_reference: str,
     use_case: GetClaimUseCase = Depends(get_get_claim_use_case),
 ) -> ClaimByIdResponse:
-    """Get a single claim by ID for a given application."""
+    """Get a single claim by reference for a given application."""
     try:
-        claim = use_case.execute(laa_reference, claim_id)
+        claim = use_case.execute(laa_reference, claim_reference)
         return claim
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
@@ -889,13 +889,13 @@ def get_application_history(
 
 
 @router.patch(
-    "/{laa_reference}/claims/{claim_id}/pay-in-full",
+    "/{laa_reference}/claims/{claim_reference}/pay-in-full",
     status_code=204,
     dependencies=[Depends(require_permission_from(Permission.CLAIM_MANAGE))],
 )
 def pay_in_full_claim(
     laa_reference: str,
-    claim_id: int,
+    claim_reference: str,
     request: PayInFullClaimRequest,
     use_case: PayInFullClaimUseCase = Depends(get_pay_in_full_claim_use_case),
 ) -> Response:
@@ -904,7 +904,7 @@ def pay_in_full_claim(
         use_case.execute(
             PayInFullClaimCommand(
                 laa_reference=laa_reference,
-                claim_id=claim_id,
+                claim_reference=claim_reference,
                 profit_cost_net=request.profit_cost_net,
                 profit_cost_gross=request.profit_cost_gross,
                 profit_cost_vat_zero=request.profit_cost_vat_zero,
@@ -926,13 +926,13 @@ def pay_in_full_claim(
 
 
 @router.patch(
-    "/{laa_reference}/claims/{claim_id}/reject",
+    "/{laa_reference}/claims/{claim_reference}/reject",
     status_code=204,
     dependencies=[Depends(require_permission_from(Permission.CLAIM_MANAGE))],
 )
 def reject_claim(
     laa_reference: str,
-    claim_id: int,
+    claim_reference: str,
     request: RejectClaimRequest,
     use_case: RejectClaimUseCase = Depends(get_reject_claim_use_case),
 ) -> Response:
@@ -941,7 +941,7 @@ def reject_claim(
         use_case.execute(
             RejectClaimCommand(
                 laa_reference=laa_reference,
-                claim_id=claim_id,
+                claim_reference=claim_reference,
                 justification=request.justification,
             ),
         )

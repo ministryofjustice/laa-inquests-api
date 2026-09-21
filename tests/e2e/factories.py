@@ -120,10 +120,15 @@ def create_claim_in_db(
     total_profit_cost_net: str = "100.00",
     total_profit_cost_gross: str = "120.00",
     claim_type: ClaimType = ClaimType.FINAL_BILL,
+    claim_reference: str | None = None,
 ) -> Claim:
     """Persist a claim with optional field overrides."""
     claim = Claim(
         application_id=application_id,
+        claim_reference=(
+            claim_reference
+            or f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}"
+        ),
         claim_type_id=claim_type,
         status_id=status,
         submission_date=submission_date or datetime.now(UTC),

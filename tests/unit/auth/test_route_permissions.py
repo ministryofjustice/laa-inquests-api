@@ -36,7 +36,10 @@ EXPECTED_ROUTE_PERMISSIONS: dict[
     ("GET", "/applications/{laa_reference}"): Permission.APPLICATION_READ,
     ("GET", "/applications/{laa_reference}/certificate"): Permission.CERTIFICATE_READ,
     ("GET", "/applications/{laa_reference}/claims"): Permission.CLAIM_READ,
-    ("GET", "/applications/{laa_reference}/claims/{claim_id}"): Permission.CLAIM_READ,
+    (
+        "GET",
+        "/applications/{laa_reference}/claims/{claim_reference}",
+    ): Permission.CLAIM_READ,
     (
         "GET",
         "/applications/{laa_reference}/coroners-letter",
@@ -44,11 +47,11 @@ EXPECTED_ROUTE_PERMISSIONS: dict[
     ("GET", "/applications/{laa_reference}/history"): Permission.HISTORY_READ,
     (
         "PATCH",
-        "/applications/{laa_reference}/claims/{claim_id}/pay-in-full",
+        "/applications/{laa_reference}/claims/{claim_reference}/pay-in-full",
     ): Permission.CLAIM_MANAGE,
     (
         "PATCH",
-        "/applications/{laa_reference}/claims/{claim_id}/reject",
+        "/applications/{laa_reference}/claims/{claim_reference}/reject",
     ): Permission.CLAIM_MANAGE,
     (
         "PATCH",

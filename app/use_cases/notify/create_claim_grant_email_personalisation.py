@@ -28,7 +28,7 @@ def create_claim_grant_email_personalisation(
         client_last_name=application.client.client_last_name,
         date_of_claim=format_date(claim.submission_date),
         claim_type=format_claim_type(claim.claim_type_id),
-        claim_ref=str(claim.claim_id),
+        claim_ref=str(claim.claim_reference),
         zero_vat_POA_costs=format_amount(
             claim.total_profit_cost_vat_zero or Decimal("0.00")
         ),

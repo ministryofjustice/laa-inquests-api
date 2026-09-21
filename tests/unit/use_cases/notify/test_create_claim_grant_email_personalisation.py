@@ -19,6 +19,7 @@ from tests.unit.factories import create_base_application
 def _claim(**overrides) -> Claim:
     claim = MagicMock(spec=Claim)
     claim.claim_id = 7
+    claim.claim_reference = "INQC-0007-0007"
     claim.claim_type_id = ClaimType.PAYMENT_ON_ACCOUNT
     claim.submission_date = datetime(2026, 6, 18, 14, 3, tzinfo=UTC)
     claim.total_profit_cost_net = Decimal("1000.00")
@@ -44,7 +45,7 @@ def test_create_claim_grant_email_personalisation_returns_expected_data():
     assert result.client_last_name == "Doe"
     assert result.date_of_claim == "18 June 2026 14:03 UTC"
     assert result.claim_type == "Payment on account"
-    assert result.claim_ref == "7"
+    assert result.claim_ref == "INQC-0007-0007"
     assert result.zero_vat_POA_costs == "1,150.00"
     assert result.net_POA_costs == "1,000.00"
     assert result.gross_POA_costs == "1,200.00"

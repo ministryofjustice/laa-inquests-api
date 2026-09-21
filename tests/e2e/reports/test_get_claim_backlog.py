@@ -48,7 +48,7 @@ class TestGetClaimBacklogReport:
         rows = parse_csv_rows(response.text)
         assert len(rows) == 1
         row = rows[0]
-        assert row["Case reference"] == str(claim.claim_id)
+        assert row["Case reference"] == claim.claim_reference
         assert row["Firm Account Number"] == application.provider.firm_code
         assert row["Firm Name"] == f"Firm {application.provider.firm_code}"
         assert row["Submission date"] == "2026-01-01 00:00:00"

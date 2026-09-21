@@ -28,6 +28,7 @@ from app.models.claim.enums import (
 
 class ClaimBase(SQLModel):
     application_id: int = Field(foreign_key="application.application_id")
+    claim_reference: str = Field(unique=True, min_length=14, max_length=14)
     claim_type_id: ClaimType = Field(sa_column=Column(Enum(ClaimType)))
     status_id: ClaimStatus = Field(
         default=ClaimStatus.SUBMITTED, sa_column=Column(Enum(ClaimStatus))
@@ -353,7 +354,7 @@ class ClaimResponse(BaseModel):
         from_attributes=True,
         populate_by_name=True,
     )
-    claim_id: int
+    claim_reference: str
     rejection_reasons: list[ReasonCode] | None = None
 
 
@@ -363,7 +364,7 @@ class ClaimSummaryBase(BaseModel):
         from_attributes=True,
         populate_by_name=True,
     )
-    claim_id: int
+    claim_reference: str
     claim_type_id: ClaimType
     submission_date: datetime
     total_profit_cost_net: Decimal | None = None

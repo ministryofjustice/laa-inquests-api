@@ -1,7 +1,9 @@
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
+from unittest.mock import MagicMock
 
+import pytest
 from sqlmodel import select
 
 from app.adapters.claim_repository_adapter import ClaimRepositoryAdapter
@@ -463,3 +465,71 @@ def test_rollback_rolls_back_unflushed_changes(session):
 
     stored = session.exec(select(Claim)).all()
     assert len(stored) == 0
+
+
+def test_generate_claim_reference_has_expected_format(session):
+    adapter = ClaimRepositoryAdapter(session)
+
+    for _ in range(10):
+        reference = adapter._generate_claim_reference()
+        assert reference.startswith("INQC-")
+        prefix, first, second = reference.split("-")
+        assert prefix == "INQC"
+        assert len(first) == 4
+        assert len(second) == 4
+
+
+def test_generate_claim_reference_returns_unique_references(session):
+    adapter = ClaimRepositoryAdapter(session)
+
+    assert adapter._generate_claim_reference() != adapter._generate_claim_reference()
+
+
+def test_generate_claim_reference_excludes_ambiguous_characters(session):
+    adapter = ClaimRepositoryAdapter(session)
+
+    for _ in range(10):
+        reference = adapter._generate_claim_reference()
+        # Ignore the "INQC-" prefix and check the random segments only.
+        assert all(char not in reference[5:] for char in "B8G6I10OQDS5Z2")
+
+
+def test_get_claim_reference_retries_when_banned_word_generated(session):
+    adapter = ClaimRepositoryAdapter(session)
+    adapter._generate_claim_reference = MagicMock(
+        side_effect=["INQC-XXXY-YYYY", "INQC-YYYY-YYYY"]
+    )
+    adapter.reference_rules.contains_banned_word = MagicMock(side_effect=[True, False])
+
+    reference = adapter._get_claim_reference()
+
+    assert reference == "INQC-YYYY-YYYY"
+    assert adapter._generate_claim_reference.call_count == 2
+
+
+def test_get_claim_reference_retries_when_reference_already_exists(session):
+    application_id = session.exec(select(Application)).first().application_id
+    adapter = ClaimRepositoryAdapter(session)
+    existing = adapter.create_claim(application_id, _make_domain_claim(), None)
+
+    adapter._generate_claim_reference = MagicMock(
+        side_effect=[existing.claim_reference, "INQC-YYYY-YYYY"]
+    )
+
+    reference = adapter._get_claim_reference()
+
+    assert reference == "INQC-YYYY-YYYY"
+    assert adapter._generate_claim_reference.call_count == 2
+
+
+def test_get_claim_reference_raises_after_max_attempts(session):
+    adapter = ClaimRepositoryAdapter(session)
+    adapter._generate_claim_reference = MagicMock(return_value="INQC-XXXX-XXXX")
+    adapter.reference_rules.contains_banned_word = MagicMock(return_value=True)
+
+    with pytest.raises(RuntimeError) as exc_info:
+        adapter._get_claim_reference()
+
+    assert (
+        str(exc_info.value) == "Maximum attempts reached for generating claim reference"
+    )

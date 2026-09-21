@@ -34,7 +34,7 @@ def _to_json_amount(amount: Decimal | None) -> str | None:
 @dataclass(frozen=True)
 class PayInFullClaimCommand:
     laa_reference: str
-    claim_id: int
+    claim_reference: str
     profit_cost_net: Decimal | None = None
     profit_cost_gross: Decimal | None = None
     profit_cost_vat_zero: Decimal | None = None
@@ -71,9 +71,11 @@ class PayInFullClaimUseCase:
         if application is None:
             raise ApplicationNotFoundError(command.laa_reference)
 
-        claim = self.get_claim_by_id_port.get_claim_by_id(command.claim_id)
+        claim = self.get_claim_by_id_port.get_claim_by_reference(
+            command.claim_reference
+        )
         if claim is None or claim.application_id != application.application_id:
-            raise ClaimNotFoundError(command.claim_id)
+            raise ClaimNotFoundError(command.claim_reference)
 
         try:
             decision_amounts = PayInFullClaim(
@@ -90,7 +92,7 @@ class PayInFullClaimUseCase:
 
         try:
             claim_decision = self.create_claim_decision_port.create_claim_decision(
-                claim_id=command.claim_id,
+                claim_id=claim.claim_id,
                 decision_status=ClaimDecisionStatus.PAY_IN_FULL,
             )
             self.create_claim_decision_amount_port.create_claim_decision_amount(
@@ -103,7 +105,7 @@ class PayInFullClaimUseCase:
                 disbursement_vat_zero=command.disbursement_vat_zero,
             )
             self.update_claim_status_port.update_claim_status(
-                claim_id=command.claim_id,
+                claim_id=claim.claim_id,
                 status=ClaimStatus.PAY_IN_FULL,
             )
 
