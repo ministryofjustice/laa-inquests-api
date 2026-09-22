@@ -617,6 +617,7 @@ def _seed_paid_poa_claim_with_extract(session, laa_reference: int) -> Claim:
         status_id=ClaimStatus.PAY_IN_FULL,
         submission_date=datetime.now(UTC),
         poa_type_id=POAType.PROFIT_COST,
+        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
     )
     session.add(poa_claim)
     session.commit()
@@ -666,7 +667,7 @@ def test_204_pay_in_full_final_bill_creates_payment_extract_in_expected_order(
     claim = _seed_claim(session, application.laa_reference)
 
     response = client.patch(
-        f"/applications/{application.laa_reference}/claims/{claim.claim_id}/pay-in-full",
+        f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
         json=_pay_in_full_payload(
             {
                 "profitCostNet": "1000.00",
@@ -730,7 +731,7 @@ def test_204_pay_in_full_fees_line_uses_zero_vat_when_vat_zero_supplied(
     claim = _seed_claim(session, application.laa_reference)
 
     response = client.patch(
-        f"/applications/{application.laa_reference}/claims/{claim.claim_id}/pay-in-full",
+        f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
         json=_pay_in_full_payload(
             {
                 "profitCostNet": None,
@@ -764,7 +765,7 @@ def test_204_pay_in_full_final_bill_creates_no_recoupments_without_paid_poa_clai
     claim = _seed_claim(session, application.laa_reference)
 
     response = client.patch(
-        f"/applications/{application.laa_reference}/claims/{claim.claim_id}/pay-in-full",
+        f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
         json=_pay_in_full_payload(),
         headers={
             "Content-Type": "application/json",

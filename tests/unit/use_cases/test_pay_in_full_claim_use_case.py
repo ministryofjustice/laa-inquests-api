@@ -341,7 +341,7 @@ def _build_use_case_with_extract_ports(
     lookup_port.get_application_by_laa_reference.return_value = application
 
     get_claim_port = MagicMock(spec=GetClaimByIdPort)
-    get_claim_port.get_claim_by_id.return_value = claim
+    get_claim_port.get_claim_by_reference.return_value = claim
 
     create_decision_port = MagicMock(spec=CreateClaimDecisionPort)
     create_decision_port.create_claim_decision.return_value = ClaimDecision(
@@ -443,7 +443,7 @@ def test_creates_final_bill_and_recoupment_extract_lines_in_order():
     use_case.execute(
         PayInFullClaimCommand(
             laa_reference="1",
-            claim_id=5,
+            claim_reference=5,
             profit_cost_net=Decimal("1000.00"),
             profit_cost_gross=Decimal("1200.00"),
             disbursement_net=Decimal("100.00"),
@@ -523,7 +523,7 @@ def test_creates_no_recoupment_lines_without_paid_poa_claims():
     use_case.execute(
         PayInFullClaimCommand(
             laa_reference="1",
-            claim_id=5,
+            claim_reference=5,
             profit_cost_net=Decimal("1000.00"),
             profit_cost_gross=Decimal("1200.00"),
             disbursement_net=Decimal("100.00"),
