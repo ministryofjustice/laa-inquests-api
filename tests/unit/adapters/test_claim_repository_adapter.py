@@ -8,15 +8,18 @@ from sqlmodel import select
 
 from app.adapters.claim_repository_adapter import ClaimRepositoryAdapter
 from app.domain.claim import Claim as DomainClaim
+from app.domain.payment_extract import PaymentExtractLine
 from app.models.application.index import Application
 from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
     ClaimType,
     InquestOutcomeCode,
+    InvoiceTypeCode,
     NumberOfCounselInstructed,
     POAType,
     ReasonCode,
+    TaxCode,
 )
 from app.models.claim.index import (
     Claim,
@@ -218,6 +221,53 @@ def test_get_claims_by_application_id_returns_empty_list_when_no_claims(session)
     results = adapter.get_claims_by_application_id(application_id)
 
     assert results == []
+
+
+def test_get_payment_extracts_by_claim_id_returns_lines_in_sequence_order(session):
+    application_id = session.exec(select(Application)).first().application_id
+    adapter = ClaimRepositoryAdapter(session)
+    claim = adapter.create_claim(
+        application_id, _make_domain_claim(), "claimant@example.com"
+    )
+    adapter.create_payment_extract(
+        claim_id=claim.claim_id,
+        lines=[
+            PaymentExtractLine(
+                sequence_number=2,
+                invoice_number=f"{claim.claim_id}_002",
+                invoice_amount=Decimal("200.00"),
+                invoice_date=datetime.now(UTC).date(),
+                invoice_type=InvoiceTypeCode.POA,
+                tax_code=TaxCode.ZERO_VAT,
+            ),
+            PaymentExtractLine(
+                sequence_number=1,
+                invoice_number=f"{claim.claim_id}_001",
+                invoice_amount=Decimal("800.00"),
+                invoice_date=datetime.now(UTC).date(),
+                invoice_type=InvoiceTypeCode.POA,
+                tax_code=TaxCode.GB_VAT_20,
+            ),
+        ],
+    )
+    adapter.commit()
+
+    results = adapter.get_payment_extracts_by_claim_id(claim.claim_id)
+
+    assert [line.sequence_number for line in results] == [1, 2]
+    assert results[0].invoice_number == f"{claim.claim_id}_001"
+    assert results[1].invoice_number == f"{claim.claim_id}_002"
+
+
+def test_get_payment_extracts_by_claim_id_returns_empty_list_when_none(session):
+    application_id = session.exec(select(Application)).first().application_id
+    adapter = ClaimRepositoryAdapter(session)
+    claim = adapter.create_claim(
+        application_id, _make_domain_claim(), "claimant@example.com"
+    )
+    adapter.commit()
+
+    assert adapter.get_payment_extracts_by_claim_id(claim.claim_id) == []
 
 
 def test_get_open_claims_returns_only_open_claims(session):
