@@ -270,7 +270,13 @@ class TestCreateClaimBaseBehaviour:
         assert history_event.event_reference == HistoryEventReference.CLAIM_SUBMITTED
         assert history_event.actor == request_body["claimantId"]
         assert history_event.actor_type == ActorType.PROVIDER
-        assert history_event.event_data == {"claim_type": request_body["claimType"]}
+        stored_claim = session.exec(
+            select(Claim).where(Claim.application_id == application.application_id)
+        ).one()
+        assert history_event.event_data == {
+            "claim_type": request_body["claimType"],
+            "claim_reference": stored_claim.claim_reference,
+        }
         assert history_event.application_id == application.application_id
 
 

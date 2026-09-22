@@ -116,6 +116,7 @@ class PayInFullClaimUseCase:
                 application_id=application.application_id,
                 event_data={
                     "claim_type": claim.claim_type_id,
+                    "claim_reference": claim.claim_reference,
                     "claim_decision": ClaimStatus.PAY_IN_FULL,
                     "profit_cost_net": _to_json_amount(command.profit_cost_net),
                     "profit_cost_gross": _to_json_amount(command.profit_cost_gross),

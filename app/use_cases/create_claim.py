@@ -244,7 +244,10 @@ class CreateClaimUseCase:
                 actor=command.claimant_id,
                 actor_type=ActorType.PROVIDER,
                 application_id=application.application_id,
-                event_data={"claim_type": command.claim_type},
+                event_data={
+                    "claim_type": command.claim_type,
+                    "claim_reference": claim.claim_reference,
+                },
             )
 
             # This commits both the claim and the history event in a single transaction
