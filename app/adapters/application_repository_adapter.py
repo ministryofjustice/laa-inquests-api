@@ -1,14 +1,12 @@
-import base64
 import logging
 import random
-import re
-import string
 import uuid
 
 from sqlmodel import Session, exists, select
 
 from app.config import Config
 from app.domain.coroners_letter import CoronersLetter
+from app.domain.reference_rules import ReferenceRules
 from app.logging_utils import build_log_extra
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import (
@@ -57,7 +55,6 @@ class ApplicationRepositoryAdapter(
     ApplicationBacklogPort,
 ):
     GENERATE_LAA_REFERENCE_ATTEMPTS = 10
-    AMBIGUOUS_CHARACTERS = "B8G6I10OQDS5Z2"
 
     def __init__(
         self,
@@ -65,30 +62,7 @@ class ApplicationRepositoryAdapter(
         banned_words_file_path: str = Config.BANNED_WORDS_FILE_PATH,
     ) -> None:
         self.session = session
-        with open(banned_words_file_path, "r") as banned_word_file:
-            banned_words = [
-                base64.b64decode(line.strip()).decode("utf-8")
-                for line in banned_word_file
-                if line.strip()  # Skip empty lines
-            ]
-        self.banned_words = [
-            word.upper()
-            for word in banned_words
-            if re.match(
-                rf"^(?:Q[^{self.AMBIGUOUS_CHARACTERS}]{{0,8}}|[^{self.AMBIGUOUS_CHARACTERS}]{{1,9}})$",
-                word.upper(),
-            )
-        ]
-        self.banned_words_pattern = re.compile(
-            pattern=r"(?:"
-            + "|".join(re.escape(word) for word in self.banned_words)
-            + ")"
-        )
-        self.laa_reference_chars = [
-            c
-            for c in string.ascii_uppercase + string.digits
-            if c not in self.AMBIGUOUS_CHARACTERS
-        ]
+        self.reference_rules = ReferenceRules.from_file(banned_words_file_path)
 
     def get_application_by_laa_reference(
         self, laa_reference: str
@@ -252,7 +226,7 @@ class ApplicationRepositoryAdapter(
         if attempt >= self.GENERATE_LAA_REFERENCE_ATTEMPTS:
             raise RuntimeError("Maximum attempts reached for generating LAA reference")
         laa_reference = self._generate_laa_reference()
-        if self.banned_words_pattern.search(
+        if self.reference_rules.contains_banned_word(
             laa_reference.replace("-", "")
         ) or self.session.scalar(
             select(exists().where(Application.laa_reference == laa_reference))
@@ -269,7 +243,10 @@ class ApplicationRepositoryAdapter(
         return f"INQ-{self._random_chars()}-{self._random_chars()}"
 
     def _random_chars(self):
-        return "".join(random.choice(self.laa_reference_chars) for _ in range(3))  # nosec: Not used for cryptographic purposes
+        return "".join(
+            random.choice(self.reference_rules.allowed_characters)  # nosec B311
+            for _ in range(3)
+        )
 
     def commit(self) -> None:
         self.session.commit()

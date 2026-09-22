@@ -29,12 +29,14 @@ from app.use_cases.get_claim import GetClaimUseCase
 def _claim(
     claim_id: int = 1,
     application_id: int = 1,
+    claim_reference: str = "INQC-0000-0001",
     total_funds_remaining_after_claim: Decimal = Decimal(
         SUBSTANTIVE_CERTIFICATE_AMOUNT
     ),
 ) -> Claim:
     return Claim(
         claim_id=claim_id,
+        claim_reference=claim_reference,
         application_id=application_id,
         claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
         status_id=ClaimStatus.SUBMITTED,
@@ -60,7 +62,7 @@ def _build_use_case(
     decision=None,
 ):
     claim_port = MagicMock(spec=GetClaimByIdPort)
-    claim_port.get_claim_by_id.return_value = claim
+    claim_port.get_claim_by_reference.return_value = claim
 
     decision_port = MagicMock(spec=GetClaimDecisionPort)
     decision_port.get_claim_decision_by_claim_id.return_value = decision
@@ -78,9 +80,9 @@ def _build_use_case(
 def test_returns_response_for_valid_application_and_claim():
     use_case = _build_use_case(claim=_claim(), application=_application())
 
-    result = use_case.execute("1", 1)
+    result = use_case.execute("1", "INQC-0000-0001")
 
-    assert result.claim_id == 1
+    assert result.claim_reference == "INQC-0000-0001"
     assert result.claim_type_id == ClaimType.PAYMENT_ON_ACCOUNT
     assert result.total_profit_cost_net == Decimal("1000.00")
 
@@ -89,14 +91,14 @@ def test_raises_application_not_found_when_application_missing():
     use_case = _build_use_case(claim=_claim(), application=None)
 
     with pytest.raises(ApplicationNotFoundError):
-        use_case.execute("999999", 1)
+        use_case.execute("999999", "INQC-0000-0001")
 
 
 def test_raises_claim_not_found_when_claim_missing():
     use_case = _build_use_case(claim=None, application=_application())
 
     with pytest.raises(ClaimNotFoundError):
-        use_case.execute("1", 999999)
+        use_case.execute("1", "INQC-9999-9999")
 
 
 def test_raises_claim_not_found_when_claim_belongs_to_another_application():
@@ -106,7 +108,7 @@ def test_raises_claim_not_found_when_claim_belongs_to_another_application():
     )
 
     with pytest.raises(ClaimNotFoundError):
-        use_case.execute("2", 1)
+        use_case.execute("2", "INQC-0000-0001")
 
 
 def test_maps_substantive_cost_limitation_from_application():
@@ -115,7 +117,7 @@ def test_maps_substantive_cost_limitation_from_application():
         application=_application(substantive_cost_limitation=25000),
     )
 
-    result = use_case.execute("1", 1)
+    result = use_case.execute("1", "INQC-0000-0001")
 
     assert result.substantive_cost_limitation == 25000
 
@@ -138,7 +140,7 @@ def test_includes_claim_decision_when_present():
         claim=_claim(), application=_application(), decision=decision
     )
 
-    result = use_case.execute("1", 1)
+    result = use_case.execute("1", "INQC-0000-0001")
 
     assert result.claim_decision is not None
     assert result.claim_decision.claim_decision_id == 7
@@ -154,7 +156,7 @@ def test_claim_decision_is_none_when_absent():
         claim=_claim(), application=_application(), decision=None
     )
 
-    result = use_case.execute("1", 1)
+    result = use_case.execute("1", "INQC-0000-0001")
 
     assert result.claim_decision is None
 
@@ -169,7 +171,7 @@ def test_cost_template_file_is_populated_when_present():
     )
     use_case = _build_use_case(claim=claim, application=_application())
 
-    result = use_case.execute("1", 1)
+    result = use_case.execute("1", "INQC-0000-0001")
 
     assert result.claim_cost_template_file is not None
     assert result.claim_cost_template_file.claim_cost_template_file_id == file_id
@@ -182,7 +184,7 @@ def test_cost_template_file_is_populated_when_present():
 def test_cost_template_file_is_none_when_absent():
     use_case = _build_use_case(claim=_claim(), application=_application())
 
-    result = use_case.execute("1", 1)
+    result = use_case.execute("1", "INQC-0000-0001")
 
     assert result.claim_cost_template_file is None
 
@@ -193,7 +195,7 @@ def test_returns_stored_total_funds_remaining_from_claim():
         application=_application(),
     )
 
-    result = use_case.execute("1", 1)
+    result = use_case.execute("1", "INQC-0000-0001")
 
     assert result.total_funds_remaining_after_claim == Decimal("8800.00")
 
@@ -204,7 +206,7 @@ def test_total_funds_remaining_defaults_to_certificate_amount_when_not_set():
         application=_application(),
     )
 
-    result = use_case.execute("1", 1)
+    result = use_case.execute("1", "INQC-0000-0001")
 
     assert result.total_funds_remaining_after_claim == Decimal(
         SUBSTANTIVE_CERTIFICATE_AMOUNT

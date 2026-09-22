@@ -16,6 +16,7 @@ from app.use_cases.list_application_claims import ListApplicationClaimsUseCase
 def _claim(claim_id: int, status: ClaimStatus) -> Claim:
     return Claim(
         claim_id=claim_id,
+        claim_reference=f"INQC-0000-{claim_id:04d}",
         application_id=1,
         claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
         status_id=status,
@@ -47,7 +48,7 @@ def test_assessed_true_returns_only_non_submitted_claims():
 
     result = use_case.execute("1", assessed=True)
 
-    assert [c.claim_id for c in result] == [2]
+    assert [c.claim_reference for c in result] == ["INQC-0000-0002"]
     port.get_claims_by_application_id.assert_called_once_with(1)
 
 
@@ -61,7 +62,7 @@ def test_assessed_false_returns_only_submitted_claims():
 
     result = use_case.execute("1", assessed=False)
 
-    assert [c.claim_id for c in result] == [1]
+    assert [c.claim_reference for c in result] == ["INQC-0000-0001"]
 
 
 def test_returns_empty_list_when_no_claims():

@@ -72,7 +72,9 @@ def _auto_approve_poa_claim(session, client, laa_reference, submission_date):
     )
     assert response.status_code == 201
 
-    claim = session.get(Claim, response.json()["claimId"])
+    claim = session.exec(
+        select(Claim).where(Claim.claim_reference == response.json()["claimReference"])
+    ).one()
     assert claim is not None
     assert claim.status_id == ClaimStatus.PAY_IN_FULL
 
@@ -83,7 +85,7 @@ def _auto_approve_poa_claim(session, client, laa_reference, submission_date):
     return claim
 
 
-def _email_sent_events(session, claim_id):
+def _email_sent_events(session, claim_reference):
     """Return the CLAIM_APPROVED_EMAIL events recorded for a claim."""
     events = session.exec(
         select(HistoryEvent).where(
@@ -93,7 +95,7 @@ def _email_sent_events(session, claim_id):
     return [
         event
         for event in events
-        if (event.event_data or {}).get("claim_reference") == claim_id
+        if (event.event_data or {}).get("claim_reference") == claim_reference
     ]
 
 
@@ -116,7 +118,7 @@ def test_single_auto_approved_poa_claim_is_emailed_when_batch_runs(session, clie
     assert call_kwargs["recipient_email"] == "test@example.com"
     assert call_kwargs["firm_name"] == FIRM_NAME
 
-    assert len(_email_sent_events(session, claim.claim_id)) == 1
+    assert len(_email_sent_events(session, claim.claim_reference)) == 1
 
 
 def test_multiple_auto_approved_poa_claims_are_emailed_in_a_single_batch_run(
@@ -159,8 +161,8 @@ def test_multiple_auto_approved_poa_claims_are_emailed_in_a_single_batch_run(
     }
     assert recipients == {"test@example.com", "second@example.com"}
 
-    assert len(_email_sent_events(session, first_claim.claim_id)) == 1
-    assert len(_email_sent_events(session, second_claim.claim_id)) == 1
+    assert len(_email_sent_events(session, first_claim.claim_reference)) == 1
+    assert len(_email_sent_events(session, second_claim.claim_reference)) == 1
 
 
 def test_claim_auto_approved_outside_the_window_is_not_emailed(session, client):
@@ -177,4 +179,4 @@ def test_claim_auto_approved_outside_the_window_is_not_emailed(session, client):
     use_case.execute(now=BATCH_RUN_TIME)
 
     gov_notify_port.send_claim_granted_decision_email.assert_not_called()
-    assert _email_sent_events(session, claim.claim_id) == []
+    assert _email_sent_events(session, claim.claim_reference) == []

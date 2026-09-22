@@ -71,6 +71,7 @@ def test_200_retrieve_claim_evidence_returns_file_content_after_linked_to_claim(
     claim = Claim(
         application_id=application.application_id,
         claim_type_id="PAYMENT_ON_ACCOUNT",
+        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
     )
     session.add(claim)
     session.commit()

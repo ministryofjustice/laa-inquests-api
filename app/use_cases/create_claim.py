@@ -359,7 +359,7 @@ class CreateClaimUseCase:
                         actor=ActorType.SYSTEM,
                         actor_type=ActorType.SYSTEM,
                         application_id=application.application_id,
-                        event_data={"claim_reference": claim.claim_id},
+                        event_data={"claim_reference": claim.claim_reference},
                     )
                     self.create_claim_port.commit()
                     claim.status_id = ClaimStatus.REJECTED
@@ -411,7 +411,7 @@ class CreateClaimUseCase:
                         actor=ActorType.SYSTEM,
                         actor_type=ActorType.SYSTEM,
                         application_id=application.application_id,
-                        event_data={"claim_reference": claim.claim_id},
+                        event_data={"claim_reference": claim.claim_reference},
                     )
 
                     self.create_claim_port.commit()

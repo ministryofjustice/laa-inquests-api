@@ -60,11 +60,11 @@ class SendAutoApprovedPoaClaimEmailsUseCase:
         )
 
         if not self._has_event(
-            history, HistoryEventReference.POA_AUTO_APPROVED, claim.claim_id
+            history, HistoryEventReference.POA_AUTO_APPROVED, claim.claim_reference
         ):
             return
         if self._has_event(
-            history, HistoryEventReference.CLAIM_APPROVED_EMAIL, claim.claim_id
+            history, HistoryEventReference.CLAIM_APPROVED_EMAIL, claim.claim_reference
         ):
             return
 
@@ -82,7 +82,7 @@ class SendAutoApprovedPoaClaimEmailsUseCase:
             actor=ActorType.SYSTEM,
             actor_type=ActorType.SYSTEM,
             application_id=application.application_id,
-            event_data={"claim_reference": claim.claim_id},
+            event_data={"claim_reference": claim.claim_reference},
         )
         self.create_history_event_port.commit()
 
@@ -90,10 +90,10 @@ class SendAutoApprovedPoaClaimEmailsUseCase:
     def _has_event(
         history: list[HistoryEvent],
         reference: HistoryEventReference,
-        claim_id: int,
+        claim_reference: str,
     ) -> bool:
         return any(
             event.event_reference == reference
-            and (event.event_data or {}).get("claim_reference") == claim_id
+            and (event.event_data or {}).get("claim_reference") == claim_reference
             for event in history
         )

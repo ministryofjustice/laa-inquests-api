@@ -52,6 +52,7 @@ def _seed_claim(
         total_profit_cost_vat_zero=Decimal("500.00"),
         total_funds_remaining_after_claim=total_funds_remaining_after_claim,
         poa_type_id=POAType.PROFIT_COST,
+        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
     )
     session.add(claim)
     session.commit()
@@ -95,13 +96,13 @@ def test_200_get_claim_by_id_returns_expected_base_properties(session, client):
     claim = _seed_claim(session, laa_reference)
 
     response = client.get(
-        f"/applications/{laa_reference}/claims/{claim.claim_id}",
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}",
         headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
     assert response.status_code == 200
     body = response.json()
-    assert body["claimId"] == claim.claim_id
+    assert body["claimReference"] == claim.claim_reference
     assert body["claimTypeId"] == "PAYMENT_ON_ACCOUNT"
     assert body["totalProfitCostNet"] == "1000.00"
     assert body["totalProfitCostGross"] == "1200.00"
@@ -109,7 +110,7 @@ def test_200_get_claim_by_id_returns_expected_base_properties(session, client):
     assert body["poaTypeId"] == "PROFIT_COST"
     assert isinstance(body["submissionDate"], str)
     assert set(body.keys()) == {
-        "claimId",
+        "claimReference",
         "claimTypeId",
         "submissionDate",
         "totalProfitCostNet",
@@ -154,13 +155,14 @@ def test_200_get_claim_by_id_returns_final_bill_details(session, client):
         financial_recovery_interest=Decimal("50.00"),
         paying_party="Test Council",
         number_of_counsel_instructed=NumberOfCounselInstructed.TWO,
+        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
     )
     session.add(claim)
     session.commit()
     session.refresh(claim)
 
     response = client.get(
-        f"/applications/{laa_reference}/claims/{claim.claim_id}",
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}",
         headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
@@ -182,7 +184,7 @@ def test_200_get_claim_by_id_includes_substantive_cost_limitation(session, clien
     claim = _seed_claim(session, laa_reference)
 
     response = client.get(
-        f"/applications/{laa_reference}/claims/{claim.claim_id}",
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}",
         headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
@@ -197,7 +199,7 @@ def test_200_get_claim_by_id_returns_stored_total_funds_remaining(session, clien
     )
 
     response = client.get(
-        f"/applications/{laa_reference}/claims/{claim.claim_id}",
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}",
         headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
@@ -212,7 +214,7 @@ def test_200_get_claim_by_id_total_funds_remaining_defaults_to_certificate_amoun
     claim = _seed_claim(session, laa_reference)
 
     response = client.get(
-        f"/applications/{laa_reference}/claims/{claim.claim_id}",
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}",
         headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
@@ -228,7 +230,7 @@ def test_200_get_claim_by_id_includes_claim_evidence(session, client):
     evidence = _seed_evidence(session, claim.claim_id)
 
     response = client.get(
-        f"/applications/{laa_reference}/claims/{claim.claim_id}",
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}",
         headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
@@ -246,7 +248,7 @@ def test_200_get_claim_by_id_returns_empty_claim_evidence_when_none_linked(
     claim = _seed_claim(session, laa_reference)
 
     response = client.get(
-        f"/applications/{laa_reference}/claims/{claim.claim_id}",
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}",
         headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
@@ -260,7 +262,7 @@ def test_200_get_claim_by_id_includes_claim_decision_when_one_exists(session, cl
     decision = _seed_decision(session, claim.claim_id)
 
     response = client.get(
-        f"/applications/{laa_reference}/claims/{claim.claim_id}",
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}",
         headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
@@ -281,7 +283,7 @@ def test_200_get_claim_by_id_claim_decision_is_null_when_none_exists(session, cl
     claim = _seed_claim(session, laa_reference)
 
     response = client.get(
-        f"/applications/{laa_reference}/claims/{claim.claim_id}",
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}",
         headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
@@ -307,7 +309,7 @@ def test_200_get_claim_by_id_includes_inquest_outcomes_as_enum_names(session, cl
     session.commit()
 
     response = client.get(
-        f"/applications/{laa_reference}/claims/{claim.claim_id}",
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}",
         headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
@@ -325,7 +327,7 @@ def test_200_get_claim_by_id_returns_empty_inquest_outcomes_when_none_linked(
     claim = _seed_claim(session, laa_reference)
 
     response = client.get(
-        f"/applications/{laa_reference}/claims/{claim.claim_id}",
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}",
         headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
@@ -347,7 +349,7 @@ def test_200_get_claim_by_id_includes_cost_template_file(session, client):
     session.commit()
 
     response = client.get(
-        f"/applications/{laa_reference}/claims/{claim.claim_id}",
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}",
         headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
@@ -366,7 +368,7 @@ def test_200_get_claim_by_id_returns_null_cost_template_file_when_none_linked(
     claim = _seed_claim(session, laa_reference)
 
     response = client.get(
-        f"/applications/{laa_reference}/claims/{claim.claim_id}",
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}",
         headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 
@@ -403,7 +405,7 @@ def test_404_when_claim_belongs_to_another_application(session, client):
     claim = _seed_claim(session, existing.laa_reference)
 
     response = client.get(
-        f"/applications/{other_application.laa_reference}/claims/{claim.claim_id}",
+        f"/applications/{other_application.laa_reference}/claims/{claim.claim_reference}",
         headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
     )
 

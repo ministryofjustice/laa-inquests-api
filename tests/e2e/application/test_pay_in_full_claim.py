@@ -1,3 +1,4 @@
+import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -51,6 +52,7 @@ def _seed_claim(
         total_profit_cost_vat_zero=Decimal("500.00"),
         poa_type_id=POAType.PROFIT_COST,
         claimant_id=claimant_id,
+        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
     )
     session.add(claim)
     session.commit()
@@ -65,7 +67,7 @@ def test_204_pay_in_full_claim_creates_decision_amount_and_updates_status(
     claim = _seed_claim(session, laa_reference)
 
     response = client.patch(
-        f"/applications/{laa_reference}/claims/{claim.claim_id}/pay-in-full",
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}/pay-in-full",
         json=_pay_in_full_payload(),
         headers={
             "Content-Type": "application/json",
@@ -101,7 +103,7 @@ def test_204_pay_in_full_claim_creates_history_event(session, client):
     claim = _seed_claim(session, application.laa_reference)
 
     response = client.patch(
-        f"/applications/{application.laa_reference}/claims/{claim.claim_id}/pay-in-full",
+        f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
         json=_pay_in_full_payload(),
         headers={
             "Content-Type": "application/json",
@@ -135,7 +137,7 @@ def test_204_pay_in_full_claim_persists_partial_amounts_as_null(session, client)
     claim = _seed_claim(session, laa_reference)
 
     response = client.patch(
-        f"/applications/{laa_reference}/claims/{claim.claim_id}/pay-in-full",
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}/pay-in-full",
         json=_pay_in_full_payload(
             {
                 "profitCostNet": None,
@@ -178,7 +180,7 @@ def test_204_pay_in_full_claim_allows_re_deciding_and_creates_new_decision_and_a
 
     for _ in range(2):
         response = client.patch(
-            f"/applications/{laa_reference}/claims/{claim.claim_id}/pay-in-full",
+            f"/applications/{laa_reference}/claims/{claim.claim_reference}/pay-in-full",
             json=_pay_in_full_payload(),
             headers={
                 "Content-Type": "application/json",
@@ -241,7 +243,7 @@ def test_404_pay_in_full_claim_when_claim_belongs_to_another_application(
     claim = _seed_claim(session, existing.laa_reference)
 
     response = client.patch(
-        f"/applications/{other_application.laa_reference}/claims/{claim.claim_id}/pay-in-full",
+        f"/applications/{other_application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
         json=_pay_in_full_payload(),
         headers={
             "Content-Type": "application/json",
@@ -257,7 +259,7 @@ def _post_pay_in_full(session, client, overrides):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference)
     return client.patch(
-        f"/applications/{laa_reference}/claims/{claim.claim_id}/pay-in-full",
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}/pay-in-full",
         json=_pay_in_full_payload(overrides),
         headers={
             "Content-Type": "application/json",
@@ -502,7 +504,7 @@ def test_204_pay_in_full_claim_sends_final_bill_paid_email_to_provider(
     claim = _seed_claim(session, application.laa_reference)
 
     response = client.patch(
-        f"/applications/{application.laa_reference}/claims/{claim.claim_id}/pay-in-full",
+        f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
         json=_pay_in_full_payload(),
         headers={
             "Content-Type": "application/json",
@@ -532,7 +534,7 @@ def test_204_pay_in_full_claim_creates_email_history_event(session, client):
     claim = _seed_claim(session, application.laa_reference)
 
     response = client.patch(
-        f"/applications/{application.laa_reference}/claims/{claim.claim_id}/pay-in-full",
+        f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
         json=_pay_in_full_payload(),
         headers={
             "Content-Type": "application/json",
@@ -574,7 +576,7 @@ def test_500_pay_in_full_claim_fails_when_final_bill_paid_email_fails(
     )
 
     response = client.patch(
-        f"/applications/{application.laa_reference}/claims/{claim.claim_id}/pay-in-full",
+        f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
         json=_pay_in_full_payload(),
         headers={
             "Content-Type": "application/json",

@@ -1,3 +1,4 @@
+import re
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -118,6 +119,7 @@ def _seed_approved_claim(
         total_profit_cost_vat_zero=vat_zero,
         total_funds_remaining_after_claim=Decimal(0),
         poa_type_id=None,
+        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
     )
     session.add(claim)
     session.commit()
@@ -168,8 +170,8 @@ class TestCreateClaimBaseBehaviour:
 
         assert response.status_code == 201
         claim = response.json()
-        assert isinstance(claim["claimId"], int)
-        assert set(claim.keys()) == {"claimId"}
+        assert re.match(r"^INQC-[A-Z0-9]{4}-[A-Z0-9]{4}$", claim["claimReference"])
+        assert set(claim.keys()) == {"claimReference"}
 
     def test_201_create_claim_sends_submission_confirmation_email_to_provider(
         self, session, client, mock_gov_notify
@@ -289,14 +291,16 @@ class TestCreateClaimFundsAndPersistence:
 
         assert response.status_code == 201
         claim = response.json()
-        assert set(claim.keys()) == {"claimId"}
+        assert set(claim.keys()) == {"claimReference"}
 
-        stored_claim = session.get(Claim, claim["claimId"])
+        stored_claim = session.exec(
+            select(Claim).where(Claim.claim_reference == claim["claimReference"])
+        ).one()
         assert stored_claim is not None
         assert stored_claim.status_id == "PAY_IN_FULL"
 
         decision = session.exec(
-            select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
+            select(ClaimDecision).where(ClaimDecision.claim_id == stored_claim.claim_id)
         ).first()
         assert decision is not None
         assert decision.decision == "PAY_IN_FULL"
@@ -318,7 +322,12 @@ class TestCreateClaimFundsAndPersistence:
         )
 
         assert response.status_code == 201
-        claim_id = response.json()["claimId"]
+        claim_reference = response.json()["claimReference"]
+        claim_id = (
+            session.exec(select(Claim).where(Claim.claim_reference == claim_reference))
+            .one()
+            .claim_id
+        )
 
         decision = session.exec(
             select(ClaimDecision).where(ClaimDecision.claim_id == claim_id)
@@ -357,7 +366,12 @@ class TestCreateClaimFundsAndPersistence:
         )
 
         assert response.status_code == 201
-        claim_id = response.json()["claimId"]
+        claim_reference = response.json()["claimReference"]
+        claim_id = (
+            session.exec(select(Claim).where(Claim.claim_reference == claim_reference))
+            .one()
+            .claim_id
+        )
 
         stored_claim = session.get(Claim, claim_id)
         assert stored_claim.status_id == ClaimStatus.PAY_IN_FULL
@@ -393,7 +407,12 @@ class TestCreateClaimFundsAndPersistence:
         )
 
         assert response.status_code == 201
-        claim_id = response.json()["claimId"]
+        claim_reference = response.json()["claimReference"]
+        claim_id = (
+            session.exec(select(Claim).where(Claim.claim_reference == claim_reference))
+            .one()
+            .claim_id
+        )
 
         stored_claim = session.get(Claim, claim_id)
         assert stored_claim.status_id == "PAY_IN_FULL"
@@ -435,7 +454,12 @@ class TestCreateClaimFundsAndPersistence:
         )
 
         assert response.status_code == 201
-        claim_id = response.json()["claimId"]
+        claim_reference = response.json()["claimReference"]
+        claim_id = (
+            session.exec(select(Claim).where(Claim.claim_reference == claim_reference))
+            .one()
+            .claim_id
+        )
 
         stored_claim = session.get(Claim, claim_id)
         assert stored_claim.status_id != "PAY_IN_FULL"
@@ -471,14 +495,16 @@ class TestCreateClaimFundsAndPersistence:
         )
 
         assert response.status_code == 201
-        claim_id = response.json()["claimId"]
+        claim_reference = response.json()["claimReference"]
 
         # 10000 limit - (2000 + 1500 approved) - 1000 new claim requested = 5500
-        stored_claim = session.get(Claim, claim_id)
+        stored_claim = session.exec(
+            select(Claim).where(Claim.claim_reference == claim_reference)
+        ).one()
         assert stored_claim.total_funds_remaining_after_claim == Decimal("5500.00")
 
         get_response = client.get(
-            f"/applications/{laa_reference}/claims/{claim_id}",
+            f"/applications/{laa_reference}/claims/{claim_reference}",
             headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
         )
         assert get_response.status_code == 200
@@ -497,10 +523,10 @@ class TestCreateClaimFundsAndPersistence:
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
             },
         )
-        claim_id = create_response.json()["claimId"]
+        claim_reference = create_response.json()["claimReference"]
 
         get_response = client.get(
-            f"/applications/{laa_reference}/claims/{claim_id}",
+            f"/applications/{laa_reference}/claims/{claim_reference}",
             headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
         )
 
@@ -542,7 +568,7 @@ class TestCreateClaimFundsAndPersistence:
 
         assert response.status_code == 201
         claim = response.json()
-        assert set(claim.keys()) == {"claimId"}
+        assert set(claim.keys()) == {"claimReference"}
 
     def test_201_create_claim_persists_claim_to_database(self, session, client):
         application = session.exec(select(Application)).first()
@@ -557,8 +583,10 @@ class TestCreateClaimFundsAndPersistence:
             },
         )
 
-        claim_id = response.json()["claimId"]
-        stored_claim = session.get(Claim, claim_id)
+        claim_reference = response.json()["claimReference"]
+        stored_claim = session.exec(
+            select(Claim).where(Claim.claim_reference == claim_reference)
+        ).one()
         assert stored_claim is not None
         assert stored_claim.application_id == application.application_id
 
@@ -583,7 +611,12 @@ class TestCreateClaimFundsAndPersistence:
         )
 
         assert response.status_code == 201
-        claim_id = response.json()["claimId"]
+        claim_reference = response.json()["claimReference"]
+        claim_id = (
+            session.exec(select(Claim).where(Claim.claim_reference == claim_reference))
+            .one()
+            .claim_id
+        )
         stored_evidence = session.get(ClaimEvidence, evidence.claim_evidence_id)
         assert stored_evidence.claim_id == claim_id
 
@@ -679,7 +712,12 @@ class TestCreateClaimValidation:
         )
 
         assert response.status_code == 201
-        claim_id = response.json()["claimId"]
+        claim_reference = response.json()["claimReference"]
+        claim_id = (
+            session.exec(select(Claim).where(Claim.claim_reference == claim_reference))
+            .one()
+            .claim_id
+        )
 
         stored = session.exec(
             select(ClaimInquestOutcome).where(ClaimInquestOutcome.claim_id == claim_id)
@@ -722,7 +760,12 @@ class TestCreateClaimValidation:
         )
 
         assert response.status_code == 201
-        claim_id = response.json()["claimId"]
+        claim_reference = response.json()["claimReference"]
+        claim_id = (
+            session.exec(select(Claim).where(Claim.claim_reference == claim_reference))
+            .one()
+            .claim_id
+        )
 
         stored_claim = session.get(Claim, claim_id)
         assert stored_claim.claim_type_id == ClaimType.NIL_BILL
@@ -832,7 +875,12 @@ class TestCreateClaimValidation:
         )
 
         assert response.status_code == 201
-        claim_id = response.json()["claimId"]
+        claim_reference = response.json()["claimReference"]
+        claim_id = (
+            session.exec(select(Claim).where(Claim.claim_reference == claim_reference))
+            .one()
+            .claim_id
+        )
 
         stored = session.exec(
             select(ClaimCostTemplate).where(ClaimCostTemplate.claim_id == claim_id)
@@ -1043,7 +1091,12 @@ class TestCreateClaimValidation:
         )
 
         assert response.status_code == 201
-        claim_id = response.json()["claimId"]
+        claim_reference = response.json()["claimReference"]
+        claim_id = (
+            session.exec(select(Claim).where(Claim.claim_reference == claim_reference))
+            .one()
+            .claim_id
+        )
 
         stored = session.get(Claim, claim_id)
         assert stored.has_counsel_been_paid is True
@@ -1245,7 +1298,11 @@ class TestCreateClaimValidation:
         )
 
         assert response.status_code == 201
-        stored_claim = session.get(Claim, response.json()["claimId"])
+        stored_claim = session.exec(
+            select(Claim).where(
+                Claim.claim_reference == response.json()["claimReference"]
+            )
+        ).one()
         assert stored_claim.total_profit_cost_net is None
         assert stored_claim.total_profit_cost_gross == Decimal("1200.00")
 
@@ -1262,7 +1319,11 @@ class TestCreateClaimValidation:
         )
 
         assert response.status_code == 201
-        stored_claim = session.get(Claim, response.json()["claimId"])
+        stored_claim = session.exec(
+            select(Claim).where(
+                Claim.claim_reference == response.json()["claimReference"]
+            )
+        ).one()
         assert stored_claim.total_profit_cost_net is None
         assert stored_claim.total_profit_cost_gross == Decimal("0.00")
 
@@ -1346,9 +1407,11 @@ class TestCreateClaimValidation:
 
         assert response.status_code == 201
         claim = response.json()
-        assert set(claim.keys()) == {"claimId"}
+        assert set(claim.keys()) == {"claimReference"}
 
-        stored_claim = session.get(Claim, claim["claimId"])
+        stored_claim = session.exec(
+            select(Claim).where(Claim.claim_reference == claim["claimReference"])
+        ).one()
         assert stored_claim is not None
         assert Decimal(str(stored_claim.total_profit_cost_net)) == Decimal("0.00")
         assert Decimal(str(stored_claim.total_profit_cost_gross)) == Decimal("0.00")
@@ -1500,10 +1563,16 @@ class TestCreateClaimAutoDecisionRules:
 
         assert response.status_code == 201
         claim = response.json()
-        assert set(claim.keys()) == {"claimId", "rejectionReasons"}
+        assert set(claim.keys()) == {"claimReference", "rejectionReasons"}
         assert claim["rejectionReasons"] == ["MAX_POA_CLAIMS_EXCEEDED"]
 
-        claim_id = claim["claimId"]
+        claim_id = (
+            session.exec(
+                select(Claim).where(Claim.claim_reference == claim["claimReference"])
+            )
+            .one()
+            .claim_id
+        )
         decision = session.exec(
             select(ClaimDecision).where(ClaimDecision.claim_id == claim_id)
         ).first()
@@ -1523,7 +1592,7 @@ class TestCreateClaimAutoDecisionRules:
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
-        seeded_claim_ids = []
+        seeded_claim_references = []
         for _ in range(4):
             seed_response = client.post(
                 f"/applications/{laa_reference}/claim",
@@ -1539,9 +1608,11 @@ class TestCreateClaimAutoDecisionRules:
                 },
             )
             assert seed_response.status_code == 201
-            seeded_claim_ids.append(seed_response.json()["claimId"])
+            seeded_claim_references.append(seed_response.json()["claimReference"])
 
-        claim_to_reject = session.get(Claim, seeded_claim_ids[0])
+        claim_to_reject = session.exec(
+            select(Claim).where(Claim.claim_reference == seeded_claim_references[0])
+        ).one()
         claim_to_reject.status_id = "REJECTED"
         session.add(claim_to_reject)
         session.commit()
@@ -1562,10 +1633,16 @@ class TestCreateClaimAutoDecisionRules:
 
         assert response.status_code == 201
         claim = response.json()
-        assert set(claim.keys()) == {"claimId"}
+        assert set(claim.keys()) == {"claimReference"}
         assert "rejectionReasons" not in claim
 
-        claim_id = claim["claimId"]
+        claim_id = (
+            session.exec(
+                select(Claim).where(Claim.claim_reference == claim["claimReference"])
+            )
+            .one()
+            .claim_id
+        )
         decision = session.exec(
             select(ClaimDecision).where(ClaimDecision.claim_id == claim_id)
         ).first()
@@ -1593,10 +1670,16 @@ class TestCreateClaimAutoDecisionRules:
 
         assert response.status_code == 201
         claim = response.json()
-        assert set(claim.keys()) == {"claimId"}
+        assert set(claim.keys()) == {"claimReference"}
         assert "rejectionReasons" not in claim
 
-        claim_id = claim["claimId"]
+        claim_id = (
+            session.exec(
+                select(Claim).where(Claim.claim_reference == claim["claimReference"])
+            )
+            .one()
+            .claim_id
+        )
         stored_claim = session.get(Claim, claim_id)
         assert stored_claim is not None
         assert stored_claim.status_id == "PAY_IN_FULL"
@@ -1634,14 +1717,16 @@ class TestCreateClaimAutoDecisionRules:
 
         assert response.status_code == 201
         claim = response.json()
-        assert set(claim.keys()) == {"claimId"}
+        assert set(claim.keys()) == {"claimReference"}
 
-        stored_claim = session.get(Claim, claim["claimId"])
+        stored_claim = session.exec(
+            select(Claim).where(Claim.claim_reference == claim["claimReference"])
+        ).one()
         assert stored_claim is not None
         assert stored_claim.status_id == "SUBMITTED"
 
         decision = session.exec(
-            select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
+            select(ClaimDecision).where(ClaimDecision.claim_id == stored_claim.claim_id)
         ).first()
         assert decision is None
 
@@ -1674,14 +1759,16 @@ class TestCreateClaimAutoDecisionRules:
 
         assert response.status_code == 201
         claim = response.json()
-        assert set(claim.keys()) == {"claimId"}
+        assert set(claim.keys()) == {"claimReference"}
 
-        stored_claim = session.get(Claim, claim["claimId"])
+        stored_claim = session.exec(
+            select(Claim).where(Claim.claim_reference == claim["claimReference"])
+        ).one()
         assert stored_claim is not None
         assert stored_claim.status_id == "SUBMITTED"
 
         decision = session.exec(
-            select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
+            select(ClaimDecision).where(ClaimDecision.claim_id == stored_claim.claim_id)
         ).first()
         assert decision is None
 
@@ -1737,7 +1824,7 @@ class TestCreateClaimAutoDecisionRules:
                 },
             )
             assert seed_response.status_code == 201
-            assert set(seed_response.json().keys()) == {"claimId"}
+            assert set(seed_response.json().keys()) == {"claimReference"}
 
         application_proceeding = application.proceeding
         application_proceeding.proceeding.substantive_cost_limitation = 5
@@ -1762,7 +1849,7 @@ class TestCreateClaimAutoDecisionRules:
 
         assert response.status_code == 201
         claim = response.json()
-        assert set(claim.keys()) == {"claimId", "rejectionReasons"}
+        assert set(claim.keys()) == {"claimReference", "rejectionReasons"}
 
         expected_reasons = {
             "MAX_POA_CLAIMS_EXCEEDED",
@@ -1772,7 +1859,13 @@ class TestCreateClaimAutoDecisionRules:
         assert set(claim["rejectionReasons"]) == expected_reasons
         assert len(claim["rejectionReasons"]) == 3
 
-        claim_id = claim["claimId"]
+        claim_id = (
+            session.exec(
+                select(Claim).where(Claim.claim_reference == claim["claimReference"])
+            )
+            .one()
+            .claim_id
+        )
         decision = session.exec(
             select(ClaimDecision).where(ClaimDecision.claim_id == claim_id)
         ).first()
@@ -1811,7 +1904,11 @@ class TestCreateClaimAutoDecisionRules:
         assert (
             "CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT" in rejected_claim["rejectionReasons"]
         )
-        rejected_stored = session.get(Claim, rejected_claim["claimId"])
+        rejected_stored = session.exec(
+            select(Claim).where(
+                Claim.claim_reference == rejected_claim["claimReference"]
+            )
+        ).one()
         assert rejected_stored.status_id == "REJECTED"
 
         approved_response = client.post(
@@ -1827,9 +1924,13 @@ class TestCreateClaimAutoDecisionRules:
 
         assert approved_response.status_code == 201
         approved_claim = approved_response.json()
-        assert set(approved_claim.keys()) == {"claimId"}
+        assert set(approved_claim.keys()) == {"claimReference"}
 
-        approved_stored = session.get(Claim, approved_claim["claimId"])
+        approved_stored = session.exec(
+            select(Claim).where(
+                Claim.claim_reference == approved_claim["claimReference"]
+            )
+        ).one()
         assert approved_stored.status_id == "PAY_IN_FULL"
 
     def test_201_create_claim_holds_for_manual_review_when_cumulative_approved_claims_exceed_limit(
@@ -1853,7 +1954,7 @@ class TestCreateClaimAutoDecisionRules:
                 },
             )
             assert approved.status_code == 201
-            assert set(approved.json().keys()) == {"claimId"}
+            assert set(approved.json().keys()) == {"claimReference"}
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
@@ -1868,14 +1969,16 @@ class TestCreateClaimAutoDecisionRules:
 
         assert response.status_code == 201
         claim = response.json()
-        assert set(claim.keys()) == {"claimId"}
+        assert set(claim.keys()) == {"claimReference"}
 
-        stored_claim = session.get(Claim, claim["claimId"])
+        stored_claim = session.exec(
+            select(Claim).where(Claim.claim_reference == claim["claimReference"])
+        ).one()
         assert stored_claim is not None
         assert stored_claim.status_id == "SUBMITTED"
 
         decision = session.exec(
-            select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
+            select(ClaimDecision).where(ClaimDecision.claim_id == stored_claim.claim_id)
         ).first()
         assert decision is None
 
@@ -1904,15 +2007,17 @@ class TestCreateClaimAutoDecisionRules:
 
         assert response.status_code == 201
         claim = response.json()
-        assert set(claim.keys()) == {"claimId", "rejectionReasons"}
+        assert set(claim.keys()) == {"claimReference", "rejectionReasons"}
         assert claim["rejectionReasons"] == ["CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT"]
 
-        stored_claim = session.get(Claim, claim["claimId"])
+        stored_claim = session.exec(
+            select(Claim).where(Claim.claim_reference == claim["claimReference"])
+        ).one()
         assert stored_claim is not None
         assert stored_claim.status_id == "REJECTED"
 
         decision = session.exec(
-            select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
+            select(ClaimDecision).where(ClaimDecision.claim_id == stored_claim.claim_id)
         ).first()
         assert decision is not None
         assert decision.decision == "REJECT"
@@ -1942,14 +2047,16 @@ class TestCreateClaimAutoDecisionRules:
 
         assert response.status_code == 201
         claim = response.json()
-        assert set(claim.keys()) == {"claimId"}
+        assert set(claim.keys()) == {"claimReference"}
 
-        stored_claim = session.get(Claim, claim["claimId"])
+        stored_claim = session.exec(
+            select(Claim).where(Claim.claim_reference == claim["claimReference"])
+        ).one()
         assert stored_claim is not None
         assert stored_claim.status_id == "SUBMITTED"
 
         decision = session.exec(
-            select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
+            select(ClaimDecision).where(ClaimDecision.claim_id == stored_claim.claim_id)
         ).first()
         assert decision is None
 
@@ -1992,14 +2099,16 @@ class TestCreateClaimAutoDecisionRules:
 
         assert response.status_code == 201
         claim = response.json()
-        assert set(claim.keys()) == {"claimId", "rejectionReasons"}
+        assert set(claim.keys()) == {"claimReference", "rejectionReasons"}
         assert claim["rejectionReasons"] == ["MAX_POA_CLAIMS_EXCEEDED"]
 
-        stored_claim = session.get(Claim, claim["claimId"])
+        stored_claim = session.exec(
+            select(Claim).where(Claim.claim_reference == claim["claimReference"])
+        ).one()
         assert stored_claim.status_id == "REJECTED"
 
         decision = session.exec(
-            select(ClaimDecision).where(ClaimDecision.claim_id == claim["claimId"])
+            select(ClaimDecision).where(ClaimDecision.claim_id == stored_claim.claim_id)
         ).first()
         assert decision is not None
         assert decision.decision == "REJECT"

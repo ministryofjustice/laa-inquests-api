@@ -16,6 +16,7 @@ from tests.unit.factories import create_base_application
 def _claim() -> Claim:
     return Claim(
         claim_id=7,
+        claim_reference="INQC-0007-0007",
         application_id=12345,
         claim_type_id=ClaimType.FINAL_BILL,
         submission_date=datetime(2026, 6, 18, 14, 3, tzinfo=UTC),
@@ -46,7 +47,7 @@ def test_create_final_bill_claim_grant_email_personalisation_returns_expected_da
     assert result.client_last_name == "Doe"
     assert result.date_of_claim == "18 June 2026 14:03 UTC"
     assert result.claim_type == "Final bill"
-    assert result.claim_ref == "7"
+    assert result.claim_ref == "INQC-0007-0007"
     assert result.net_profit_costs == "1,000.00"
     assert result.gross_profit_costs == "1,200.00"
     assert result.zero_vat_profit_costs == "0.00"

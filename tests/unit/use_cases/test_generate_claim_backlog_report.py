@@ -57,6 +57,7 @@ class TestGenerateClaimBacklogReportUseCase:
     def test_returns_csv_row_for_open_claim(self):
         claim = create_base_claim(
             claim_id=10,
+            claim_reference="INQC-0010-0010",
             application_id=12345,
             claim_type_id=ClaimType.FINAL_BILL,
             total_profit_cost_vat_zero=Decimal("0.00"),
@@ -73,7 +74,7 @@ class TestGenerateClaimBacklogReportUseCase:
 
         assert len(rows) == 1
         row = rows[0]
-        assert row["Case reference"] == "10"
+        assert row["Case reference"] == "INQC-0010-0010"
         assert row["Firm Name"] == "Test Firm"
         assert row["Firm Account Number"] == "ABC123"
         assert row["Submission date"] == "2026-01-01 00:00:00"

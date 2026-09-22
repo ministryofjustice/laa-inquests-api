@@ -213,6 +213,7 @@ def test_gov_notify_adapter_sends_final_bill_claim_rejection_email_successfully(
     application, _ = _create_test_application_and_proceeding()
     claim = Claim(
         claim_id=7,
+        claim_reference="INQC-0007-0007",
         application_id=12345,
         claim_type_id=ClaimType.FINAL_BILL,
         submission_date=datetime(2026, 6, 18, 14, 3, tzinfo=ZoneInfo("UTC")),
@@ -251,7 +252,7 @@ def test_gov_notify_adapter_sends_final_bill_claim_rejection_email_successfully(
             "client_last_name": "Doe",
             "date_of_claim": "18 June 2026 14:03 UTC",
             "claim_type": "Final bill",
-            "claim_ref": "7",
+            "claim_ref": "INQC-0007-0007",
             "claimed_amount": "1,200.00",
             "reason_for_refusal": "Rejected following manual review.",
             "date_of_rejection": call_kwargs["personalisation"]["date_of_rejection"],

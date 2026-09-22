@@ -67,6 +67,7 @@ def _make_command(overrides=None) -> CreateClaimCommand:
 def _make_claim() -> Claim:
     return Claim(
         claim_id=1,
+        claim_reference="INQC-0000-0001",
         application_id=12345,
         claim_type_id="PAYMENT_ON_ACCOUNT",
         total_profit_cost_net=1000,
@@ -957,7 +958,7 @@ def test_execute_persists_auto_reject_and_returns_rejection_reasons_and_creates_
         actor=ActorType.SYSTEM,
         actor_type=ActorType.SYSTEM,
         application_id=application.application_id,
-        event_data={"claim_reference": 1},
+        event_data={"claim_reference": "INQC-0000-0001"},
     )
     assert create_claim_port.commit.call_count == 2
 
@@ -1017,7 +1018,7 @@ def test_execute_returns_submitted_claim_when_auto_reject_persistence_fails_and_
             actor=ActorType.SYSTEM,
             actor_type=ActorType.SYSTEM,
             application_id=application.application_id,
-            event_data={"claim_reference": 1},
+            event_data={"claim_reference": "INQC-0000-0001"},
         )
         not in create_history_event_port.create_history_event.mock_calls
     )
@@ -1088,7 +1089,7 @@ def test_execute_auto_reject_does_not_persist_when_auto_reject_create_history_ev
         actor=ActorType.SYSTEM,
         actor_type=ActorType.SYSTEM,
         application_id=application.application_id,
-        event_data={"claim_reference": 1},
+        event_data={"claim_reference": "INQC-0000-0001"},
     )
     assert create_claim_port.commit.call_count == 1  # This commit is for create claim
     assert (
@@ -1228,7 +1229,7 @@ def test_execute_auto_approves_eligible_payment_on_account_claim():
         actor=ActorType.SYSTEM,
         actor_type=ActorType.SYSTEM,
         application_id=application.application_id,
-        event_data={"claim_reference": 1},
+        event_data={"claim_reference": "INQC-0000-0001"},
     )
     assert create_claim_port.commit.call_count == 2
 
@@ -1569,7 +1570,7 @@ def test_execute_does_not_create_history_event_if_auto_approve_eligible_update_c
             actor=ActorType.SYSTEM,
             actor_type=ActorType.SYSTEM,
             application_id=application.application_id,
-            event_data={"claim_reference": 1},
+            event_data={"claim_reference": "INQC-0000-0001"},
         )
         not in create_history_event_port.create_history_event.mock_calls
     )
@@ -1625,7 +1626,7 @@ def test_execute_does_not_auto_approve_if_create_history_event_fails():
         actor=ActorType.SYSTEM,
         actor_type=ActorType.SYSTEM,
         application_id=application.application_id,
-        event_data={"claim_reference": 1},
+        event_data={"claim_reference": "INQC-0000-0001"},
     )
     assert create_claim_port.commit.call_count == 1
     assert create_claim_port.rollback.call_count == 1

@@ -1,14 +1,17 @@
 import logging
+import random
 import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlmodel import Session, select
+from sqlmodel import Session, exists, select
 
+from app.config import Config
 from app.domain.claim import Claim as DomainClaim
 from app.domain.claim_evidence import ClaimEvidence as DomainClaimEvidence
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
 from app.domain.payment_extract import PaymentExtractLine
+from app.domain.reference_rules import ReferenceRules
 from app.logging_utils import build_log_extra
 from app.models.application.index import Application
 from app.models.claim.enums import (
@@ -70,8 +73,15 @@ class ClaimRepositoryAdapter(
     DeleteClaimEvidencePort,
     ListAutoApprovedPoaClaimsPort,
 ):
-    def __init__(self, session: Session) -> None:
+    GENERATE_CLAIM_REFERENCE_ATTEMPTS = 10
+
+    def __init__(
+        self,
+        session: Session,
+        banned_words_file_path: str = Config.BANNED_WORDS_FILE_PATH,
+    ) -> None:
         self.session = session
+        self.reference_rules = ReferenceRules.from_file(banned_words_file_path)
 
     def create_claim(
         self,
@@ -84,6 +94,7 @@ class ClaimRepositoryAdapter(
     ) -> Claim:
         new_claim = Claim(
             application_id=application_id,
+            claim_reference=self._get_claim_reference(),
             claim_type_id=claim.claim_type,
             total_profit_cost_net=claim.net,
             total_profit_cost_gross=claim.gross,
@@ -112,6 +123,7 @@ class ClaimRepositoryAdapter(
                 event="claim_repository_create_completed",
                 application_id=application_id,
                 claim_id=new_claim.claim_id,
+                claim_reference=new_claim.claim_reference,
             ),
         )
         return new_claim
@@ -192,6 +204,49 @@ class ClaimRepositoryAdapter(
 
     def get_claim_by_id(self, claim_id: int) -> Claim | None:
         return self.session.get(Claim, claim_id)
+
+    def get_claim_by_reference(self, claim_reference: str) -> Claim | None:
+        return self.session.exec(
+            select(Claim).where(Claim.claim_reference == claim_reference)
+        ).first()
+
+    def _get_claim_reference(self, attempt: int = 0) -> str:
+        if attempt >= self.GENERATE_CLAIM_REFERENCE_ATTEMPTS:
+            logger.error(
+                "Claim reference generation failed",
+                extra=build_log_extra(
+                    event="claim_reference_generation_failed",
+                    attempt=attempt,
+                ),
+            )
+            raise RuntimeError(
+                "Maximum attempts reached for generating claim reference"
+            )
+        claim_reference = self._generate_claim_reference()
+        if self.reference_rules.contains_banned_word(
+            claim_reference.replace("-", "")
+        ) or self.session.scalar(
+            select(exists().where(Claim.claim_reference == claim_reference))
+        ):
+            logger.warning(
+                "Claim reference generation retry",
+                extra=build_log_extra(
+                    event="claim_reference_generation_retry",
+                    attempt=attempt,
+                ),
+            )
+            return self._get_claim_reference(attempt + 1)
+        return claim_reference
+
+    def _generate_claim_reference(self) -> str:
+        """Generates a claim reference in the format 'INQC-XXXX-XXXX'."""
+        return f"INQC-{self._random_chars()}-{self._random_chars()}"
+
+    def _random_chars(self) -> str:
+        return "".join(
+            random.choice(self.reference_rules.allowed_characters)  # nosec B311
+            for _ in range(4)
+        )
 
     def list_auto_approved_poa_claims(
         self, start: datetime, end: datetime
