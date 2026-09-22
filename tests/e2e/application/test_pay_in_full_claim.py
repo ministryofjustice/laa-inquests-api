@@ -628,7 +628,7 @@ def _seed_paid_poa_claim_with_extract(session, laa_reference: int) -> Claim:
             ClaimPaymentExtract(
                 claim_id=poa_claim.claim_id,
                 sequence_number=1,
-                invoice_number=f"{poa_claim.claim_id}_001",
+                invoice_number=f"{poa_claim.claim_reference}_001",
                 invoice_amount=Decimal("800.00"),
                 invoice_date=datetime.now(UTC).date(),
                 invoice_type=InvoiceTypeCode.POA,
@@ -637,7 +637,7 @@ def _seed_paid_poa_claim_with_extract(session, laa_reference: int) -> Claim:
             ClaimPaymentExtract(
                 claim_id=poa_claim.claim_id,
                 sequence_number=2,
-                invoice_number=f"{poa_claim.claim_id}_002",
+                invoice_number=f"{poa_claim.claim_reference}_002",
                 invoice_amount=Decimal("200.00"),
                 invoice_date=datetime.now(UTC).date(),
                 invoice_type=InvoiceTypeCode.POA,
@@ -696,29 +696,29 @@ def test_204_pay_in_full_final_bill_creates_payment_extract_in_expected_order(
 
     fees, disb_standard, disb_zero, recoup_standard, recoup_zero = lines
 
-    assert fees.invoice_number == f"{claim.claim_id}_001"
+    assert fees.invoice_number == f"{claim.claim_reference}_001"
     assert fees.invoice_amount == Decimal("1200.00")
     assert fees.invoice_type == InvoiceTypeCode.FINAL_BILL_FEES
     assert fees.tax_code == TaxCode.GB_VAT_20
     assert fees.invoice_date == claim.submission_date.date()
 
-    assert disb_standard.invoice_number == f"{claim.claim_id}_002"
+    assert disb_standard.invoice_number == f"{claim.claim_reference}_002"
     assert disb_standard.invoice_amount == Decimal("150.00")
     assert disb_standard.invoice_type == InvoiceTypeCode.FINAL_BILL_DISBURSEMENT
     assert disb_standard.tax_code == TaxCode.GB_VAT_20
 
-    assert disb_zero.invoice_number == f"{claim.claim_id}_003"
+    assert disb_zero.invoice_number == f"{claim.claim_reference}_003"
     assert disb_zero.invoice_amount == Decimal("50.00")
     assert disb_zero.invoice_type == InvoiceTypeCode.FINAL_BILL_DISBURSEMENT
     assert disb_zero.tax_code == TaxCode.ZERO_VAT
 
-    assert recoup_standard.invoice_number == f"{poa_claim.claim_id}_001-R"
+    assert recoup_standard.invoice_number == f"{poa_claim.claim_reference}_001-R"
     assert recoup_standard.invoice_amount == Decimal("-800.00")
     assert recoup_standard.invoice_type == InvoiceTypeCode.RECOUPED
     assert recoup_standard.tax_code == TaxCode.GB_VAT_20
     assert recoup_standard.invoice_date == decision_date
 
-    assert recoup_zero.invoice_number == f"{poa_claim.claim_id}_002-R"
+    assert recoup_zero.invoice_number == f"{poa_claim.claim_reference}_002-R"
     assert recoup_zero.invoice_amount == Decimal("-200.00")
     assert recoup_zero.invoice_type == InvoiceTypeCode.RECOUPED
     assert recoup_zero.tax_code == TaxCode.ZERO_VAT

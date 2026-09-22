@@ -74,7 +74,7 @@ def _build_payment_extract_lines(claim: Claim) -> list[PaymentExtractLine]:
     if claim.poa_type_id == POAType.PROFIT_COST:
         return [
             build_poa_profit_cost_extract(
-                claim_id=claim.claim_id,
+                claim_reference=claim.claim_reference,
                 sequence=1,
                 submission_date=claim.submission_date,
                 net=claim.total_profit_cost_net,
@@ -83,7 +83,7 @@ def _build_payment_extract_lines(claim: Claim) -> list[PaymentExtractLine]:
         ]
     if claim.poa_type_id in (POAType.EXPERT_COST, POAType.NON_EXPERT_DISBURSEMENT):
         return build_poa_disbursement_extract(
-            claim_id=claim.claim_id,
+            claim_reference=claim.claim_reference,
             submission_date=claim.submission_date,
             gross=claim.total_profit_cost_gross,
             vat_zero_amount=claim.total_profit_cost_vat_zero,

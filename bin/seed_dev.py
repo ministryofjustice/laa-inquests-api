@@ -26,18 +26,33 @@ from app.models.application.index import (
     Deceased,
     Provider,
 )
-from app.models.claim.enums import ClaimStatus, ClaimType, POAType
-from app.models.claim.index import Claim, ClaimEvidence
+from app.models.claim.enums import (
+    ClaimStatus,
+    ClaimType,
+    InquestOutcomeCode,
+    NumberOfCounselInstructed,
+    POAType,
+)
+from app.models.claim.index import (
+    Claim,
+    ClaimCostTemplate,
+    ClaimEvidence,
+    ClaimInquestOutcome,
+)
 
 SEED_FIRM_CODE = "1473"
 SEED_CORONERS_LETTER_ID = uuid.UUID("5e0bb75e-00e8-4e3d-84b3-88b77ba3aad4")
 SEED_CLAIM_EVIDENCE_ID = uuid.UUID("7b34cf18-1d41-40eb-8bc8-9a2e7e14dea6")
+SEED_FINAL_BILL_CLAIM_EVIDENCE_ID = uuid.UUID("a1c2e3f4-5678-4abc-9def-0123456789ab")
+SEED_FINAL_BILL_COST_TEMPLATE_FILE_ID = uuid.UUID(
+    "b2d3f4a5-6789-4bcd-8ef0-123456789abc"
+)
 
 
 def seed_dev():
     """
-    Seeds a single granted application with a submitted claim (and their related
-    records) into the database.
+    Seeds a single granted application with a submitted payment on account claim
+    and a submitted final bill claim (and their related records) into the database.
     Idempotent: keyed on the seed coroners letter id, so it is safe to re-run.
     """
     with CustomSessionLocal() as db_session:
@@ -152,6 +167,44 @@ def seed_dev():
             ],
         )
         db_session.add(claim)
+
+        final_bill_claim = Claim(
+            application_id=application.application_id,
+            claim_reference="INQC-FBIL-0001",
+            claim_type_id=ClaimType.FINAL_BILL,
+            status_id=ClaimStatus.SUBMITTED,
+            total_profit_cost_net=None,
+            total_profit_cost_gross=Decimal("1200.00"),
+            total_profit_cost_vat_zero=None,
+            poa_type_id=None,
+            has_counsel_been_paid=True,
+            has_alternative_funding=False,
+            has_recovery_costs_awarded=True,
+            financial_recovery_previous_pre_certificate_costs=Decimal("100.00"),
+            financial_recovery_cost=Decimal("200.00"),
+            financial_recovery_damages=Decimal("300.00"),
+            financial_recovery_interest=Decimal("50.00"),
+            paying_party="Test Paying Party",
+            number_of_counsel_instructed=NumberOfCounselInstructed.TWO,
+            claimant_id="claimant-123@provider.co.uk",
+            claim_evidence=[
+                ClaimEvidence(
+                    claim_evidence_id=SEED_FINAL_BILL_CLAIM_EVIDENCE_ID,
+                    sds_file_name="seed-final-bill-claim-evidence",
+                    file_name="final-bill-claim-evidence.pdf",
+                )
+            ],
+            claim_inquest_outcomes=[
+                ClaimInquestOutcome(
+                    inquest_outcome_id=InquestOutcomeCode.NATURAL_CAUSES
+                )
+            ],
+            claim_cost_template=ClaimCostTemplate(
+                claim_cost_template_file_id=SEED_FINAL_BILL_COST_TEMPLATE_FILE_ID,
+                claim_cost_template_file_name="final_bill_costs.xlsx",
+            ),
+        )
+        db_session.add(final_bill_claim)
         db_session.commit()
 
 

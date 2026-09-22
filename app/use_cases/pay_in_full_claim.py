@@ -199,7 +199,7 @@ class PayInFullClaimUseCase:
         invoice_date = claim.submission_date.date()
 
         fees_line = build_final_bill_fees_extract(
-            claim_id=claim.claim_id,
+            claim_reference=claim.claim_reference,
             sequence=sequence,
             invoice_date=invoice_date,
             gross=command.profit_cost_gross,
@@ -210,7 +210,7 @@ class PayInFullClaimUseCase:
             sequence += 1
 
         disbursement_lines = build_final_bill_disbursement_extract(
-            claim_id=claim.claim_id,
+            claim_reference=claim.claim_reference,
             start_sequence=sequence,
             invoice_date=invoice_date,
             gross=command.disbursement_gross,

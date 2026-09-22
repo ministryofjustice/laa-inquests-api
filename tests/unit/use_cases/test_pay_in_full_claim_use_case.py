@@ -396,6 +396,7 @@ def _build_use_case_with_extract_ports(
 def _final_bill_claim(claim_id: int = 5, application_id: int = 1) -> Claim:
     return Claim(
         claim_id=claim_id,
+        claim_reference=f"INQC-0000-{claim_id:04d}",
         application_id=application_id,
         claim_type_id=ClaimType.FINAL_BILL,
         status_id=ClaimStatus.SUBMITTED,
@@ -406,6 +407,7 @@ def _final_bill_claim(claim_id: int = 5, application_id: int = 1) -> Claim:
 def test_creates_final_bill_and_recoupment_extract_lines_in_order():
     poa_claim = Claim(
         claim_id=9,
+        claim_reference="INQC-0000-0009",
         application_id=1,
         claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
         status_id=ClaimStatus.PAY_IN_FULL,
@@ -416,7 +418,7 @@ def test_creates_final_bill_and_recoupment_extract_lines_in_order():
         ClaimPaymentExtract(
             claim_id=9,
             sequence_number=1,
-            invoice_number="9_001",
+            invoice_number="INQC-0000-0009_001",
             invoice_amount=Decimal("800.00"),
             invoice_date=datetime(2026, 1, 1, tzinfo=UTC).date(),
             invoice_type=InvoiceTypeCode.POA,
@@ -425,7 +427,7 @@ def test_creates_final_bill_and_recoupment_extract_lines_in_order():
         ClaimPaymentExtract(
             claim_id=9,
             sequence_number=2,
-            invoice_number="9_002",
+            invoice_number="INQC-0000-0009_002",
             invoice_amount=Decimal("200.00"),
             invoice_date=datetime(2026, 1, 1, tzinfo=UTC).date(),
             invoice_type=InvoiceTypeCode.POA,
@@ -471,7 +473,7 @@ def test_creates_final_bill_and_recoupment_extract_lines_in_order():
     assert summary == [
         (
             1,
-            "5_001",
+            "INQC-0000-0005_001",
             Decimal("1200.00"),
             InvoiceTypeCode.FINAL_BILL_FEES,
             TaxCode.GB_VAT_20,
@@ -479,7 +481,7 @@ def test_creates_final_bill_and_recoupment_extract_lines_in_order():
         ),
         (
             2,
-            "5_002",
+            "INQC-0000-0005_002",
             Decimal("150.00"),
             InvoiceTypeCode.FINAL_BILL_DISBURSEMENT,
             TaxCode.GB_VAT_20,
@@ -487,7 +489,7 @@ def test_creates_final_bill_and_recoupment_extract_lines_in_order():
         ),
         (
             3,
-            "5_003",
+            "INQC-0000-0005_003",
             Decimal("50.00"),
             InvoiceTypeCode.FINAL_BILL_DISBURSEMENT,
             TaxCode.ZERO_VAT,
@@ -495,7 +497,7 @@ def test_creates_final_bill_and_recoupment_extract_lines_in_order():
         ),
         (
             4,
-            "9_001-R",
+            "INQC-0000-0009_001-R",
             Decimal("-800.00"),
             InvoiceTypeCode.RECOUPED,
             TaxCode.GB_VAT_20,
@@ -503,7 +505,7 @@ def test_creates_final_bill_and_recoupment_extract_lines_in_order():
         ),
         (
             5,
-            "9_002-R",
+            "INQC-0000-0009_002-R",
             Decimal("-200.00"),
             InvoiceTypeCode.RECOUPED,
             TaxCode.ZERO_VAT,

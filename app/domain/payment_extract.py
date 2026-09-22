@@ -25,7 +25,7 @@ class PaymentExtractLine:
 
 
 def build_poa_profit_cost_extract(
-    claim_id: int,
+    claim_reference: str,
     sequence: int,
     submission_date: datetime,
     net: Decimal | None,
@@ -42,7 +42,7 @@ def build_poa_profit_cost_extract(
 
     return PaymentExtractLine(
         sequence_number=sequence,
-        invoice_number=f"{claim_id}_{sequence:03d}",
+        invoice_number=f"{claim_reference}_{sequence:03d}",
         invoice_amount=invoice_amount,
         invoice_date=submission_date.date(),
         invoice_type=InvoiceTypeCode.POA,
@@ -51,7 +51,7 @@ def build_poa_profit_cost_extract(
 
 
 def build_poa_disbursement_extract(
-    claim_id: int,
+    claim_reference: str,
     submission_date: datetime,
     gross: Decimal | None,
     vat_zero_amount: Decimal | None,
@@ -68,7 +68,7 @@ def build_poa_disbursement_extract(
         lines.append(
             PaymentExtractLine(
                 sequence_number=sequence,
-                invoice_number=f"{claim_id}_{sequence:03d}",
+                invoice_number=f"{claim_reference}_{sequence:03d}",
                 invoice_amount=bankers_round(vat_20_percent_amount),
                 invoice_date=invoice_date,
                 invoice_type=InvoiceTypeCode.POA,
@@ -81,7 +81,7 @@ def build_poa_disbursement_extract(
         lines.append(
             PaymentExtractLine(
                 sequence_number=sequence,
-                invoice_number=f"{claim_id}_{sequence:03d}",
+                invoice_number=f"{claim_reference}_{sequence:03d}",
                 invoice_amount=bankers_round(vat_zero_amount),
                 invoice_date=invoice_date,
                 invoice_type=InvoiceTypeCode.POA,
@@ -93,7 +93,7 @@ def build_poa_disbursement_extract(
 
 
 def build_final_bill_fees_extract(
-    claim_id: int,
+    claim_reference: str,
     sequence: int,
     invoice_date: date,
     gross: Decimal | None,
@@ -110,7 +110,7 @@ def build_final_bill_fees_extract(
 
     return PaymentExtractLine(
         sequence_number=sequence,
-        invoice_number=f"{claim_id}_{sequence:03d}",
+        invoice_number=f"{claim_reference}_{sequence:03d}",
         invoice_amount=bankers_round(invoice_amount),
         invoice_date=invoice_date,
         invoice_type=InvoiceTypeCode.FINAL_BILL_FEES,
@@ -119,7 +119,7 @@ def build_final_bill_fees_extract(
 
 
 def build_final_bill_disbursement_extract(
-    claim_id: int,
+    claim_reference: str,
     start_sequence: int,
     invoice_date: date,
     gross: Decimal | None,
@@ -136,7 +136,7 @@ def build_final_bill_disbursement_extract(
         lines.append(
             PaymentExtractLine(
                 sequence_number=sequence,
-                invoice_number=f"{claim_id}_{sequence:03d}",
+                invoice_number=f"{claim_reference}_{sequence:03d}",
                 invoice_amount=bankers_round(vat_20_percent_amount),
                 invoice_date=invoice_date,
                 invoice_type=InvoiceTypeCode.FINAL_BILL_DISBURSEMENT,
@@ -149,7 +149,7 @@ def build_final_bill_disbursement_extract(
         lines.append(
             PaymentExtractLine(
                 sequence_number=sequence,
-                invoice_number=f"{claim_id}_{sequence:03d}",
+                invoice_number=f"{claim_reference}_{sequence:03d}",
                 invoice_amount=bankers_round(vat_zero_amount),
                 invoice_date=invoice_date,
                 invoice_type=InvoiceTypeCode.FINAL_BILL_DISBURSEMENT,

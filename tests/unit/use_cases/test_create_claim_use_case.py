@@ -150,6 +150,7 @@ def _make_use_case(**kwargs):
 def _claim_with_poa(poa_type, net, gross, vat_zero=None) -> Claim:
     return Claim(
         claim_id=1,
+        claim_reference="INQC-0000-0001",
         application_id=12345,
         claim_type_id="PAYMENT_ON_ACCOUNT",
         total_profit_cost_net=net,
@@ -1105,7 +1106,7 @@ def test_build_payment_extract_maps_vat_profit_cost_claim():
     assert lines == [
         PaymentExtractLine(
             sequence_number=1,
-            invoice_number="1_001",
+            invoice_number="INQC-0000-0001_001",
             invoice_amount=Decimal("960.00"),
             invoice_date=claim.submission_date.date(),
             invoice_type=InvoiceTypeCode.POA,
@@ -1124,7 +1125,7 @@ def test_build_payment_extract_maps_zero_vat_profit_cost_claim():
     assert lines == [
         PaymentExtractLine(
             sequence_number=1,
-            invoice_number="1_001",
+            invoice_number="INQC-0000-0001_001",
             invoice_amount=Decimal("800.00"),
             invoice_date=claim.submission_date.date(),
             invoice_type=InvoiceTypeCode.POA,
@@ -1146,7 +1147,7 @@ def test_build_payment_extract_maps_disbursement_claim_to_two_lines():
     assert lines == [
         PaymentExtractLine(
             sequence_number=1,
-            invoice_number="1_001",
+            invoice_number="INQC-0000-0001_001",
             invoice_amount=Decimal("1000.00"),
             invoice_date=claim.submission_date.date(),
             invoice_type=InvoiceTypeCode.POA,
@@ -1154,7 +1155,7 @@ def test_build_payment_extract_maps_disbursement_claim_to_two_lines():
         ),
         PaymentExtractLine(
             sequence_number=2,
-            invoice_number="1_002",
+            invoice_number="INQC-0000-0001_002",
             invoice_amount=Decimal("200.00"),
             invoice_date=claim.submission_date.date(),
             invoice_type=InvoiceTypeCode.POA,
@@ -1212,7 +1213,7 @@ def test_execute_auto_approves_eligible_payment_on_account_claim():
         lines=[
             PaymentExtractLine(
                 sequence_number=1,
-                invoice_number="1_001",
+                invoice_number="INQC-0000-0001_001",
                 invoice_amount=Decimal("960.00"),
                 invoice_date=claim.submission_date.date(),
                 invoice_type=InvoiceTypeCode.POA,
@@ -1262,7 +1263,7 @@ def test_execute_auto_approval_persists_profit_cost_amounts_for_profit_cost_poa(
         lines=[
             PaymentExtractLine(
                 sequence_number=1,
-                invoice_number="1_001",
+                invoice_number="INQC-0000-0001_001",
                 invoice_amount=Decimal("38400.00"),
                 invoice_date=claim.submission_date.date(),
                 invoice_type=InvoiceTypeCode.POA,
@@ -1301,7 +1302,7 @@ def test_execute_auto_approval_persists_zero_vat_payment_extract_for_profit_cost
         lines=[
             PaymentExtractLine(
                 sequence_number=1,
-                invoice_number="1_001",
+                invoice_number="INQC-0000-0001_001",
                 invoice_amount=Decimal("800.00"),
                 invoice_date=claim.submission_date.date(),
                 invoice_type=InvoiceTypeCode.POA,
@@ -1339,7 +1340,7 @@ def test_execute_auto_approval_persists_disbursement_amounts_for_expert_cost_poa
         lines=[
             PaymentExtractLine(
                 sequence_number=1,
-                invoice_number="1_001",
+                invoice_number="INQC-0000-0001_001",
                 invoice_amount=Decimal("40000.00"),
                 invoice_date=claim.submission_date.date(),
                 invoice_type=InvoiceTypeCode.POA,
@@ -1377,7 +1378,7 @@ def test_execute_auto_approval_persists_disbursement_amounts_for_non_expert_poa(
         lines=[
             PaymentExtractLine(
                 sequence_number=1,
-                invoice_number="1_001",
+                invoice_number="INQC-0000-0001_001",
                 invoice_amount=Decimal("40000.00"),
                 invoice_date=claim.submission_date.date(),
                 invoice_type=InvoiceTypeCode.POA,
