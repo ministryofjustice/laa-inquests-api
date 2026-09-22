@@ -251,6 +251,7 @@ class ClaimRepositoryAdapter(
             random.choice(self.reference_rules.allowed_characters)  # nosec B311
             for _ in range(4)
         )
+
     def get_payment_extracts_by_claim_id(
         self, claim_id: int
     ) -> list[ClaimPaymentExtract]:
