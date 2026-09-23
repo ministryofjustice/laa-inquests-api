@@ -3,6 +3,7 @@ import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 
+import pytest
 from sqlmodel import select
 
 from app import api
@@ -126,6 +127,35 @@ def _seed_approved_claim(
     session.refresh(claim)
     session.add(ClaimDecision(claim_id=claim.claim_id, decision=decision))
     session.commit()
+    return claim
+
+
+def _seed_claim_with_type_and_status(
+    session,
+    laa_reference: str,
+    claim_type: ClaimType,
+    status: ClaimStatus,
+) -> Claim:
+    application_id = (
+        session.exec(
+            select(Application).where(Application.laa_reference == laa_reference)
+        )
+        .one()
+        .application_id
+    )
+    claim = Claim(
+        application_id=application_id,
+        claim_type_id=claim_type,
+        status_id=status,
+        submission_date=datetime.now(UTC),
+        total_profit_cost_gross=Decimal("100.00"),
+        total_funds_remaining_after_claim=Decimal(0),
+        poa_type_id=None,
+        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
+    )
+    session.add(claim)
+    session.commit()
+    session.refresh(claim)
     return claim
 
 
@@ -2118,6 +2148,94 @@ class TestCreateClaimAutoDecisionRules:
         ).first()
         assert decision is not None
         assert decision.decision == "REJECT"
+
+
+class TestCreateClaimActiveFinalBillRestriction:
+    @pytest.mark.parametrize(
+        "blocking_claim_type", [ClaimType.FINAL_BILL, ClaimType.NIL_BILL]
+    )
+    @pytest.mark.parametrize(
+        "blocking_status", [ClaimStatus.SUBMITTED, ClaimStatus.PAY_IN_FULL]
+    )
+    def test_422_create_poa_claim_when_active_final_bill_exists(
+        self, session, client, blocking_claim_type, blocking_status
+    ):
+        application = session.exec(select(Application)).first()
+        laa_reference = application.laa_reference
+        _seed_claim_with_type_and_status(
+            session, laa_reference, blocking_claim_type, blocking_status
+        )
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert response.json()["detail"]["errorCode"] == "ACTIVE_FINAL_BILL_EXISTS"
+
+        stored_claims = session.exec(
+            select(Claim).where(Claim.application_id == application.application_id)
+        ).all()
+        assert len(stored_claims) == 1
+
+    @pytest.mark.parametrize(
+        "blocking_claim_type", [ClaimType.FINAL_BILL, ClaimType.NIL_BILL]
+    )
+    @pytest.mark.parametrize(
+        "blocking_status", [ClaimStatus.SUBMITTED, ClaimStatus.PAY_IN_FULL]
+    )
+    def test_422_create_final_bill_claim_when_active_final_bill_exists(
+        self, session, client, blocking_claim_type, blocking_status
+    ):
+        application = session.exec(select(Application)).first()
+        laa_reference = application.laa_reference
+        _seed_claim_with_type_and_status(
+            session, laa_reference, blocking_claim_type, blocking_status
+        )
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_final_bill_body(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert response.json()["detail"]["errorCode"] == "ACTIVE_FINAL_BILL_EXISTS"
+
+    @pytest.mark.parametrize(
+        "blocking_claim_type", [ClaimType.FINAL_BILL, ClaimType.NIL_BILL]
+    )
+    @pytest.mark.parametrize(
+        "non_blocking_status",
+        [ClaimStatus.REJECTED, ClaimStatus.REJECTED_WITH_AMENDMENT],
+    )
+    def test_201_create_claim_when_existing_final_bill_is_rejected(
+        self, session, client, blocking_claim_type, non_blocking_status
+    ):
+        application = session.exec(select(Application)).first()
+        laa_reference = application.laa_reference
+        _seed_claim_with_type_and_status(
+            session, laa_reference, blocking_claim_type, non_blocking_status
+        )
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
+            },
+        )
+
+        assert response.status_code == 201
 
 
 class TestCreateClaimRbac:

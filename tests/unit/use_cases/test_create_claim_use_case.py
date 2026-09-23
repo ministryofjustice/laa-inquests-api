@@ -73,7 +73,7 @@ def _make_command(overrides=None) -> CreateClaimCommand:
     return CreateClaimCommand(**payload)
 
 
-def _make_claim() -> Claim:
+def _make_created_claim() -> Claim:
     return Claim(
         claim_id=1,
         claim_reference="INQC-0000-0001",
@@ -261,9 +261,73 @@ def test_execute_raises_invalid_claim_error_when_application_not_granted():
     create_claim_port.create_claim.assert_not_called()
 
 
+def _make_existing_claim(claim_type, status) -> Claim:
+    return Claim(
+        claim_id=99,
+        claim_reference="INQC-9999-9999",
+        application_id=12345,
+        claim_type_id=claim_type,
+        status_id=status,
+        submission_date=datetime.now(UTC),
+        total_profit_cost_gross=Decimal("100.00"),
+    )
+
+
+@pytest.mark.parametrize(
+    "blocking_claim_type", [ClaimType.FINAL_BILL, ClaimType.NIL_BILL]
+)
+@pytest.mark.parametrize(
+    "blocking_status", [ClaimStatus.SUBMITTED, ClaimStatus.PAY_IN_FULL]
+)
+def test_execute_raises_invalid_claim_error_when_active_final_bill_exists(
+    blocking_claim_type, blocking_status
+):
+    command = _make_command()
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    existing_claim = _make_existing_claim(blocking_claim_type, blocking_status)
+
+    use_case = _make_use_case(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(),
+        get_claims_for_application_port=_make_get_claims_port([existing_claim]),
+    )
+
+    with pytest.raises(InvalidClaimError) as exc_info:
+        use_case.execute(command)
+    assert exc_info.value.code == ClaimErrorCode.ACTIVE_FINAL_BILL_EXISTS
+    create_claim_port.create_claim.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "blocking_claim_type", [ClaimType.FINAL_BILL, ClaimType.NIL_BILL]
+)
+@pytest.mark.parametrize(
+    "non_blocking_status",
+    [ClaimStatus.REJECTED, ClaimStatus.REJECTED_WITH_AMENDMENT],
+)
+def test_execute_proceeds_when_existing_final_bill_is_rejected(
+    blocking_claim_type, non_blocking_status
+):
+    command = _make_command()
+    claim = _make_created_claim()
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = claim
+    existing_claim = _make_existing_claim(blocking_claim_type, non_blocking_status)
+
+    use_case = _make_use_case(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(),
+        get_claims_for_application_port=_make_get_claims_port([existing_claim]),
+    )
+
+    use_case.execute(command)
+
+    create_claim_port.create_claim.assert_called_once()
+
+
 def test_execute_creates_claim_and_commits():
     command = _make_command()
-    claim = _make_claim()
+    claim = _make_created_claim()
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
 
@@ -288,7 +352,7 @@ def test_execute_creates_claim_and_commits():
 
 def test_execute_links_claim_evidence_to_created_claim():
     command = _make_command()
-    claim = _make_claim()
+    claim = _make_created_claim()
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
 
@@ -324,7 +388,7 @@ def test_execute_links_inquest_outcomes_to_created_claim():
             "number_of_counsel_instructed": NumberOfCounselInstructed.TWO,
         }
     )
-    claim = _make_claim()
+    claim = _make_created_claim()
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
 
@@ -361,7 +425,7 @@ def test_execute_links_cost_template_to_created_claim():
             "number_of_counsel_instructed": NumberOfCounselInstructed.TWO,
         }
     )
-    claim = _make_claim()
+    claim = _make_created_claim()
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
 
@@ -379,7 +443,7 @@ def test_execute_links_cost_template_to_created_claim():
 
 def test_execute_does_not_link_cost_template_for_payment_on_account():
     command = _make_command()
-    claim = _make_claim()
+    claim = _make_created_claim()
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
 
@@ -395,7 +459,7 @@ def test_execute_does_not_link_cost_template_for_payment_on_account():
 
 def test_execute_returns_created_claim():
     command = _make_command()
-    claim = _make_claim()
+    claim = _make_created_claim()
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
 
@@ -411,7 +475,7 @@ def test_execute_returns_created_claim():
 
 def test_execute_sends_claim_submission_email_when_application_exists():
     command = _make_command()
-    claim = _make_claim()
+    claim = _make_created_claim()
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
     application = MagicMock(spec=Application)
@@ -443,7 +507,7 @@ def test_execute_sends_claim_submission_email_when_application_exists():
 
 def test_execute_creates_submission_confirmation_history_event_when_notify_succeeds():
     command = _make_command()
-    claim = _make_claim()
+    claim = _make_created_claim()
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
     application = _make_matching_application()
@@ -476,7 +540,7 @@ def test_execute_creates_submission_confirmation_history_event_when_notify_succe
 
 def test_execute_does_not_create_submission_confirmation_history_event_when_notify_fails():
     command = _make_command()
-    claim = _make_claim()
+    claim = _make_created_claim()
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
     application = _make_matching_application()
@@ -502,7 +566,7 @@ def test_execute_does_not_create_submission_confirmation_history_event_when_noti
 
 def test_execute_creates_claim_approved_history_event_when_notify_succeeds():
     command = _make_command()
-    claim = _make_claim()
+    claim = _make_created_claim()
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
     application = _make_matching_application()
@@ -535,7 +599,7 @@ def test_execute_creates_claim_approved_history_event_when_notify_succeeds():
 
 def test_execute_does_not_create_claim_approved_history_event_when_notify_fails():
     command = _make_command()
-    claim = _make_claim()
+    claim = _make_created_claim()
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
     application = _make_matching_application()
@@ -561,7 +625,7 @@ def test_execute_does_not_create_claim_approved_history_event_when_notify_fails(
 
 def test_execute_does_not_notify_when_create_history_event_fails():
     command = _make_command()
-    claim = _make_claim()
+    claim = _make_created_claim()
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
     application = _make_matching_application()
@@ -588,7 +652,7 @@ def test_execute_does_not_notify_when_create_history_event_fails():
 
 def test_execute_creates_claim_submitted_history_event_when_submission_succeeds():
     command = _make_command()
-    claim = _make_claim()
+    claim = _make_created_claim()
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
     application = _make_matching_application()
@@ -618,7 +682,7 @@ def test_execute_creates_claim_submitted_history_event_when_submission_succeeds(
 
 def test_execute_rolls_back_claim_and_history_when_history_event_creation_fails():
     command = _make_command()
-    claim = _make_claim()
+    claim = _make_created_claim()
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
@@ -777,7 +841,7 @@ def test_execute_does_not_raise_for_final_bill_with_gross_only():
         }
     )
     port = MagicMock(spec=CreateClaimPort)
-    port.create_claim.return_value = _make_claim()
+    port.create_claim.return_value = _make_created_claim()
     use_case = _make_use_case(
         create_claim_port=port,
         application_lookup_port=_make_application_lookup_port(),
@@ -797,7 +861,7 @@ def test_execute_accepts_non_profit_cost_with_vat_zero_only():
         }
     )
     port = MagicMock(spec=CreateClaimPort)
-    port.create_claim.return_value = _make_claim()
+    port.create_claim.return_value = _make_created_claim()
     use_case = _make_use_case(
         create_claim_port=port,
         application_lookup_port=_make_application_lookup_port(),
@@ -817,7 +881,7 @@ def test_execute_uses_validated_domain_values_when_calling_port():
         }
     )
     port = MagicMock(spec=CreateClaimPort)
-    port.create_claim.return_value = _make_claim()
+    port.create_claim.return_value = _make_created_claim()
     use_case = _make_use_case(
         create_claim_port=port,
         application_lookup_port=_make_application_lookup_port(),
@@ -834,7 +898,7 @@ def test_execute_uses_validated_domain_values_when_calling_port():
 
 def test_execute_fetches_application_before_creating_claim():
     command = _make_command()
-    claim = _make_claim()
+    claim = _make_created_claim()
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
 
@@ -869,7 +933,7 @@ def test_execute_fetches_application_before_creating_claim():
 def test_execute_fetches_existing_claims_with_correct_laa_reference():
     command = _make_command()
     create_claim_port = MagicMock(spec=CreateClaimPort)
-    create_claim_port.create_claim.return_value = _make_claim()
+    create_claim_port.create_claim.return_value = _make_created_claim()
     get_claims_port = _make_get_claims_port()
     application_lookup_port = _make_application_lookup_port()
     application = _make_matching_application()
@@ -890,7 +954,7 @@ def test_execute_fetches_existing_claims_with_correct_laa_reference():
 def test_execute_does_not_raise_when_application_total_exceeds_limit():
     command = _make_command()
     create_claim_port = MagicMock(spec=CreateClaimPort)
-    create_claim_port.create_claim.return_value = _make_claim()
+    create_claim_port.create_claim.return_value = _make_created_claim()
 
     existing_claim = MagicMock(spec=Claim)
     existing_claim.total_profit_cost_gross = Decimal("9000.00")
@@ -912,7 +976,7 @@ def test_execute_does_not_raise_when_application_total_exceeds_limit():
 
 def test_execute_persists_auto_reject_and_returns_rejection_reasons_and_creates_history_event():
     command = _make_command({"net": Decimal("1.00"), "gross": Decimal("1.00")})
-    claim = _make_claim()
+    claim = _make_created_claim()
 
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
@@ -980,7 +1044,7 @@ def test_execute_persists_auto_reject_and_returns_rejection_reasons_and_creates_
 
 def test_execute_returns_submitted_claim_when_auto_reject_persistence_fails_and_does_not_create_history_event():
     command = _make_command({"net": Decimal("1.00"), "gross": Decimal("1.00")})
-    claim = _make_claim()
+    claim = _make_created_claim()
 
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
@@ -1043,7 +1107,7 @@ def test_execute_returns_submitted_claim_when_auto_reject_persistence_fails_and_
 
 def test_execute_auto_reject_does_not_persist_when_auto_reject_create_history_event_fails():
     command = _make_command({"net": Decimal("1.00"), "gross": Decimal("1.00")})
-    claim = _make_claim()
+    claim = _make_created_claim()
 
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
@@ -1180,7 +1244,7 @@ def test_build_payment_extract_maps_disbursement_claim_to_two_lines():
 
 def test_execute_auto_approves_eligible_payment_on_account_claim():
     command = _make_command({"net": Decimal("50000.00"), "gross": Decimal("50000.00")})
-    claim = _make_claim()
+    claim = _make_created_claim()
 
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
@@ -1404,7 +1468,7 @@ def test_execute_auto_approval_persists_disbursement_amounts_for_non_expert_poa(
 
 def test_execute_does_not_persist_decision_amount_when_claim_auto_rejected():
     command = _make_command({"net": Decimal("5000.00"), "gross": Decimal("5000.00")})
-    claim = _make_claim()
+    claim = _make_created_claim()
 
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
@@ -1435,7 +1499,7 @@ def test_execute_does_not_persist_decision_amount_when_claim_auto_rejected():
 
 def test_execute_does_not_persist_decision_amount_when_claim_needs_manual_review():
     command = _make_command({"net": Decimal("50000.01"), "gross": Decimal("50000.01")})
-    claim = _make_claim()
+    claim = _make_created_claim()
 
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
@@ -1465,7 +1529,7 @@ def test_execute_does_not_persist_decision_amount_when_claim_needs_manual_review
 
 def test_execute_reverts_to_submitted_when_persisting_decision_amount_fails():
     command = _make_command({"net": Decimal("50000.00"), "gross": Decimal("50000.00")})
-    claim = _make_claim()
+    claim = _make_created_claim()
 
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
@@ -1503,7 +1567,7 @@ def test_execute_reverts_to_submitted_when_persisting_decision_amount_fails():
 
 def test_execute_does_not_send_grant_email_when_auto_approving_poa_claim():
     command = _make_command({"net": Decimal("50000.00"), "gross": Decimal("50000.00")})
-    claim = _make_claim()
+    claim = _make_created_claim()
 
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
@@ -1539,7 +1603,7 @@ def test_execute_does_not_send_grant_email_when_auto_approving_poa_claim():
 
 def test_execute_does_not_create_history_event_if_auto_approve_eligible_update_claim_status_fails():
     command = _make_command({"net": Decimal("50000.00"), "gross": Decimal("50000.00")})
-    claim = _make_claim()
+    claim = _make_created_claim()
 
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
@@ -1595,7 +1659,7 @@ def test_execute_does_not_create_history_event_if_auto_approve_eligible_update_c
 
 def test_execute_does_not_auto_approve_if_create_history_event_fails():
     command = _make_command({"net": Decimal("50000.00"), "gross": Decimal("50000.00")})
-    claim = _make_claim()
+    claim = _make_created_claim()
 
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
@@ -1649,7 +1713,7 @@ def test_execute_does_not_auto_approve_if_create_history_event_fails():
 
 def test_execute_does_not_auto_approve_when_amount_exceeds_threshold():
     command = _make_command({"net": Decimal("50000.01"), "gross": Decimal("50000.01")})
-    claim = _make_claim()
+    claim = _make_created_claim()
 
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
@@ -1701,7 +1765,7 @@ def test_execute_does_not_auto_approve_non_payment_on_account_claim():
             "number_of_counsel_instructed": NumberOfCounselInstructed.TWO,
         }
     )
-    claim = _make_claim()
+    claim = _make_created_claim()
 
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
@@ -1732,7 +1796,7 @@ def test_execute_does_not_auto_approve_non_payment_on_account_claim():
 
 def test_execute_sets_funds_from_cumulative_approved_claims_and_new_amount():
     command = _make_command({"net": Decimal("800.00"), "gross": Decimal("1000.00")})
-    claim = _make_claim()
+    claim = _make_created_claim()
 
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
@@ -1800,7 +1864,7 @@ def test_execute_sets_funds_from_cumulative_approved_claims_and_new_amount():
 
 def test_execute_sets_funds_deducting_new_amount_even_when_auto_approved():
     command = _make_command({"net": Decimal("2000.00"), "gross": Decimal("2000.00")})
-    claim = _make_claim()
+    claim = _make_created_claim()
 
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
@@ -1835,7 +1899,7 @@ def test_execute_sets_funds_deducting_new_amount_even_when_auto_approved():
 
 def test_execute_sets_funds_without_decision_port_treats_existing_as_unapproved():
     command = _make_command({"net": Decimal("500.00"), "gross": Decimal("500.00")})
-    claim = _make_claim()
+    claim = _make_created_claim()
 
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
