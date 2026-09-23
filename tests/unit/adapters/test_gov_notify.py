@@ -164,6 +164,7 @@ def test_gov_notify_adapter_sends_claim_rejected_decision_email_successfully():
         claim_id=7,
         application_id=12345,
         claim_type_id="PAYMENT_ON_ACCOUNT",
+        claim_reference="INQC-ABCD-1234",
         submission_date=datetime(2026, 6, 18, 14, 3, tzinfo=ZoneInfo("UTC")),
         total_profit_cost_net=1000,
         total_profit_cost_gross=1200,
@@ -210,6 +211,7 @@ def test_gov_notify_adapter_sends_claim_rejected_decision_email_successfully():
             == "18 June 2026 14:03 UTC"
         )
         assert call_kwargs["personalisation"]["claim_type"] == "Payment on account"
+        assert call_kwargs["personalisation"]["claim_ref"] == "INQC-ABCD-1234"
         assert call_kwargs["personalisation"]["total_claim_amount"] == "1,200.00"
         assert call_kwargs["personalisation"]["date_of_rejection"]
         assert (
