@@ -81,6 +81,7 @@ class RejectClaimUseCase:
                 application_id=application.application_id,
                 event_data={
                     "claim_type": claim.claim_type_id,
+                    "claim_reference": claim.claim_reference,
                     "claim_decision": ClaimStatus.REJECTED,
                     "decision_justification": command.justification,
                 },

@@ -31,6 +31,7 @@ def _claim(claim_id: int = 1, application_id: int = 1) -> Claim:
     return Claim(
         claim_id=claim_id,
         application_id=application_id,
+        claim_reference="INQC-0000-0001",
         claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
         status_id=ClaimStatus.SUBMITTED,
         submission_date=datetime.now(UTC),
@@ -161,6 +162,7 @@ def test_creates_reject_decision_reason_updates_status_and_commits():
                 application_id=1,
                 event_data={
                     "claim_type": ClaimType.PAYMENT_ON_ACCOUNT,
+                    "claim_reference": "INQC-0000-0001",
                     "claim_decision": ClaimStatus.REJECTED,
                     "decision_justification": "Rejected after review.",
                 },
@@ -256,6 +258,7 @@ def test_reject_claim_not_committed_when_create_history_event_fails():
         application_id=1,
         event_data={
             "claim_type": ClaimType.PAYMENT_ON_ACCOUNT,
+            "claim_reference": "INQC-0000-0001",
             "claim_decision": ClaimStatus.REJECTED,
             "decision_justification": "Rejected after review.",
         },

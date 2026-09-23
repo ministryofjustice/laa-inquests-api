@@ -11,6 +11,7 @@ def test_model_dump_json_camel_cases_event_data_keys():
         event_reference=HistoryEventReference.CLAIM_SUBMITTED,
         event_data={
             "claim_type": "PAYMENT_ON_ACCOUNT",
+            "claim_reference": "INQC-0010-0010",
             "test_key": {"test_nested_key": "test"},
         },
     )
@@ -19,6 +20,7 @@ def test_model_dump_json_camel_cases_event_data_keys():
 
     assert result["eventData"] == {
         "claimType": "PAYMENT_ON_ACCOUNT",
+        "claimReference": "INQC-0010-0010",
         "testKey": {"testNestedKey": "test"},
     }
 

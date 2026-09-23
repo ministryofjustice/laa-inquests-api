@@ -49,6 +49,7 @@ def _claim(claim_id: int = 1, application_id: int = 1) -> Claim:
     return Claim(
         claim_id=claim_id,
         application_id=application_id,
+        claim_reference="INQC-0000-0001",
         claim_type_id=ClaimType.FINAL_BILL,
         status_id=ClaimStatus.SUBMITTED,
         submission_date=datetime.now(UTC),
@@ -196,6 +197,7 @@ def test_creates_pay_in_full_decision_amount_updates_status_and_commits():
         application_id=1,
         event_data={
             "claim_type": ClaimType.FINAL_BILL,
+            "claim_reference": "INQC-0000-0001",
             "claim_decision": ClaimStatus.PAY_IN_FULL,
             "profit_cost_net": "1000.00",
             "profit_cost_gross": "1200.00",

@@ -608,7 +608,10 @@ def test_execute_creates_claim_submitted_history_event_when_submission_succeeds(
         actor=command.claimant_id,
         actor_type=ActorType.PROVIDER,
         application_id=application.application_id,
-        event_data={"claim_type": command.claim_type},
+        event_data={
+            "claim_type": command.claim_type,
+            "claim_reference": claim.claim_reference,
+        },
     )
     create_claim_port.commit.assert_called_once_with()
 
