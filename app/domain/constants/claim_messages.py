@@ -57,6 +57,10 @@ NIL_BILL_GROSS_MUST_BE_ZERO_MESSAGE = "The gross total must be zero for nil bill
 CLAIM_EVIDENCE_NOT_ALLOWED_MESSAGE = (
     "Claim evidence may only be provided for payment on account and final bill claims"
 )
+ACTIVE_FINAL_BILL_EXISTS_MESSAGE = (
+    "A further claim cannot be submitted because a final bill or nil bill has "
+    "already been submitted for this case"
+)
 
 # Pay-in-full profit cost validation messages
 PIF_MISSING_TOTAL_CLAIM_COST_MESSAGE = (
