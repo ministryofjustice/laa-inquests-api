@@ -194,6 +194,32 @@ def test_raises_when_disbursement_gross_not_greater_than_vat_zero_plus_net():
     assert exc.value.code == ClaimErrorCode.DISBURSEMENT_GROSS_NOT_GREATER_THAN_TOTAL
 
 
+def test_valid_with_all_zero_disbursement_totals():
+    PayInFullClaim(
+        **VALID_PROFIT_COST,
+        disbursement_net=Decimal("0.00"),
+        disbursement_gross=Decimal("0.00"),
+        disbursement_vat_zero=Decimal("0.00"),
+    ).validate()
+
+
+def test_valid_with_zero_net_and_gross_and_vat_zero_amount():
+    PayInFullClaim(
+        **VALID_PROFIT_COST,
+        disbursement_net=Decimal("0.00"),
+        disbursement_gross=Decimal("0.00"),
+        disbursement_vat_zero=Decimal("50.00"),
+    ).validate()
+
+
+def test_valid_with_zero_net_and_gross_and_no_vat_zero():
+    PayInFullClaim(
+        **VALID_PROFIT_COST,
+        disbursement_net=Decimal("0.00"),
+        disbursement_gross=Decimal("0.00"),
+    ).validate()
+
+
 def test_profit_cost_error_takes_priority_over_disbursement_error():
     with pytest.raises(ClaimValidationError) as exc:
         PayInFullClaim().validate()

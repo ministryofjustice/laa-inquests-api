@@ -6,6 +6,7 @@ from app.domain.payment_extract import (
     bankers_round,
     build_final_bill_disbursement_extract,
     build_final_bill_fees_extract,
+    build_final_bill_nil_fees_extract,
     build_poa_disbursement_extract,
     build_poa_profit_cost_extract,
     build_recoupment_extract,
@@ -308,6 +309,22 @@ class TestBuildFinalBillFeesExtract:
 
         assert line is not None
         assert line.invoice_amount == Decimal("1000.12")
+
+
+class TestBuildFinalBillNilFeesExtract:
+    def test_produces_zero_value_final_bill_fees_line(self):
+        line = build_final_bill_nil_fees_extract(
+            claim_reference="INQC-DEMO-XZ12",
+            sequence=1,
+            invoice_date=_submission().date(),
+        )
+
+        assert line.sequence_number == 1
+        assert line.invoice_number == "INQC-DEMO-XZ12_001"
+        assert line.invoice_amount == Decimal("0.00")
+        assert line.invoice_date == _submission().date()
+        assert line.invoice_type == InvoiceTypeCode.FINAL_BILL_FEES
+        assert line.tax_code == TaxCode.GB_VAT_20
 
 
 class TestBuildFinalBillDisbursementExtract:

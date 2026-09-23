@@ -118,6 +118,22 @@ def build_final_bill_fees_extract(
     )
 
 
+def build_final_bill_nil_fees_extract(
+    claim_reference: str,
+    sequence: int,
+    invoice_date: date,
+) -> PaymentExtractLine:
+    return PaymentExtractLine(
+        sequence_number=sequence,
+        invoice_number=f"{claim_reference}_{sequence:03d}",
+        invoice_amount=Decimal("0.00"),
+        invoice_date=invoice_date,
+        invoice_type=InvoiceTypeCode.FINAL_BILL_FEES,
+        # TODO(IDDS-833): tax code for nil bills pending business confirmation.
+        tax_code=TaxCode.GB_VAT_20,
+    )
+
+
 def build_final_bill_disbursement_extract(
     claim_reference: str,
     start_sequence: int,

@@ -11,6 +11,7 @@ from app.domain.payment_extract import (
     RecoupmentSourceLine,
     build_final_bill_disbursement_extract,
     build_final_bill_fees_extract,
+    build_final_bill_nil_fees_extract,
     build_recoupment_extract,
 )
 from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ClaimType
@@ -219,6 +220,16 @@ class PayInFullClaimUseCase:
         )
         lines.extend(disbursement_lines)
         sequence += len(disbursement_lines)
+
+        if not lines:
+            lines.append(
+                build_final_bill_nil_fees_extract(
+                    claim_reference=claim.claim_reference,
+                    sequence=sequence,
+                    invoice_date=invoice_date,
+                )
+            )
+            sequence += 1
 
         for poa_claim in self._recoupable_poa_claims(application_id, claim.claim_id):
             sources = [

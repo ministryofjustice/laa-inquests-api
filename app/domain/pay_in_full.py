@@ -94,7 +94,13 @@ class PayInFullClaim:
 
         if self.disbursement_net is not None and self.disbursement_gross is not None:
             vat_zero = self.disbursement_vat_zero or Decimal(0)
-            if self.disbursement_gross <= vat_zero + self.disbursement_net:
+            has_no_standard_rated_disbursement = (
+                self.disbursement_gross == 0 and self.disbursement_net == 0
+            )
+            if (
+                not has_no_standard_rated_disbursement
+                and self.disbursement_gross <= vat_zero + self.disbursement_net
+            ):
                 raise ClaimValidationError(
                     ClaimErrorCode.DISBURSEMENT_GROSS_NOT_GREATER_THAN_TOTAL,
                     DISB_GROSS_NOT_GREATER_THAN_TOTAL_MESSAGE,

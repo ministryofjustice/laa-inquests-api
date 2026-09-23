@@ -505,6 +505,20 @@ def test_204_pay_in_full_claim_allows_disbursement_vat_zero_net_and_gross(
     assert response.status_code == 204
 
 
+def test_204_pay_in_full_claim_allows_all_zero_disbursement_totals(session, client):
+    response = _post_pay_in_full(
+        session,
+        client,
+        {
+            "disbursementNet": "0.00",
+            "disbursementGross": "0.00",
+            "disbursementVatZero": "0.00",
+        },
+    )
+
+    assert response.status_code == 204
+
+
 def test_204_pay_in_full_claim_sends_final_bill_paid_email_to_provider(
     session, client, mock_gov_notify
 ):
@@ -777,3 +791,117 @@ def test_204_pay_in_full_final_bill_creates_no_recoupments_without_paid_poa_clai
 
     lines = _extract_lines_for(session, claim.claim_id)
     assert all(line.invoice_type != InvoiceTypeCode.RECOUPED for line in lines)
+
+
+_NIL_BILL_PAYLOAD = {
+    "profitCostNet": "0.00",
+    "profitCostGross": "0.00",
+    "profitCostVatZero": None,
+    "disbursementNet": "0.00",
+    "disbursementGross": "0.00",
+    "disbursementVatZero": "0.00",
+}
+
+
+def test_204_pay_in_full_final_bill_nil_bill_creates_single_zero_fees_line(
+    session, client
+):
+    application = session.exec(select(Application)).first()
+    claim = _seed_claim(session, application.laa_reference)
+
+    response = client.patch(
+        f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
+        json=_pay_in_full_payload(_NIL_BILL_PAYLOAD),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
+        },
+    )
+
+    assert response.status_code == 204
+
+    lines = _extract_lines_for(session, claim.claim_id)
+    assert len(lines) == 1
+    (fees,) = lines
+    assert fees.sequence_number == 1
+    assert fees.invoice_number == f"{claim.claim_reference}_001"
+    assert fees.invoice_amount == Decimal("0.00")
+    assert fees.invoice_type == InvoiceTypeCode.FINAL_BILL_FEES
+    assert fees.tax_code == TaxCode.GB_VAT_20
+    assert fees.invoice_date == claim.submission_date.date()
+
+
+def test_204_pay_in_full_final_bill_nil_bill_via_vat_zero_fields_creates_single_zero_fees_line(
+    session, client
+):
+    application = session.exec(select(Application)).first()
+    claim = _seed_claim(session, application.laa_reference)
+
+    response = client.patch(
+        f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
+        json=_pay_in_full_payload(
+            {
+                "profitCostNet": None,
+                "profitCostGross": None,
+                "profitCostVatZero": "0.00",
+                "disbursementNet": None,
+                "disbursementGross": None,
+                "disbursementVatZero": "0.00",
+            }
+        ),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
+        },
+    )
+
+    assert response.status_code == 204
+
+    lines = _extract_lines_for(session, claim.claim_id)
+    assert len(lines) == 1
+    (fees,) = lines
+    assert fees.invoice_number == f"{claim.claim_reference}_001"
+    assert fees.invoice_amount == Decimal("0.00")
+    assert fees.invoice_type == InvoiceTypeCode.FINAL_BILL_FEES
+
+
+def test_204_pay_in_full_final_bill_nil_bill_creates_zero_fees_line_then_recoupments(
+    session, client
+):
+    application = session.exec(select(Application)).first()
+    poa_claim = _seed_paid_poa_claim_with_extract(session, application.laa_reference)
+    claim = _seed_claim(session, application.laa_reference)
+
+    response = client.patch(
+        f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
+        json=_pay_in_full_payload(_NIL_BILL_PAYLOAD),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
+        },
+    )
+
+    assert response.status_code == 204
+
+    lines = _extract_lines_for(session, claim.claim_id)
+    assert len(lines) == 3
+    assert all(
+        line.invoice_type != InvoiceTypeCode.FINAL_BILL_DISBURSEMENT for line in lines
+    )
+
+    fees, recoup_standard, recoup_zero = lines
+
+    assert fees.sequence_number == 1
+    assert fees.invoice_number == f"{claim.claim_reference}_001"
+    assert fees.invoice_amount == Decimal("0.00")
+    assert fees.invoice_type == InvoiceTypeCode.FINAL_BILL_FEES
+
+    assert recoup_standard.sequence_number == 2
+    assert recoup_standard.invoice_number == f"{poa_claim.claim_reference}_001-R"
+    assert recoup_standard.invoice_amount == Decimal("-800.00")
+    assert recoup_standard.invoice_type == InvoiceTypeCode.RECOUPED
+
+    assert recoup_zero.sequence_number == 3
+    assert recoup_zero.invoice_number == f"{poa_claim.claim_reference}_002-R"
+    assert recoup_zero.invoice_amount == Decimal("-200.00")
+    assert recoup_zero.invoice_type == InvoiceTypeCode.RECOUPED
