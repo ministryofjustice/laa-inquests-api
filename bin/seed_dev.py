@@ -26,17 +26,37 @@ from app.models.application.index import (
     Deceased,
     Provider,
 )
-from app.models.claim.enums import ClaimStatus, ClaimType, POAType
-from app.models.claim.index import Claim, ClaimEvidence
+from app.models.claim.enums import (
+    ClaimStatus,
+    ClaimType,
+    InquestOutcomeCode,
+    NumberOfCounselInstructed,
+    POAType,
+)
+from app.models.claim.index import (
+    Claim,
+    ClaimCostTemplate,
+    ClaimEvidence,
+    ClaimInquestOutcome,
+)
 
 SEED_FIRM_CODE = "1473"
 SEED_CORONERS_LETTER_ID = uuid.UUID("5e0bb75e-00e8-4e3d-84b3-88b77ba3aad4")
+SEED_FINAL_BILL_CORONERS_LETTER_ID = uuid.UUID("c3e4a5b6-7890-4cde-9f01-23456789abcd")
 SEED_CLAIM_EVIDENCE_ID = uuid.UUID("7b34cf18-1d41-40eb-8bc8-9a2e7e14dea6")
+SEED_FINAL_BILL_POA_CLAIM_EVIDENCE_ID = uuid.UUID(
+    "d4f5a6b7-8901-4def-9012-3456789abcde"
+)
+SEED_FINAL_BILL_CLAIM_EVIDENCE_ID = uuid.UUID("a1c2e3f4-5678-4abc-9def-0123456789ab")
+SEED_FINAL_BILL_COST_TEMPLATE_FILE_ID = uuid.UUID(
+    "b2d3f4a5-6789-4bcd-8ef0-123456789abc"
+)
 
 
 def seed_dev():
     """
-    Seeds a single granted application with a submitted claim (and their related
+    Seeds a granted application with a submitted payment on account claim, plus a
+    second granted application with a submitted final bill claim (and their related
     records) into the database.
     Idempotent: keyed on the seed coroners letter id, so it is safe to re-run.
     """
@@ -130,6 +150,7 @@ def seed_dev():
             public_bodies=public_bodies,
             laa_reference="INQ-YYY-YYY",
         )
+
         db_session.add(application)
         db_session.flush()
 
@@ -152,6 +173,154 @@ def seed_dev():
             ],
         )
         db_session.add(claim)
+
+        final_bill_coroners_letter = CoronersLetter(
+            coroners_letter_id=SEED_FINAL_BILL_CORONERS_LETTER_ID,
+            sds_file_name="seed-final-bill-coroners-letter",
+            file_name="final-bill-coroners-letter.pdf",
+        )
+        db_session.add(final_bill_coroners_letter)
+
+        final_bill_correspondence_address = Address(
+            address_line_1="123 Example Street",
+            address_line_2="Jones",
+            town_or_city="Example Town",
+            county="Jones",
+            postcode="AA1 1AA",
+        )
+        final_bill_home_address = Address(
+            address_line_1="123 Example Street",
+            address_line_2="Jones",
+            town_or_city="Example Town",
+            county="Jones",
+            postcode="AA1 1AA",
+        )
+        db_session.add(final_bill_correspondence_address)
+        db_session.add(final_bill_home_address)
+        db_session.flush()
+
+        final_bill_client = Client(
+            client_first_name="Jane",
+            client_last_name="Smith",
+            client_last_name_at_birth="Jones",
+            date_of_birth="2000-01-01",
+            national_insurance_number="AA123456A",
+            has_applied_previously=False,
+            prev_application_reference="TBD",
+            correspondence_address_source=AddressSource.USE_SPECIFIED_ADDRESS,
+            correspondence_address_id=final_bill_correspondence_address.address_id,
+            home_address_id=final_bill_home_address.address_id,
+            has_no_fixed_abode=False,
+            is_client_correspondence_recipient=False,
+            correspondence_recipient_type=CorrespondenceRecipientType.PERSON,
+            correspondence_recipient_name="string",
+        )
+        db_session.add(final_bill_client)
+        db_session.flush()
+
+        final_bill_deceased = Deceased(
+            deceased_first_name="John",
+            deceased_last_name="Smith",
+            deceased_date_of_birth="2000-01-01",
+            deceased_date_of_death="2025-01-01",
+            coroners_reference="Example reference number",
+            further_information="Further information.",
+            client_relationship_to_deceased="Spouse",
+            client_id=final_bill_client.client_id,
+        )
+        db_session.add(final_bill_deceased)
+        db_session.flush()
+
+        final_bill_provider = Provider(
+            firm_code=SEED_FIRM_CODE,
+            office_id="0U651L",
+            email_address="provider@example.com",
+        )
+        db_session.add(final_bill_provider)
+        db_session.flush()
+
+        final_bill_application_proceeding = ApplicationProceeding(
+            proceeding_id=ProceedingId.IQPC,
+            merits_decision=MeritsDecision.GRANTED,
+            certificate_start_date=date(2025, 1, 1),
+            certificate_issue_date=datetime.now(UTC).date(),
+        )
+        final_bill_public_bodies = [
+            ApplicationPublicBody(
+                public_body_id=PublicBodyId.DEPARTMENT_OF_HEALTH_AND_SOCIAL_CARE
+            )
+        ]
+
+        final_bill_application = Application(
+            client_id=final_bill_client.client_id,
+            deceased_id=final_bill_deceased.deceased_id,
+            provider_id=final_bill_provider.provider_id,
+            coroners_letter_id=SEED_FINAL_BILL_CORONERS_LETTER_ID,
+            proceeding=final_bill_application_proceeding,
+            public_bodies=final_bill_public_bodies,
+            laa_reference="INQ-XXX-XXX",
+        )
+
+        db_session.add(final_bill_application)
+        db_session.flush()
+
+        final_bill_poa_claim = Claim(
+            application_id=final_bill_application.application_id,
+            claim_reference="INQC-XXXX-XXXX",
+            claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
+            status_id=ClaimStatus.SUBMITTED,
+            total_profit_cost_net=Decimal("1000.00"),
+            total_profit_cost_gross=Decimal("1200.00"),
+            total_profit_cost_vat_zero=Decimal("500.00"),
+            poa_type_id=POAType.PROFIT_COST,
+            claimant_id="claimant-123@provider.co.uk",
+            claim_evidence=[
+                ClaimEvidence(
+                    claim_evidence_id=SEED_FINAL_BILL_POA_CLAIM_EVIDENCE_ID,
+                    sds_file_name="seed-final-bill-poa-claim-evidence",
+                    file_name="final-bill-poa-claim-evidence.pdf",
+                )
+            ],
+        )
+        db_session.add(final_bill_poa_claim)
+
+        final_bill_claim = Claim(
+            application_id=final_bill_application.application_id,
+            claim_reference="INQC-FBIL-0001",
+            claim_type_id=ClaimType.FINAL_BILL,
+            status_id=ClaimStatus.SUBMITTED,
+            total_profit_cost_net=None,
+            total_profit_cost_gross=Decimal("1200.00"),
+            total_profit_cost_vat_zero=None,
+            poa_type_id=None,
+            has_counsel_been_paid=True,
+            has_alternative_funding=False,
+            has_recovery_costs_awarded=True,
+            financial_recovery_previous_pre_certificate_costs=Decimal("100.00"),
+            financial_recovery_cost=Decimal("200.00"),
+            financial_recovery_damages=Decimal("300.00"),
+            financial_recovery_interest=Decimal("50.00"),
+            paying_party="Test Paying Party",
+            number_of_counsel_instructed=NumberOfCounselInstructed.TWO,
+            claimant_id="claimant-123@provider.co.uk",
+            claim_evidence=[
+                ClaimEvidence(
+                    claim_evidence_id=SEED_FINAL_BILL_CLAIM_EVIDENCE_ID,
+                    sds_file_name="seed-final-bill-claim-evidence",
+                    file_name="final-bill-claim-evidence.pdf",
+                )
+            ],
+            claim_inquest_outcomes=[
+                ClaimInquestOutcome(
+                    inquest_outcome_id=InquestOutcomeCode.NATURAL_CAUSES
+                )
+            ],
+            claim_cost_template=ClaimCostTemplate(
+                claim_cost_template_file_id=SEED_FINAL_BILL_COST_TEMPLATE_FILE_ID,
+                claim_cost_template_file_name="final_bill_costs.xlsx",
+            ),
+        )
+        db_session.add(final_bill_claim)
         db_session.commit()
 
 

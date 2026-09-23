@@ -64,7 +64,7 @@ class TestCreateClaimPaymentExtract:
         # 80% of net (1000) plus 20% VAT = 1000 * 0.8 * 1.2 = 960.00
         assert payment_extract is not None
         assert payment_extract.sequence_number == 1
-        assert payment_extract.invoice_number == f"{claim_id}_001"
+        assert payment_extract.invoice_number == f"{claim_reference}_001"
         assert payment_extract.invoice_amount == Decimal("960.00")
         assert payment_extract.invoice_date == stored_claim.submission_date.date()
         assert payment_extract.invoice_type == InvoiceTypeCode.POA
@@ -94,7 +94,7 @@ class TestCreateClaimPaymentExtract:
 
         # 80% of zero-rated value (1000) = 800.00, no VAT added
         assert payment_extract is not None
-        assert payment_extract.invoice_number == f"{claim_id}_001"
+        assert payment_extract.invoice_number == f"{claim_reference}_001"
         assert payment_extract.invoice_amount == Decimal("800.00")
         assert payment_extract.invoice_type == InvoiceTypeCode.POA
         assert payment_extract.tax_code == TaxCode.ZERO_VAT
@@ -126,7 +126,7 @@ class TestCreateClaimPaymentExtract:
         # Standard-rated line: gross (1200) minus zero-rated (200) = 1000.00
         net_line = extracts[0]
         assert net_line.sequence_number == 1
-        assert net_line.invoice_number == f"{claim_id}_001"
+        assert net_line.invoice_number == f"{claim_reference}_001"
         assert net_line.invoice_amount == Decimal("1000.00")
         assert net_line.invoice_date == stored_claim.submission_date.date()
         assert net_line.invoice_type == InvoiceTypeCode.POA
@@ -135,7 +135,7 @@ class TestCreateClaimPaymentExtract:
         # Zero-rated line: 100% of zero-rated value (200) = 200.00
         vat_zero_line = extracts[1]
         assert vat_zero_line.sequence_number == 2
-        assert vat_zero_line.invoice_number == f"{claim_id}_002"
+        assert vat_zero_line.invoice_number == f"{claim_reference}_002"
         assert vat_zero_line.invoice_amount == Decimal("200.00")
         assert vat_zero_line.invoice_type == InvoiceTypeCode.POA
         assert vat_zero_line.tax_code == TaxCode.ZERO_VAT
@@ -163,7 +163,7 @@ class TestCreateClaimPaymentExtract:
         extracts = _payment_extracts(session, claim_id)
 
         assert len(extracts) == 1
-        assert extracts[0].invoice_number == f"{claim_id}_001"
+        assert extracts[0].invoice_number == f"{claim_reference}_001"
         assert extracts[0].invoice_amount == Decimal("1200.00")
         assert extracts[0].invoice_type == InvoiceTypeCode.POA
         assert extracts[0].tax_code == TaxCode.GB_VAT_20
@@ -192,7 +192,7 @@ class TestCreateClaimPaymentExtract:
         extracts = _payment_extracts(session, claim_id)
 
         assert len(extracts) == 1
-        assert extracts[0].invoice_number == f"{claim_id}_001"
+        assert extracts[0].invoice_number == f"{claim_reference}_001"
         assert extracts[0].invoice_amount == Decimal("500.00")
         assert extracts[0].invoice_type == InvoiceTypeCode.POA
         assert extracts[0].tax_code == TaxCode.ZERO_VAT
