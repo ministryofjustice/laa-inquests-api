@@ -110,6 +110,7 @@ def test_gov_notify_adapter_sends_claim_submit_confirmation_email_successfully()
         claim_id=1,
         application_id=12345,
         claim_type_id="PAYMENT_ON_ACCOUNT",
+        claim_reference="INQC-ABCD-1234",
         submission_date=datetime(2026, 6, 18, 14, 3, tzinfo=ZoneInfo("UTC")),
         total_profit_cost_net=1000,
         total_profit_cost_gross=1200,
@@ -135,6 +136,7 @@ def test_gov_notify_adapter_sends_claim_submit_confirmation_email_successfully()
             claim,
             application,
             "provider@example.com",
+            "Test Firm Name",
         )
 
         mock_api_client.assert_called_once_with(Config.GOV_NOTIFY_API_KEY)
@@ -142,11 +144,18 @@ def test_gov_notify_adapter_sends_claim_submit_confirmation_email_successfully()
         assert call_kwargs["email_address"] == "provider@example.com"
         assert call_kwargs["template_id"] == "test-claim-submit-template-id"
         assert isinstance(call_kwargs["personalisation"], dict)
-        assert (
-            call_kwargs["personalisation"]["laa_reference"] == application.laa_reference
+        assert call_kwargs["personalisation"]["provider_name"] == "Test Firm Name"
+        assert call_kwargs["personalisation"]["ref_number"] == str(
+            application.laa_reference
         )
-        assert call_kwargs["personalisation"]["client_name"] == "Jane Doe"
-        assert call_kwargs["personalisation"]["submission_date"] == "18 June 2026"
+        assert call_kwargs["personalisation"]["client_first_name"] == "Jane"
+        assert call_kwargs["personalisation"]["client_last_name"] == "Doe"
+        assert (
+            call_kwargs["personalisation"]["date_of_claim"] == "18 June 2026 14:03 UTC"
+        )
+        assert call_kwargs["personalisation"]["claim_type"] == "Payment on account"
+        assert call_kwargs["personalisation"]["claim_reference"] == "INQC-ABCD-1234"
+        assert call_kwargs["personalisation"]["claimed_amount"] == "1,200.00"
 
 
 def test_gov_notify_adapter_sends_claim_rejected_decision_email_successfully():

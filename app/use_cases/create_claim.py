@@ -51,6 +51,7 @@ from app.ports.claim.update_claim_status_port import (
 )
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
+from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.exceptions import ApplicationNotFoundError, InvalidClaimError
 
 logger = logging.getLogger(__name__)
@@ -136,6 +137,7 @@ class CreateClaimUseCase:
         update_claim_status_port: UpdateClaimStatusPort | None = None,
         get_claim_decision_port: GetClaimDecisionPort | None = None,
         create_payment_extract_port: CreatePaymentExtractPort | None = None,
+        provider_details_port: ProviderDetailsPort | None = None,
     ) -> None:
         self.create_claim_port = create_claim_port
         self.application_lookup_port = application_lookup_port
@@ -148,6 +150,7 @@ class CreateClaimUseCase:
         self.update_claim_status_port = update_claim_status_port
         self.get_claim_decision_port = get_claim_decision_port
         self.create_payment_extract_port = create_payment_extract_port
+        self.provider_details_port = provider_details_port
 
     def execute(self, command: CreateClaimCommand) -> CreateClaimResult:
         if command.claim_type == ClaimType.NIL_BILL:
@@ -275,7 +278,11 @@ class CreateClaimUseCase:
             )
             raise
 
-        if application is not None and self.gov_notify_port is not None:
+        if (
+            application is not None
+            and self.gov_notify_port is not None
+            and self.provider_details_port is not None
+        ):
             try:
                 self.create_history_event_port.create_history_event(
                     event_reference=HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION,
@@ -291,6 +298,9 @@ class CreateClaimUseCase:
                     claim=claim,
                     application=application,
                     recipient_email=application.provider.email_address,
+                    firm_name=self.provider_details_port.get_firm_name(
+                        application.provider.firm_code
+                    ),
                 )
                 self.create_history_event_port.commit()
             except Exception:

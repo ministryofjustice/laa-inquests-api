@@ -306,6 +306,7 @@ def get_create_claim_use_case(
     create_payment_extract_port: CreatePaymentExtractPort = Depends(
         get_claim_db_adapter
     ),
+    provider_details_port: ProviderDetailsPort = Depends(get_provider_details_port),
 ) -> CreateClaimUseCase:
     return CreateClaimUseCase(
         create_claim_port=create_claim_port,
@@ -319,6 +320,7 @@ def get_create_claim_use_case(
         update_claim_status_port=update_claim_status_port,
         get_claim_decision_port=get_claim_decision_port,
         create_payment_extract_port=create_payment_extract_port,
+        provider_details_port=provider_details_port,
     )
 
 

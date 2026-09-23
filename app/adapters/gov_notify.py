@@ -146,10 +146,12 @@ class GovNotifyAdapter(GovNotifyPort):
         claim: Claim,
         application: Application,
         recipient_email: str,
+        firm_name: str,
     ) -> None:
         personalisation = create_claim_submission_email_personalisation(
             claim,
             application,
+            firm_name,
         )
         self._send_email_notification(
             email_address=recipient_email,
