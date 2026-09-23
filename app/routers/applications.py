@@ -61,6 +61,9 @@ from app.ports.claim.create_payment_extract_port import CreatePaymentExtractPort
 from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.ports.claim.get_claim_decision_port import GetClaimDecisionPort
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
+from app.ports.claim.get_payment_extracts_for_claim_port import (
+    GetPaymentExtractsForClaimPort,
+)
 from app.ports.claim.update_claim_status_port import (
     UpdateClaimStatusPort,
 )
@@ -365,6 +368,15 @@ def get_pay_in_full_claim_use_case(
     ),
     provider_details_port: ProviderDetailsPort = Depends(get_provider_details_port),
     gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
+    get_claims_for_application_port: GetClaimsForApplicationPort = Depends(
+        get_claim_db_adapter
+    ),
+    get_payment_extracts_for_claim_port: GetPaymentExtractsForClaimPort = Depends(
+        get_claim_db_adapter
+    ),
+    create_payment_extract_port: CreatePaymentExtractPort = Depends(
+        get_claim_db_adapter
+    ),
 ) -> PayInFullClaimUseCase:
     return PayInFullClaimUseCase(
         application_lookup_port=application_lookup_port,
@@ -375,6 +387,9 @@ def get_pay_in_full_claim_use_case(
         create_history_event_port=create_history_event_port,
         provider_details_port=provider_details_port,
         gov_notify_port=gov_notify_port,
+        get_claims_for_application_port=get_claims_for_application_port,
+        get_payment_extracts_for_claim_port=get_payment_extracts_for_claim_port,
+        create_payment_extract_port=create_payment_extract_port,
     )
 
 

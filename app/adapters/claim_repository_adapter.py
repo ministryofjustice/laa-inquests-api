@@ -45,6 +45,9 @@ from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.ports.claim.get_claim_decision_port import GetClaimDecisionPort
 from app.ports.claim.get_claim_evidence_port import GetClaimEvidencePort
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
+from app.ports.claim.get_payment_extracts_for_claim_port import (
+    GetPaymentExtractsForClaimPort,
+)
 from app.ports.claim.list_auto_approved_poa_claims_port import (
     ListAutoApprovedPoaClaimsPort,
 )
@@ -67,6 +70,7 @@ class ClaimRepositoryAdapter(
     CreateClaimDecisionAmountPort,
     CreateDecisionReasonPort,
     CreatePaymentExtractPort,
+    GetPaymentExtractsForClaimPort,
     UpdateClaimStatusPort,
     UploadClaimEvidencePort,
     GetClaimEvidencePort,
@@ -247,6 +251,16 @@ class ClaimRepositoryAdapter(
             random.choice(self.reference_rules.allowed_characters)  # nosec B311
             for _ in range(4)
         )
+
+    def get_payment_extracts_by_claim_id(
+        self, claim_id: int
+    ) -> list[ClaimPaymentExtract]:
+        statement = (
+            select(ClaimPaymentExtract)
+            .where(ClaimPaymentExtract.claim_id == claim_id)
+            .order_by(ClaimPaymentExtract.sequence_number.asc())
+        )
+        return list(self.session.exec(statement).all())
 
     def list_auto_approved_poa_claims(
         self, start: datetime, end: datetime
