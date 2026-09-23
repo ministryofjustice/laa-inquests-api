@@ -2237,6 +2237,50 @@ class TestCreateClaimActiveFinalBillRestriction:
 
         assert response.status_code == 201
 
+    @pytest.mark.parametrize(
+        "blocking_claim_type", [ClaimType.FINAL_BILL, ClaimType.NIL_BILL]
+    )
+    def test_201_create_claim_after_active_final_bill_is_rejected(
+        self, session, client, blocking_claim_type
+    ):
+        application = session.exec(select(Application)).first()
+        laa_reference = application.laa_reference
+        blocking_claim = _seed_claim_with_type_and_status(
+            session, laa_reference, blocking_claim_type, ClaimStatus.SUBMITTED
+        )
+
+        blocked_response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
+            },
+        )
+        assert blocked_response.status_code == 422
+
+        reject_response = client.patch(
+            f"/applications/{laa_reference}/claims/"
+            f"{blocking_claim.claim_reference}/reject",
+            json={"justification": "Claim rejected following manual assessment."},
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
+            },
+        )
+        assert reject_response.status_code == 204
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
+            },
+        )
+
+        assert response.status_code == 201
+
 
 class TestCreateClaimRbac:
     def test_201_create_claim_with_provider_claims_user_app_role(self, session, client):
