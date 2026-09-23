@@ -67,7 +67,7 @@ def _pick_nearest(
     nearest_references = {ref for dist, ref in diffs if dist == min_distance}
     if len(nearest_references) == 1:
         return nearest_references.pop()
-    raise ValueError("Ambiguous nearest claim reference")
+    return None
 
 
 def _build_submitted_index(
