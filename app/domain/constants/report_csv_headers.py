@@ -13,6 +13,7 @@ CLAIMS_BACKLOG_REPORT_HEADERS = [
     "Firm Name",
     "Firm Account Number",
     "Submission date",
+    "Claim reference",
     "Claim status",
     "Total 0% VAT claim value",
     "Net total claim value",
