@@ -77,6 +77,7 @@ class GovNotifyPort(ABC):
         claim: Claim,
         application: Application,
         recipient_email: str,
+        firm_name: str,
     ) -> None:
         """Send claim submission notification to recipient.
 
@@ -84,6 +85,7 @@ class GovNotifyPort(ABC):
             claim: The claim being submitted
             application: The associated application for the claim
             recipient_email: Email address of the recipient
+            firm_name: Name of the provider firm
 
         Raises:
             Exception: If the notification fails to send

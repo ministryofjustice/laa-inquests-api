@@ -37,6 +37,7 @@ from app.ports.claim.update_claim_status_port import (
     UpdateClaimStatusPort,
 )
 from app.ports.create_history_event_port import CreateHistoryEventPort
+from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.create_claim import (
     CreateClaimCommand,
     CreateClaimUseCase,
@@ -45,6 +46,14 @@ from app.use_cases.create_claim import (
 from app.use_cases.exceptions import ApplicationNotFoundError, InvalidClaimError
 
 _UNSET = object()
+
+FIRM_NAME = "Test Firm Name"
+
+
+def _make_provider_details_port(firm_name: str = FIRM_NAME):
+    port = MagicMock(spec=ProviderDetailsPort)
+    port.get_firm_name.return_value = firm_name
+    return port
 
 
 def _make_command(overrides=None) -> CreateClaimCommand:
@@ -144,6 +153,7 @@ def _make_use_case(**kwargs):
     kwargs.setdefault(
         "create_history_event_port", MagicMock(spec=CreateHistoryEventPort)
     )
+    kwargs.setdefault("provider_details_port", _make_provider_details_port())
     return CreateClaimUseCase(**kwargs)
 
 
@@ -427,6 +437,7 @@ def test_execute_sends_claim_submission_email_when_application_exists():
         claim=claim,
         application=application,
         recipient_email="provider@example.com",
+        firm_name=FIRM_NAME,
     )
 
 
@@ -439,7 +450,7 @@ def test_execute_creates_submission_confirmation_history_event_when_notify_succe
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
     gov_notify_port = MagicMock()
 
-    use_case = CreateClaimUseCase(
+    use_case = _make_use_case(
         create_claim_port=create_claim_port,
         application_lookup_port=_make_application_lookup_port(application),
         get_claims_for_application_port=_make_get_claims_port(),
@@ -475,7 +486,7 @@ def test_execute_does_not_create_submission_confirmation_history_event_when_noti
         "notify failed"
     )
 
-    use_case = CreateClaimUseCase(
+    use_case = _make_use_case(
         create_claim_port=create_claim_port,
         application_lookup_port=_make_application_lookup_port(application),
         get_claims_for_application_port=_make_get_claims_port(),
@@ -498,7 +509,7 @@ def test_execute_creates_claim_approved_history_event_when_notify_succeeds():
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
     gov_notify_port = MagicMock()
 
-    use_case = CreateClaimUseCase(
+    use_case = _make_use_case(
         create_claim_port=create_claim_port,
         application_lookup_port=_make_application_lookup_port(application),
         get_claims_for_application_port=_make_get_claims_port(),
@@ -534,7 +545,7 @@ def test_execute_does_not_create_claim_approved_history_event_when_notify_fails(
         "notify failed"
     )
 
-    use_case = CreateClaimUseCase(
+    use_case = _make_use_case(
         create_claim_port=create_claim_port,
         application_lookup_port=_make_application_lookup_port(application),
         get_claims_for_application_port=_make_get_claims_port(),
@@ -561,7 +572,7 @@ def test_execute_does_not_notify_when_create_history_event_fails():
     ]
     gov_notify_port = MagicMock()
 
-    use_case = CreateClaimUseCase(
+    use_case = _make_use_case(
         create_claim_port=create_claim_port,
         application_lookup_port=_make_application_lookup_port(application),
         get_claims_for_application_port=_make_get_claims_port(),

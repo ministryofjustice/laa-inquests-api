@@ -30,6 +30,7 @@ def create_claim_rejection_email_personalisation(
         client_last_name=application.client.client_last_name,
         claim_submitted_at=format_date(claim.submission_date),
         claim_type=format_claim_type(claim.claim_type_id),
+        claim_ref=str(claim.claim_reference),
         total_claim_amount=format_amount(
             total_claim_amount(
                 claim.total_profit_cost_vat_zero, claim.total_profit_cost_gross

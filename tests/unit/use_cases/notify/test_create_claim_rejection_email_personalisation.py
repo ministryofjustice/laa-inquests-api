@@ -20,6 +20,7 @@ MODULE = "app.use_cases.notify.create_claim_rejection_email_personalisation"
 def _claim(**overrides) -> Claim:
     claim = MagicMock(spec=Claim)
     claim.claim_id = 7
+    claim.claim_reference = "INQC-ABCD-1234"
     claim.claim_type_id = ClaimType.PAYMENT_ON_ACCOUNT
     claim.submission_date = datetime(2026, 6, 18, 14, 3, tzinfo=UTC)
     claim.total_profit_cost_net = Decimal("1000.00")
@@ -52,6 +53,7 @@ def test_create_claim_rejection_email_personalisation_returns_expected_data(
     assert result.client_last_name == "Doe"
     assert result.claim_submitted_at == "18 June 2026 14:03 UTC"
     assert result.claim_type == "Payment on account"
+    assert result.claim_ref == "INQC-ABCD-1234"
     assert result.total_claim_amount == "1,200.00"
     assert result.date_of_rejection == "18 August 2026 09:30 UTC"
     assert result.justification == "Rejected following manual review."
