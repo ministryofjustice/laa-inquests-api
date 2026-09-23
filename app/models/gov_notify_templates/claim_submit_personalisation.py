@@ -8,6 +8,11 @@ class NotifyClaimSubmitTemplatePersonalisation(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    laa_reference: str = Field(description="LAA application reference")
-    client_name: str = Field(description="Client full name")
-    submission_date: str = Field(description="Claim submission date")
+    provider_name: str = Field(description="Firm name")
+    ref_number: str = Field(description="Legal aid certificate reference")
+    client_first_name: str = Field(description="Client first name")
+    client_last_name: str = Field(description="Client last name")
+    date_of_claim: str = Field(description="Date and time the claim was submitted")
+    claim_type: str = Field(description="Human-readable claim type")
+    claim_reference: str = Field(description="Claim reference")
+    claimed_amount: str = Field(description="Total amount claimed")
