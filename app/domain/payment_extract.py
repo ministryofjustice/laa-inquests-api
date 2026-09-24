@@ -129,8 +129,7 @@ def build_final_bill_nil_fees_extract(
         invoice_amount=Decimal("0.00"),
         invoice_date=invoice_date,
         invoice_type=InvoiceTypeCode.FINAL_BILL_FEES,
-        # TODO(IDDS-833): tax code for nil bills pending business confirmation.
-        tax_code=TaxCode.GB_VAT_20,
+        tax_code=TaxCode.ZERO_VAT,
     )
 
 

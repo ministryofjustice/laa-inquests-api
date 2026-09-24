@@ -578,7 +578,7 @@ def test_creates_single_zero_fees_line_for_nil_final_bill():
             "INQC-0000-0005_001",
             Decimal("0.00"),
             InvoiceTypeCode.FINAL_BILL_FEES,
-            TaxCode.GB_VAT_20,
+            TaxCode.ZERO_VAT,
             date(2026, 3, 10),
         ),
     ]

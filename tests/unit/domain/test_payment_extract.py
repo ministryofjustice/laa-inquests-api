@@ -324,7 +324,7 @@ class TestBuildFinalBillNilFeesExtract:
         assert line.invoice_amount == Decimal("0.00")
         assert line.invoice_date == _submission().date()
         assert line.invoice_type == InvoiceTypeCode.FINAL_BILL_FEES
-        assert line.tax_code == TaxCode.GB_VAT_20
+        assert line.tax_code == TaxCode.ZERO_VAT
 
 
 class TestBuildFinalBillDisbursementExtract:

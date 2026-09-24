@@ -827,7 +827,7 @@ def test_204_pay_in_full_final_bill_nil_bill_creates_single_zero_fees_line(
     assert fees.invoice_number == f"{claim.claim_reference}_001"
     assert fees.invoice_amount == Decimal("0.00")
     assert fees.invoice_type == InvoiceTypeCode.FINAL_BILL_FEES
-    assert fees.tax_code == TaxCode.GB_VAT_20
+    assert fees.tax_code == TaxCode.ZERO_VAT
     assert fees.invoice_date == claim.submission_date.date()
 
 
@@ -863,6 +863,7 @@ def test_204_pay_in_full_final_bill_nil_bill_via_vat_zero_fields_creates_single_
     assert fees.invoice_number == f"{claim.claim_reference}_001"
     assert fees.invoice_amount == Decimal("0.00")
     assert fees.invoice_type == InvoiceTypeCode.FINAL_BILL_FEES
+    assert fees.tax_code == TaxCode.ZERO_VAT
 
 
 def test_204_pay_in_full_final_bill_nil_bill_creates_zero_fees_line_then_recoupments(
@@ -895,6 +896,7 @@ def test_204_pay_in_full_final_bill_nil_bill_creates_zero_fees_line_then_recoupm
     assert fees.invoice_number == f"{claim.claim_reference}_001"
     assert fees.invoice_amount == Decimal("0.00")
     assert fees.invoice_type == InvoiceTypeCode.FINAL_BILL_FEES
+    assert fees.tax_code == TaxCode.ZERO_VAT
 
     assert recoup_standard.sequence_number == 2
     assert recoup_standard.invoice_number == f"{poa_claim.claim_reference}_001-R"
