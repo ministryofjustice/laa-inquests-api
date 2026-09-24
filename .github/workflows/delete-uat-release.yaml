@@ -5,6 +5,9 @@ on:
     types:
       - closed
 
+# This is a standard set of permissions we found to be sufficient for most workflows in general
+# We set these to narrow permissions as advised by https://codeql.github.com/codeql-query-help/actions/actions-missing-workflow-permissions/
+# If you want to be more restrictive, you can try changing these permissions here, or assigning permissions per job in a workflow file
 permissions:
   contents: read
   actions: read
