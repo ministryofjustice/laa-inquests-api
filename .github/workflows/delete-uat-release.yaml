@@ -10,7 +10,6 @@ on:
 # If you want to be more restrictive, you can try changing these permissions here, or assigning permissions per job in a workflow file
 permissions:
   contents: read
-  actions: read
 
 jobs:
   delete_uat_job:
