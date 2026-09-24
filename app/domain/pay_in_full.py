@@ -30,6 +30,18 @@ class PayInFullClaim:
         self._validate_profit_cost()
         self._validate_disbursement()
 
+    @property
+    def is_nil_bill(self) -> bool:
+        amounts = (
+            self.profit_cost_net,
+            self.profit_cost_gross,
+            self.profit_cost_vat_zero,
+            self.disbursement_net,
+            self.disbursement_gross,
+            self.disbursement_vat_zero,
+        )
+        return all(amount is None or amount == 0 for amount in amounts)
+
     def _validate_profit_cost(self) -> None:
         has_net = self.profit_cost_net is not None
         has_gross = self.profit_cost_gross is not None

@@ -225,3 +225,67 @@ def test_profit_cost_error_takes_priority_over_disbursement_error():
         PayInFullClaim().validate()
 
     assert exc.value.code == ClaimErrorCode.MISSING_TOTAL_CLAIM_COST
+
+ZERO = Decimal("0.00")
+
+
+@pytest.mark.parametrize(
+    "amounts",
+    [
+        pytest.param(
+            {
+                "profit_cost_net": ZERO,
+                "profit_cost_gross": ZERO,
+                "disbursement_net": ZERO,
+                "disbursement_gross": ZERO,
+            },
+            id="standard_rated_fields_zero",
+        ),
+        pytest.param(
+            {"profit_cost_vat_zero": ZERO, "disbursement_vat_zero": ZERO},
+            id="vat_zero_fields_zero",
+        ),
+        pytest.param(
+            {
+                "profit_cost_net": ZERO,
+                "profit_cost_gross": ZERO,
+                "disbursement_net": ZERO,
+                "disbursement_gross": ZERO,
+                "disbursement_vat_zero": ZERO,
+            },
+            id="all_disbursement_fields_zero",
+        ),
+    ],
+)
+def test_is_nil_bill_when_all_approved_amounts_are_zero(amounts):
+    assert PayInFullClaim(**amounts).is_nil_bill is True
+
+
+@pytest.mark.parametrize(
+    "amounts",
+    [
+        pytest.param(
+            {**VALID_PROFIT_COST, "disbursement_vat_zero": ZERO},
+            id="profit_cost_gross_set",
+        ),
+        pytest.param(
+            {
+                "profit_cost_net": ZERO,
+                "profit_cost_gross": ZERO,
+                "disbursement_net": ZERO,
+                "disbursement_gross": ZERO,
+                "disbursement_vat_zero": Decimal("50.00"),
+            },
+            id="disbursement_vat_zero_set",
+        ),
+        pytest.param(
+            {
+                "profit_cost_vat_zero": Decimal("-5.00"),
+                "disbursement_vat_zero": ZERO,
+            },
+            id="negative_amount",
+        ),
+    ],
+)
+def test_is_not_nil_bill_when_any_approved_amount_is_non_zero(amounts):
+    assert PayInFullClaim(**amounts).is_nil_bill is False

@@ -134,7 +134,7 @@ class PayInFullClaimUseCase:
             self._create_payment_extract(
                 claim=claim,
                 application_id=application.application_id,
-                command=command,
+                decision_amounts=decision_amounts,
                 decision_date=claim_decision.created_at.date(),
             )
 
@@ -190,7 +190,7 @@ class PayInFullClaimUseCase:
         self,
         claim: Claim,
         application_id: int,
-        command: PayInFullClaimCommand,
+        decision_amounts: PayInFullClaim,
         decision_date: date,
     ) -> None:
         if self.create_payment_extract_port is None:
@@ -200,28 +200,7 @@ class PayInFullClaimUseCase:
         sequence = 1
         invoice_date = claim.submission_date.date()
 
-        fees_line = build_final_bill_fees_extract(
-            claim_reference=claim.claim_reference,
-            sequence=sequence,
-            invoice_date=invoice_date,
-            gross=command.profit_cost_gross,
-            vat_zero_amount=command.profit_cost_vat_zero,
-        )
-        if fees_line is not None:
-            lines.append(fees_line)
-            sequence += 1
-
-        disbursement_lines = build_final_bill_disbursement_extract(
-            claim_reference=claim.claim_reference,
-            start_sequence=sequence,
-            invoice_date=invoice_date,
-            gross=command.disbursement_gross,
-            vat_zero_amount=command.disbursement_vat_zero,
-        )
-        lines.extend(disbursement_lines)
-        sequence += len(disbursement_lines)
-
-        if not lines:
+        if decision_amounts.is_nil_bill:
             lines.append(
                 build_final_bill_nil_fees_extract(
                     claim_reference=claim.claim_reference,
@@ -230,6 +209,27 @@ class PayInFullClaimUseCase:
                 )
             )
             sequence += 1
+        else:
+            fees_line = build_final_bill_fees_extract(
+                claim_reference=claim.claim_reference,
+                sequence=sequence,
+                invoice_date=invoice_date,
+                gross=decision_amounts.profit_cost_gross,
+                vat_zero_amount=decision_amounts.profit_cost_vat_zero,
+            )
+            if fees_line is not None:
+                lines.append(fees_line)
+                sequence += 1
+
+            disbursement_lines = build_final_bill_disbursement_extract(
+                claim_reference=claim.claim_reference,
+                start_sequence=sequence,
+                invoice_date=invoice_date,
+                gross=decision_amounts.disbursement_gross,
+                vat_zero_amount=decision_amounts.disbursement_vat_zero,
+            )
+            lines.extend(disbursement_lines)
+            sequence += len(disbursement_lines)
 
         for poa_claim in self._recoupable_poa_claims(application_id, claim.claim_id):
             sources = [
