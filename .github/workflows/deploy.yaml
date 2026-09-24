@@ -23,16 +23,17 @@ on:
         options:
           - dev
 
-permissions:
-  contents: read
-
 jobs:
   code-linting:
     name: Code Linting
+    permissions:
+      contents: read
     uses: ./.github/workflows/code-linting.yaml
 
   snyk:
     name: Snyk scan docker image
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
 
     steps:
@@ -80,25 +81,27 @@ jobs:
 
   unit-tests:
     name: Pytest Unit Tests
+    permissions:
+      contents: read
     uses: ./.github/workflows/unit-tests.yaml
 
   build-ghcr:
     name: Build and Push to GHCR
+    permissions:
+      contents: read
+      packages: write
     if: github.ref == 'refs/heads/main'
     needs:
       - unit-tests
     uses: ./.github/workflows/build-ghcr.yaml
-    permissions:
-      contents: read
-      packages: write
 
   deploy-dev:
-    if: ${{ !contains(github.actor, '[bot]') }}
-    runs-on: ubuntu-latest
-    environment: dev
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read # This is required for actions/checkout
+    if: ${{ !contains(github.actor, '[bot]') }}
+    runs-on: ubuntu-latest
+    environment: dev
     needs:
       - unit-tests
       - snyk
@@ -136,6 +139,8 @@ jobs:
           session_name: ${{ vars.SESSION_NAME}}
           session_secret: ${{ secrets.SESSION_SECRET }}
   notify-slack:
+    permissions:
+      contents: read
     environment: dev
     needs: deploy-dev
     runs-on: ubuntu-latest

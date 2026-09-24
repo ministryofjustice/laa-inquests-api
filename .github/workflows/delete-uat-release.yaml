@@ -5,11 +5,10 @@ on:
     types:
       - closed
 
-permissions:
-  contents: read
-
 jobs:
   delete_uat_job:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     environment: dev
     outputs:
