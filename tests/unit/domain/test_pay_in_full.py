@@ -226,6 +226,7 @@ def test_profit_cost_error_takes_priority_over_disbursement_error():
 
     assert exc.value.code == ClaimErrorCode.MISSING_TOTAL_CLAIM_COST
 
+
 ZERO = Decimal("0.00")
 
 
