@@ -23,6 +23,11 @@ on:
         options:
           - dev
 
+permissions:
+  contents: read
+  actions: read
+  packages: read
+
 jobs:
   code-linting:
     name: Code Linting

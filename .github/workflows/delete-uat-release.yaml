@@ -5,6 +5,11 @@ on:
     types:
       - closed
 
+permissions:
+  contents: read
+  actions: read
+  packages: read
+
 jobs:
   delete_uat_job:
     runs-on: ubuntu-latest

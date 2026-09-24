@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "*.*.*"
+
+permissions:
+  contents: read
+  actions: read
+  packages: read
+
 jobs:
   deploy-staging:
     environment: staging
