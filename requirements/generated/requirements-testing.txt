@@ -51,7 +51,7 @@ pydantic-core==2.33.2
 pydantic-extra-types==2.11.1
 pydantic-settings==2.14.2
 pydyf==0.12.1
-pygments==2.20.0
+pygments==2.21.0
 pyjwt==2.13.0
 pypdf==6.16.1
 pyphen==0.17.2
