@@ -8,7 +8,6 @@ from app.ports.entra_auth_port import AuthenticatedUser
 from app.routers.dependencies import verify_entra_token
 
 
-# Test comment
 class Permission(str, Enum):
     APPLICATION_CREATE = "application:create"
     APPLICATION_READ = "application:read"
