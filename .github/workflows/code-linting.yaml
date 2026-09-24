@@ -8,17 +8,11 @@ on:
       - reopened
       - synchronize
 
-# This is a standard set of permissions we found to be sufficient for most workflows in general
-# We set these to narrow permissions as advised by https://codeql.github.com/codeql-query-help/actions/actions-missing-workflow-permissions/
-# If you want to be more restrictive, you can try changing these permissions here, or assigning permissions per job in a workflow file
-permissions:
-  contents: read
-  actions: read
-  packages: read
-
 jobs:
   pip-compile:
     name: Run the pip-compile pre-commit hooks
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
     - name: Checkout the repository
@@ -38,6 +32,8 @@ jobs:
 
   lint:
     name: Ruff
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

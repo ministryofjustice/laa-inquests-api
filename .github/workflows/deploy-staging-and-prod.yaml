@@ -5,21 +5,13 @@ on:
     tags:
       - "*.*.*"
 
-# This is a standard set of permissions we found to be sufficient for most workflows in general
-# We set these to narrow permissions as advised by https://codeql.github.com/codeql-query-help/actions/actions-missing-workflow-permissions/
-# If you want to be more restrictive, you can try changing these permissions here, or assigning permissions per job in a workflow file
-permissions:
-  contents: read
-  actions: read
-  packages: read
-
 jobs:
   deploy-staging:
-    environment: staging
-    runs-on: ubuntu-latest
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read # This is required for actions/checkout
+    environment: staging
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -50,6 +42,8 @@ jobs:
           provider-api-base-url: ${{ vars.PROVIDER_API_BASE_URL }}
           provider-api-key: ${{ secrets.PROVIDER_API_KEY }}
   notify-slack-staging:
+    permissions:
+      contents: read
     environment: staging
     needs: deploy-staging
     runs-on: ubuntu-latest
@@ -101,6 +95,8 @@ jobs:
           provider-api-base-url: ${{ vars.PROVIDER_API_BASE_URL }}
           provider-api-key: ${{ secrets.PROVIDER_API_KEY }}
   notify-slack-prod:
+    permissions:
+      contents: read
     environment: production
     needs: deploy-production
     runs-on: ubuntu-latest
