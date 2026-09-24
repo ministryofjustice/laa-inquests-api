@@ -14,7 +14,7 @@ from app.models.application.index import (
     ProceedingId,
     Provider,
 )
-from app.models.claim.enums import ClaimStatus, ClaimType
+from app.models.claim.enums import ClaimStatus, ClaimType, POAType
 from app.models.claim.index import Claim
 
 
@@ -121,6 +121,7 @@ def create_claim_in_db(
     total_profit_cost_gross: str = "120.00",
     claim_type: ClaimType = ClaimType.FINAL_BILL,
     claim_reference: str | None = None,
+    poa_type: POAType | None = None,
 ) -> Claim:
     """Persist a claim with optional field overrides."""
     claim = Claim(
@@ -135,6 +136,7 @@ def create_claim_in_db(
         total_profit_cost_vat_zero=total_profit_cost_vat_zero,
         total_profit_cost_net=total_profit_cost_net,
         total_profit_cost_gross=total_profit_cost_gross,
+        poa_type_id=poa_type,
     )
     session.add(claim)
     session.commit()

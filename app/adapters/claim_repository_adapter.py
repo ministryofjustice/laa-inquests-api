@@ -1,9 +1,13 @@
 import logging
 import random
 import uuid
+from collections.abc import Iterator
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 
+from sqlalchemy import and_
+from sqlalchemy.orm import aliased
 from sqlmodel import Session, exists, select
 
 from app.config import Config
@@ -11,14 +15,19 @@ from app.domain.claim import Claim as DomainClaim
 from app.domain.claim_evidence import ClaimEvidence as DomainClaimEvidence
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
 from app.domain.payment_extract import PaymentExtractLine
+from app.domain.payment_extract_report import (
+    PaymentExtractReportSourceLine,
+    PaymentLineType,
+)
 from app.domain.reference_rules import ReferenceRules
 from app.logging_utils import build_log_extra
-from app.models.application.index import Application
+from app.models.application.index import Application, Provider
 from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
     ClaimType,
     InquestOutcomeCode,
+    InvoiceTypeCode,
     ReasonCode,
 )
 from app.models.claim.index import (
@@ -51,6 +60,7 @@ from app.ports.claim.get_payment_extracts_for_claim_port import (
 from app.ports.claim.list_auto_approved_poa_claims_port import (
     ListAutoApprovedPoaClaimsPort,
 )
+from app.ports.claim.payment_extract_report_port import PaymentExtractReportPort
 from app.ports.claim.update_claim_status_port import (
     UpdateClaimStatusPort,
 )
@@ -58,6 +68,11 @@ from app.ports.claim.upload_claim_evidence_port import UploadClaimEvidencePort
 from app.ports.claim_backlog_port import ClaimBacklogPort
 
 logger = logging.getLogger(__name__)
+
+PAYMENT_EXTRACT_REPORT_BATCH_SIZE = 1000
+
+_OriginalExtract = aliased(ClaimPaymentExtract, name="original_extract")
+_OriginalClaim = aliased(Claim, name="original_claim")
 
 
 class ClaimRepositoryAdapter(
@@ -76,6 +91,7 @@ class ClaimRepositoryAdapter(
     GetClaimEvidencePort,
     DeleteClaimEvidencePort,
     ListAutoApprovedPoaClaimsPort,
+    PaymentExtractReportPort,
 ):
     GENERATE_CLAIM_REFERENCE_ATTEMPTS = 10
 
@@ -261,6 +277,112 @@ class ClaimRepositoryAdapter(
             .order_by(ClaimPaymentExtract.sequence_number.asc())
         )
         return list(self.session.exec(statement).all())
+
+    def get_payment_extract_firm_codes(
+        self, created_from: datetime, created_before: datetime
+    ) -> list[str]:
+        statement = self._payment_extract_report_statement(
+            Provider.firm_code,
+            created_from=created_from,
+            created_before=created_before,
+        ).distinct()
+        return list(self.session.exec(statement).all())
+
+    def get_payment_extract_line_types(
+        self, created_from: datetime, created_before: datetime
+    ) -> list[PaymentLineType]:
+        statement = self._payment_extract_report_statement(
+            ClaimPaymentExtract.invoice_type,
+            Claim.poa_type_id,
+            _OriginalClaim.poa_type_id.label("original_poa_type"),
+            created_from=created_from,
+            created_before=created_before,
+        ).distinct()
+        return [
+            PaymentLineType(
+                invoice_type=invoice_type,
+                poa_type=poa_type,
+                original_poa_type=original_poa_type,
+            )
+            for invoice_type, poa_type, original_poa_type in self.session.exec(
+                statement
+            )
+        ]
+
+    def iter_payment_extract_report_lines(
+        self, created_from: datetime, created_before: datetime
+    ) -> Iterator[PaymentExtractReportSourceLine]:
+        statement = (
+            self._payment_extract_report_statement(
+                ClaimPaymentExtract.invoice_number,
+                ClaimPaymentExtract.invoice_amount,
+                ClaimPaymentExtract.invoice_date,
+                ClaimPaymentExtract.tax_code,
+                ClaimPaymentExtract.invoice_type,
+                Claim.poa_type_id,
+                _OriginalClaim.poa_type_id.label("original_poa_type"),
+                Provider.firm_code,
+                Application.laa_reference,
+                created_from=created_from,
+                created_before=created_before,
+            )
+            .order_by(
+                ClaimPaymentExtract.created_at,
+                ClaimPaymentExtract.claim_id,
+                ClaimPaymentExtract.sequence_number,
+            )
+            .execution_options(yield_per=PAYMENT_EXTRACT_REPORT_BATCH_SIZE)
+        )
+        for (
+            invoice_number,
+            invoice_amount,
+            invoice_date,
+            tax_code,
+            invoice_type,
+            poa_type,
+            original_poa_type,
+            firm_code,
+            laa_reference,
+        ) in self.session.exec(statement):
+            yield PaymentExtractReportSourceLine(
+                invoice_number=invoice_number,
+                invoice_amount=invoice_amount,
+                invoice_date=invoice_date,
+                tax_code=tax_code,
+                line_type=PaymentLineType(
+                    invoice_type=invoice_type,
+                    poa_type=poa_type,
+                    original_poa_type=original_poa_type,
+                ),
+                firm_code=firm_code,
+                laa_reference=laa_reference,
+            )
+
+    def _payment_extract_report_statement(
+        self, *columns: Any, created_from: datetime, created_before: datetime
+    ):
+        return (
+            select(*columns)
+            .select_from(ClaimPaymentExtract)
+            .join(Claim, ClaimPaymentExtract.claim_id == Claim.claim_id)
+            .join(Application, Claim.application_id == Application.application_id)
+            .join(Provider, Application.provider_id == Provider.provider_id)
+            .outerjoin(
+                _OriginalExtract,
+                and_(
+                    ClaimPaymentExtract.invoice_type == InvoiceTypeCode.RECOUPED,
+                    _OriginalExtract.invoice_number.concat("-R")
+                    == ClaimPaymentExtract.invoice_number,
+                ),
+            )
+            .outerjoin(
+                _OriginalClaim, _OriginalExtract.claim_id == _OriginalClaim.claim_id
+            )
+            .where(
+                ClaimPaymentExtract.created_at >= created_from,
+                ClaimPaymentExtract.created_at < created_before,
+            )
+        )
 
     def list_auto_approved_poa_claims(
         self, start: datetime, end: datetime
