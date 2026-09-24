@@ -33,7 +33,7 @@ migration = _load_migration()
 
 # Naive on purpose: history_event.timestamp and claim.submission_date are stored
 # as timezone-naive DateTime columns in Postgres.
-BASE_TIME = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)  # noqa: DTZ001
+BASE_TIME = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
 
 
 def _make_session() -> Session:
