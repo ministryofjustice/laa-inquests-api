@@ -1,7 +1,16 @@
 from collections.abc import Iterator
+from typing import Any, Protocol
 
 from fastapi.dependencies.models import Dependant
 from fastapi.routing import APIRoute
+
+try:
+    from fastapi.routing import iter_route_contexts
+except ImportError:
+
+    def iter_route_contexts(routes: list[Any]) -> Iterator[Any]:
+        return iter(routes)
+
 
 from app.auth.rbac import Permission, PermissionChecker
 from app.main import create_app
@@ -99,7 +108,13 @@ def _walk_dependencies(dependant: Dependant) -> Iterator[Dependant]:
         yield from _walk_dependencies(dependency)
 
 
-def _configured_permissions(route: APIRoute) -> list[Permission] | Permission | None:
+class RouteWithDependencies(Protocol):
+    dependant: Dependant
+
+
+def _configured_permissions(
+    route: RouteWithDependencies,
+) -> list[Permission] | Permission | None:
     permissions = [
         permission
         for dependency in _walk_dependencies(route.dependant)
@@ -117,8 +132,8 @@ def test_every_route_has_the_expected_permission():
 
     actual = {
         (method, route.path): _configured_permissions(route)
-        for route in app.routes
-        if isinstance(route, APIRoute)
+        for route in iter_route_contexts(app.routes)
+        if isinstance(getattr(route, "original_route", route), APIRoute)
         for method in route.methods
     }
 
