@@ -1,6 +1,11 @@
 name: Linting
 on: workflow_call
 
+permissions:
+  contents: read
+  actions: read
+  packages: read
+
 jobs:
   pip-compile:
     name: Run the pip-compile pre-commit hooks
