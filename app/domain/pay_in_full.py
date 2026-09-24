@@ -30,6 +30,18 @@ class PayInFullClaim:
         self._validate_profit_cost()
         self._validate_disbursement()
 
+    @property
+    def is_nil_bill(self) -> bool:
+        amounts = (
+            self.profit_cost_net,
+            self.profit_cost_gross,
+            self.profit_cost_vat_zero,
+            self.disbursement_net,
+            self.disbursement_gross,
+            self.disbursement_vat_zero,
+        )
+        return all(amount is None or amount == 0 for amount in amounts)
+
     def _validate_profit_cost(self) -> None:
         has_net = self.profit_cost_net is not None
         has_gross = self.profit_cost_gross is not None
@@ -94,7 +106,13 @@ class PayInFullClaim:
 
         if self.disbursement_net is not None and self.disbursement_gross is not None:
             vat_zero = self.disbursement_vat_zero or Decimal(0)
-            if self.disbursement_gross <= vat_zero + self.disbursement_net:
+            has_no_standard_rated_disbursement = (
+                self.disbursement_gross == 0 and self.disbursement_net == 0
+            )
+            if (
+                not has_no_standard_rated_disbursement
+                and self.disbursement_gross <= vat_zero + self.disbursement_net
+            ):
                 raise ClaimValidationError(
                     ClaimErrorCode.DISBURSEMENT_GROSS_NOT_GREATER_THAN_TOTAL,
                     DISB_GROSS_NOT_GREATER_THAN_TOTAL_MESSAGE,
