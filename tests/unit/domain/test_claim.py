@@ -692,8 +692,10 @@ def _make_existing_claim(
     status: ClaimStatus = ClaimStatus.SUBMITTED,
     poa_type: POAType | None = None,
     submission_date: datetime | None = None,
+    claim_type: ClaimType = ClaimType.PAYMENT_ON_ACCOUNT,
 ) -> ExistingClaimSummary:
     return ExistingClaimSummary(
+        claim_type=claim_type,
         status=status,
         poa_type=poa_type,
         submission_date=submission_date or datetime.now(UTC),
@@ -791,6 +793,7 @@ def test_exceeds_aggregate_cost_limit_when_new_claim_has_only_vat_zero_total_and
     )
     existing = [
         ExistingClaimSummary(
+            claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
             status=ClaimStatus.PAY_IN_FULL,
             poa_type=None,
             submission_date=datetime.now(UTC),
@@ -991,6 +994,7 @@ def _make_existing_profit_cost_poa(
     status: ClaimStatus = ClaimStatus.SUBMITTED,
 ) -> ExistingClaimSummary:
     return ExistingClaimSummary(
+        claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
         status=status,
         poa_type=POAType.PROFIT_COST,
         submission_date=submission_date,
@@ -1311,3 +1315,60 @@ def test_is_not_eligible_for_auto_approval_when_claim_is_not_payment_on_account(
     application.overall_decision = MeritsDecision.GRANTED
 
     assert claim.is_eligible_for_auto_approval(application) is False
+
+
+@pytest.mark.parametrize(
+    "new_claim",
+    [
+        pytest.param(_make_domain_claim(), id="new_claim_is_poa"),
+        pytest.param(_final_bill_claim(), id="new_claim_is_final_bill"),
+        pytest.param(_nil_bill_claim(), id="new_claim_is_nil_bill"),
+    ],
+)
+@pytest.mark.parametrize(
+    "blocking_claim_type", [ClaimType.FINAL_BILL, ClaimType.NIL_BILL]
+)
+@pytest.mark.parametrize(
+    "blocking_status", [ClaimStatus.SUBMITTED, ClaimStatus.PAY_IN_FULL]
+)
+def test_validate_no_active_final_bill_raises_when_active_final_bill_exists(
+    new_claim, blocking_claim_type, blocking_status
+):
+    existing = [
+        _make_existing_claim(claim_type=blocking_claim_type, status=blocking_status)
+    ]
+
+    with pytest.raises(ClaimValidationError) as exc_info:
+        new_claim.validate_no_active_final_bill(existing)
+
+    assert exc_info.value.code == ClaimErrorCode.ACTIVE_FINAL_BILL_EXISTS
+
+
+@pytest.mark.parametrize(
+    "blocking_claim_type", [ClaimType.FINAL_BILL, ClaimType.NIL_BILL]
+)
+@pytest.mark.parametrize(
+    "non_blocking_status",
+    [ClaimStatus.REJECTED, ClaimStatus.REJECTED_WITH_AMENDMENT],
+)
+def test_validate_no_active_final_bill_does_not_raise_when_final_bill_rejected(
+    blocking_claim_type, non_blocking_status
+):
+    existing = [
+        _make_existing_claim(claim_type=blocking_claim_type, status=non_blocking_status)
+    ]
+
+    _make_domain_claim().validate_no_active_final_bill(existing)
+
+
+def test_validate_no_active_final_bill_does_not_raise_when_existing_claims_are_only_poa():
+    existing = [
+        _make_existing_claim(status=ClaimStatus.SUBMITTED),
+        _make_existing_claim(status=ClaimStatus.PAY_IN_FULL),
+    ]
+
+    _make_domain_claim().validate_no_active_final_bill(existing)
+
+
+def test_validate_no_active_final_bill_does_not_raise_when_no_existing_claims():
+    _make_domain_claim().validate_no_active_final_bill([])

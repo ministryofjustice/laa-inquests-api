@@ -8,6 +8,7 @@ from decimal import Decimal
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
 from app.domain.claim_rejection import ClaimRejection, ClaimRejectionReason
 from app.domain.constants.claim_messages import (
+    ACTIVE_FINAL_BILL_EXISTS_MESSAGE,
     COST_TEMPLATE_FILE_NOT_ALLOWED_MESSAGE,
     COUNSEL_DETAILS_NOT_ALLOWED_MESSAGE,
     FINAL_BILL_DETAILS_NOT_ALLOWED_MESSAGE,
@@ -50,6 +51,8 @@ from app.models.claim.enums import (
 INQUEST_OUTCOME_CLAIM_TYPES = frozenset({ClaimType.FINAL_BILL, ClaimType.NIL_BILL})
 COST_TEMPLATE_CLAIM_TYPES = frozenset({ClaimType.FINAL_BILL})
 COUNSEL_DETAIL_CLAIM_TYPES = frozenset({ClaimType.FINAL_BILL})
+FINAL_BILL_CLAIM_TYPES = frozenset({ClaimType.FINAL_BILL, ClaimType.NIL_BILL})
+ACTIVE_FINAL_BILL_STATUSES = frozenset({ClaimStatus.SUBMITTED, ClaimStatus.PAY_IN_FULL})
 
 
 def _as_utc(dt: datetime) -> datetime:
@@ -113,6 +116,7 @@ def total_claim_amount(
 
 @dataclass(frozen=True)
 class ExistingClaimSummary:
+    claim_type: ClaimType
     status: ClaimStatus
     poa_type: POAType | None
     submission_date: datetime
@@ -165,6 +169,20 @@ class Claim:
 
         if self.poa_type == POAType.PROFIT_COST:
             self._validate_profit_cost()
+
+    def validate_no_active_final_bill(
+        self, existing_claims: list[ExistingClaimSummary]
+    ) -> None:
+        has_active_final_bill = any(
+            c.claim_type in FINAL_BILL_CLAIM_TYPES
+            and c.status in ACTIVE_FINAL_BILL_STATUSES
+            for c in existing_claims
+        )
+        if has_active_final_bill:
+            raise ClaimValidationError(
+                ClaimErrorCode.ACTIVE_FINAL_BILL_EXISTS,
+                ACTIVE_FINAL_BILL_EXISTS_MESSAGE,
+            )
 
     def gross_or_vat_zero_cost(self) -> Decimal | None:
         return self.gross if self.gross is not None else self.vat_zero_total

@@ -6,7 +6,13 @@ from sqlmodel import select
 
 from app.auth.rbac import Role
 from app.models.application.index import Application
-from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ClaimType, POAType
+from app.models.claim.enums import (
+    ClaimDecisionStatus,
+    ClaimStatus,
+    ClaimType,
+    InquestOutcomeCode,
+    POAType,
+)
 from app.models.claim.index import Claim, ClaimDecision
 
 
@@ -23,6 +29,9 @@ def _seed_claim(
         .one()
         .application_id
     )
+    poa_type = (
+        POAType.PROFIT_COST if claim_type == ClaimType.PAYMENT_ON_ACCOUNT else None
+    )
     claim = Claim(
         application_id=application_id,
         claim_type_id=claim_type,
@@ -32,8 +41,44 @@ def _seed_claim(
         total_profit_cost_gross=Decimal("1200.00"),
         total_profit_cost_vat_zero=Decimal("500.00"),
         total_funds_remaining_after_claim=Decimal("8800.00"),
-        poa_type_id=POAType.PROFIT_COST,
+        poa_type_id=poa_type,
         claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
+    )
+    session.add(claim)
+    session.commit()
+    session.refresh(claim)
+    return claim
+
+
+def _seed_final_bill_claim(
+    session,
+    laa_reference: int,
+    status: ClaimStatus,
+    claim_type: ClaimType = ClaimType.NIL_BILL,
+) -> Claim:
+    application_id = (
+        session.exec(
+            select(Application).where(Application.laa_reference == laa_reference)
+        )
+        .one()
+        .application_id
+    )
+
+    claim = Claim(
+        application_id=application_id,
+        claim_type_id=claim_type,
+        status_id=status,
+        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
+        total_profit_cost_gross=0,
+        total_profit_cost_net=None,
+        inquest_outcomes=(InquestOutcomeCode.OPEN_CONCLUSION,),
+        has_alternative_funding=False,
+        has_recovery_costs_awarded=True,
+        financial_recovery_previous_pre_certificate_costs=100,
+        financial_recovery_cost=200,
+        financial_recovery_damages=300,
+        financial_recovery_interest=50,
+        paying_party="Test Council",
     )
     session.add(claim)
     session.commit()
@@ -149,6 +194,58 @@ def test_200_assessed_false_returns_only_submitted_claims(session, client):
     assert [c["claimReference"] for c in response.json()] == [
         submitted_claim.claim_reference
     ]
+
+
+def test_200_returns_submitted_nil_bill_claim_for_providers(session, client):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    _seed_final_bill_claim(session, laa_reference, ClaimStatus.SUBMITTED)
+    response = client.get(
+        f"/applications/{laa_reference}/claims?assessed=false",
+        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 1
+    assert body[0]["statusId"] == "SUBMITTED"
+
+
+def test_200_returns_pay_in_full_nil_bill_claim_for_providers(session, client):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    _seed_final_bill_claim(session, laa_reference, ClaimStatus.PAY_IN_FULL)
+    response = client.get(
+        f"/applications/{laa_reference}/claims?assessed=true",
+        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 1
+    assert body[0]["statusId"] == "PAY_IN_FULL"
+
+
+def test_200_returns_submitted_final_bill_claim_for_providers(session, client):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    _seed_claim(session, laa_reference, ClaimStatus.SUBMITTED, ClaimType.FINAL_BILL)
+    response = client.get(
+        f"/applications/{laa_reference}/claims?assessed=false",
+        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 1
+    assert body[0]["statusId"] == "SUBMITTED"
+
+
+def test_200_returns_pay_in_full_final_bill_claim_for_providers(session, client):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    _seed_claim(session, laa_reference, ClaimStatus.PAY_IN_FULL, ClaimType.FINAL_BILL)
+    response = client.get(
+        f"/applications/{laa_reference}/claims?assessed=true",
+        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 1
+    assert body[0]["statusId"] == "PAY_IN_FULL"
 
 
 def test_422_when_assessed_query_param_is_missing(session, client):
