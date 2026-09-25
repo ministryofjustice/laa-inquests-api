@@ -5,6 +5,7 @@ sqlmodel
 alembic
 alembic_autogenerate_enums
 sentry-sdk[fastapi]
+slowapi
 psycopg2-binary
 passlib
 argon2_cffi

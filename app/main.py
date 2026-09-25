@@ -4,12 +4,16 @@ from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from app.config.docs import docs_config
 from app.config.logging import configure_logging
 from app.contexts.request import clear_request_context, set_request_context
 from app.contexts.user import clear_entra_user_context
 from app.logging_utils import build_log_extra, duration_ms
+from app.rate_limit import limiter
 from app.routers import applications, claims, monitoring, notifications, reports
 
 logger = logging.getLogger(__name__)
@@ -18,6 +22,9 @@ logger = logging.getLogger(__name__)
 def create_app():
     configure_logging()
     app = FastAPI(**docs_config)
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    app.add_middleware(SlowAPIMiddleware)
 
     @app.middleware("http")
     async def request_context_middleware(request: Request, call_next):
