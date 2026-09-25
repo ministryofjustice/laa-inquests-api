@@ -14,6 +14,7 @@ CLAIMS_BACKLOG_REPORT_HEADERS = [
     "Firm Name",
     "Firm Account Number",
     "Submission date",
+    "Claim reference",
     "Claim status",
     "Total 0% VAT claim value",
     "Net total claim value",
@@ -48,7 +49,8 @@ class TestGetClaimBacklogReport:
         rows = parse_csv_rows(response.text)
         assert len(rows) == 1
         row = rows[0]
-        assert row["Case reference"] == claim.claim_reference
+        assert row["Case reference"] == application.laa_reference
+        assert row["Claim reference"] == claim.claim_reference
         assert row["Firm Account Number"] == application.provider.firm_code
         assert row["Firm Name"] == f"Firm {application.provider.firm_code}"
         assert row["Submission date"] == "2026-01-01 00:00:00"
@@ -57,6 +59,38 @@ class TestGetClaimBacklogReport:
         assert row["Net total claim value"] == "100.00"
         assert row["Gross total claim value"] == "120.00"
         assert row["Claim type"] == "FINAL_BILL"
+
+    def test_200_multiple_claims_same_case_display_own_claim_reference(
+        self, session, client
+    ):
+        application = session.exec(select(Application)).first()
+        claim_one = create_claim_in_db(
+            session,
+            application_id=application.application_id,
+            status=ClaimStatus.SUBMITTED,
+            submission_date=datetime(2026, 1, 1, tzinfo=UTC),
+            claim_reference="INQC-AAAA-1111",
+        )
+        claim_two = create_claim_in_db(
+            session,
+            application_id=application.application_id,
+            status=ClaimStatus.SUBMITTED,
+            submission_date=datetime(2026, 1, 2, tzinfo=UTC),
+            claim_reference="INQC-BBBB-2222",
+        )
+
+        response = client.get(
+            "/reports/claims/backlog",
+            headers={"Authorization": f"Bearer {Role.CLAIM_WORKFLOW_REPORTING.value}"},
+        )
+
+        rows = parse_csv_rows(response.text)
+        references_by_date = {
+            row["Submission date"]: row["Claim reference"] for row in rows
+        }
+        assert references_by_date["2026-01-01 00:00:00"] == claim_one.claim_reference
+        assert references_by_date["2026-01-02 00:00:00"] == claim_two.claim_reference
+        assert all(row["Case reference"] == application.laa_reference for row in rows)
 
     def test_200_csv_excludes_non_open_claims(self, session, client):
         application = session.exec(select(Application)).first()

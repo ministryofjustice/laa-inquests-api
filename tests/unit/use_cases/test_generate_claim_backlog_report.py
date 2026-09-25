@@ -74,7 +74,8 @@ class TestGenerateClaimBacklogReportUseCase:
 
         assert len(rows) == 1
         row = rows[0]
-        assert row["Case reference"] == "INQC-0010-0010"
+        assert row["Case reference"] == "INQ-YYY-YYY"
+        assert row["Claim reference"] == "INQC-0010-0010"
         assert row["Firm Name"] == "Test Firm"
         assert row["Firm Account Number"] == "ABC123"
         assert row["Submission date"] == "2026-01-01 00:00:00"
