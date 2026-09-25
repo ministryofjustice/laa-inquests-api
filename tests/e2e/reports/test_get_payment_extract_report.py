@@ -34,11 +34,7 @@ URL = "/reports/payment-extract"
 FINANCE_HEADERS = {"Authorization": f"Bearer {Role.FINANCE.value}"}
 
 
-def _naive_utc(*args: int) -> datetime:
-    return datetime(*args, tzinfo=UTC).replace(tzinfo=None)
-
-
-IN_RANGE = _naive_utc(2025, 3, 15, 12, 0)
+IN_RANGE = datetime(2025, 3, 15, 12, 0, tzinfo=UTC)
 DEFAULT_PARAMS = {"from": "2025-03-01", "to": "2025-03-31"}
 
 
@@ -209,7 +205,7 @@ class TestGetPaymentExtractReport:
             session,
             poa_claim,
             invoice_type=InvoiceTypeCode.POA,
-            created_at=_naive_utc(2025, 1, 1),
+            created_at=datetime(2025, 1, 1, tzinfo=UTC),
         )
         final_bill_claim = _claim(session)
         _add_extract(
@@ -246,10 +242,10 @@ class TestGetPaymentExtractReport:
     def test_200_filters_rows_on_created_at_with_inclusive_dates(self, session, client):
         claim = _claim(session)
         created_ats = {
-            "before": _naive_utc(2025, 2, 28, 23, 59, 59),
-            "start": _naive_utc(2025, 3, 1, 0, 0),
-            "end": _naive_utc(2025, 3, 31, 23, 59, 59),
-            "after": _naive_utc(2025, 4, 1, 0, 0),
+            "before": datetime(2025, 2, 28, 23, 59, 59, tzinfo=UTC),
+            "start": datetime(2025, 3, 1, 0, 0, tzinfo=UTC),
+            "end": datetime(2025, 3, 31, 23, 59, 59, tzinfo=UTC),
+            "after": datetime(2025, 4, 1, 0, 0, tzinfo=UTC),
         }
         invoice_numbers = {}
         for sequence, (label, created_at) in enumerate(created_ats.items(), start=1):
@@ -274,14 +270,14 @@ class TestGetPaymentExtractReport:
             claim,
             invoice_type=InvoiceTypeCode.FINAL_BILL_FEES,
             sequence_number=1,
-            created_at=_naive_utc(2025, 3, 20),
+            created_at=datetime(2025, 3, 20, tzinfo=UTC),
         )
         earlier = _add_extract(
             session,
             claim,
             invoice_type=InvoiceTypeCode.FINAL_BILL_DISBURSEMENT,
             sequence_number=2,
-            created_at=_naive_utc(2025, 3, 5),
+            created_at=datetime(2025, 3, 5, tzinfo=UTC),
         )
 
         response = _get(client)
@@ -295,7 +291,7 @@ class TestGetPaymentExtractReport:
             session,
             claim,
             invoice_type=InvoiceTypeCode.FINAL_BILL_FEES,
-            created_at=_naive_utc(2024, 1, 1),
+            created_at=datetime(2024, 1, 1, tzinfo=UTC),
         )
 
         response = _get(client)
