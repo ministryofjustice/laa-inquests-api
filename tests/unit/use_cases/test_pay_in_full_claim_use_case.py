@@ -537,3 +537,105 @@ def test_creates_no_recoupment_lines_without_paid_poa_claims():
 
     lines = create_port.create_payment_extract.call_args.kwargs["lines"]
     assert all(line.invoice_type != InvoiceTypeCode.RECOUPED for line in lines)
+
+
+def test_creates_single_zero_fees_line_for_nil_final_bill():
+    claim = _final_bill_claim(claim_id=5)
+    (use_case, create_port) = _build_use_case_with_extract_ports(
+        claim=claim,
+        application=_application(),
+        poa_claims=[claim],
+    )
+
+    use_case.execute(
+        PayInFullClaimCommand(
+            laa_reference="1",
+            claim_reference=5,
+            profit_cost_net=Decimal("0.00"),
+            profit_cost_gross=Decimal("0.00"),
+            disbursement_net=Decimal("0.00"),
+            disbursement_gross=Decimal("0.00"),
+            disbursement_vat_zero=Decimal("0.00"),
+        )
+    )
+
+    create_port.create_payment_extract.assert_called_once()
+    lines = create_port.create_payment_extract.call_args.kwargs["lines"]
+    summary = [
+        (
+            line.sequence_number,
+            line.invoice_number,
+            line.invoice_amount,
+            line.invoice_type,
+            line.tax_code,
+            line.invoice_date,
+        )
+        for line in lines
+    ]
+    assert summary == [
+        (
+            1,
+            "INQC-0000-0005_001",
+            Decimal("0.00"),
+            InvoiceTypeCode.FINAL_BILL_FEES,
+            TaxCode.ZERO_VAT,
+            date(2026, 3, 10),
+        ),
+    ]
+
+
+def test_creates_zero_fees_line_then_recoupment_lines_for_nil_final_bill():
+    poa_claim = Claim(
+        claim_id=9,
+        claim_reference="INQC-0000-0009",
+        application_id=1,
+        claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
+        status_id=ClaimStatus.PAY_IN_FULL,
+        submission_date=datetime(2026, 1, 1, tzinfo=UTC),
+        poa_type_id=POAType.PROFIT_COST,
+    )
+    poa_extracts = [
+        ClaimPaymentExtract(
+            claim_id=9,
+            sequence_number=1,
+            invoice_number="INQC-0000-0009_001",
+            invoice_amount=Decimal("800.00"),
+            invoice_date=date(2026, 1, 1),
+            invoice_type=InvoiceTypeCode.POA,
+            tax_code=TaxCode.GB_VAT_20,
+        ),
+    ]
+    claim = _final_bill_claim(claim_id=5)
+    (use_case, create_port) = _build_use_case_with_extract_ports(
+        claim=claim,
+        application=_application(),
+        poa_claims=[claim, poa_claim],
+        poa_extracts=poa_extracts,
+    )
+
+    use_case.execute(
+        PayInFullClaimCommand(
+            laa_reference="1",
+            claim_reference=5,
+            profit_cost_net=Decimal("0.00"),
+            profit_cost_gross=Decimal("0.00"),
+            disbursement_net=Decimal("0.00"),
+            disbursement_gross=Decimal("0.00"),
+            disbursement_vat_zero=Decimal("0.00"),
+        )
+    )
+
+    lines = create_port.create_payment_extract.call_args.kwargs["lines"]
+    summary = [
+        (
+            line.sequence_number,
+            line.invoice_number,
+            line.invoice_amount,
+            line.invoice_type,
+        )
+        for line in lines
+    ]
+    assert summary == [
+        (1, "INQC-0000-0005_001", Decimal("0.00"), InvoiceTypeCode.FINAL_BILL_FEES),
+        (2, "INQC-0000-0009_001-R", Decimal("-800.00"), InvoiceTypeCode.RECOUPED),
+    ]

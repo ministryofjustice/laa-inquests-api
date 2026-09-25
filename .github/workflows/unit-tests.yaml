@@ -5,6 +5,8 @@ on: workflow_call
 jobs:
   test:
     name: Pytest
+    permissions:
+      contents: read
     environment: dev
     runs-on: ubuntu-latest
     steps:

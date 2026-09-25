@@ -1,5 +1,5 @@
 import importlib.util
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from sqlmodel import Session, SQLModel, StaticPool, create_engine
@@ -33,7 +33,7 @@ migration = _load_migration()
 
 # Naive on purpose: history_event.timestamp and claim.submission_date are stored
 # as timezone-naive DateTime columns in Postgres.
-BASE_TIME = datetime(2026, 1, 1, 12, 0, 0)  # noqa: DTZ001
+BASE_TIME = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
 
 
 def _make_session() -> Session:
