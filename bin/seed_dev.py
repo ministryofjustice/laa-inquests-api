@@ -437,22 +437,22 @@ def _random_reference(
 
 
 def _random_date(start: date, end: date) -> date:
-    return start + timedelta(days=random.randint(0, (end - start).days))
+    return start + timedelta(days=random.randint(0, (end - start).days))  # nosec B311
 
 
 def _random_office_id() -> str:
-    digits = "".join(random.choices(string.digits, k=3))
+    digits = "".join(random.choices(string.digits, k=3))  # nosec B311
     return (
-        f"{random.choice(string.digits)}"
-        f"{random.choice(string.ascii_uppercase)}"
+        f"{random.choice(string.digits)}"  # nosec B311
+        f"{random.choice(string.ascii_uppercase)}"  # nosec B311
         f"{digits}"
-        f"{random.choice(string.ascii_uppercase)}"
+        f"{random.choice(string.ascii_uppercase)}"  # nosec B311
     )
 
 
 def _bulk_address() -> Address:
     return Address(
-        address_line_1=f"{random.randint(1, 250)} Example Street",
+        address_line_1=f"{random.randint(1, 250)} Example Street",  # nosec B311
         address_line_2="Flat 1",
         town_or_city="Example Town",
         county="Example County",
