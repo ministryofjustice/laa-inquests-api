@@ -196,8 +196,8 @@ class TestGeneratePaymentExtractReportUseCase:
         _csv(use_case.execute(FROM_DATE, TO_DATE))
 
         expected = (
-            datetime(2025, 3, 1, tzinfo=UTC).replace(tzinfo=None),
-            datetime(2025, 4, 1, tzinfo=UTC).replace(tzinfo=None),
+            datetime(2025, 3, 1, tzinfo=UTC),
+            datetime(2025, 4, 1, tzinfo=UTC),
         )
         for method in (
             report_port.get_payment_extract_firm_codes,
@@ -213,7 +213,7 @@ class TestGeneratePaymentExtractReportUseCase:
         _csv(use_case.execute(FROM_DATE, future))
 
         created_before = report_port.get_payment_extract_firm_codes.call_args.args[1]
-        assert created_before <= datetime.now(UTC).replace(tzinfo=None)
+        assert created_before <= datetime.now(UTC)
         for method in (
             report_port.get_payment_extract_line_types,
             report_port.iter_payment_extract_report_lines,
