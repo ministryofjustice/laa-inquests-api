@@ -34,10 +34,10 @@ class GeneratePaymentExtractReportUseCase:
 
     def execute(self, from_date: date, to_date: date) -> Iterator[str]:
         """Validate all lookups up front, then return a lazy CSV chunk stream."""
-        created_from = datetime.combine(from_date, time.min,tzinfo=UTC)
+        created_from = datetime.combine(from_date, time.min, tzinfo=UTC)
         # created_at is stored as naive UTC; capping at now keeps pre-checks and stream on the same rows.
         created_before = min(
-            datetime.combine(to_date + timedelta(days=1), time.min,tzinfo=UTC),
+            datetime.combine(to_date + timedelta(days=1), time.min, tzinfo=UTC),
             datetime.now(UTC),
         )
 
