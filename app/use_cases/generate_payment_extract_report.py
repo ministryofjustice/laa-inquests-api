@@ -127,13 +127,12 @@ class GeneratePaymentExtractReportUseCase:
             if remaining:
                 yield remaining
         except Exception:
-            logger.error(
+            logger.exception(
                 "Payment extract report stream failed",
                 extra=build_log_extra(
                     event="payment_extract_report_stream_failed",
                     row_count=row_count,
                 ),
-                exc_info=True,
             )
             raise
 
@@ -165,7 +164,7 @@ class GeneratePaymentExtractReportUseCase:
             line.line_type.invoice_type.value,
             line.invoice_number,
             firm_name,
-            line.firm_code,
+            line.office_id,
             line.laa_reference,
             "",
             line.tax_code.value,

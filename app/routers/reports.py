@@ -1,5 +1,6 @@
 import logging
 from datetime import date
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
@@ -183,8 +184,8 @@ def get_claim_backlog_report(
     dependencies=[Depends(require_permission_from(Permission.REPORTS_PAYMENT_READ))],
 )
 def get_payment_extract_report(
-    from_date: date = Query(alias="from"),
-    to_date: date = Query(alias="to"),
+    from_date: Annotated[date, Query(alias="from")],
+    to_date: Annotated[date, Query(alias="to")],
     use_case: GeneratePaymentExtractReportUseCase = Depends(
         get_generate_payment_extract_report_use_case
     ),

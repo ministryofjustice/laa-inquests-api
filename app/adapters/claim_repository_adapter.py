@@ -322,6 +322,7 @@ class ClaimRepositoryAdapter(
                 Claim.poa_type_id,
                 _OriginalClaim.poa_type_id.label("original_poa_type"),
                 Provider.firm_code,
+                Provider.office_id,
                 Application.laa_reference,
                 created_from=created_from,
                 created_before=created_before,
@@ -342,6 +343,7 @@ class ClaimRepositoryAdapter(
             poa_type,
             original_poa_type,
             firm_code,
+            office_id,
             laa_reference,
         ) in self.session.exec(statement):
             yield PaymentExtractReportSourceLine(
@@ -355,6 +357,7 @@ class ClaimRepositoryAdapter(
                     original_poa_type=original_poa_type,
                 ),
                 firm_code=firm_code,
+                office_id=office_id,
                 laa_reference=laa_reference,
             )
 

@@ -23,12 +23,14 @@ from tests.helpers.csv_helpers import parse_csv_fieldnames, parse_csv_rows
 FROM_DATE = date(2025, 3, 1)
 TO_DATE = date(2025, 3, 31)
 FINAL_BILL_FEES = PaymentLineType(invoice_type=InvoiceTypeCode.FINAL_BILL_FEES)
+OFFICE_ID = "9Z999Z"
 
 
 def _line(
     invoice_number: str = "INQC-AAAA-BBBB_001",
     firm_code: str = "ABC123",
     line_type: PaymentLineType = FINAL_BILL_FEES,
+    office_id: str = OFFICE_ID,
 ) -> PaymentExtractReportSourceLine:
     return PaymentExtractReportSourceLine(
         invoice_number=invoice_number,
@@ -37,6 +39,7 @@ def _line(
         tax_code=TaxCode.GB_VAT_20,
         line_type=line_type,
         firm_code=firm_code,
+        office_id=office_id,
         laa_reference="INQ-123-456",
     )
 
@@ -93,7 +96,7 @@ class TestGeneratePaymentExtractReportUseCase:
                 "INVOICE TYPE": "Inq Final Bill (Fees)",
                 "INVOICE NUM": "INQC-AAAA-BBBB_001",
                 "VENDOR NAME": "Test Firm",
-                "VENDOR SITE CODE": "ABC123",
+                "VENDOR SITE CODE": OFFICE_ID,
                 "CASE REFERENCE": "INQ-123-456",
                 "CLIENT NAME": "",
                 "TAX CODE": "GB VAT 20%",
@@ -192,7 +195,10 @@ class TestGeneratePaymentExtractReportUseCase:
 
         _csv(use_case.execute(FROM_DATE, TO_DATE))
 
-        expected = (datetime(2025, 3, 1), datetime(2025, 4, 1))
+        expected = (
+            datetime(2025, 3, 1, tzinfo=UTC).replace(tzinfo=None),
+            datetime(2025, 4, 1, tzinfo=UTC).replace(tzinfo=None),
+        )
         for method in (
             report_port.get_payment_extract_firm_codes,
             report_port.get_payment_extract_line_types,
@@ -202,7 +208,7 @@ class TestGeneratePaymentExtractReportUseCase:
 
     def test_caps_created_before_at_now_when_to_date_in_future(self):
         use_case, report_port, _ = _build_use_case(lines=[])
-        future = date.today() + timedelta(days=30)
+        future = datetime.now(UTC).date() + timedelta(days=30)
 
         _csv(use_case.execute(FROM_DATE, future))
 

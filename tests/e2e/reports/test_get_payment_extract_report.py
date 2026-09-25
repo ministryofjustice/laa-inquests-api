@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from unittest.mock import MagicMock
 
@@ -32,7 +32,13 @@ PAYMENT_EXTRACT_REPORT_HEADERS = [
 
 URL = "/reports/payment-extract"
 FINANCE_HEADERS = {"Authorization": f"Bearer {Role.FINANCE.value}"}
-IN_RANGE = datetime(2025, 3, 15, 12, 0)
+
+
+def _naive_utc(*args: int) -> datetime:
+    return datetime(*args, tzinfo=UTC).replace(tzinfo=None)
+
+
+IN_RANGE = _naive_utc(2025, 3, 15, 12, 0)
 DEFAULT_PARAMS = {"from": "2025-03-01", "to": "2025-03-31"}
 
 
@@ -138,7 +144,7 @@ class TestGetPaymentExtractReport:
             "INVOICE TYPE": "Inq Final Bill (Fees)",
             "INVOICE NUM": f"{claim.claim_reference}_001",
             "VENDOR NAME": f"Firm {application.provider.firm_code}",
-            "VENDOR SITE CODE": application.provider.firm_code,
+            "VENDOR SITE CODE": application.provider.office_id,
             "CASE REFERENCE": application.laa_reference,
             "CLIENT NAME": "",
             "TAX CODE": "GB VAT 20%",
@@ -203,7 +209,7 @@ class TestGetPaymentExtractReport:
             session,
             poa_claim,
             invoice_type=InvoiceTypeCode.POA,
-            created_at=datetime(2025, 1, 1),
+            created_at=_naive_utc(2025, 1, 1),
         )
         final_bill_claim = _claim(session)
         _add_extract(
@@ -240,10 +246,10 @@ class TestGetPaymentExtractReport:
     def test_200_filters_rows_on_created_at_with_inclusive_dates(self, session, client):
         claim = _claim(session)
         created_ats = {
-            "before": datetime(2025, 2, 28, 23, 59, 59),
-            "start": datetime(2025, 3, 1, 0, 0),
-            "end": datetime(2025, 3, 31, 23, 59, 59),
-            "after": datetime(2025, 4, 1, 0, 0),
+            "before": _naive_utc(2025, 2, 28, 23, 59, 59),
+            "start": _naive_utc(2025, 3, 1, 0, 0),
+            "end": _naive_utc(2025, 3, 31, 23, 59, 59),
+            "after": _naive_utc(2025, 4, 1, 0, 0),
         }
         invoice_numbers = {}
         for sequence, (label, created_at) in enumerate(created_ats.items(), start=1):
@@ -268,14 +274,14 @@ class TestGetPaymentExtractReport:
             claim,
             invoice_type=InvoiceTypeCode.FINAL_BILL_FEES,
             sequence_number=1,
-            created_at=datetime(2025, 3, 20),
+            created_at=_naive_utc(2025, 3, 20),
         )
         earlier = _add_extract(
             session,
             claim,
             invoice_type=InvoiceTypeCode.FINAL_BILL_DISBURSEMENT,
             sequence_number=2,
-            created_at=datetime(2025, 3, 5),
+            created_at=_naive_utc(2025, 3, 5),
         )
 
         response = _get(client)
@@ -289,7 +295,7 @@ class TestGetPaymentExtractReport:
             session,
             claim,
             invoice_type=InvoiceTypeCode.FINAL_BILL_FEES,
-            created_at=datetime(2024, 1, 1),
+            created_at=_naive_utc(2024, 1, 1),
         )
 
         response = _get(client)

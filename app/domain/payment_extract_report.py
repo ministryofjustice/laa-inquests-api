@@ -37,6 +37,7 @@ class PaymentExtractReportSourceLine:
     tax_code: TaxCode
     line_type: PaymentLineType
     firm_code: str
+    office_id: str
     laa_reference: str
 
 
