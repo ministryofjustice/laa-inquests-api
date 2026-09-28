@@ -18,6 +18,7 @@ from app.ports.claim_backlog_port import ClaimBacklogPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.routers.applications import get_provider_details_port
 from app.use_cases.exceptions import (
+    InvalidDateRangeError,
     ProviderDetailsRetrievalError,
     ReportGenerationError,
 )
@@ -192,13 +193,14 @@ def get_payment_extract_report(
     request: Request = None,
 ) -> StreamingResponse:
     """Stream a CSV of payment extract lines created between two dates (inclusive)."""
-    if from_date > to_date:
-        raise HTTPException(
-            status_code=422, detail="'from' date must be on or before 'to' date"
-        )
 
     try:
         chunks = use_case.execute(from_date, to_date)
+    except InvalidDateRangeError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid date range: {exc}",
+        )
     except (
         ReportGenerationError,
         ProviderDetailsRetrievalError,

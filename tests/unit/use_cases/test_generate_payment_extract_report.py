@@ -12,6 +12,7 @@ from app.domain.payment_extract_report import (
 from app.models.claim.enums import InvoiceTypeCode, POAType, TaxCode
 from app.use_cases import generate_payment_extract_report
 from app.use_cases.exceptions import (
+    InvalidDateRangeError,
     ProviderDetailsRetrievalError,
     ReportGenerationError,
 )
@@ -19,6 +20,7 @@ from app.use_cases.generate_payment_extract_report import (
     GeneratePaymentExtractReportUseCase,
 )
 from tests.helpers.csv_helpers import parse_csv_fieldnames, parse_csv_rows
+from tests.unit.use_cases.test_send_auto_approved_poa_claim_emails import use_case
 
 FROM_DATE = date(2025, 3, 1)
 TO_DATE = date(2025, 3, 31)
@@ -230,6 +232,14 @@ class TestGeneratePaymentExtractReportUseCase:
         assert len(chunks) == 3
         rows = parse_csv_rows(_csv(chunks))
         assert [row["INVOICE NUM"] for row in rows] == [f"A_{i:03d}" for i in range(5)]
+
+    def test_raises_invalid_date_range_when_from_after_to(self):
+        use_case, _, _ = _build_use_case(lines=[_line()])
+        FROM_DATE = date(2025, 3, 31)
+        TO_DATE = date(2025, 3, 1)
+        
+        with pytest.raises(InvalidDateRangeError):
+            use_case.execute(FROM_DATE, TO_DATE)
 
     def test_raises_mid_stream_when_line_has_unchecked_firm(self):
         use_case, report_port, _ = _build_use_case(lines=[_line()])

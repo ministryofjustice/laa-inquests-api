@@ -16,7 +16,7 @@ from app.domain.payment_extract_report import (
 from app.logging_utils import build_log_extra
 from app.ports.claim.payment_extract_report_port import PaymentExtractReportPort
 from app.ports.provider_details_port import ProviderDetailsPort
-from app.use_cases.exceptions import ReportGenerationError
+from app.use_cases.exceptions import InvalidDateRangeError, ReportGenerationError
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +34,10 @@ class GeneratePaymentExtractReportUseCase:
 
     def execute(self, from_date: date, to_date: date) -> Iterator[str]:
         """Validate all lookups up front, then return a lazy CSV chunk stream."""
+        if from_date > to_date:
+            raise InvalidDateRangeError(
+                "The 'from' date must be on or before the 'to' date."
+            )
         created_from = datetime.combine(from_date, time.min, tzinfo=UTC)
         created_before = min(
             datetime.combine(to_date + timedelta(days=1), time.min, tzinfo=UTC),
