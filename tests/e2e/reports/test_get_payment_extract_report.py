@@ -113,7 +113,7 @@ class TestGetPaymentExtractReport:
         assert "text/csv" in response.headers["content-type"]
         assert "attachment" in response.headers["content-disposition"]
         assert (
-            f"{datetime.today().strftime('%d-%m-%y')} - Report - IDDS Financial Payments - OFFICIAL-SENSITIVE - LAA Use Only.csv"
+            f"{datetime.now(UTC).today().strftime('%d-%m-%y')} - Report - IDDS Financial Payments - OFFICIAL-SENSITIVE - LAA Use Only.csv"
             in response.headers["content-disposition"]
         )
         assert parse_csv_fieldnames(response.text) == PAYMENT_EXTRACT_REPORT_HEADERS

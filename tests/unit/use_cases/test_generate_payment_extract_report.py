@@ -20,7 +20,6 @@ from app.use_cases.generate_payment_extract_report import (
     GeneratePaymentExtractReportUseCase,
 )
 from tests.helpers.csv_helpers import parse_csv_fieldnames, parse_csv_rows
-from tests.unit.use_cases.test_send_auto_approved_poa_claim_emails import use_case
 
 FROM_DATE = date(2025, 3, 1)
 TO_DATE = date(2025, 3, 31)

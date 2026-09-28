@@ -1,5 +1,5 @@
 import logging
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -220,7 +220,7 @@ def get_payment_extract_report(
             status_code=500,
             detail="Failed to generate payment extract report",
         )
-    filename = f"{datetime.today().strftime('%d-%m-%y')} - Report - IDDS Financial Payments - OFFICIAL-SENSITIVE - LAA Use Only.csv"
+    filename = f"{datetime.now(UTC).today().strftime('%d-%m-%y')} - Report - IDDS Financial Payments - OFFICIAL-SENSITIVE - LAA Use Only.csv"
     return StreamingResponse(
         chunks,
         media_type="text/csv",
