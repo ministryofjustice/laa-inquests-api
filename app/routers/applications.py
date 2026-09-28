@@ -83,7 +83,6 @@ from app.ports.search_application_port import SearchApplicationPort
 from app.ports.update_application_public_bodies_port import ApplicationPublicBodiesPort
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
-from app.rate_limit import limiter
 from app.routers.dependencies import (
     get_claim_db_adapter,
     get_current_provider_firm_code,
@@ -682,7 +681,6 @@ async def read_all_applications(
         )
     ],
 )
-@limiter.limit("2 per 900 seconds")
 def list_public_bodies(
     request: Request,
     response: Response,
