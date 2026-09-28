@@ -50,7 +50,6 @@ def classify_payment_line(line_type: PaymentLineType) -> PaymentLineClassificati
         case InvoiceTypeCode.POA:
             return _classify_poa(line_type.poa_type, line_type)
         case InvoiceTypeCode.RECOUPED:
-            # Recoupments live on the final bill claim, so the type comes from the original POA.
             return _classify_poa(line_type.original_poa_type, line_type)
     raise UnclassifiablePaymentLineError(
         f"Unknown invoice type {line_type.invoice_type}"
