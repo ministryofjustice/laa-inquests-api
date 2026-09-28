@@ -109,12 +109,11 @@ class TestGetPaymentExtractReport:
 
     def test_200_returns_csv_attachment_with_expected_headers(self, client):
         response = _get(client)
-
         assert response.status_code == 200
         assert "text/csv" in response.headers["content-type"]
         assert "attachment" in response.headers["content-disposition"]
         assert (
-            "payment_extract_2025-03-01_2025-03-31.csv"
+            f"{datetime.today().strftime('%d-%m-%y')} - Report - IDDS Financial Payments - OFFICIAL-SENSITIVE - LAA Use Only.csv"
             in response.headers["content-disposition"]
         )
         assert parse_csv_fieldnames(response.text) == PAYMENT_EXTRACT_REPORT_HEADERS
