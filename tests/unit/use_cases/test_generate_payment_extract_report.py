@@ -237,7 +237,7 @@ class TestGeneratePaymentExtractReportUseCase:
         use_case, _, _ = _build_use_case(lines=[_line()])
         FROM_DATE = date(2025, 3, 31)
         TO_DATE = date(2025, 3, 1)
-        
+
         with pytest.raises(InvalidDateRangeError):
             use_case.execute(FROM_DATE, TO_DATE)
 
