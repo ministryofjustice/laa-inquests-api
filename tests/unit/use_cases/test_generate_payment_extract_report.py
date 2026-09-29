@@ -209,9 +209,10 @@ class TestGeneratePaymentExtractReportUseCase:
 
     def test_caps_created_before_at_now_when_to_date_in_future(self):
         use_case, report_port, _ = _build_use_case(lines=[])
-        future = datetime.now(UTC).date() + timedelta(days=30)
+        today = datetime.now(UTC).date()
+        future = today + timedelta(days=30)
 
-        _csv(use_case.execute(FROM_DATE, future))
+        _csv(use_case.execute(today - timedelta(days=30), future))
 
         created_before = report_port.get_payment_extract_firm_codes.call_args.args[1]
         assert created_before <= datetime.now(UTC)
@@ -239,6 +240,14 @@ class TestGeneratePaymentExtractReportUseCase:
 
         with pytest.raises(InvalidDateRangeError):
             use_case.execute(FROM_DATE, TO_DATE)
+
+    def test_raises_invalid_date_range_when_range_exceeds_90_days(self):
+        use_case, report_port, _ = _build_use_case(lines=[_line()])
+
+        with pytest.raises(InvalidDateRangeError, match="90 days"):
+            use_case.execute(date(2025, 1, 1), date(2025, 4, 1))
+
+        report_port.get_payment_extract_firm_codes.assert_not_called()
 
     def test_raises_mid_stream_when_line_has_unchecked_firm(self):
         use_case, report_port, _ = _build_use_case(lines=[_line()])

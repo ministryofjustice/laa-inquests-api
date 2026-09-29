@@ -329,6 +329,17 @@ class TestGetPaymentExtractReport:
 
         assert response.status_code == 422
 
+    def test_422_when_date_range_exceeds_90_days(self, client):
+        response = _get(client, {"from": "2025-01-01", "to": "2025-04-01"})
+
+        assert response.status_code == 422
+        assert "90 days" in response.json()["detail"]
+
+    def test_200_when_date_range_is_exactly_90_days(self, client):
+        response = _get(client, {"from": "2025-01-01", "to": "2025-03-31"})
+
+        assert response.status_code == 200
+
     def test_500_when_firm_name_missing(self, session, client):
         claim = _claim(session)
         _add_extract(session, claim, invoice_type=InvoiceTypeCode.FINAL_BILL_FEES)

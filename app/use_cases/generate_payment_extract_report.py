@@ -21,6 +21,7 @@ from app.use_cases.exceptions import InvalidDateRangeError, ReportGenerationErro
 logger = logging.getLogger(__name__)
 
 ROWS_PER_CHUNK = 500
+MAX_REPORT_RANGE_DAYS = 90
 
 
 class GeneratePaymentExtractReportUseCase:
@@ -37,6 +38,10 @@ class GeneratePaymentExtractReportUseCase:
         if from_date > to_date:
             raise InvalidDateRangeError(
                 "The 'from' date must be on or before the 'to' date."
+            )
+        if (to_date - from_date).days + 1 > MAX_REPORT_RANGE_DAYS:
+            raise InvalidDateRangeError(
+                f"The date range must not exceed {MAX_REPORT_RANGE_DAYS} days."
             )
         created_from = datetime.combine(from_date, time.min, tzinfo=UTC)
         created_before = min(
