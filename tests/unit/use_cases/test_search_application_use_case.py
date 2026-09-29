@@ -8,7 +8,7 @@ from app.ports.provider_details_port import ProviderDetailsPort
 from app.ports.search_application_port import SearchApplicationPort
 from app.use_cases.exceptions import ProviderDetailsRetrievalError
 from app.use_cases.search_application import SearchApplicationUseCase
-from tests.unit.factories import create_base_application, create_base_provider
+from tests.factories.builders import build_application, build_provider
 
 
 def _make_use_case(
@@ -76,8 +76,8 @@ def test_execute_passes_merits_decision_to_search_port():
 
 
 def test_execute_calls_provider_details_port_with_firm_code():
-    provider = create_base_provider(firm_code="0A123B")
-    application = create_base_application(provider=provider)
+    provider = build_provider(firm_code="0A123B")
+    application = build_application(provider=provider)
     search_port = MagicMock(spec=SearchApplicationPort)
     search_port.search_applications.return_value = [application]
     provider_port = MagicMock(spec=ProviderDetailsPort)
@@ -93,7 +93,7 @@ def test_execute_calls_provider_details_port_with_firm_code():
 
 
 def test_execute_raises_provider_details_retrieval_error_when_get_firm_name_raises_exception():
-    application = create_base_application()
+    application = build_application()
     search_port = MagicMock(spec=SearchApplicationPort)
     search_port.search_applications.return_value = [application]
     provider_port = MagicMock(spec=ProviderDetailsPort)
@@ -109,10 +109,8 @@ def test_execute_raises_provider_details_retrieval_error_when_get_firm_name_rais
 
 
 def test_execute_returns_response_with_all_required_fields():
-    provider = create_base_provider(firm_code="0A123B")
-    application = create_base_application(
-        application_id=1, provider=provider, status="LIVE"
-    )
+    provider = build_provider(firm_code="0A123B")
+    application = build_application(application_id=1, provider=provider, status="LIVE")
     use_case = _make_use_case(application=application, firm_name="My Firm")
 
     results = use_case.execute("1", "0A123B")

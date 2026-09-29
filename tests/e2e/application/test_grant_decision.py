@@ -1,10 +1,8 @@
 from datetime import UTC, date, datetime
 
-from sqlmodel import select
-
 from app.auth.rbac import Role
 from app.models.application.enums import MeritsDecision
-from app.models.application.index import Application
+from tests.factories.persisted import create_application
 
 
 def _grant_decision_payload(overrides=None):
@@ -14,13 +12,11 @@ def _grant_decision_payload(overrides=None):
     return payload
 
 
-def test_204_grant_decision_to_granted(session, client):
-    application = session.exec(select(Application)).first()
+def test_204_grant_decision_sets_decision_to_granted(session, client):
+    application = create_application(
+        session, proceeding_overrides={"merits_decision": MeritsDecision.PENDING}
+    )
     laa_reference = application.laa_reference
-    application.proceeding.merits_decision = MeritsDecision.PENDING
-    session.add(application.proceeding)
-    session.commit()
-    session.refresh(application)
     assert application.proceeding.substantive_cost_limitation == 0
 
     response = client.patch(

@@ -13,12 +13,12 @@ from app.use_cases.exceptions import (
 from app.use_cases.generate_application_backlog_report import (
     GenerateApplicationBacklogReportUseCase,
 )
-from tests.helpers.csv_helpers import parse_csv_rows
-from tests.unit.factories import (
-    create_base_application,
-    create_base_application_proceeding,
-    create_base_provider,
+from tests.factories.builders import (
+    build_application,
+    build_application_proceeding,
+    build_provider,
 )
+from tests.helpers.csv_helpers import parse_csv_rows
 
 
 def _build_use_case(
@@ -51,11 +51,11 @@ class TestGenerateApplicationBacklogReportUseCase:
         assert len(rows) == 0
 
     def test_returns_csv_row_for_pending_application(self):
-        provider = create_base_provider(firm_code="123")
-        proceeding = create_base_application_proceeding(
+        provider = build_provider(firm_code="123")
+        proceeding = build_application_proceeding(
             merits_decision=MeritsDecision.PENDING,
         )
-        application = create_base_application(
+        application = build_application(
             provider=provider,
             proceeding=proceeding,
         )
@@ -80,8 +80,8 @@ class TestGenerateApplicationBacklogReportUseCase:
         assert row["Matter Type"] == "INQUESTS"
 
     def test_resolves_firm_name_from_firms_response(self):
-        provider = create_base_provider(firm_code="456")
-        application = create_base_application(provider=provider)
+        provider = build_provider(firm_code="456")
+        application = build_application(provider=provider)
 
         use_case = _build_use_case(
             applications=[application],
@@ -94,8 +94,8 @@ class TestGenerateApplicationBacklogReportUseCase:
         assert rows[0]["Firm Name"] == "Acme Solicitors"
 
     def test_raises_error_when_firm_name_not_found_for_application(self):
-        provider = create_base_provider(firm_code="999")
-        application = create_base_application(provider=provider)
+        provider = build_provider(firm_code="999")
+        application = build_application(provider=provider)
 
         use_case = _build_use_case(
             applications=[application],
@@ -106,13 +106,13 @@ class TestGenerateApplicationBacklogReportUseCase:
             use_case.execute()
 
     def test_multiple_applications_all_included(self):
-        app1 = create_base_application(
+        app1 = build_application(
             application_id=100,
-            provider=create_base_provider(firm_code="1"),
+            provider=build_provider(firm_code="1"),
         )
-        app2 = create_base_application(
+        app2 = build_application(
             application_id=200,
-            provider=create_base_provider(firm_code="2"),
+            provider=build_provider(firm_code="2"),
         )
 
         use_case = _build_use_case(
@@ -132,8 +132,8 @@ class TestGenerateApplicationBacklogReportUseCase:
         assert app2.laa_reference in refs
 
     def test_raises_exception_when_firms_retrieval_fails(self):
-        provider = create_base_provider(firm_code="123")
-        application = create_base_application(provider=provider)
+        provider = build_provider(firm_code="123")
+        application = build_application(provider=provider)
 
         backlog_port = MagicMock()
         backlog_port.get_pending_applications.return_value = [application]
@@ -152,9 +152,9 @@ class TestGenerateApplicationBacklogReportUseCase:
             use_case.execute()
 
     def test_deduplicates_firm_ids_before_calling_port(self):
-        provider = create_base_provider(firm_code="123")
-        app1 = create_base_application(application_id=100, provider=provider)
-        app2 = create_base_application(application_id=200, provider=provider)
+        provider = build_provider(firm_code="123")
+        app1 = build_application(application_id=100, provider=provider)
+        app2 = build_application(application_id=200, provider=provider)
 
         backlog_port = MagicMock()
         backlog_port.get_pending_applications.return_value = [app1, app2]

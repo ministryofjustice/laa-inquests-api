@@ -16,6 +16,7 @@ from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.send_auto_approved_poa_claim_emails import (
     SendAutoApprovedPoaClaimEmailsUseCase,
 )
+from tests.factories.builders import build_application, build_poa_claim
 
 
 def _event(reference: HistoryEventReference, claim_reference: str) -> SimpleNamespace:
@@ -24,18 +25,12 @@ def _event(reference: HistoryEventReference, claim_reference: str) -> SimpleName
     )
 
 
-def _claim(claim_id: int = 7) -> MagicMock:
-    claim = MagicMock(spec=Claim)
-    claim.claim_id = claim_id
-    claim.claim_reference = f"INQC-TEST-{claim_id:04d}"
-    application = SimpleNamespace(
-        application_id=12345,
-        provider=SimpleNamespace(
-            firm_code="ABC123", email_address="provider@example.com"
-        ),
+def _claim(claim_id: int = 7) -> Claim:
+    return build_poa_claim(
+        claim_id=claim_id,
+        claim_reference=f"INQC-TEST-{claim_id:04d}",
+        application=build_application(application_id=12345),
     )
-    claim.application = application
-    return claim
 
 
 @pytest.fixture

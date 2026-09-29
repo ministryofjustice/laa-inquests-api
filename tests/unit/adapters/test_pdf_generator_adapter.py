@@ -7,23 +7,19 @@ from pypdf import PdfReader
 
 from app.adapters.pdf_generator_adapter import PdfGeneratorAdapter
 from app.models.application.certificate import ApplicationCertificate
-from app.models.application.index import Address
-from tests.unit.factories import create_base_office_address
+from tests.factories.builders import build_home_address, build_office_address
 
 
 def _sample_context() -> ApplicationCertificate:
     """Build a minimal, valid ApplicationCertificate context for template rendering."""
     return ApplicationCertificate(
         client_name="Jane Doe",
-        client_address=Address(
+        client_address=build_home_address(
             address_line_1="1 High Street",
             address_line_2="Westminster",
-            town_or_city="London",
-            county="Greater London",
-            postcode="SW1A 1AA",
         ),
         firm_name="Test Firm Ltd",
-        office_address=create_base_office_address(),
+        office_address=build_office_address(),
         opponent_details=["Department for Transport"],
         laa_reference="12345",
         date_created=date(2026, 7, 15),

@@ -1,99 +1,25 @@
 import uuid
-from datetime import UTC, datetime
 from decimal import Decimal
-
-from sqlmodel import select
 
 from app.auth.rbac import Role
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
-from app.models.application.index import Application
-from app.models.claim.enums import (
-    ClaimDecisionStatus,
-    ClaimStatus,
-    ClaimType,
-    InquestOutcomeCode,
-    NumberOfCounselInstructed,
-    POAType,
-    ReasonCode,
+from app.models.claim.enums import InquestOutcomeCode, NumberOfCounselInstructed
+from tests.factories.builders import build_poa_claim
+from tests.factories.persisted import (
+    create_application,
+    create_claim,
+    create_claim_cost_template,
+    create_claim_decision,
+    create_claim_evidence,
+    create_claim_inquest_outcomes,
 )
-from app.models.claim.index import (
-    Claim,
-    ClaimCostTemplate,
-    ClaimDecision,
-    ClaimEvidence,
-    ClaimInquestOutcome,
-    DecisionReason,
-)
-from tests.e2e.factories import create_application_in_db
 
 
-def _seed_claim(
-    session,
-    laa_reference: int,
-    claim_type: ClaimType = ClaimType.PAYMENT_ON_ACCOUNT,
-    total_funds_remaining_after_claim: Decimal = Decimal(
-        SUBSTANTIVE_CERTIFICATE_AMOUNT
-    ),
-) -> Claim:
-    application_id = (
-        session.exec(
-            select(Application).where(Application.laa_reference == laa_reference)
-        )
-        .one()
-        .application_id
-    )
-    claim = Claim(
-        application_id=application_id,
-        claim_type_id=claim_type,
-        status_id=ClaimStatus.SUBMITTED,
-        submission_date=datetime.now(UTC),
-        total_profit_cost_net=Decimal("1000.00"),
-        total_profit_cost_gross=Decimal("1200.00"),
-        total_profit_cost_vat_zero=Decimal("500.00"),
-        total_funds_remaining_after_claim=total_funds_remaining_after_claim,
-        poa_type_id=POAType.PROFIT_COST,
-        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
-    )
-    session.add(claim)
-    session.commit()
-    session.refresh(claim)
-    return claim
-
-
-def _seed_evidence(session, claim_id: int) -> ClaimEvidence:
-    evidence = ClaimEvidence(
-        sds_file_name="evidence_abc123.pdf",
-        file_name="evidence.pdf",
-        claim_id=claim_id,
-    )
-    session.add(evidence)
-    session.commit()
-    session.refresh(evidence)
-    return evidence
-
-
-def _seed_decision(session, claim_id: int) -> ClaimDecision:
-    decision = ClaimDecision(
-        claim_id=claim_id,
-        decision=ClaimDecisionStatus.REJECT,
-    )
-    session.add(decision)
-    session.commit()
-    session.refresh(decision)
-    reason = DecisionReason(
-        claim_decision_id=decision.claim_decision_id,
-        reason_code=ReasonCode.MAX_POA_CLAIMS_EXCEEDED,
-        justification="Too many payment on account claims",
-    )
-    session.add(reason)
-    session.commit()
-    session.refresh(decision)
-    return decision
-
-
-def test_200_get_claim_by_id_returns_expected_base_properties(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    claim = _seed_claim(session, laa_reference)
+def test_200_get_claim_by_id_returns_expected_base_properties(
+    session, client, seeded_application
+):
+    laa_reference = seeded_application.laa_reference
+    claim = create_claim(session, seeded_application, preset=build_poa_claim)
 
     response = client.get(
         f"/applications/{laa_reference}/claims/{claim.claim_reference}",
@@ -135,17 +61,14 @@ def test_200_get_claim_by_id_returns_expected_base_properties(session, client):
     }
 
 
-def test_200_get_claim_by_id_returns_final_bill_details(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    claim = Claim(
-        application_id=session.exec(
-            select(Application).where(Application.laa_reference == laa_reference)
-        )
-        .one()
-        .application_id,
-        claim_type_id=ClaimType.FINAL_BILL,
-        status_id=ClaimStatus.SUBMITTED,
-        submission_date=datetime.now(UTC),
+def test_200_get_claim_by_id_returns_final_bill_details(
+    session, client, seeded_application
+):
+    application = seeded_application
+    laa_reference = application.laa_reference
+    claim = create_claim(
+        session,
+        application,
         has_counsel_been_paid=True,
         has_alternative_funding=False,
         has_recovery_costs_awarded=True,
@@ -155,11 +78,7 @@ def test_200_get_claim_by_id_returns_final_bill_details(session, client):
         financial_recovery_interest=Decimal("50.00"),
         paying_party="Test Council",
         number_of_counsel_instructed=NumberOfCounselInstructed.TWO,
-        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
     )
-    session.add(claim)
-    session.commit()
-    session.refresh(claim)
 
     response = client.get(
         f"/applications/{laa_reference}/claims/{claim.claim_reference}",
@@ -179,9 +98,11 @@ def test_200_get_claim_by_id_returns_final_bill_details(session, client):
     assert body["numberOfCounselInstructed"] == "2"
 
 
-def test_200_get_claim_by_id_includes_substantive_cost_limitation(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    claim = _seed_claim(session, laa_reference)
+def test_200_get_claim_by_id_includes_substantive_cost_limitation(
+    session, client, seeded_application
+):
+    laa_reference = seeded_application.laa_reference
+    claim = create_claim(session, seeded_application)
 
     response = client.get(
         f"/applications/{laa_reference}/claims/{claim.claim_reference}",
@@ -192,10 +113,14 @@ def test_200_get_claim_by_id_includes_substantive_cost_limitation(session, clien
     assert response.json()["substantiveCostLimitation"] == 10000
 
 
-def test_200_get_claim_by_id_returns_stored_total_funds_remaining(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    claim = _seed_claim(
-        session, laa_reference, total_funds_remaining_after_claim=Decimal("8800.00")
+def test_200_get_claim_by_id_returns_stored_total_funds_remaining(
+    session, client, seeded_application
+):
+    laa_reference = seeded_application.laa_reference
+    claim = create_claim(
+        session,
+        seeded_application,
+        total_funds_remaining_after_claim=Decimal("8800.00"),
     )
 
     response = client.get(
@@ -208,10 +133,10 @@ def test_200_get_claim_by_id_returns_stored_total_funds_remaining(session, clien
 
 
 def test_200_get_claim_by_id_total_funds_remaining_defaults_to_certificate_amount(
-    session, client
+    session, client, seeded_application
 ):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    claim = _seed_claim(session, laa_reference)
+    laa_reference = seeded_application.laa_reference
+    claim = create_claim(session, seeded_application)
 
     response = client.get(
         f"/applications/{laa_reference}/claims/{claim.claim_reference}",
@@ -224,10 +149,12 @@ def test_200_get_claim_by_id_total_funds_remaining_defaults_to_certificate_amoun
     )
 
 
-def test_200_get_claim_by_id_includes_claim_evidence(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    claim = _seed_claim(session, laa_reference)
-    evidence = _seed_evidence(session, claim.claim_id)
+def test_200_get_claim_by_id_includes_claim_evidence(
+    session, client, seeded_application
+):
+    laa_reference = seeded_application.laa_reference
+    claim = create_claim(session, seeded_application)
+    evidence = create_claim_evidence(session, claim)
 
     response = client.get(
         f"/applications/{laa_reference}/claims/{claim.claim_reference}",
@@ -242,10 +169,10 @@ def test_200_get_claim_by_id_includes_claim_evidence(session, client):
 
 
 def test_200_get_claim_by_id_returns_empty_claim_evidence_when_none_linked(
-    session, client
+    session, client, seeded_application
 ):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    claim = _seed_claim(session, laa_reference)
+    laa_reference = seeded_application.laa_reference
+    claim = create_claim(session, seeded_application)
 
     response = client.get(
         f"/applications/{laa_reference}/claims/{claim.claim_reference}",
@@ -256,10 +183,12 @@ def test_200_get_claim_by_id_returns_empty_claim_evidence_when_none_linked(
     assert response.json()["claimEvidence"] == []
 
 
-def test_200_get_claim_by_id_includes_claim_decision_when_one_exists(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    claim = _seed_claim(session, laa_reference)
-    decision = _seed_decision(session, claim.claim_id)
+def test_200_get_claim_by_id_includes_claim_decision_when_one_exists(
+    session, client, seeded_application
+):
+    laa_reference = seeded_application.laa_reference
+    claim = create_claim(session, seeded_application)
+    decision = create_claim_decision(session, claim, reasons=[{}])
 
     response = client.get(
         f"/applications/{laa_reference}/claims/{claim.claim_reference}",
@@ -278,9 +207,11 @@ def test_200_get_claim_by_id_includes_claim_decision_when_one_exists(session, cl
     ]
 
 
-def test_200_get_claim_by_id_claim_decision_is_null_when_none_exists(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    claim = _seed_claim(session, laa_reference)
+def test_200_get_claim_by_id_claim_decision_is_null_when_none_exists(
+    session, client, seeded_application
+):
+    laa_reference = seeded_application.laa_reference
+    claim = create_claim(session, seeded_application)
 
     response = client.get(
         f"/applications/{laa_reference}/claims/{claim.claim_reference}",
@@ -291,22 +222,16 @@ def test_200_get_claim_by_id_claim_decision_is_null_when_none_exists(session, cl
     assert response.json()["claimDecision"] is None
 
 
-def test_200_get_claim_by_id_includes_inquest_outcomes_as_enum_names(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    claim = _seed_claim(session, laa_reference, claim_type=ClaimType.FINAL_BILL)
-    session.add_all(
-        [
-            ClaimInquestOutcome(
-                claim_id=claim.claim_id,
-                inquest_outcome_id=InquestOutcomeCode.NARRATIVE_CONCLUSION,
-            ),
-            ClaimInquestOutcome(
-                claim_id=claim.claim_id,
-                inquest_outcome_id=InquestOutcomeCode.NATURAL_CAUSES,
-            ),
-        ]
+def test_200_get_claim_by_id_includes_inquest_outcomes_as_enum_names(
+    session, client, seeded_application
+):
+    laa_reference = seeded_application.laa_reference
+    claim = create_claim(session, seeded_application)
+    create_claim_inquest_outcomes(
+        session,
+        claim,
+        [InquestOutcomeCode.NARRATIVE_CONCLUSION, InquestOutcomeCode.NATURAL_CAUSES],
     )
-    session.commit()
 
     response = client.get(
         f"/applications/{laa_reference}/claims/{claim.claim_reference}",
@@ -321,10 +246,10 @@ def test_200_get_claim_by_id_includes_inquest_outcomes_as_enum_names(session, cl
 
 
 def test_200_get_claim_by_id_returns_empty_inquest_outcomes_when_none_linked(
-    session, client
+    session, client, seeded_application
 ):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    claim = _seed_claim(session, laa_reference)
+    laa_reference = seeded_application.laa_reference
+    claim = create_claim(session, seeded_application)
 
     response = client.get(
         f"/applications/{laa_reference}/claims/{claim.claim_reference}",
@@ -335,18 +260,18 @@ def test_200_get_claim_by_id_returns_empty_inquest_outcomes_when_none_linked(
     assert response.json()["inquestOutcomes"] == []
 
 
-def test_200_get_claim_by_id_includes_cost_template_file(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    claim = _seed_claim(session, laa_reference, claim_type=ClaimType.FINAL_BILL)
+def test_200_get_claim_by_id_includes_cost_template_file(
+    session, client, seeded_application
+):
+    laa_reference = seeded_application.laa_reference
+    claim = create_claim(session, seeded_application)
     file_id = uuid.uuid4()
-    session.add(
-        ClaimCostTemplate(
-            claim_id=claim.claim_id,
-            claim_cost_template_file_id=file_id,
-            claim_cost_template_file_name="final_bill_costs.xlsx",
-        )
+    create_claim_cost_template(
+        session,
+        claim,
+        claim_cost_template_file_id=file_id,
+        claim_cost_template_file_name="final_bill_costs.xlsx",
     )
-    session.commit()
 
     response = client.get(
         f"/applications/{laa_reference}/claims/{claim.claim_reference}",
@@ -362,10 +287,10 @@ def test_200_get_claim_by_id_includes_cost_template_file(session, client):
 
 
 def test_200_get_claim_by_id_returns_null_cost_template_file_when_none_linked(
-    session, client
+    session, client, seeded_application
 ):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    claim = _seed_claim(session, laa_reference)
+    laa_reference = seeded_application.laa_reference
+    claim = create_claim(session, seeded_application)
 
     response = client.get(
         f"/applications/{laa_reference}/claims/{claim.claim_reference}",
@@ -376,8 +301,8 @@ def test_200_get_claim_by_id_returns_null_cost_template_file_when_none_linked(
     assert response.json()["claimCostTemplateFile"] is None
 
 
-def test_404_when_claim_does_not_exist(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+def test_404_when_claim_does_not_exist(client, seeded_application):
+    laa_reference = seeded_application.laa_reference
 
     response = client.get(
         f"/applications/{laa_reference}/claims/999999",
@@ -398,11 +323,13 @@ def test_404_when_application_does_not_exist(client):
     assert response.json()["detail"] == "Application not found"
 
 
-def test_404_when_claim_belongs_to_another_application(session, client):
-    existing = session.exec(select(Application)).first()
-    other_application = create_application_in_db(session)
+def test_404_when_claim_belongs_to_another_application(
+    session, client, seeded_application
+):
+    existing = seeded_application
+    other_application = create_application(session)
 
-    claim = _seed_claim(session, existing.laa_reference)
+    claim = create_claim(session, existing)
 
     response = client.get(
         f"/applications/{other_application.laa_reference}/claims/{claim.claim_reference}",

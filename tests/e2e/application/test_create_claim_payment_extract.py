@@ -4,9 +4,9 @@ from decimal import Decimal
 from sqlmodel import select
 
 from app.auth.rbac import Role
-from app.models.application.index import Application
 from app.models.claim.enums import InvoiceTypeCode, TaxCode
 from app.models.claim.index import Claim, ClaimPaymentExtract
+from tests.factories.seed import SEED_LAA_REFERENCE
 
 
 def _make_request_body(overrides=None):
@@ -23,8 +23,8 @@ def _make_request_body(overrides=None):
     return body
 
 
-def _post_claim(session, client, overrides=None):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+def _post_claim(client, overrides=None):
+    laa_reference = SEED_LAA_REFERENCE
     return client.post(
         f"/applications/{laa_reference}/claim",
         json=_make_request_body(overrides),
@@ -51,7 +51,7 @@ def _payment_extracts(session, claim_id):
 
 class TestCreateClaimPaymentExtract:
     def test_201_profit_cost_vat_claim_persists_payment_extract(self, session, client):
-        response = _post_claim(session, client)
+        response = _post_claim(client)
 
         assert response.status_code == 201
         claim_reference = response.json()["claimReference"]
@@ -74,7 +74,6 @@ class TestCreateClaimPaymentExtract:
         self, session, client
     ):
         response = _post_claim(
-            session,
             client,
             {
                 "totalProfitCostNet": None,
@@ -103,7 +102,6 @@ class TestCreateClaimPaymentExtract:
         self, session, client
     ):
         response = _post_claim(
-            session,
             client,
             {
                 "poaTypeId": "EXPERT_COST",
@@ -144,7 +142,6 @@ class TestCreateClaimPaymentExtract:
         self, session, client
     ):
         response = _post_claim(
-            session,
             client,
             {
                 "poaTypeId": "EXPERT_COST",
@@ -172,7 +169,6 @@ class TestCreateClaimPaymentExtract:
         self, session, client
     ):
         response = _post_claim(
-            session,
             client,
             {
                 "poaTypeId": "NON_EXPERT_DISBURSEMENT",

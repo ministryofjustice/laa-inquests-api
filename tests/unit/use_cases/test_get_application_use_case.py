@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.models.application.enums import AddressSource
-from app.models.application.index import Address, AddressResponse
+from app.models.application.index import AddressResponse
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.exceptions import (
@@ -11,11 +11,21 @@ from app.use_cases.exceptions import (
     ProviderDetailsRetrievalError,
 )
 from app.use_cases.get_application import GetApplicationUseCase
-from tests.unit.factories import (
-    create_base_application,
-    create_base_client,
-    create_base_provider,
+from tests.factories.builders import (
+    build_application,
+    build_client,
+    build_office_address,
+    build_provider,
 )
+
+
+def _provider_office_address():
+    return build_office_address(
+        address_line_2="Suite 100",
+        town_or_city="Anytown",
+        county="Anycounty",
+        postcode="AB12 3CD",
+    )
 
 
 def test_execute_raises_application_not_found_error_when_application_not_found():
@@ -34,9 +44,9 @@ def test_execute_raises_application_not_found_error_when_application_not_found()
 
 def test_execute_calls_provider_details_port_get_firm_name_with_firm_code():
     get_application_port = MagicMock(spec=GetApplicationPort)
-    provider = create_base_provider(firm_code="0A123B", office_id="0U651L")
+    provider = build_provider(firm_code="0A123B", office_id="0U651L")
     get_application_port.get_application_by_laa_reference.return_value = (
-        create_base_application(provider=provider)
+        build_application(provider=provider)
     )
     port = MagicMock(spec=ProviderDetailsPort)
     port.get_firm_name.return_value = "Test Firm"
@@ -53,7 +63,7 @@ def test_execute_calls_provider_details_port_get_firm_name_with_firm_code():
 def test_execute_returns_application_response_with_firm_name():
     get_application_port = MagicMock(spec=GetApplicationPort)
     get_application_port.get_application_by_laa_reference.return_value = (
-        create_base_application()
+        build_application()
     )
     port = MagicMock(spec=ProviderDetailsPort)
     port.get_firm_name.return_value = "Test Firm"
@@ -70,7 +80,7 @@ def test_execute_returns_application_response_with_firm_name():
 def test_execute_raises_exception_when_provider_details_port_get_firm_name_raises_exception():
     get_application_port = MagicMock(spec=GetApplicationPort)
     get_application_port.get_application_by_laa_reference.return_value = (
-        create_base_application()
+        build_application()
     )
     port = MagicMock(spec=ProviderDetailsPort)
     port.get_firm_name.side_effect = ProviderDetailsRetrievalError(
@@ -90,9 +100,9 @@ def test_execute_raises_exception_when_provider_details_port_get_firm_name_raise
 
 def test_execute_returns_correct_account_number():
     get_application_port = MagicMock(spec=GetApplicationPort)
-    provider = create_base_provider(office_id="042")
+    provider = build_provider(office_id="042")
     get_application_port.get_application_by_laa_reference.return_value = (
-        create_base_application(provider=provider)
+        build_application(provider=provider)
     )
     port = MagicMock(spec=ProviderDetailsPort)
     port.get_firm_name.return_value = "Test Firm"
@@ -108,9 +118,9 @@ def test_execute_returns_correct_account_number():
 
 def test_execute_returns_provider_email_in_response():
     get_application_port = MagicMock(spec=GetApplicationPort)
-    provider = create_base_provider(email_address="provider@example.com")
+    provider = build_provider(email_address="provider@example.com")
     get_application_port.get_application_by_laa_reference.return_value = (
-        create_base_application(provider=provider)
+        build_application(provider=provider)
     )
     port = MagicMock(spec=ProviderDetailsPort)
     port.get_firm_name.return_value = "Test Firm"
@@ -126,19 +136,13 @@ def test_execute_returns_provider_email_in_response():
 
 def test_execute_calls_provider_details_port_get_office_address_with_office_id():
     get_application_port = MagicMock(spec=GetApplicationPort)
-    client = create_base_client(
+    client = build_client(
         correspondence_address_source=AddressSource.USE_PROVIDER_ADDRESS
     )
     get_application_port.get_application_by_laa_reference.return_value = (
-        create_base_application(client=client)
+        build_application(client=client)
     )
-    office_address = Address(
-        address_line_1="123 Main St",
-        address_line_2="Suite 100",
-        town_or_city="Anytown",
-        county="Anycounty",
-        postcode="AB12 3CD",
-    )
+    office_address = _provider_office_address()
 
     port = MagicMock(spec=ProviderDetailsPort)
     port.get_firm_name.return_value = "Test Firm"
@@ -155,19 +159,13 @@ def test_execute_calls_provider_details_port_get_office_address_with_office_id()
 
 def test_execute_returns_application_response_with_office_correspondence_address():
     get_application_port = MagicMock(spec=GetApplicationPort)
-    client = create_base_client(
+    client = build_client(
         correspondence_address_source=AddressSource.USE_PROVIDER_ADDRESS
     )
     get_application_port.get_application_by_laa_reference.return_value = (
-        create_base_application(client=client)
+        build_application(client=client)
     )
-    office_address = Address(
-        address_line_1="123 Main St",
-        address_line_2="Suite 100",
-        town_or_city="Anytown",
-        county="Anycounty",
-        postcode="AB12 3CD",
-    )
+    office_address = _provider_office_address()
 
     port = MagicMock(spec=ProviderDetailsPort)
     port.get_firm_name.return_value = "Test Firm"
@@ -186,19 +184,13 @@ def test_execute_returns_application_response_with_office_correspondence_address
 
 def test_execute_returns_application_response_with_office_correspondence_address_when_no_fixed_abode():
     get_application_port = MagicMock(spec=GetApplicationPort)
-    client = create_base_client(
+    client = build_client(
         correspondence_address_source=AddressSource.USE_PROVIDER_ADDRESS
     )
     get_application_port.get_application_by_laa_reference.return_value = (
-        create_base_application(client=client)
+        build_application(client=client)
     )
-    office_address = Address(
-        address_line_1="123 Main St",
-        address_line_2="Suite 100",
-        town_or_city="Anytown",
-        county="Anycounty",
-        postcode="AB12 3CD",
-    )
+    office_address = _provider_office_address()
 
     port = MagicMock(spec=ProviderDetailsPort)
     port.get_firm_name.return_value = "Test Firm"
@@ -217,11 +209,11 @@ def test_execute_returns_application_response_with_office_correspondence_address
 
 def test_execute_raises_exception_when_provider_details_port_get_office_address_raises_exception():
     get_application_port = MagicMock(spec=GetApplicationPort)
-    client = create_base_client(
+    client = build_client(
         correspondence_address_source=AddressSource.USE_PROVIDER_ADDRESS
     )
     get_application_port.get_application_by_laa_reference.return_value = (
-        create_base_application(client=client)
+        build_application(client=client)
     )
     port = MagicMock(spec=ProviderDetailsPort)
     port.get_firm_name.return_value = "Test Firm"

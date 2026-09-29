@@ -5,7 +5,7 @@ import pytest
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.pdf_generation_port import PdfGenerationPort
 from app.use_cases.send_grant_letter import SendGrantLetterUseCase
-from tests.unit.factories import create_base_certificate
+from tests.factories.builders import build_certificate
 
 
 @pytest.fixture
@@ -20,7 +20,7 @@ def gov_notify_port() -> MagicMock:
 
 @pytest.fixture
 def certificate_context():
-    return create_base_certificate()
+    return build_certificate()
 
 
 @pytest.fixture

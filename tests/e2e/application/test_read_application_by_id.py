@@ -1,19 +1,17 @@
 import uuid
 
 import pytest
-from sqlmodel import select
 
 from app.auth.rbac import Role
-from app.models.application.index import Application, CoronersLetter
+from tests.factories.persisted import create_coroners_letter
 
 pytestmark = pytest.mark.usefixtures("mock_gov_notify")
 
 
 def test_200_read_application_by_reference_returns_expected_application(
-    session, client
+    client, seeded_application
 ):
-    first_application_row = session.exec(select(Application)).first()
-    first_application_laa_reference = first_application_row.laa_reference
+    first_application_laa_reference = seeded_application.laa_reference
 
     response = client.get(
         f"/applications/{first_application_laa_reference}",
@@ -27,9 +25,10 @@ def test_200_read_application_by_reference_returns_expected_application(
     assert requested_application["laaReference"] == first_application_laa_reference
 
 
-def test_200_proceeding_details_included_on_application_response(session, client):
-    first_application_row = session.exec(select(Application)).first()
-    first_application_laa_reference = first_application_row.laa_reference
+def test_200_proceeding_details_included_on_application_response(
+    client, seeded_application
+):
+    first_application_laa_reference = seeded_application.laa_reference
 
     response = client.get(
         f"/applications/{first_application_laa_reference}",
@@ -46,9 +45,10 @@ def test_200_proceeding_details_included_on_application_response(session, client
     assert isinstance(proceeding["proceedingDescription"], str)
 
 
-def test_200_client_addresses_included_on_application_response(session, client):
-    first_application_row = session.exec(select(Application)).first()
-    first_application_laa_reference = first_application_row.laa_reference
+def test_200_client_addresses_included_on_application_response(
+    client, seeded_application
+):
+    first_application_laa_reference = seeded_application.laa_reference
 
     response = client.get(
         f"/applications/{first_application_laa_reference}",
@@ -72,10 +72,9 @@ def test_200_client_addresses_included_on_application_response(session, client):
 
 
 def test_200_returns_client_correspondence_recipient_flag_when_client_is_recipient(
-    session, client
+    client, seeded_application
 ):
-    first_application_row = session.exec(select(Application)).first()
-    first_application_laa_reference = first_application_row.laa_reference
+    first_application_laa_reference = seeded_application.laa_reference
 
     response = client.get(
         f"/applications/{first_application_laa_reference}",
@@ -171,9 +170,8 @@ def test_404_read_application_returns_404_when_not_found(client):
     assert response.status_code == 404
 
 
-def test_200_get_application_includes_provider_email(session, client):
-    first_application_row = session.exec(select(Application)).first()
-    laa_reference = first_application_row.laa_reference
+def test_200_get_application_includes_provider_email(client, seeded_application):
+    laa_reference = seeded_application.laa_reference
 
     response = client.get(
         f"/applications/{laa_reference}",
@@ -187,9 +185,10 @@ def test_200_get_application_includes_provider_email(session, client):
     assert response.json()["provider"]["emailAddress"] == "test@example.com"
 
 
-def test_200_provider_details_included_on_application_response(session, client):
-    first_application_row = session.exec(select(Application)).first()
-    first_application_laa_reference = first_application_row.laa_reference
+def test_200_provider_details_included_on_application_response(
+    client, seeded_application
+):
+    first_application_laa_reference = seeded_application.laa_reference
 
     response = client.get(
         f"/applications/{first_application_laa_reference}",
@@ -204,7 +203,9 @@ def test_200_provider_details_included_on_application_response(session, client):
     assert provider["accountNumber"] == "0U651L"
 
 
-def test_200_provider_fields_are_null_when_provider_api_unavailable(session):
+def test_200_provider_fields_are_null_when_provider_api_unavailable(
+    session, seeded_application
+):
     from unittest.mock import MagicMock
 
     from fastapi.testclient import TestClient
@@ -222,9 +223,8 @@ def test_200_provider_fields_are_null_when_provider_api_unavailable(session):
     try:
         with TestClient(api) as test_client:
             api.dependency_overrides[get_session] = lambda: session
-            first_application_row = session.exec(select(Application)).first()
             response = test_client.get(
-                f"/applications/{first_application_row.laa_reference}",
+                f"/applications/{seeded_application.laa_reference}",
                 headers={
                     "Content-Type": "application/x-www-form-urlencoded",
                     "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
@@ -237,21 +237,18 @@ def test_200_provider_fields_are_null_when_provider_api_unavailable(session):
 
 
 def test_200_read_application_response_includes_coroners_letter_file_name(
-    session, client
+    session, client, seeded_application
 ):
-    first_application_row = session.exec(select(Application)).first()
-    laa_reference = first_application_row.laa_reference
+    laa_reference = seeded_application.laa_reference
 
-    coroners_letter = CoronersLetter(
+    coroners_letter = create_coroners_letter(
+        session,
         sds_file_name="sds-abc123.pdf",
         file_name="test-document.pdf",
     )
-    session.add(coroners_letter)
-    session.commit()
-    session.refresh(coroners_letter)
 
-    first_application_row.coroners_letter_id = coroners_letter.coroners_letter_id
-    session.add(first_application_row)
+    seeded_application.coroners_letter_id = coroners_letter.coroners_letter_id
+    session.add(seeded_application)
     session.commit()
 
     response = client.get(

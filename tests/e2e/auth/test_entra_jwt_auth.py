@@ -4,11 +4,10 @@ import pytest
 
 from app import api
 from app.auth.rbac import Role, get_current_user_permissions
-from app.models.application.index import CoronersLetter
-from app.models.claim.index import ClaimEvidence
 from tests.e2e.application.test_create_application import (
     _make_request_body as make_application_request_body,
 )
+from tests.factories.persisted import create_claim_evidence, create_coroners_letter
 from tests.helpers.application_payloads import create_application_payload
 from tests.helpers.provider_details import (
     override_provider_details_port_with_provider_offices,
@@ -127,13 +126,11 @@ class TestDeleteClaimEvidenceAuth:
         session,
         client,
     ):
-        claim_evidence = ClaimEvidence(
+        claim_evidence = create_claim_evidence(
+            session,
             sds_file_name="stored-claim-evidence_abc123.pdf",
             file_name="claim_evidence.pdf",
         )
-        session.add(claim_evidence)
-        session.commit()
-        session.refresh(claim_evidence)
 
         response = client.delete(
             f"/claims/{claim_evidence.claim_evidence_id}",
@@ -167,13 +164,11 @@ class TestDeleteCoronersLetterAuth:
         session,
         client,
     ):
-        coroners_letter = CoronersLetter(
+        coroners_letter = create_coroners_letter(
+            session,
             sds_file_name="stored-file_abc123.pdf",
             file_name="coroners_letter.pdf",
         )
-        session.add(coroners_letter)
-        session.commit()
-        session.refresh(coroners_letter)
 
         response = client.delete(
             f"/applications/coroners-letter/{coroners_letter.coroners_letter_id}",

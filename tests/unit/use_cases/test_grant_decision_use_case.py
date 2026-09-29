@@ -17,7 +17,7 @@ from app.use_cases.exceptions import (
     GrantDecisionError,
 )
 from app.use_cases.grant_decision import GrantDecisionUseCase
-from tests.unit.factories import create_base_application
+from tests.factories.builders import build_application
 
 
 @pytest.fixture(autouse=True)
@@ -32,7 +32,7 @@ def grant_request() -> GrantApplicationUpdate:
 
 @pytest.fixture
 def application() -> Application:
-    return create_base_application()
+    return build_application()
 
 
 @pytest.fixture

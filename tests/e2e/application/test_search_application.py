@@ -1,25 +1,13 @@
-from sqlmodel import select
-
 from app.auth.rbac import Role
 from app.models.application.enums import MeritsDecision
-from app.models.application.index import Application
-from tests.e2e.factories import create_application_in_db
+from tests.factories.persisted import create_application
+from tests.factories.seed import TEST_USER_FIRM_CODE
 
 
-def _seed_application_for_other_firm(session, firm_code: str = "ZZ999Z") -> int:
-    other_application = create_application_in_db(
-        session,
-        provider_overrides={
-            "firm_code": firm_code,
-            "office_id": "002",
-            "email_address": "other@example.com",
-        },
-    )
-    return other_application.laa_reference
-
-
-def test_200_search_application_by_reference_returns_expected_fields(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+def test_200_search_application_by_reference_returns_expected_fields(
+    client, seeded_application
+):
+    laa_reference = seeded_application.laa_reference
     response = client.get(
         "/applications/search",
         params={"laa_reference": laa_reference},
@@ -41,8 +29,10 @@ def test_200_search_application_by_reference_returns_expected_fields(session, cl
     assert result["overallDecision"] == MeritsDecision.GRANTED
 
 
-def test_200_search_application_trims_leading_and_trailing_spaces(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+def test_200_search_application_trims_leading_and_trailing_spaces(
+    client, seeded_application
+):
+    laa_reference = seeded_application.laa_reference
     response = client.get(
         "/applications/search",
         params={"laa_reference": f"  {laa_reference}  "},
@@ -67,10 +57,11 @@ def test_200_search_application_returns_empty_list_for_unknown_reference(client)
 def test_200_search_application_includes_pending_application_when_no_merits_filter(
     session, client
 ):
-    app = session.exec(select(Application)).first()
-    app.proceeding.merits_decision = MeritsDecision.PENDING
-    session.add(app.proceeding)
-    session.commit()
+    app = create_application(
+        session,
+        provider_overrides={"firm_code": TEST_USER_FIRM_CODE},
+        proceeding_overrides={"merits_decision": MeritsDecision.PENDING},
+    )
 
     response = client.get(
         "/applications/search",
@@ -86,10 +77,11 @@ def test_200_search_application_includes_pending_application_when_no_merits_filt
 def test_200_search_application_with_merits_filter_returns_only_granted(
     session, client
 ):
-    app = session.exec(select(Application)).first()
-    app.proceeding.merits_decision = MeritsDecision.GRANTED
-    session.add(app.proceeding)
-    session.commit()
+    app = create_application(
+        session,
+        provider_overrides={"firm_code": TEST_USER_FIRM_CODE},
+        proceeding_overrides={"merits_decision": MeritsDecision.GRANTED},
+    )
 
     response = client.get(
         "/applications/search",
@@ -108,10 +100,11 @@ def test_200_search_application_with_merits_filter_returns_only_granted(
 def test_200_search_application_with_granted_filter_excludes_pending_application(
     session, client
 ):
-    app = session.exec(select(Application)).first()
-    app.proceeding.merits_decision = MeritsDecision.PENDING
-    session.add(app.proceeding)
-    session.commit()
+    app = create_application(
+        session,
+        provider_overrides={"firm_code": TEST_USER_FIRM_CODE},
+        proceeding_overrides={"merits_decision": MeritsDecision.PENDING},
+    )
 
     response = client.get(
         "/applications/search",
@@ -140,7 +133,14 @@ def test_422_search_application_returns_unprocessable_when_laa_reference_missing
 def test_200_search_application_excludes_application_belonging_to_another_firm(
     session, client
 ):
-    other_firm_reference = _seed_application_for_other_firm(session)
+    other_firm_reference = create_application(
+        session,
+        provider_overrides={
+            "firm_code": "ZZ999Z",
+            "office_id": "002",
+            "email_address": "other@example.com",
+        },
+    ).laa_reference
 
     response = client.get(
         "/applications/search",

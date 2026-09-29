@@ -12,13 +12,14 @@ from app.use_cases.exceptions import (
     ClaimEvidenceDeleteError,
     ClaimEvidenceNotFoundError,
 )
+from tests.factories.domain import build_domain_claim_evidence
 
 
 def _make_claim_evidence(
     sds_file_name: str = "claim-evidence_abc123.pdf",
     file_name: str = "test-document.pdf",
 ) -> ClaimEvidence:
-    return ClaimEvidence(sds_file_name=sds_file_name, file_name=file_name)
+    return build_domain_claim_evidence(sds_file_name=sds_file_name, file_name=file_name)
 
 
 def test_execute_deletes_file_from_sds_and_db():

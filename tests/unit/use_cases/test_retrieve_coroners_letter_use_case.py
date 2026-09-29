@@ -12,6 +12,7 @@ from app.use_cases.exceptions import (
     InvalidCoronersLetterDocumentIdError,
     SDSLetterRetrievalError,
 )
+from tests.factories.builders import build_application, build_coroners_letter
 
 
 def _make_coroners_letter(
@@ -19,7 +20,7 @@ def _make_coroners_letter(
     sds_file_name: str = "letter_abc123.pdf",
     file_name: str = "test-document.pdf",
 ) -> CoronersLetter:
-    return CoronersLetter(
+    return build_coroners_letter(
         coroners_letter_id=coroners_letter_id or uuid.uuid4(),
         sds_file_name=sds_file_name,
         file_name=file_name,
@@ -27,9 +28,7 @@ def _make_coroners_letter(
 
 
 def _make_application(coroners_letter: CoronersLetter | None = None) -> Application:
-    app = MagicMock(spec=Application)
-    app.coroners_letter = coroners_letter
-    return app
+    return build_application(coroners_letter=coroners_letter)
 
 
 def _make_use_case(application: Application | None, sds_port: MagicMock):

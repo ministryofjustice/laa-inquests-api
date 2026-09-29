@@ -1,21 +1,18 @@
 from datetime import UTC, datetime
 
 import pytest
-from sqlmodel import select
 
 from app.adapters.history_event_repository_adapter import HistoryEventRepositoryAdapter
 from app.contexts.user import clear_entra_user_context, set_entra_user_context
-from app.models.application.index import (
-    Application,
-    ApplicationProceeding,
-    ApplicationPublicBody,
-)
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
+from tests.factories.persisted import create_application
 
 
-def test_create_history_event_persists_event_with_expected_values(session):
-    application = session.exec(select(Application)).first()
+def test_create_history_event_persists_event_with_expected_values(
+    session, seeded_application
+):
+    application = seeded_application
     adapter = HistoryEventRepositoryAdapter(session)
 
     created = adapter.create_history_event(
@@ -39,8 +36,8 @@ def test_create_history_event_persists_event_with_expected_values(session):
     }
 
 
-def test_create_history_event_sets_timestamp_automatically(session):
-    application = session.exec(select(Application)).first()
+def test_create_history_event_sets_timestamp_automatically(session, seeded_application):
+    application = seeded_application
     adapter = HistoryEventRepositoryAdapter(session)
 
     before_creation = datetime.now(UTC)
@@ -61,8 +58,8 @@ def test_create_history_event_sets_timestamp_automatically(session):
     assert before_creation <= timestamp <= after_creation
 
 
-def test_create_history_event_handles_none_event_data(session):
-    application = session.exec(select(Application)).first()
+def test_create_history_event_handles_none_event_data(session, seeded_application):
+    application = seeded_application
     adapter = HistoryEventRepositoryAdapter(session)
 
     created = adapter.create_history_event(
@@ -79,8 +76,10 @@ def test_create_history_event_handles_none_event_data(session):
     assert stored.event_data is None
 
 
-def test_create_history_raises_exception_for_missing_event_reference(session):
-    application = session.exec(select(Application)).first()
+def test_create_history_raises_exception_for_missing_event_reference(
+    session, seeded_application
+):
+    application = seeded_application
     adapter = HistoryEventRepositoryAdapter(session)
 
     with pytest.raises(ValueError):
@@ -92,8 +91,8 @@ def test_create_history_raises_exception_for_missing_event_reference(session):
         )
 
 
-def test_create_history_raises_exception_for_missing_actor(session):
-    application = session.exec(select(Application)).first()
+def test_create_history_raises_exception_for_missing_actor(session, seeded_application):
+    application = seeded_application
     adapter = HistoryEventRepositoryAdapter(session)
 
     with pytest.raises(ValueError):
@@ -105,8 +104,8 @@ def test_create_history_raises_exception_for_missing_actor(session):
         )
 
 
-def test_create_history_raises_exception_for_empty_actor(session):
-    application = session.exec(select(Application)).first()
+def test_create_history_raises_exception_for_empty_actor(session, seeded_application):
+    application = seeded_application
     adapter = HistoryEventRepositoryAdapter(session)
 
     with pytest.raises(ValueError):
@@ -118,8 +117,10 @@ def test_create_history_raises_exception_for_empty_actor(session):
         )
 
 
-def test_create_history_raises_exception_for_missing_actor_type(session):
-    application = session.exec(select(Application)).first()
+def test_create_history_raises_exception_for_missing_actor_type(
+    session, seeded_application
+):
+    application = seeded_application
     adapter = HistoryEventRepositoryAdapter(session)
 
     with pytest.raises(ValueError):
@@ -143,8 +144,8 @@ def test_create_history_raises_exception_for_missing_laa_reference(session):
         )
 
 
-def test_commits_transaction(session):
-    application = session.exec(select(Application)).first()
+def test_commits_transaction(session, seeded_application):
+    application = seeded_application
     adapter = HistoryEventRepositoryAdapter(session)
 
     created = adapter.create_history_event(
@@ -160,8 +161,8 @@ def test_commits_transaction(session):
     assert stored.event_reference == HistoryEventReference.APPLICATION_SUBMITTED
 
 
-def test_rollback_discards_uncommitted_event(session):
-    application = session.exec(select(Application)).first()
+def test_rollback_discards_uncommitted_event(session, seeded_application):
+    application = seeded_application
     adapter = HistoryEventRepositoryAdapter(session)
 
     created = adapter.create_history_event(
@@ -177,8 +178,8 @@ def test_rollback_discards_uncommitted_event(session):
     assert stored is None
 
 
-def test_get_application_history_returns_correct_events(session):
-    application = session.exec(select(Application)).first()
+def test_get_application_history_returns_correct_events(session, seeded_application):
+    application = seeded_application
     adapter = HistoryEventRepositoryAdapter(session)
 
     event1 = adapter.create_history_event(
@@ -200,26 +201,13 @@ def test_get_application_history_returns_correct_events(session):
     assert event2 in history
 
 
-def test_get_application_history_does_not_return_events_for_other_applications(session):
-    application1 = session.exec(select(Application)).first()
+def test_get_application_history_does_not_return_events_for_other_applications(
+    session, seeded_application
+):
+    application1 = seeded_application
     application_id_1 = application1.application_id
 
-    application2 = Application(
-        proceeding=ApplicationProceeding(
-            proceeding_id=application1.proceeding.proceeding_id,
-        ),
-        client_id=application1.client_id,
-        deceased_id=application1.deceased.deceased_id,
-        public_bodies=[
-            ApplicationPublicBody(
-                public_body_id=application1.public_bodies[0].public_body_id,
-            )
-        ],
-        provider_id=application1.provider_id,
-        laa_reference="INQ-YYY-YYY",
-    )
-    session.add(application2)
-    session.flush()
+    application2 = create_application(session)
     application_id_2 = application2.application_id
 
     adapter = HistoryEventRepositoryAdapter(session)
@@ -245,9 +233,9 @@ def test_get_application_history_does_not_return_events_for_other_applications(s
 
 
 def test_get_application_history_returns_event_list_in_reverse_chronological_order(
-    session,
+    session, seeded_application
 ):
-    application = session.exec(select(Application)).first()
+    application = seeded_application
     adapter = HistoryEventRepositoryAdapter(session)
 
     event1 = adapter.create_history_event(
@@ -268,8 +256,10 @@ def test_get_application_history_returns_event_list_in_reverse_chronological_ord
     assert history == [event2, event1]
 
 
-def test_create_history_event_does_not_store_entra_object_id_for_system_actor(session):
-    application = session.exec(select(Application)).first()
+def test_create_history_event_does_not_store_entra_object_id_for_system_actor(
+    session, seeded_application
+):
+    application = seeded_application
     adapter = HistoryEventRepositoryAdapter(session)
 
     set_entra_user_context("entra-object-id-123", "Caseworker")
@@ -288,8 +278,10 @@ def test_create_history_event_does_not_store_entra_object_id_for_system_actor(se
     assert stored.entra_user_object_id is None
 
 
-def test_create_history_event_stores_entra_object_id_for_non_system_actor(session):
-    application = session.exec(select(Application)).first()
+def test_create_history_event_stores_entra_object_id_for_non_system_actor(
+    session, seeded_application
+):
+    application = seeded_application
     adapter = HistoryEventRepositoryAdapter(session)
 
     set_entra_user_context("entra-object-id-123", "Caseworker")

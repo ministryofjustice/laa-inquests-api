@@ -12,13 +12,16 @@ from app.use_cases.exceptions import (
     CoronersLetterDeleteError,
     CoronersLetterNotFoundError,
 )
+from tests.factories.domain import build_domain_coroners_letter
 
 
 def _make_coroners_letter(
     sds_file_name: str = "coroners-letter_abc123.pdf",
     file_name: str = "test-coroners-letter.pdf",
 ) -> CoronersLetter:
-    return CoronersLetter(sds_file_name=sds_file_name, file_name=file_name)
+    return build_domain_coroners_letter(
+        sds_file_name=sds_file_name, file_name=file_name
+    )
 
 
 def test_execute_deletes_file_from_sds_and_db():

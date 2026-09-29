@@ -6,7 +6,6 @@ import pytest
 from sqlmodel import select
 
 from app.adapters.application_repository_adapter import ApplicationRepositoryAdapter
-from app.domain.coroners_letter import CoronersLetter
 from app.models.application.enums import (
     AddressSource,
     CorrespondenceRecipientType,
@@ -17,12 +16,14 @@ from app.models.application.enums import (
 from app.models.application.index import (
     Application,
     ApplicationCreate,
-    ApplicationProceeding,
 )
 from app.models.application.index import (
     CoronersLetter as CoronersLetterModel,
 )
-from tests.e2e.factories import create_application_in_db
+from tests.factories.builders import build_application_proceeding
+from tests.factories.domain import build_domain_coroners_letter
+from tests.factories.persisted import create_application
+from tests.factories.seed import TEST_USER_FIRM_CODE
 
 
 def _make_request(with_addresses: bool = True) -> ApplicationCreate:
@@ -76,8 +77,10 @@ def _make_request(with_addresses: bool = True) -> ApplicationCreate:
     )
 
 
-def test_get_application_by_laa_reference_returns_existing_application(session):
-    test_app_reference = session.exec(select(Application)).first().laa_reference
+def test_get_application_by_laa_reference_returns_existing_application(
+    session, seeded_application
+):
+    test_app_reference = seeded_application.laa_reference
     adapter = ApplicationRepositoryAdapter(session)
 
     result = adapter.get_application_by_laa_reference(str(test_app_reference))
@@ -169,7 +172,7 @@ def test_rollback_delegates_to_session_rollback():
 def test_save_uploaded_coroners_letter_persists_and_commits():
     mock_session = MagicMock()
     adapter = ApplicationRepositoryAdapter(mock_session)
-    coroners_letter = CoronersLetter(
+    coroners_letter = build_domain_coroners_letter(
         sds_file_name="sds-file.pdf",
         file_name="upload.pdf",
     )
@@ -189,9 +192,7 @@ def test_save_uploaded_coroners_letter_persists_and_commits():
 def test_update_decision_adds_entities_and_commits():
     mock_session = MagicMock()
     adapter = ApplicationRepositoryAdapter(mock_session)
-    proceeding = ApplicationProceeding(
-        application_id=1, proceeding_id=ProceedingId.IQOT
-    )
+    proceeding = build_application_proceeding(application_id=1)
 
     adapter.update_decision(proceeding)
 
@@ -200,8 +201,8 @@ def test_update_decision_adds_entities_and_commits():
     mock_session.rollback.assert_not_called()
 
 
-def test_search_applications_returns_matching_application(session):
-    test_app_reference = session.exec(select(Application)).first().laa_reference
+def test_search_applications_returns_matching_application(session, seeded_application):
+    test_app_reference = seeded_application.laa_reference
     adapter = ApplicationRepositoryAdapter(session)
 
     result = adapter.search_applications(str(test_app_reference), "0A123B")
@@ -211,16 +212,17 @@ def test_search_applications_returns_matching_application(session):
 
 
 def test_search_applications_returns_empty_list_when_application_is_pending(session):
-    app = session.exec(select(Application)).first()
-    app.proceeding.merits_decision = MeritsDecision.PENDING
-    session.add(app.proceeding)
-    session.flush()
+    app = create_application(
+        session,
+        provider_overrides={"firm_code": TEST_USER_FIRM_CODE},
+        proceeding_overrides={"merits_decision": MeritsDecision.PENDING},
+    )
 
     adapter = ApplicationRepositoryAdapter(session)
 
     result = adapter.search_applications(
         str(app.laa_reference),
-        "0A123B",
+        TEST_USER_FIRM_CODE,
         MeritsDecision.GRANTED,
     )
 
@@ -228,38 +230,44 @@ def test_search_applications_returns_empty_list_when_application_is_pending(sess
 
 
 def test_search_applications_returns_empty_list_when_application_is_refused(session):
-    app = session.exec(select(Application)).first()
-    app.proceeding.merits_decision = MeritsDecision.REFUSED
-    session.add(app.proceeding)
-    session.flush()
+    app = create_application(
+        session,
+        provider_overrides={"firm_code": TEST_USER_FIRM_CODE},
+        proceeding_overrides={"merits_decision": MeritsDecision.REFUSED},
+    )
 
     adapter = ApplicationRepositoryAdapter(session)
 
     result = adapter.search_applications(
         str(app.laa_reference),
-        "0A123B",
+        TEST_USER_FIRM_CODE,
         MeritsDecision.GRANTED,
     )
 
     assert result == []
 
 
-def test_search_applications_returns_pending_application_when_no_merits_filter(session):
-    app = session.exec(select(Application)).first()
-    app.proceeding.merits_decision = MeritsDecision.PENDING
-    session.add(app.proceeding)
-    session.flush()
+def test_search_applications_returns_pending_application_when_no_merits_filter(
+    session,
+):
+    app = create_application(
+        session,
+        provider_overrides={"firm_code": TEST_USER_FIRM_CODE},
+        proceeding_overrides={"merits_decision": MeritsDecision.PENDING},
+    )
 
     adapter = ApplicationRepositoryAdapter(session)
 
-    result = adapter.search_applications(str(app.laa_reference), "0A123B")
+    result = adapter.search_applications(str(app.laa_reference), TEST_USER_FIRM_CODE)
 
     assert len(result) == 1
     assert result[0].laa_reference == app.laa_reference
 
 
-def test_search_applications_returns_empty_list_when_firm_code_does_not_match(session):
-    test_app_reference = session.exec(select(Application)).first().laa_reference
+def test_search_applications_returns_empty_list_when_firm_code_does_not_match(
+    session, seeded_application
+):
+    test_app_reference = seeded_application.laa_reference
     adapter = ApplicationRepositoryAdapter(session)
 
     result = adapter.search_applications(str(test_app_reference), "ZZ999Z")
@@ -337,7 +345,7 @@ def test_get_laa_reference_does_not_return_existing_reference(session):
 
     # Create an application with a specific reference to simulate an existing reference
     existing_reference = "INQ-AAA-AAA"
-    create_application_in_db(
+    create_application(
         session,
         laa_reference=existing_reference,
     )
@@ -367,10 +375,9 @@ def test_get_laa_reference_raises_error_after_max_attempts(session):
 
 class TestGetPendingApplications:
     def test_returns_applications_with_pending_decision(self, session):
-        app = session.exec(select(Application)).first()
-        app.proceeding.merits_decision = MeritsDecision.PENDING
-        session.add(app.proceeding)
-        session.flush()
+        create_application(
+            session, proceeding_overrides={"merits_decision": MeritsDecision.PENDING}
+        )
 
         adapter = ApplicationRepositoryAdapter(session)
 
@@ -380,10 +387,9 @@ class TestGetPendingApplications:
         assert result[0].proceeding.merits_decision == "PENDING"
 
     def test_excludes_granted_applications(self, session):
-        app = session.exec(select(Application)).first()
-        app.proceeding.merits_decision = MeritsDecision.GRANTED
-        session.add(app.proceeding)
-        session.flush()
+        create_application(
+            session, proceeding_overrides={"merits_decision": MeritsDecision.GRANTED}
+        )
 
         adapter = ApplicationRepositoryAdapter(session)
 
@@ -392,10 +398,9 @@ class TestGetPendingApplications:
         assert len(result) == 0
 
     def test_excludes_refused_applications(self, session):
-        app = session.exec(select(Application)).first()
-        app.proceeding.merits_decision = MeritsDecision.REFUSED
-        session.add(app.proceeding)
-        session.flush()
+        create_application(
+            session, proceeding_overrides={"merits_decision": MeritsDecision.REFUSED}
+        )
 
         adapter = ApplicationRepositoryAdapter(session)
 
@@ -404,15 +409,16 @@ class TestGetPendingApplications:
         assert len(result) == 0
 
     def test_ordered_by_created_at_ascending(self, session):
-        from tests.e2e.factories import create_application_in_db
+        pending = {"merits_decision": MeritsDecision.PENDING}
 
-        app = session.exec(select(Application)).first()
-        app.proceeding.merits_decision = MeritsDecision.PENDING
-        session.add(app.proceeding)
-        session.flush()
-
-        older_app = create_application_in_db(
+        create_application(
             session,
+            proceeding_overrides=pending,
+            created_at=datetime(2021, 1, 1, tzinfo=UTC),
+        )
+        older_app = create_application(
+            session,
+            proceeding_overrides=pending,
             created_at=datetime(2019, 1, 1, tzinfo=UTC),
         )
 
@@ -425,8 +431,10 @@ class TestGetPendingApplications:
 
 
 class TestUpdateApplicationPublicBodies:
-    def test_updates_to_single_public_body_and_commits(self, session):
-        application = session.exec(select(Application)).first()
+    def test_updates_to_single_public_body_and_commits(
+        self, session, seeded_application
+    ):
+        application = seeded_application
         adapter = ApplicationRepositoryAdapter(session)
 
         new_public_bodies = [PublicBodyId.MINISTRY_OF_DEFENCE]
@@ -439,8 +447,10 @@ class TestUpdateApplicationPublicBodies:
             == PublicBodyId.MINISTRY_OF_DEFENCE
         )
 
-    def test_updates_to_the_same_single_public_body_and_commits(self, session):
-        application = session.exec(select(Application)).first()
+    def test_updates_to_the_same_single_public_body_and_commits(
+        self, session, seeded_application
+    ):
+        application = seeded_application
         adapter = ApplicationRepositoryAdapter(session)
 
         new_public_bodies = [PublicBodyId.DEPARTMENT_FOR_TRANSPORT]
@@ -453,8 +463,10 @@ class TestUpdateApplicationPublicBodies:
             == PublicBodyId.DEPARTMENT_FOR_TRANSPORT
         )
 
-    def test_updates_to_multiple_public_bodies_and_commits(self, session):
-        application = session.exec(select(Application)).first()
+    def test_updates_to_multiple_public_bodies_and_commits(
+        self, session, seeded_application
+    ):
+        application = seeded_application
         adapter = ApplicationRepositoryAdapter(session)
 
         new_public_bodies = [

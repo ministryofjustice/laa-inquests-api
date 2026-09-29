@@ -3,8 +3,8 @@ from unittest.mock import MagicMock
 
 from app import api
 from app.auth.rbac import Role
-from app.models.claim.index import ClaimEvidence
 from app.routers.claims import get_sds_port
+from tests.factories.persisted import create_claim_evidence
 
 
 def _upload_evidence_and_get_id(client, auth_token):
@@ -69,13 +69,11 @@ class TestDeleteClaimEvidenceRbac:
     def test_204_delete_claim_evidence_with_provider_claims_user_app_role(
         self, session, client
     ):
-        claim_evidence = ClaimEvidence(
+        claim_evidence = create_claim_evidence(
+            session,
             sds_file_name="stored-claim-evidence_abc123.pdf",
             file_name="claim_evidence.pdf",
         )
-        session.add(claim_evidence)
-        session.commit()
-        session.refresh(claim_evidence)
 
         response = client.delete(
             f"/claims/{claim_evidence.claim_evidence_id}",

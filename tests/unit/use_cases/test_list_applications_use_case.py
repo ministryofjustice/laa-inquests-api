@@ -1,14 +1,14 @@
 from unittest.mock import MagicMock
 
-from app.models.application.index import Application
 from app.ports.list_applications_port import ListApplicationsPort
 from app.use_cases.list_applications import ListApplicationsUseCase
+from tests.factories.builders import build_application
 
 
 def test_execute_returns_applications_from_list_applications_port():
     applications = [
-        Application(application_id=1, deceased_id=1, provider_id=1),
-        Application(application_id=2, deceased_id=2, provider_id=2),
+        build_application(application_id=1),
+        build_application(application_id=2, laa_reference="INQ-ZZZ-ZZZ"),
     ]
     list_applications_port = MagicMock(spec=ListApplicationsPort)
     list_applications_port.list_applications.return_value = applications

@@ -11,8 +11,8 @@ from app.models.history.index import HistoryEvent
 
 
 @pytest.fixture
-def application(session) -> Application:
-    return session.exec(select(Application)).first()
+def application(seeded_application) -> Application:
+    return seeded_application
 
 
 def _caseworker_headers(auth_token: str) -> dict[str, str]:

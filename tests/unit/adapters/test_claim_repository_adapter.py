@@ -7,16 +7,13 @@ import pytest
 from sqlmodel import select
 
 from app.adapters.claim_repository_adapter import ClaimRepositoryAdapter
-from app.domain.claim import Claim as DomainClaim
 from app.domain.payment_extract import PaymentExtractLine
-from app.models.application.index import Application
 from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
     ClaimType,
     InquestOutcomeCode,
     InvoiceTypeCode,
-    NumberOfCounselInstructed,
     POAType,
     ReasonCode,
     TaxCode,
@@ -30,29 +27,18 @@ from app.models.claim.index import (
     ClaimInquestOutcome,
     DecisionReason,
 )
+from tests.factories.domain import build_domain_claim, build_final_bill_domain_claim
+from tests.factories.persisted import create_claim_evidence
 
 
-def _make_domain_claim(overrides=None) -> DomainClaim:
-    payload = {
-        "claim_type": ClaimType.PAYMENT_ON_ACCOUNT,
-        "net": Decimal("1000.00"),
-        "gross": Decimal("1200.00"),
-        "vat_zero_total": None,
-        "poa_type": POAType.PROFIT_COST,
-    }
-    if overrides is not None:
-        payload.update(overrides)
-    return DomainClaim(**payload)
-
-
-def test_create_claim_persists_claim_with_expected_values(session):
-    application_id = session.exec(select(Application)).first().application_id
+def test_create_claim_persists_claim_with_expected_values(session, seeded_application):
+    application_id = seeded_application.application_id
     adapter = ClaimRepositoryAdapter(session)
 
     created = adapter.create_claim(
         application_id,
-        _make_domain_claim(
-            {"poa_type": POAType.EXPERT_COST, "vat_zero_total": Decimal("150.00")}
+        build_domain_claim(
+            poa_type=POAType.EXPERT_COST, vat_zero_total=Decimal("150.00")
         ),
         "claimant-123@provider.co.uk",
     )
@@ -69,48 +55,33 @@ def test_create_claim_persists_claim_with_expected_values(session):
     assert stored.claimant_id == "claimant-123@provider.co.uk"
 
 
-def test_create_claim_defaults_status_to_submitted(session):
-    application_id = session.exec(select(Application)).first().application_id
+def test_create_claim_defaults_status_to_submitted(session, seeded_application):
+    application_id = seeded_application.application_id
     adapter = ClaimRepositoryAdapter(session)
 
-    created = adapter.create_claim(application_id, _make_domain_claim(), None)
+    created = adapter.create_claim(application_id, build_domain_claim(), None)
 
     assert created.status_id == ClaimStatus.SUBMITTED
 
 
-def test_create_claim_sets_submission_date(session):
-    application_id = session.exec(select(Application)).first().application_id
+def test_create_claim_sets_submission_date(session, seeded_application):
+    application_id = seeded_application.application_id
     adapter = ClaimRepositoryAdapter(session)
 
-    created = adapter.create_claim(application_id, _make_domain_claim(), None)
+    created = adapter.create_claim(application_id, build_domain_claim(), None)
 
     assert created.submission_date is not None
 
 
-def test_create_claim_persists_optional_fields_as_none_when_omitted(session):
-    application_id = session.exec(select(Application)).first().application_id
+def test_create_claim_persists_optional_fields_as_none_when_omitted(
+    session, seeded_application
+):
+    application_id = seeded_application.application_id
     adapter = ClaimRepositoryAdapter(session)
 
     created = adapter.create_claim(
         application_id,
-        _make_domain_claim(
-            {
-                "claim_type": ClaimType.FINAL_BILL,
-                "poa_type": None,
-                "inquest_outcomes": (InquestOutcomeCode.NATURAL_CAUSES,),
-                "cost_template_file_id": uuid.uuid4(),
-                "cost_template_file_name": "costs.xlsx",
-                "has_counsel_been_paid": True,
-                "has_alternative_funding": False,
-                "has_recovery_costs_awarded": True,
-                "financial_recovery_previous_pre_certificate_costs": Decimal("100.00"),
-                "financial_recovery_cost": Decimal("200.00"),
-                "financial_recovery_damages": Decimal("300.00"),
-                "financial_recovery_interest": Decimal("50.00"),
-                "paying_party": "Test Council",
-                "number_of_counsel_instructed": NumberOfCounselInstructed.TWO,
-            }
-        ),
+        build_final_bill_domain_claim(),
         None,
     )
 
@@ -118,29 +89,12 @@ def test_create_claim_persists_optional_fields_as_none_when_omitted(session):
     assert created.claimant_id is None
 
 
-def test_link_inquest_outcomes_to_claim_persists_link_rows(session):
-    application_id = session.exec(select(Application)).first().application_id
+def test_link_inquest_outcomes_to_claim_persists_link_rows(session, seeded_application):
+    application_id = seeded_application.application_id
     adapter = ClaimRepositoryAdapter(session)
     created = adapter.create_claim(
         application_id,
-        _make_domain_claim(
-            {
-                "claim_type": ClaimType.FINAL_BILL,
-                "poa_type": None,
-                "inquest_outcomes": (InquestOutcomeCode.NATURAL_CAUSES,),
-                "cost_template_file_id": uuid.uuid4(),
-                "cost_template_file_name": "costs.xlsx",
-                "has_counsel_been_paid": True,
-                "has_alternative_funding": False,
-                "has_recovery_costs_awarded": True,
-                "financial_recovery_previous_pre_certificate_costs": Decimal("100.00"),
-                "financial_recovery_cost": Decimal("200.00"),
-                "financial_recovery_damages": Decimal("300.00"),
-                "financial_recovery_interest": Decimal("50.00"),
-                "paying_party": "Test Council",
-                "number_of_counsel_instructed": NumberOfCounselInstructed.TWO,
-            }
-        ),
+        build_final_bill_domain_claim(),
         None,
     )
 
@@ -161,29 +115,12 @@ def test_link_inquest_outcomes_to_claim_persists_link_rows(session):
     }
 
 
-def test_link_cost_template_to_claim_persists_row(session):
-    application_id = session.exec(select(Application)).first().application_id
+def test_link_cost_template_to_claim_persists_row(session, seeded_application):
+    application_id = seeded_application.application_id
     adapter = ClaimRepositoryAdapter(session)
     created = adapter.create_claim(
         application_id,
-        _make_domain_claim(
-            {
-                "claim_type": ClaimType.FINAL_BILL,
-                "poa_type": None,
-                "inquest_outcomes": (InquestOutcomeCode.NATURAL_CAUSES,),
-                "cost_template_file_id": uuid.uuid4(),
-                "cost_template_file_name": "costs.xlsx",
-                "has_counsel_been_paid": True,
-                "has_alternative_funding": False,
-                "has_recovery_costs_awarded": True,
-                "financial_recovery_previous_pre_certificate_costs": Decimal("100.00"),
-                "financial_recovery_cost": Decimal("200.00"),
-                "financial_recovery_damages": Decimal("300.00"),
-                "financial_recovery_interest": Decimal("50.00"),
-                "paying_party": "Test Council",
-                "number_of_counsel_instructed": NumberOfCounselInstructed.TWO,
-            }
-        ),
+        build_final_bill_domain_claim(),
         None,
     )
     file_id = uuid.uuid4()
@@ -201,33 +138,38 @@ def test_link_cost_template_to_claim_persists_row(session):
     assert stored[0].claim_cost_template_file_name == "final_bill_costs.xlsx"
 
 
-def test_get_claims_by_application_id_returns_claims_for_application(session):
-    application_id = session.exec(select(Application)).first().application_id
+def test_get_claims_by_application_id_returns_claims_for_application(
+    session, seeded_application
+):
+    application_id = seeded_application.application_id
     adapter = ClaimRepositoryAdapter(session)
-    adapter.create_claim(application_id, _make_domain_claim(), "claimant@example.com")
-    adapter.create_claim(application_id, _make_domain_claim(), "claimant@example.com")
+    adapter.create_claim(application_id, build_domain_claim(), "claimant@example.com")
+    adapter.create_claim(application_id, build_domain_claim(), "claimant@example.com")
 
-    application_id = session.exec(select(Application)).first().application_id
     results = adapter.get_claims_by_application_id(application_id)
 
     assert len(results) == 2
     assert all(c.application_id == application_id for c in results)
 
 
-def test_get_claims_by_application_id_returns_empty_list_when_no_claims(session):
+def test_get_claims_by_application_id_returns_empty_list_when_no_claims(
+    session, seeded_application
+):
     adapter = ClaimRepositoryAdapter(session)
 
-    application_id = session.exec(select(Application)).first().application_id
+    application_id = seeded_application.application_id
     results = adapter.get_claims_by_application_id(application_id)
 
     assert results == []
 
 
-def test_get_payment_extracts_by_claim_id_returns_lines_in_sequence_order(session):
-    application_id = session.exec(select(Application)).first().application_id
+def test_get_payment_extracts_by_claim_id_returns_lines_in_sequence_order(
+    session, seeded_application
+):
+    application_id = seeded_application.application_id
     adapter = ClaimRepositoryAdapter(session)
     claim = adapter.create_claim(
-        application_id, _make_domain_claim(), "claimant@example.com"
+        application_id, build_domain_claim(), "claimant@example.com"
     )
     adapter.create_payment_extract(
         claim_id=claim.claim_id,
@@ -259,26 +201,28 @@ def test_get_payment_extracts_by_claim_id_returns_lines_in_sequence_order(sessio
     assert results[1].invoice_number == f"{claim.claim_id}_002"
 
 
-def test_get_payment_extracts_by_claim_id_returns_empty_list_when_none(session):
-    application_id = session.exec(select(Application)).first().application_id
+def test_get_payment_extracts_by_claim_id_returns_empty_list_when_none(
+    session, seeded_application
+):
+    application_id = seeded_application.application_id
     adapter = ClaimRepositoryAdapter(session)
     claim = adapter.create_claim(
-        application_id, _make_domain_claim(), "claimant@example.com"
+        application_id, build_domain_claim(), "claimant@example.com"
     )
     adapter.commit()
 
     assert adapter.get_payment_extracts_by_claim_id(claim.claim_id) == []
 
 
-def test_get_open_claims_returns_only_open_claims(session):
-    application_id = session.exec(select(Application)).first().application_id
+def test_get_open_claims_returns_only_open_claims(session, seeded_application):
+    application_id = seeded_application.application_id
     adapter = ClaimRepositoryAdapter(session)
 
     open_claim = adapter.create_claim(
-        application_id, _make_domain_claim(), "claimant@example.com"
+        application_id, build_domain_claim(), "claimant@example.com"
     )
     rejected_claim = adapter.create_claim(
-        application_id, _make_domain_claim(), "claimant@example.com"
+        application_id, build_domain_claim(), "claimant@example.com"
     )
     rejected_claim.status_id = ClaimStatus.REJECTED
     session.add(rejected_claim)
@@ -291,25 +235,29 @@ def test_get_open_claims_returns_only_open_claims(session):
     assert all(claim.status_id == ClaimStatus.SUBMITTED for claim in results)
 
 
-def test_get_open_claims_returned_claims_have_matching_application(session):
-    application_id = session.exec(select(Application)).first().application_id
+def test_get_open_claims_returned_claims_have_matching_application(
+    session, seeded_application
+):
+    application_id = seeded_application.application_id
     adapter = ClaimRepositoryAdapter(session)
-    adapter.create_claim(application_id, _make_domain_claim(), "claimant@example.com")
+    adapter.create_claim(application_id, build_domain_claim(), "claimant@example.com")
     results = adapter.get_open_claims()
 
     for claim in results:
         assert claim.application_id == claim.application.application_id
 
 
-def test_get_open_claims_orders_by_submission_date_ascending(session):
-    application_id = session.exec(select(Application)).first().application_id
+def test_get_open_claims_orders_by_submission_date_ascending(
+    session, seeded_application
+):
+    application_id = seeded_application.application_id
     adapter = ClaimRepositoryAdapter(session)
 
     newer_claim = adapter.create_claim(
-        application_id, _make_domain_claim(), "claimant@example.com"
+        application_id, build_domain_claim(), "claimant@example.com"
     )
     older_claim = adapter.create_claim(
-        application_id, _make_domain_claim(), "claimant@example.com"
+        application_id, build_domain_claim(), "claimant@example.com"
     )
 
     newer_claim.submission_date = datetime(2026, 6, 1, tzinfo=UTC)
@@ -326,11 +274,13 @@ def test_get_open_claims_orders_by_submission_date_ascending(session):
     assert results[1].claim_id == newer_claim.claim_id
 
 
-def test_create_claim_decision_persists_decision_with_expected_values(session):
-    application_id = session.exec(select(Application)).first().application_id
+def test_create_claim_decision_persists_decision_with_expected_values(
+    session, seeded_application
+):
+    application_id = seeded_application.application_id
     adapter = ClaimRepositoryAdapter(session)
     claim = adapter.create_claim(
-        application_id, _make_domain_claim(), "claimant@example.com"
+        application_id, build_domain_claim(), "claimant@example.com"
     )
 
     decision = adapter.create_claim_decision(claim.claim_id, ClaimDecisionStatus.REJECT)
@@ -343,11 +293,13 @@ def test_create_claim_decision_persists_decision_with_expected_values(session):
     assert stored.created_at is not None
 
 
-def test_create_decision_reason_persists_reason_with_expected_values(session):
-    application_id = session.exec(select(Application)).first().application_id
+def test_create_decision_reason_persists_reason_with_expected_values(
+    session, seeded_application
+):
+    application_id = seeded_application.application_id
     adapter = ClaimRepositoryAdapter(session)
     claim = adapter.create_claim(
-        application_id, _make_domain_claim(), "claimant@example.com"
+        application_id, build_domain_claim(), "claimant@example.com"
     )
     decision = adapter.create_claim_decision(claim.claim_id, ClaimDecisionStatus.REJECT)
 
@@ -364,11 +316,13 @@ def test_create_decision_reason_persists_reason_with_expected_values(session):
     assert stored.justification is None
 
 
-def test_create_decision_reason_persists_justification_when_provided(session):
-    application_id = session.exec(select(Application)).first().application_id
+def test_create_decision_reason_persists_justification_when_provided(
+    session, seeded_application
+):
+    application_id = seeded_application.application_id
     adapter = ClaimRepositoryAdapter(session)
     claim = adapter.create_claim(
-        application_id, _make_domain_claim(), "claimant@example.com"
+        application_id, build_domain_claim(), "claimant@example.com"
     )
     decision = adapter.create_claim_decision(claim.claim_id, ClaimDecisionStatus.REJECT)
 
@@ -381,11 +335,13 @@ def test_create_decision_reason_persists_justification_when_provided(session):
     assert reason.justification == "Some justification text"
 
 
-def test_create_claim_decision_amount_persists_amounts_with_expected_values(session):
-    application_id = session.exec(select(Application)).first().application_id
+def test_create_claim_decision_amount_persists_amounts_with_expected_values(
+    session, seeded_application
+):
+    application_id = seeded_application.application_id
     adapter = ClaimRepositoryAdapter(session)
     claim = adapter.create_claim(
-        application_id, _make_domain_claim(), "claimant@example.com"
+        application_id, build_domain_claim(), "claimant@example.com"
     )
     decision = adapter.create_claim_decision(
         claim.claim_id, ClaimDecisionStatus.PAY_IN_FULL
@@ -413,11 +369,13 @@ def test_create_claim_decision_amount_persists_amounts_with_expected_values(sess
     assert stored.disbursement_vat_zero == Decimal("50.00")
 
 
-def test_create_claim_decision_amount_persists_none_when_fields_omitted(session):
-    application_id = session.exec(select(Application)).first().application_id
+def test_create_claim_decision_amount_persists_none_when_fields_omitted(
+    session, seeded_application
+):
+    application_id = seeded_application.application_id
     adapter = ClaimRepositoryAdapter(session)
     claim = adapter.create_claim(
-        application_id, _make_domain_claim(), "claimant@example.com"
+        application_id, build_domain_claim(), "claimant@example.com"
     )
     decision = adapter.create_claim_decision(
         claim.claim_id, ClaimDecisionStatus.PAY_IN_FULL
@@ -433,16 +391,15 @@ def test_create_claim_decision_amount_persists_none_when_fields_omitted(session)
     assert amount.disbursement_vat_zero is None
 
 
-def test_link_evidence_to_claim_sets_claim_id_on_existing_evidence(session):
-    application_id = session.exec(select(Application)).first().application_id
+def test_link_evidence_to_claim_sets_claim_id_on_existing_evidence(
+    session, seeded_application
+):
+    application_id = seeded_application.application_id
     adapter = ClaimRepositoryAdapter(session)
     claim = adapter.create_claim(
-        application_id, _make_domain_claim(), "claimant@example.com"
+        application_id, build_domain_claim(), "claimant@example.com"
     )
-    evidence = ClaimEvidence(sds_file_name="stored.pdf", file_name="original.pdf")
-    session.add(evidence)
-    session.commit()
-    session.refresh(evidence)
+    evidence = create_claim_evidence(session)
 
     adapter.link_evidence_to_claim(claim.claim_id, [evidence.claim_evidence_id])
 
@@ -450,11 +407,13 @@ def test_link_evidence_to_claim_sets_claim_id_on_existing_evidence(session):
     assert stored.claim_id == claim.claim_id
 
 
-def test_link_evidence_to_claim_ignores_unknown_evidence_ids(session):
-    application_id = session.exec(select(Application)).first().application_id
+def test_link_evidence_to_claim_ignores_unknown_evidence_ids(
+    session, seeded_application
+):
+    application_id = seeded_application.application_id
     adapter = ClaimRepositoryAdapter(session)
     claim = adapter.create_claim(
-        application_id, _make_domain_claim(), "claimant@example.com"
+        application_id, build_domain_claim(), "claimant@example.com"
     )
 
     adapter.link_evidence_to_claim(claim.claim_id, [uuid.uuid4()])  # should not raise
@@ -462,10 +421,7 @@ def test_link_evidence_to_claim_ignores_unknown_evidence_ids(session):
 
 def test_delete_claim_evidence_by_id_deletes_existing_evidence(session):
     adapter = ClaimRepositoryAdapter(session)
-    evidence = ClaimEvidence(sds_file_name="stored.pdf", file_name="original.pdf")
-    session.add(evidence)
-    session.commit()
-    session.refresh(evidence)
+    evidence = create_claim_evidence(session)
 
     deleted = adapter.delete_claim_evidence_by_id(evidence.claim_evidence_id)
 
@@ -481,11 +437,11 @@ def test_delete_claim_evidence_by_id_returns_false_for_unknown_id(session):
     assert deleted is False
 
 
-def test_update_claim_status_sets_status_on_claim(session):
-    application_id = session.exec(select(Application)).first().application_id
+def test_update_claim_status_sets_status_on_claim(session, seeded_application):
+    application_id = seeded_application.application_id
     adapter = ClaimRepositoryAdapter(session)
     claim = adapter.create_claim(
-        application_id, _make_domain_claim(), "claimant@example.com"
+        application_id, build_domain_claim(), "claimant@example.com"
     )
     assert claim.status_id == ClaimStatus.SUBMITTED
 
@@ -495,10 +451,10 @@ def test_update_claim_status_sets_status_on_claim(session):
     assert claim.status_id == ClaimStatus.REJECTED
 
 
-def test_commit_commits_session(session):
-    application_id = session.exec(select(Application)).first().application_id
+def test_commit_commits_session(session, seeded_application):
+    application_id = seeded_application.application_id
     adapter = ClaimRepositoryAdapter(session)
-    adapter.create_claim(application_id, _make_domain_claim(), None)
+    adapter.create_claim(application_id, build_domain_claim(), None)
 
     adapter.commit()
 
@@ -506,10 +462,10 @@ def test_commit_commits_session(session):
     assert len(stored) == 1
 
 
-def test_rollback_rolls_back_unflushed_changes(session):
-    application_id = session.exec(select(Application)).first().application_id
+def test_rollback_rolls_back_unflushed_changes(session, seeded_application):
+    application_id = seeded_application.application_id
     adapter = ClaimRepositoryAdapter(session)
-    adapter.create_claim(application_id, _make_domain_claim(), None)
+    adapter.create_claim(application_id, build_domain_claim(), None)
 
     adapter.rollback()
 
@@ -557,10 +513,12 @@ def test_get_claim_reference_retries_when_banned_word_generated(session):
     assert adapter._generate_claim_reference.call_count == 2
 
 
-def test_get_claim_reference_retries_when_reference_already_exists(session):
-    application_id = session.exec(select(Application)).first().application_id
+def test_get_claim_reference_retries_when_reference_already_exists(
+    session, seeded_application
+):
+    application_id = seeded_application.application_id
     adapter = ClaimRepositoryAdapter(session)
-    existing = adapter.create_claim(application_id, _make_domain_claim(), None)
+    existing = adapter.create_claim(application_id, build_domain_claim(), None)
 
     adapter._generate_claim_reference = MagicMock(
         side_effect=[existing.claim_reference, "INQC-YYYY-YYYY"]

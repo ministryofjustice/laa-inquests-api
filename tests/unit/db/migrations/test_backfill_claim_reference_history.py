@@ -6,8 +6,13 @@ from sqlmodel import Session, SQLModel, StaticPool, create_engine
 
 from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ClaimType
 from app.models.claim.index import Claim, ClaimDecision
-from app.models.history.enums import ActorType, HistoryEventReference
+from app.models.history.enums import HistoryEventReference
 from app.models.history.index import HistoryEvent
+from tests.factories.builders import (
+    build_claim,
+    build_claim_decision,
+    build_history_event,
+)
 
 _MIGRATION_PATH = (
     Path(__file__).resolve().parents[4]
@@ -50,11 +55,10 @@ def _make_claim(
     claim_type: ClaimType,
     submission_date: datetime = BASE_TIME,
 ) -> Claim:
-    return Claim(
+    return build_claim(
         application_id=application_id,
         claim_reference=claim_reference,
         claim_type_id=claim_type,
-        status_id=ClaimStatus.SUBMITTED,
         submission_date=submission_date,
     )
 
@@ -62,7 +66,9 @@ def _make_claim(
 def _make_decision(
     claim_id: int, decision: ClaimDecisionStatus, created_at: datetime
 ) -> ClaimDecision:
-    return ClaimDecision(claim_id=claim_id, decision=decision, created_at=created_at)
+    return build_claim_decision(
+        claim_id=claim_id, decision=decision, created_at=created_at
+    )
 
 
 def _make_event(
@@ -71,10 +77,8 @@ def _make_event(
     event_data: dict,
     timestamp: datetime = BASE_TIME,
 ) -> HistoryEvent:
-    return HistoryEvent(
+    return build_history_event(
         event_reference=event_reference,
-        actor="actor",
-        actor_type=ActorType.PROVIDER,
         application_id=application_id,
         event_data=event_data,
         timestamp=timestamp,

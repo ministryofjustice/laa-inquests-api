@@ -1,7 +1,6 @@
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -9,13 +8,19 @@ from app.domain.claim import Claim, ExistingClaimSummary, total_claim_amount
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
 from app.domain.claim_rejection import ClaimRejectionReason
 from app.models.application.enums import MeritsDecision
-from app.models.application.index import Application
 from app.models.claim.enums import (
     ClaimStatus,
     ClaimType,
     InquestOutcomeCode,
     NumberOfCounselInstructed,
     POAType,
+)
+from tests.factories.builders import build_granted_application
+from tests.factories.domain import (
+    build_domain_claim,
+    build_existing_claim_summary,
+    build_final_bill_domain_claim,
+    build_nil_bill_domain_claim,
 )
 
 
@@ -472,49 +477,11 @@ def test_valid_final_bill_with_final_bill_details():
 
 
 def _final_bill_claim(overrides: dict | None = None) -> Claim:
-    kwargs = {
-        "claim_type": ClaimType.FINAL_BILL,
-        "poa_type": None,
-        "net": None,
-        "gross": Decimal("100.00"),
-        "vat_zero_total": None,
-        "inquest_outcomes": (InquestOutcomeCode.NATURAL_CAUSES,),
-        "cost_template_file_id": uuid.uuid4(),
-        "cost_template_file_name": "costs.xlsx",
-        "has_counsel_been_paid": True,
-        "has_alternative_funding": False,
-        "has_recovery_costs_awarded": True,
-        "financial_recovery_previous_pre_certificate_costs": Decimal("100.00"),
-        "financial_recovery_cost": Decimal("200.00"),
-        "financial_recovery_damages": Decimal("300.00"),
-        "financial_recovery_interest": Decimal("50.00"),
-        "paying_party": "Test Council",
-        "number_of_counsel_instructed": NumberOfCounselInstructed.TWO,
-    }
-    if overrides is not None:
-        kwargs.update(overrides)
-    return Claim(**kwargs)
+    return build_final_bill_domain_claim(**(overrides or {}))
 
 
 def _nil_bill_claim(overrides: dict | None = None) -> Claim:
-    kwargs = {
-        "claim_type": ClaimType.NIL_BILL,
-        "poa_type": None,
-        "net": None,
-        "gross": Decimal("0.00"),
-        "vat_zero_total": None,
-        "inquest_outcomes": (InquestOutcomeCode.OPEN_CONCLUSION,),
-        "has_alternative_funding": False,
-        "has_recovery_costs_awarded": True,
-        "financial_recovery_previous_pre_certificate_costs": Decimal("100.00"),
-        "financial_recovery_cost": Decimal("200.00"),
-        "financial_recovery_damages": Decimal("300.00"),
-        "financial_recovery_interest": Decimal("50.00"),
-        "paying_party": "Test Council",
-    }
-    if overrides is not None:
-        kwargs.update(overrides)
-    return Claim(**kwargs)
+    return build_nil_bill_domain_claim(**(overrides or {}))
 
 
 def test_raises_when_final_bill_has_net_total():
@@ -591,9 +558,7 @@ def test_should_auto_reject_for_limit_when_total_exceeds_limit():
     )
     claim.validate_total_claim_cost()
 
-    application = MagicMock(spec=Application)
-    application.proceeding = MagicMock()
-    application.proceeding.substantive_cost_limitation = 1000
+    application = _make_application(limit=1000)
     reason = claim.should_auto_reject_for_limit(application)
 
     assert reason is ClaimRejectionReason.CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT
@@ -609,9 +574,7 @@ def test_should_not_auto_reject_for_limit_when_total_not_exceeding_limit():
     )
     claim.validate_total_claim_cost()
 
-    application = MagicMock(spec=Application)
-    application.proceeding = MagicMock()
-    application.proceeding.substantive_cost_limitation = 1000
+    application = _make_application(limit=1000)
     reason = claim.should_auto_reject_for_limit(application)
 
     assert reason is None
@@ -627,9 +590,7 @@ def test_should_auto_reject_for_limit_uses_gross_not_net():
     )
     claim.validate_total_claim_cost()
 
-    application = MagicMock(spec=Application)
-    application.proceeding = MagicMock()
-    application.proceeding.substantive_cost_limitation = 1000
+    application = _make_application(limit=1000)
     reason = claim.should_auto_reject_for_limit(application)
 
     assert reason is ClaimRejectionReason.CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT
@@ -643,9 +604,7 @@ def test_should_auto_reject_for_limit_when_vat_zero_total_exceeds_limit():
         gross=None,
         vat_zero_total=Decimal("1500.00"),
     )
-    application = MagicMock(spec=Application)
-    application.proceeding = MagicMock()
-    application.proceeding.substantive_cost_limitation = 1000
+    application = _make_application(limit=1000)
     reason = claim.should_auto_reject_for_limit(application)
 
     assert reason is ClaimRejectionReason.CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT
@@ -659,30 +618,18 @@ def test_should_not_auto_reject_for_limit_when_vat_zero_total_within_limit():
         gross=None,
         vat_zero_total=Decimal("500.00"),
     )
-    application = MagicMock(spec=Application)
-    application.proceeding = MagicMock()
-    application.proceeding.substantive_cost_limitation = 1000
+    application = _make_application(limit=1000)
     reason = claim.should_auto_reject_for_limit(application)
 
     assert reason is None
 
 
 def _make_domain_claim(gross=Decimal("500.00"), net=Decimal("400.00")):
-    return Claim(
-        claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
-        poa_type=POAType.PROFIT_COST,
-        net=net,
-        gross=gross,
-        vat_zero_total=None,
-    )
+    return build_domain_claim(net=net, gross=gross)
 
 
 def _make_application(limit=1000):
-    application = MagicMock(spec=Application)
-    application.proceeding = MagicMock()
-    application.proceeding.substantive_cost_limitation = limit
-    application.proceeding.certificate_start_date = None
-    return application
+    return build_granted_application(substantive_cost_limitation=limit)
 
 
 def _make_existing_claim(
@@ -694,7 +641,7 @@ def _make_existing_claim(
     submission_date: datetime | None = None,
     claim_type: ClaimType = ClaimType.PAYMENT_ON_ACCOUNT,
 ) -> ExistingClaimSummary:
-    return ExistingClaimSummary(
+    return build_existing_claim_summary(
         claim_type=claim_type,
         status=status,
         poa_type=poa_type,
@@ -735,9 +682,7 @@ def test_exceeds_aggregate_cost_limit_when_sum_within_limit():
 
 def test_exceeds_aggregate_cost_limit_when_limit_is_none():
     claim = _make_domain_claim(gross=Decimal("900.00"))
-    application = MagicMock(spec=Application)
-    application.proceeding = MagicMock()
-    application.proceeding.substantive_cost_limitation = None
+    application = build_granted_application(substantive_cost_limitation=None)
     result = claim.exceeds_aggregate_cost_limit(application, [])
 
     assert result is False
@@ -993,14 +938,12 @@ def _make_existing_profit_cost_poa(
     submission_date: datetime,
     status: ClaimStatus = ClaimStatus.SUBMITTED,
 ) -> ExistingClaimSummary:
-    return ExistingClaimSummary(
-        claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
-        status=status,
+    return build_existing_claim_summary(
         poa_type=POAType.PROFIT_COST,
+        status=status,
         submission_date=submission_date,
         net=Decimal("500.00"),
         gross=Decimal("600.00"),
-        vat_zero_total=None,
     )
 
 
@@ -1147,12 +1090,9 @@ def test_should_auto_reject_returns_all_applicable_reasons_when_multiple_conditi
 
 
 def _make_application_with_certificate(start: date | None, limit=1000000):
-    application = MagicMock(spec=Application)
-    proceeding = MagicMock()
-    proceeding.substantive_cost_limitation = limit
-    proceeding.certificate_start_date = start
-    application.proceeding = proceeding
-    return application
+    return build_granted_application(
+        substantive_cost_limitation=limit, certificate_start_date=start
+    )
 
 
 def test_should_auto_reject_early_profit_cost_poa_claim_made_during_3_month_certificate_probationary_period():
@@ -1224,8 +1164,6 @@ def test_is_eligible_for_auto_approval_when_payment_on_account_total_is_50000():
         vat_zero_total=None,
     )
     application = _make_application_with_certificate(start=None)
-    application.status = "LIVE"
-    application.overall_decision = MeritsDecision.GRANTED
 
     assert claim.is_eligible_for_auto_approval(application) is True
 
@@ -1239,8 +1177,6 @@ def test_is_not_eligible_for_auto_approval_when_total_exceeds_50000():
         vat_zero_total=None,
     )
     application = _make_application_with_certificate(start=None)
-    application.status = "LIVE"
-    application.overall_decision = MeritsDecision.GRANTED
 
     assert claim.is_eligible_for_auto_approval(application) is False
 
@@ -1254,8 +1190,6 @@ def test_is_not_eligible_for_auto_approval_when_gross_exceeds_50000_even_if_net_
         vat_zero_total=None,
     )
     application = _make_application_with_certificate(start=None)
-    application.status = "LIVE"
-    application.overall_decision = MeritsDecision.GRANTED
 
     assert claim.is_eligible_for_auto_approval(application) is False
 
@@ -1270,7 +1204,6 @@ def test_is_not_eligible_for_auto_approval_when_application_status_withdrawn():
     )
     application = _make_application_with_certificate(start=None)
     application.status = "WITHDRAWN"
-    application.overall_decision = MeritsDecision.GRANTED
 
     assert claim.is_eligible_for_auto_approval(application) is False
 
@@ -1284,8 +1217,7 @@ def test_is_not_eligible_for_auto_approval_when_merits_decision_pending():
         vat_zero_total=None,
     )
     application = _make_application_with_certificate(start=None)
-    application.status = "LIVE"
-    application.overall_decision = MeritsDecision.PENDING
+    application.proceeding.merits_decision = MeritsDecision.PENDING
 
     assert claim.is_eligible_for_auto_approval(application) is False
 
@@ -1311,8 +1243,6 @@ def test_is_not_eligible_for_auto_approval_when_claim_is_not_payment_on_account(
         number_of_counsel_instructed=NumberOfCounselInstructed.TWO,
     )
     application = _make_application_with_certificate(start=None)
-    application.status = "LIVE"
-    application.overall_decision = MeritsDecision.GRANTED
 
     assert claim.is_eligible_for_auto_approval(application) is False
 

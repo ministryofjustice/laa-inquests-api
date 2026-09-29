@@ -11,14 +11,11 @@ from app.models.claim.enums import (
     ClaimStatus,
     ClaimType,
     InvoiceTypeCode,
-    POAType,
     TaxCode,
 )
 from app.models.claim.index import (
     Claim,
-    ClaimDecision,
     ClaimDecisionAmount,
-    ClaimPaymentExtract,
 )
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.notifications.enums import NotificationType
@@ -43,31 +40,31 @@ from app.use_cases.exceptions import (
     InvalidClaimError,
 )
 from app.use_cases.pay_in_full_claim import PayInFullClaimCommand, PayInFullClaimUseCase
+from tests.factories.builders import (
+    build_application,
+    build_claim,
+    build_claim_decision,
+    build_claim_payment_extract,
+    build_poa_claim,
+)
 
 
 def _claim(claim_id: int = 1, application_id: int = 1) -> Claim:
-    return Claim(
+    return build_poa_claim(
         claim_id=claim_id,
         application_id=application_id,
         claim_reference="INQC-0000-0001",
         claim_type_id=ClaimType.FINAL_BILL,
-        status_id=ClaimStatus.SUBMITTED,
         submission_date=datetime.now(UTC),
-        total_profit_cost_net=Decimal("1000.00"),
-        total_profit_cost_gross=Decimal("1200.00"),
-        total_profit_cost_vat_zero=Decimal("500.00"),
-        poa_type_id=POAType.PROFIT_COST,
         claimant_id="claimant-123@provider.co.uk",
     )
 
 
 def _application(application_id: int = 1):
-    application = MagicMock()
-    application.application_id = application_id
-    application.laa_reference = f"INQ-{application_id:03d}-REF"
-    application.provider.firm_code = "ABC123"
-    application.provider.email_address = "provider@example.com"
-    return application
+    return build_application(
+        application_id=application_id,
+        laa_reference=f"INQ-{application_id:03d}-REF",
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -83,7 +80,7 @@ def _build_use_case(claim=None, application=None):
     get_claim_port.get_claim_by_reference.return_value = claim
 
     create_decision_port = MagicMock(spec=CreateClaimDecisionPort)
-    create_decision_port.create_claim_decision.return_value = ClaimDecision(
+    create_decision_port.create_claim_decision.return_value = build_claim_decision(
         claim_decision_id=42,
         claim_id=claim.claim_id if claim is not None else 1,
         decision=ClaimDecisionStatus.PAY_IN_FULL,
@@ -346,7 +343,7 @@ def _build_use_case_with_extract_ports(
     get_claim_port.get_claim_by_reference.return_value = claim
 
     create_decision_port = MagicMock(spec=CreateClaimDecisionPort)
-    create_decision_port.create_claim_decision.return_value = ClaimDecision(
+    create_decision_port.create_claim_decision.return_value = build_claim_decision(
         claim_decision_id=42,
         claim_id=claim.claim_id,
         decision=ClaimDecisionStatus.PAY_IN_FULL,
@@ -396,43 +393,41 @@ def _build_use_case_with_extract_ports(
 
 
 def _final_bill_claim(claim_id: int = 5, application_id: int = 1) -> Claim:
-    return Claim(
+    return build_claim(
         claim_id=claim_id,
         claim_reference=f"INQC-0000-{claim_id:04d}",
         application_id=application_id,
-        claim_type_id=ClaimType.FINAL_BILL,
-        status_id=ClaimStatus.SUBMITTED,
         submission_date=datetime(2026, 3, 10, tzinfo=UTC),
     )
 
 
-def test_creates_final_bill_and_recoupment_extract_lines_in_order():
-    poa_claim = Claim(
+def _paid_poa_claim() -> Claim:
+    return build_poa_claim(
         claim_id=9,
         claim_reference="INQC-0000-0009",
         application_id=1,
-        claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
         status_id=ClaimStatus.PAY_IN_FULL,
         submission_date=datetime(2026, 1, 1, tzinfo=UTC),
-        poa_type_id=POAType.PROFIT_COST,
     )
+
+
+def test_creates_final_bill_and_recoupment_extract_lines_in_order():
+    poa_claim = _paid_poa_claim()
     poa_extracts = [
-        ClaimPaymentExtract(
+        build_claim_payment_extract(
             claim_id=9,
             sequence_number=1,
             invoice_number="INQC-0000-0009_001",
             invoice_amount=Decimal("800.00"),
             invoice_date=datetime(2026, 1, 1, tzinfo=UTC).date(),
-            invoice_type=InvoiceTypeCode.POA,
             tax_code=TaxCode.GB_VAT_20,
         ),
-        ClaimPaymentExtract(
+        build_claim_payment_extract(
             claim_id=9,
             sequence_number=2,
             invoice_number="INQC-0000-0009_002",
             invoice_amount=Decimal("200.00"),
             invoice_date=datetime(2026, 1, 1, tzinfo=UTC).date(),
-            invoice_type=InvoiceTypeCode.POA,
             tax_code=TaxCode.ZERO_VAT,
         ),
     ]
@@ -585,23 +580,14 @@ def test_creates_single_zero_fees_line_for_nil_final_bill():
 
 
 def test_creates_zero_fees_line_then_recoupment_lines_for_nil_final_bill():
-    poa_claim = Claim(
-        claim_id=9,
-        claim_reference="INQC-0000-0009",
-        application_id=1,
-        claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
-        status_id=ClaimStatus.PAY_IN_FULL,
-        submission_date=datetime(2026, 1, 1, tzinfo=UTC),
-        poa_type_id=POAType.PROFIT_COST,
-    )
+    poa_claim = _paid_poa_claim()
     poa_extracts = [
-        ClaimPaymentExtract(
+        build_claim_payment_extract(
             claim_id=9,
             sequence_number=1,
             invoice_number="INQC-0000-0009_001",
             invoice_amount=Decimal("800.00"),
             invoice_date=date(2026, 1, 1),
-            invoice_type=InvoiceTypeCode.POA,
             tax_code=TaxCode.GB_VAT_20,
         ),
     ]

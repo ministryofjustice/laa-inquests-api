@@ -8,22 +8,24 @@ import pytest
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
 from app.models.claim.enums import (
     ClaimDecisionStatus,
-    ClaimStatus,
     ClaimType,
-    POAType,
     ReasonCode,
 )
 from app.models.claim.index import (
     Claim,
-    ClaimCostTemplate,
-    ClaimDecision,
-    DecisionReason,
 )
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.ports.claim.get_claim_decision_port import GetClaimDecisionPort
 from app.use_cases.exceptions import ApplicationNotFoundError, ClaimNotFoundError
 from app.use_cases.get_claim import GetClaimUseCase
+from tests.factories.builders import (
+    build_claim_cost_template,
+    build_claim_decision,
+    build_decision_reason,
+    build_granted_application,
+    build_poa_claim,
+)
 
 
 def _claim(
@@ -34,26 +36,20 @@ def _claim(
         SUBSTANTIVE_CERTIFICATE_AMOUNT
     ),
 ) -> Claim:
-    return Claim(
+    return build_poa_claim(
         claim_id=claim_id,
         claim_reference=claim_reference,
         application_id=application_id,
-        claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
-        status_id=ClaimStatus.SUBMITTED,
         submission_date=datetime.now(UTC),
-        total_profit_cost_net=Decimal("1000.00"),
-        total_profit_cost_gross=Decimal("1200.00"),
-        total_profit_cost_vat_zero=Decimal("500.00"),
         total_funds_remaining_after_claim=total_funds_remaining_after_claim,
-        poa_type_id=POAType.PROFIT_COST,
     )
 
 
 def _application(application_id: int = 1, substantive_cost_limitation: int = 10000):
-    application = MagicMock()
-    application.application_id = application_id
-    application.proceeding.substantive_cost_limitation = substantive_cost_limitation
-    return application
+    return build_granted_application(
+        application_id=application_id,
+        substantive_cost_limitation=substantive_cost_limitation,
+    )
 
 
 def _build_use_case(
@@ -123,12 +119,12 @@ def test_maps_substantive_cost_limitation_from_application():
 
 
 def test_includes_claim_decision_when_present():
-    decision = ClaimDecision(
+    decision = build_claim_decision(
         claim_decision_id=7,
         claim_id=1,
         decision=ClaimDecisionStatus.REJECT,
         decision_reasons=[
-            DecisionReason(
+            build_decision_reason(
                 decision_reason_id=1,
                 claim_decision_id=7,
                 reason_code=ReasonCode.MAX_POA_CLAIMS_EXCEEDED,
@@ -164,7 +160,7 @@ def test_claim_decision_is_none_when_absent():
 def test_cost_template_file_is_populated_when_present():
     file_id = uuid.uuid4()
     claim = _claim()
-    claim.claim_cost_template = ClaimCostTemplate(
+    claim.claim_cost_template = build_claim_cost_template(
         claim_id=claim.claim_id,
         claim_cost_template_file_id=file_id,
         claim_cost_template_file_name="final_bill_costs.xlsx",

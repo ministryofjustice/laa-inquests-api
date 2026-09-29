@@ -8,11 +8,11 @@ from app.models.gov_notify_templates.application_submit_personalisation import (
 from app.use_cases.notify.create_application_submission_email_personalisation import (
     create_application_submission_email_personalisation,
 )
-from tests.unit.factories import (
-    create_base_application,
-    create_base_client,
-    create_base_deceased,
-    create_base_home_address,
+from tests.factories.builders import (
+    build_application,
+    build_client,
+    build_deceased,
+    build_home_address,
 )
 
 
@@ -20,7 +20,7 @@ def test_create_application_submission_email_personalisation_returns_all_require
     """
     Test that create_application_submission_email_personalisation returns all fields required by the GovNotify template.
     """
-    application = create_base_application()
+    application = build_application()
 
     result = create_application_submission_email_personalisation(application)
 
@@ -98,7 +98,7 @@ def test_create_application_submission_email_personalisation_handles_optional_fi
     """
     Test that create_application_submission_email_personalisation handles missing/optional fields correctly.
     """
-    client = create_base_client(
+    client = build_client(
         client_last_name_at_birth=None,
         national_insurance_number=None,
         has_applied_previously=False,
@@ -109,11 +109,11 @@ def test_create_application_submission_email_personalisation_handles_optional_fi
         correspondence_recipient_name=None,
     )
 
-    deceased = create_base_deceased(
+    deceased = build_deceased(
         further_information=None,
     )
 
-    application = create_base_application(
+    application = build_application(
         client=client,
         deceased=deceased,
     )
@@ -135,7 +135,7 @@ def test_create_application_submission_email_personalisation_formats_address_cor
     """
     Test that addresses are formatted correctly with line breaks.
     """
-    home_address = create_base_home_address(
+    home_address = build_home_address(
         address_line_1="123 Test Street",
         address_line_2="Floor 2",
         town_or_city="Test City",
@@ -143,11 +143,11 @@ def test_create_application_submission_email_personalisation_formats_address_cor
         postcode="TC1 1TC",
     )
 
-    client = create_base_client(
+    client = build_client(
         home_address=home_address,
     )
 
-    application = create_base_application(
+    application = build_application(
         client=client,
     )
 
@@ -162,11 +162,11 @@ def test_default_home_address_value_set_to_no_fixed_abode_when_not_provided():
     """
     Test that default value for home address is set correctly.
     """
-    client = create_base_client(
+    client = build_client(
         home_address=None,
     )
 
-    application = create_base_application(client=client)
+    application = build_application(client=client)
 
     result = create_application_submission_email_personalisation(application)
 

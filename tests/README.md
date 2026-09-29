@@ -67,3 +67,18 @@ def test_database(session: Session):
 ```
 This session is a `sqlmodel.Session` object, it inherits from the SQLAlchemy session class.
 View the SQLModel documentation [here](https://sqlmodel.tiangolo.com/).
+
+# Creating test data
+Never call a model constructor (`Application(...)`, `Claim(...)`, `ClaimEvidence(...)` etc.) directly in a test.
+Use the factories in `tests/factories/` so a change to a model only needs updating in one place.
+
+| Module | Use it for |
+| --- | --- |
+| `tests/factories/builders.py` | `build_*` returns an unsaved object. This is the only place default values live. |
+| `tests/factories/persisted.py` | `create_*(session, ...)` builds and commits the object. `update_*` helpers change the seeded proceeding. |
+| `tests/factories/domain.py` | `build_*` for domain value objects (`Claim`, `PayInFullClaim`, ...). |
+| `tests/factories/seed.py` | The data every `session` starts with. Only edit this to change the seeded application. |
+
+- Nested objects are changed with `client_overrides`, `deceased_overrides`, `provider_overrides` and `proceeding_overrides`.
+- `for_db=True` (used by `create_*`) leaves ids to the database and refers to the seeded `Proceeding` and `PublicBody` rows instead of recreating them. #TODO Review this
+- `tests/unit/test_factories.py` fails first when a model change needs a default updated.

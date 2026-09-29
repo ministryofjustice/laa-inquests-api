@@ -1,12 +1,9 @@
 from datetime import UTC, datetime
 
-from sqlmodel import select
-
 from app.auth.rbac import Role
 from app.domain.constants.report_csv_headers import APPLICATION_BACKLOG_REPORT_HEADERS
 from app.models.application.enums import MeritsDecision
-from app.models.application.index import Application
-from tests.e2e.factories import create_application_in_db
+from tests.factories.persisted import create_application
 from tests.helpers.csv_helpers import parse_csv_rows
 
 
@@ -27,10 +24,9 @@ class TestGetApplicationBacklogReport:
         assert ".csv" in response.headers["content-disposition"]
 
     def test_200_csv_contains_expected_headers(self, session, client):
-        application = session.exec(select(Application)).first()
-        application.proceeding.merits_decision = MeritsDecision.PENDING
-        session.add(application.proceeding)
-        session.commit()
+        create_application(
+            session, proceeding_overrides={"merits_decision": MeritsDecision.PENDING}
+        )
 
         response = client.get(
             "/reports/applications/backlog",
@@ -46,10 +42,9 @@ class TestGetApplicationBacklogReport:
     def test_200_csv_row_contains_expected_data_for_pending_application(
         self, session, client
     ):
-        application = session.exec(select(Application)).first()
-        application.proceeding.merits_decision = MeritsDecision.PENDING
-        session.add(application.proceeding)
-        session.commit()
+        create_application(
+            session, proceeding_overrides={"merits_decision": MeritsDecision.PENDING}
+        )
 
         response = client.get(
             "/reports/applications/backlog",
@@ -66,13 +61,13 @@ class TestGetApplicationBacklogReport:
             assert row[header] != "", f"Expected '{header}' to be non-empty"
 
     def test_200_csv_excludes_non_pending_applications(self, session, client):
-        create_application_in_db(
+        create_application(
             session,
             provider_overrides={"firm_code": "XGRANT"},
             proceeding_overrides={"merits_decision": MeritsDecision.GRANTED},
         )
 
-        create_application_in_db(
+        create_application(
             session,
             provider_overrides={"firm_code": "XGRANT"},
             proceeding_overrides={"merits_decision": MeritsDecision.REFUSED},
@@ -94,20 +89,17 @@ class TestGetApplicationBacklogReport:
     def test_200_csv_ordered_by_application_received_date_ascending(
         self, session, client
     ):
-        application = session.exec(select(Application)).first()
-        application.proceeding.merits_decision = MeritsDecision.PENDING
-        session.add(application.proceeding)
-        session.commit()
+        pending = {"merits_decision": MeritsDecision.PENDING}
 
-        older_app = create_application_in_db(
+        older_app = create_application(
             session,
-            provider_overrides={"firm_code": "XOLD01"},
+            proceeding_overrides=pending,
             created_at=datetime(2020, 1, 1, tzinfo=UTC),
         )
 
-        create_application_in_db(
+        create_application(
             session,
-            provider_overrides={"firm_code": "XOLD01"},
+            proceeding_overrides=pending,
             created_at=datetime(2022, 1, 1, tzinfo=UTC),
         )
 
@@ -119,7 +111,7 @@ class TestGetApplicationBacklogReport:
         )
 
         rows = parse_csv_rows(response.text)
-        assert len(rows) >= 3
+        assert len(rows) == 2
 
         dates = [row["Application Received Date"] for row in rows]
         assert dates == sorted(dates)

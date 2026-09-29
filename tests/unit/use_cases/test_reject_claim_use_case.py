@@ -1,5 +1,4 @@
 from datetime import UTC, datetime
-from decimal import Decimal
 from unittest.mock import MagicMock, call
 
 import pytest
@@ -9,10 +8,9 @@ from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
     ClaimType,
-    POAType,
     ReasonCode,
 )
-from app.models.claim.index import Claim, ClaimDecision
+from app.models.claim.index import Claim
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.notifications.enums import NotificationType
 from app.ports.application_lookup_port import ApplicationLookupPort
@@ -25,30 +23,28 @@ from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.exceptions import ApplicationNotFoundError, ClaimNotFoundError
 from app.use_cases.reject_claim import RejectClaimCommand, RejectClaimUseCase
+from tests.factories.builders import (
+    build_application,
+    build_claim_decision,
+    build_poa_claim,
+)
 
 
 def _claim(claim_id: int = 1, application_id: int = 1) -> Claim:
-    return Claim(
+    return build_poa_claim(
         claim_id=claim_id,
         application_id=application_id,
         claim_reference="INQC-0000-0001",
-        claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
-        status_id=ClaimStatus.SUBMITTED,
         submission_date=datetime.now(UTC),
-        total_profit_cost_net=Decimal("1000.00"),
-        total_profit_cost_gross=Decimal("1200.00"),
-        total_profit_cost_vat_zero=Decimal("500.00"),
-        poa_type_id=POAType.PROFIT_COST,
         claimant_id="claimant-123@provider.co.uk",
     )
 
 
 def _application(application_id: int = 1):
-    application = MagicMock()
-    application.application_id = application_id
-    application.laa_reference = f"INQ-{application_id:03d}-REF"
-    application.provider.firm_code = "ABC123"
-    return application
+    return build_application(
+        application_id=application_id,
+        laa_reference=f"INQ-{application_id:03d}-REF",
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -64,7 +60,7 @@ def _build_use_case(claim=None, application=None):
     get_claim_port.get_claim_by_reference.return_value = claim
 
     create_decision_port = MagicMock(spec=CreateClaimDecisionPort)
-    create_decision_port.create_claim_decision.return_value = ClaimDecision(
+    create_decision_port.create_claim_decision.return_value = build_claim_decision(
         claim_decision_id=42,
         claim_id=claim.claim_id if claim is not None else 1,
         decision=ClaimDecisionStatus.REJECT,

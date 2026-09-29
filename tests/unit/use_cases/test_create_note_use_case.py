@@ -8,11 +8,11 @@ from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.use_cases.create_note import CreateNoteUseCase
 from app.use_cases.exceptions import ApplicationNotFoundError
-from tests.unit.factories import create_base_application
+from tests.factories.builders import build_application
 
 
 def test_create_note_creates_caseworker_history_event_and_commits():
-    application = create_base_application()
+    application = build_application()
     application_lookup_port = MagicMock(spec=ApplicationLookupPort)
     application_lookup_port.get_application_by_laa_reference.return_value = application
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
@@ -62,7 +62,7 @@ def test_create_note_raises_when_application_is_not_found():
 
 
 def test_create_note_rolls_back_when_history_event_creation_fails():
-    application = create_base_application()
+    application = build_application()
     application_lookup_port = MagicMock(spec=ApplicationLookupPort)
     application_lookup_port.get_application_by_laa_reference.return_value = application
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
@@ -85,7 +85,7 @@ def test_create_note_rolls_back_when_history_event_creation_fails():
 
 
 def test_create_note_rolls_back_when_commit_fails():
-    application = create_base_application()
+    application = build_application()
     application_lookup_port = MagicMock(spec=ApplicationLookupPort)
     application_lookup_port.get_application_by_laa_reference.return_value = application
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)

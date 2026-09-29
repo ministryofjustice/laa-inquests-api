@@ -6,10 +6,10 @@ from app.models.application.index import Application
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.pdf_generation_port import PdfGenerationPort
 from app.use_cases.send_grant_email import SendGrantEmailUseCase
-from tests.unit.factories import (
-    create_base_application,
-    create_base_certificate,
-    create_base_provider,
+from tests.factories.builders import (
+    build_application,
+    build_certificate,
+    build_provider,
 )
 
 
@@ -25,15 +25,15 @@ def gov_notify_port() -> MagicMock:
 
 @pytest.fixture
 def application() -> Application:
-    provider = create_base_provider(
+    provider = build_provider(
         firm_code="0A123B", office_id="0U651L", email_address="test@example.com"
     )
-    return create_base_application(provider=provider)
+    return build_application(provider=provider)
 
 
 @pytest.fixture
 def certificate_context():
-    return create_base_certificate()
+    return build_certificate()
 
 
 @pytest.fixture

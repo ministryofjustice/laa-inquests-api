@@ -5,12 +5,13 @@ from app.models.application.enums import MeritsDecision, PublicBodyId
 from app.models.application.index import Application
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
+from tests.factories.persisted import create_application
 
 
 def test_204_update_application_public_bodies_updates_the_application_public_bodies(
-    session, client
+    session, client, seeded_application
 ):
-    application = session.exec(select(Application)).first()
+    application = seeded_application
 
     response = client.patch(
         f"/applications/{application.laa_reference}/public-bodies",
@@ -32,8 +33,10 @@ def test_204_update_application_public_bodies_updates_the_application_public_bod
     )
 
 
-def test_204_update_application_public_bodies_creates_history_event(session, client):
-    application = session.exec(select(Application)).first()
+def test_204_update_application_public_bodies_creates_history_event(
+    session, client, seeded_application
+):
+    application = seeded_application
 
     response = client.patch(
         f"/applications/{application.laa_reference}/public-bodies",
@@ -67,13 +70,12 @@ def test_204_update_application_public_bodies_creates_history_event(session, cli
 def test_422_update_application_public_bodies_when_application_not_granted(
     session, client
 ):
-    application = session.exec(select(Application)).first()
+    application = create_application(
+        session, proceeding_overrides={"merits_decision": MeritsDecision.PENDING}
+    )
     original_public_body_ids = [
         public_body.public_body_id for public_body in application.public_bodies
     ]
-    application.proceeding.merits_decision = MeritsDecision.PENDING
-    session.add(application.proceeding)
-    session.commit()
 
     response = client.patch(
         f"/applications/{application.laa_reference}/public-bodies",
@@ -123,9 +125,9 @@ def test_404_update_application_public_bodies_returns_not_found_for_not_found_ap
 
 
 def test_422_update_application_public_bodies_returns_unprocessable_entity_when_list_is_empty(
-    session, client
+    client, seeded_application
 ):
-    application = session.exec(select(Application)).first()
+    application = seeded_application
     response = client.patch(
         f"/applications/{application.laa_reference}/public-bodies",
         json={"publicBodies": []},

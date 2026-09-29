@@ -7,19 +7,19 @@ from app.models.gov_notify_templates.application_grant_personalisation import (
 from app.use_cases.notify.create_application_grant_email_personalisation import (
     create_application_grant_email_personalisation,
 )
-from tests.unit.factories import (
-    create_base_application,
-    create_base_application_proceeding,
-    create_base_client,
+from tests.factories.builders import (
+    build_application,
+    build_application_proceeding,
+    build_client,
 )
 
 
 def _create_test_application_and_proceeding():
-    client = create_base_client()
+    client = build_client()
 
-    application = create_base_application(client=client)
+    application = build_application(client=client)
 
-    proceeding = create_base_application_proceeding(application=application)
+    proceeding = build_application_proceeding(application=application)
 
     return application, proceeding
 

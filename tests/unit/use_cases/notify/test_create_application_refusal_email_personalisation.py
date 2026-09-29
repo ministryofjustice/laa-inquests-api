@@ -3,42 +3,27 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from app.models.application.enums import AddressSource, MeritsDecision, ProceedingId
-from app.models.application.index import Application, ApplicationProceeding, Client
+from app.models.application.enums import MeritsDecision
 from app.models.gov_notify_templates.application_refuse_personalisation import (
     NotifyApplicationRefuseTemplatePersonalisation,
 )
 from app.use_cases.notify.create_application_refusal_email_personalisation import (
     create_application_refusal_email_personalisation,
 )
+from tests.factories.builders import build_application, build_application_proceeding
 
 
 def _create_test_application_and_proceeding(application_id: int = 12345):
-    client = Client(
-        client_id=1,
-        client_first_name="Jane",
-        client_last_name="Doe",
-        date_of_birth="15-06-1985",
-        correspondence_address_source=AddressSource.USE_CLIENT_HOME_ADDRESS,
-    )
-
-    application = Application(
+    proceeding = build_application_proceeding(
         application_id=application_id,
-        laa_reference="INQ-YYY-YYY",
-        created_at=datetime(2026, 6, 18, 14, 3, tzinfo=UTC),
-        client_id=1,
-        client=client,
-        deceased_id=1,
-        provider_id=1,
-    )
-
-    proceeding = ApplicationProceeding(
-        application_proceeding_id=1,
-        application_id=application_id,
-        proceeding_id=ProceedingId.IQOT,
         merits_decision=MeritsDecision.REFUSED,
         reason_for_refusal="NOT_IN_SCOPE",
         justification="The matter does not meet scope requirements.",
+    )
+    application = build_application(
+        application_id=application_id,
+        created_at=datetime(2026, 6, 18, 14, 3, tzinfo=UTC),
+        proceeding=proceeding,
     )
 
     return application, proceeding

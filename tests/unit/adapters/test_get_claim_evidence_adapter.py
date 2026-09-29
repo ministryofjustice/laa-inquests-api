@@ -1,17 +1,15 @@
 import uuid
 
 from app.adapters.claim_repository_adapter import ClaimRepositoryAdapter
-from app.models.claim.index import ClaimEvidence
+from tests.factories.persisted import create_claim_evidence
 
 
 def test_get_claim_evidence_by_id_returns_domain_claim_evidence_when_found(session):
-    claim_evidence = ClaimEvidence(
+    claim_evidence = create_claim_evidence(
+        session,
         sds_file_name="stored-claim-evidence_abc123.pdf",
         file_name="claim_evidence.pdf",
     )
-    session.add(claim_evidence)
-    session.commit()
-    session.refresh(claim_evidence)
 
     adapter = ClaimRepositoryAdapter(session)
 

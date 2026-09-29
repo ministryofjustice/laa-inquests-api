@@ -10,7 +10,6 @@ from app.adapters.claim_repository_adapter import ClaimRepositoryAdapter
 from app.adapters.history_event_repository_adapter import HistoryEventRepositoryAdapter
 from app.auth.rbac import Role
 from app.models.application.enums import MeritsDecision
-from app.models.application.index import Application
 from app.models.claim.enums import ClaimStatus
 from app.models.claim.index import Claim
 from app.models.history.enums import HistoryEventReference
@@ -18,7 +17,7 @@ from app.models.history.index import HistoryEvent
 from app.use_cases.send_auto_approved_poa_claim_emails import (
     SendAutoApprovedPoaClaimEmailsUseCase,
 )
-from tests.e2e.factories import create_application_in_db
+from tests.factories.persisted import create_application
 
 FIRM_NAME = "Test Firm Name"
 BATCH_RUN_TIME = datetime(2026, 9, 7, 9, 0, tzinfo=UTC)
@@ -99,9 +98,11 @@ def _email_sent_events(session, claim_reference):
     ]
 
 
-def test_single_auto_approved_poa_claim_is_emailed_when_batch_runs(session, client):
+def test_single_auto_approved_poa_claim_is_emailed_when_batch_runs(
+    session, client, seeded_application
+):
     """A single POA claim auto-approved within the window is emailed at batch time."""
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    laa_reference = seeded_application.laa_reference
     claim = _auto_approve_poa_claim(
         session,
         client,
@@ -122,12 +123,12 @@ def test_single_auto_approved_poa_claim_is_emailed_when_batch_runs(session, clie
 
 
 def test_multiple_auto_approved_poa_claims_are_emailed_in_a_single_batch_run(
-    session, client
+    session, client, seeded_application
 ):
     """Multiple POA claims within the same window are each emailed once per batch run."""
     submission_date = BATCH_RUN_TIME - timedelta(hours=24)
 
-    first_laa_reference = session.exec(select(Application)).first().laa_reference
+    first_laa_reference = seeded_application.laa_reference
     first_claim = _auto_approve_poa_claim(
         session,
         client,
@@ -135,7 +136,7 @@ def test_multiple_auto_approved_poa_claims_are_emailed_in_a_single_batch_run(
         submission_date,
     )
 
-    second_application = create_application_in_db(
+    second_application = create_application(
         session,
         provider_overrides={
             "firm_code": FIRM_CODE,
@@ -165,9 +166,11 @@ def test_multiple_auto_approved_poa_claims_are_emailed_in_a_single_batch_run(
     assert len(_email_sent_events(session, second_claim.claim_reference)) == 1
 
 
-def test_claim_auto_approved_outside_the_window_is_not_emailed(session, client):
+def test_claim_auto_approved_outside_the_window_is_not_emailed(
+    session, client, seeded_application
+):
     """A claim auto-approved before the 48-hour window is not emailed by the batch."""
-    laa_reference = session.exec(select(Application)).first().laa_reference
+    laa_reference = seeded_application.laa_reference
     claim = _auto_approve_poa_claim(
         session,
         client,

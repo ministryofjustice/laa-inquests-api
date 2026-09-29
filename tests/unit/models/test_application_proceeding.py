@@ -1,10 +1,10 @@
 from app.models.application.constants import UNGRANTED_SUBSTANTIVE_COST_LIMITATION
 from app.models.application.enums import MeritsDecision
-from tests.unit.factories import create_base_application_proceeding
+from tests.factories.builders import build_application_proceeding
 
 
 def test_substantive_cost_limitation_is_zero_when_pending():
-    application_proceeding = create_base_application_proceeding(
+    application_proceeding = build_application_proceeding(
         merits_decision=MeritsDecision.PENDING
     )
 
@@ -15,7 +15,7 @@ def test_substantive_cost_limitation_is_zero_when_pending():
 
 
 def test_substantive_cost_limitation_is_zero_when_refused():
-    application_proceeding = create_base_application_proceeding(
+    application_proceeding = build_application_proceeding(
         merits_decision=MeritsDecision.REFUSED
     )
 
@@ -26,7 +26,7 @@ def test_substantive_cost_limitation_is_zero_when_refused():
 
 
 def test_substantive_cost_limitation_matches_proceeding_when_granted():
-    application_proceeding = create_base_application_proceeding(
+    application_proceeding = build_application_proceeding(
         merits_decision=MeritsDecision.GRANTED
     )
 

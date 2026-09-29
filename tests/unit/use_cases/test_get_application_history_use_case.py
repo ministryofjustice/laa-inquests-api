@@ -9,6 +9,7 @@ from app.models.history.index import HistoryEvent, HistoryEventResponse
 from app.models.notifications.enums import NotificationType
 from app.use_cases.exceptions import ApplicationNotFoundError
 from app.use_cases.get_application_history import GetApplicationHistoryUseCase
+from tests.factories.builders import build_history_event
 
 
 def _make_use_case(
@@ -43,7 +44,7 @@ def test_execute_raises_application_not_found_error_when_no_matching_application
 
 
 def test_execute_returns_history_events_from_port():
-    history_event_1 = HistoryEvent(
+    history_event_1 = build_history_event(
         id=1,
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         timestamp=datetime.now(UTC),
@@ -52,7 +53,7 @@ def test_execute_returns_history_events_from_port():
         event_data=None,
         application_id=123456,
     )
-    history_event_2 = HistoryEvent(
+    history_event_2 = build_history_event(
         id=2,
         event_reference=HistoryEventReference.APPLICATION_ASSESSMENT_COMPLETED,
         timestamp=datetime.now(UTC),
@@ -82,7 +83,7 @@ def test_execute_returns_history_events_from_port():
 
 
 def test_execute_masks_provider_actor_as_provider():
-    history_event = HistoryEvent(
+    history_event = build_history_event(
         id=1,
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
         timestamp=datetime.now(UTC),
@@ -99,7 +100,7 @@ def test_execute_masks_provider_actor_as_provider():
 
 
 def test_execute_masks_recipient_in_event_data():
-    history_event = HistoryEvent(
+    history_event = build_history_event(
         id=1,
         event_reference=HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION,
         timestamp=datetime.now(UTC),
@@ -120,7 +121,7 @@ def test_execute_masks_recipient_in_event_data():
 
 
 def test_execute_preserves_non_provider_actor():
-    history_event = HistoryEvent(
+    history_event = build_history_event(
         id=1,
         event_reference=HistoryEventReference.APPLICATION_ASSESSMENT_COMPLETED,
         timestamp=datetime.now(UTC),

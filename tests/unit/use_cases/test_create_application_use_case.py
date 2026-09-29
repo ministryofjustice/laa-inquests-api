@@ -12,7 +12,7 @@ from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.exceptions import ProviderDetailsRetrievalError
-from tests.unit.factories import create_base_application
+from tests.factories.builders import build_application
 
 
 def _make_request(email_address: str = "provider@example.com") -> ApplicationCreate:
@@ -56,7 +56,7 @@ def _make_request(email_address: str = "provider@example.com") -> ApplicationCre
 
 def test_execute_creates_application_sends_confirmation_email_and_commits():
     request = _make_request()
-    application = create_base_application()
+    application = build_application()
     create_application_port = MagicMock(spec=CreateApplicationPort)
     create_application_port.create_application.return_value = application
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
@@ -114,7 +114,7 @@ def test_execute_creates_application_sends_confirmation_email_and_commits():
 def test_execute_passes_authenticated_firm_code_to_create_application_port():
     request = _make_request()
     create_application_port = MagicMock(spec=CreateApplicationPort)
-    create_application_port.create_application.return_value = create_base_application()
+    create_application_port.create_application.return_value = build_application()
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
     gov_notify_port = MagicMock(spec=GovNotifyPort)
     provider_details_port = MagicMock(spec=ProviderDetailsPort)
@@ -134,7 +134,7 @@ def test_execute_passes_authenticated_firm_code_to_create_application_port():
 def test_execute_rolls_back_and_reraises_when_notify_fails():
     request = _make_request()
     create_application_port = MagicMock(spec=CreateApplicationPort)
-    create_application_port.create_application.return_value = create_base_application()
+    create_application_port.create_application.return_value = build_application()
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
     gov_notify_port = MagicMock(spec=GovNotifyPort)
     gov_notify_port.send_application_submit_confirmation_email.side_effect = (
@@ -158,7 +158,7 @@ def test_execute_rolls_back_and_reraises_when_notify_fails():
 
 def test_execute_rolls_back_and_reraises_when_commit_fails():
     request = _make_request()
-    application = create_base_application()
+    application = build_application()
     create_application_port = MagicMock(spec=CreateApplicationPort)
     create_application_port.create_application.return_value = application
     create_application_port.commit.side_effect = RuntimeError("commit failed")
@@ -185,7 +185,7 @@ def test_execute_rolls_back_and_reraises_when_commit_fails():
 
 def test_execute_rolls_back_and_reraises_when_does_office_exist_fails():
     request = _make_request()
-    application = create_base_application()
+    application = build_application()
     create_application_port = MagicMock(spec=CreateApplicationPort)
     create_application_port.create_application.return_value = application
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)

@@ -3,10 +3,9 @@ from datetime import UTC, datetime
 from sqlmodel import select
 
 from app.auth.rbac import Role
-from app.models.application.index import Application
 from app.models.claim.enums import ClaimStatus
 from app.models.claim.index import Claim
-from tests.e2e.factories import create_claim_in_db
+from tests.factories.persisted import create_claim
 from tests.helpers.csv_helpers import parse_csv_fieldnames, parse_csv_rows
 
 CLAIMS_BACKLOG_REPORT_HEADERS = [
@@ -26,12 +25,12 @@ CLAIMS_BACKLOG_REPORT_HEADERS = [
 class TestGetClaimBacklogReport:
     """E2E tests for GET /reports/claims/backlog."""
 
-    def test_200_csv_has_good_data_quality(self, session, client):
-        application = session.exec(select(Application)).first()
-        claim = create_claim_in_db(
+    def test_200_csv_has_good_data_quality(self, session, client, seeded_application):
+        application = seeded_application
+        claim = create_claim(
             session,
-            application_id=application.application_id,
-            status=ClaimStatus.SUBMITTED,
+            application,
+            status_id=ClaimStatus.SUBMITTED,
             submission_date=datetime(2026, 1, 1, tzinfo=UTC),
         )
 
@@ -61,20 +60,20 @@ class TestGetClaimBacklogReport:
         assert row["Claim type"] == "FINAL_BILL"
 
     def test_200_multiple_claims_same_case_display_own_claim_reference(
-        self, session, client
+        self, session, client, seeded_application
     ):
-        application = session.exec(select(Application)).first()
-        claim_one = create_claim_in_db(
+        application = seeded_application
+        claim_one = create_claim(
             session,
-            application_id=application.application_id,
-            status=ClaimStatus.SUBMITTED,
+            application,
+            status_id=ClaimStatus.SUBMITTED,
             submission_date=datetime(2026, 1, 1, tzinfo=UTC),
             claim_reference="INQC-AAAA-1111",
         )
-        claim_two = create_claim_in_db(
+        claim_two = create_claim(
             session,
-            application_id=application.application_id,
-            status=ClaimStatus.SUBMITTED,
+            application,
+            status_id=ClaimStatus.SUBMITTED,
             submission_date=datetime(2026, 1, 2, tzinfo=UTC),
             claim_reference="INQC-BBBB-2222",
         )
@@ -92,25 +91,27 @@ class TestGetClaimBacklogReport:
         assert references_by_date["2026-01-02 00:00:00"] == claim_two.claim_reference
         assert all(row["Case reference"] == application.laa_reference for row in rows)
 
-    def test_200_csv_excludes_non_open_claims(self, session, client):
-        application = session.exec(select(Application)).first()
+    def test_200_csv_excludes_non_open_claims(
+        self, session, client, seeded_application
+    ):
+        application = seeded_application
 
-        create_claim_in_db(
+        create_claim(
             session,
-            application_id=application.application_id,
-            status=ClaimStatus.SUBMITTED,
+            application,
+            status_id=ClaimStatus.SUBMITTED,
             submission_date=datetime(2026, 4, 2, tzinfo=UTC),
         )
-        create_claim_in_db(
+        create_claim(
             session,
-            application_id=application.application_id,
-            status=ClaimStatus.REJECTED,
+            application,
+            status_id=ClaimStatus.REJECTED,
             submission_date=datetime(2026, 4, 2, tzinfo=UTC),
         )
-        create_claim_in_db(
+        create_claim(
             session,
-            application_id=application.application_id,
-            status=ClaimStatus.SUBMITTED,
+            application,
+            status_id=ClaimStatus.SUBMITTED,
             submission_date=datetime(2026, 4, 1, tzinfo=UTC),
         )
 

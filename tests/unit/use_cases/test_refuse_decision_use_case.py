@@ -12,7 +12,7 @@ from app.models.notifications.enums import NotificationType
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.use_cases.exceptions import ApplicationNotFoundError, RefuseDecisionError
 from app.use_cases.refuse_decision import RefuseDecisionUseCase
-from tests.unit.factories import create_base_application
+from tests.factories.builders import build_application
 
 
 @pytest.fixture(autouse=True)
@@ -30,7 +30,7 @@ def refuse_request() -> RefuseApplicationUpdate:
 
 @pytest.fixture
 def application():
-    return create_base_application()
+    return build_application()
 
 
 @pytest.fixture

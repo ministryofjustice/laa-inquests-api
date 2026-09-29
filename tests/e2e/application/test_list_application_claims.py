@@ -1,108 +1,13 @@
-import uuid
-from datetime import UTC, datetime
-from decimal import Decimal
-
-from sqlmodel import select
-
 from app.auth.rbac import Role
-from app.models.application.index import Application
-from app.models.claim.enums import (
-    ClaimDecisionStatus,
-    ClaimStatus,
-    ClaimType,
-    InquestOutcomeCode,
-    POAType,
-)
-from app.models.claim.index import Claim, ClaimDecision
+from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus
+from tests.factories.builders import build_nil_bill_claim
+from tests.factories.persisted import create_claim, create_claim_decision
 
 
-def _seed_claim(
-    session,
-    laa_reference: int,
-    status: ClaimStatus,
-    claim_type: ClaimType = ClaimType.PAYMENT_ON_ACCOUNT,
-) -> Claim:
-    application_id = (
-        session.exec(
-            select(Application).where(Application.laa_reference == laa_reference)
-        )
-        .one()
-        .application_id
-    )
-    poa_type = (
-        POAType.PROFIT_COST if claim_type == ClaimType.PAYMENT_ON_ACCOUNT else None
-    )
-    claim = Claim(
-        application_id=application_id,
-        claim_type_id=claim_type,
-        status_id=status,
-        submission_date=datetime.now(UTC),
-        total_profit_cost_net=Decimal("1000.00"),
-        total_profit_cost_gross=Decimal("1200.00"),
-        total_profit_cost_vat_zero=Decimal("500.00"),
-        total_funds_remaining_after_claim=Decimal("8800.00"),
-        poa_type_id=poa_type,
-        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
-    )
-    session.add(claim)
-    session.commit()
-    session.refresh(claim)
-    return claim
-
-
-def _seed_final_bill_claim(
-    session,
-    laa_reference: int,
-    status: ClaimStatus,
-    claim_type: ClaimType = ClaimType.NIL_BILL,
-) -> Claim:
-    application_id = (
-        session.exec(
-            select(Application).where(Application.laa_reference == laa_reference)
-        )
-        .one()
-        .application_id
-    )
-
-    claim = Claim(
-        application_id=application_id,
-        claim_type_id=claim_type,
-        status_id=status,
-        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
-        total_profit_cost_gross=0,
-        total_profit_cost_net=None,
-        inquest_outcomes=(InquestOutcomeCode.OPEN_CONCLUSION,),
-        has_alternative_funding=False,
-        has_recovery_costs_awarded=True,
-        financial_recovery_previous_pre_certificate_costs=100,
-        financial_recovery_cost=200,
-        financial_recovery_damages=300,
-        financial_recovery_interest=50,
-        paying_party="Test Council",
-    )
-    session.add(claim)
-    session.commit()
-    session.refresh(claim)
-    return claim
-
-
-def _seed_decision(
-    session,
-    claim_id: int,
-    decision: ClaimDecisionStatus,
-) -> ClaimDecision:
-    claim_decision = ClaimDecision(
-        claim_id=claim_id,
-        decision=decision,
-    )
-    session.add(claim_decision)
-    session.commit()
-    session.refresh(claim_decision)
-    return claim_decision
-
-
-def test_200_returns_empty_list_when_application_has_no_claims(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+def test_200_returns_empty_list_when_application_has_no_claims(
+    client, seeded_application
+):
+    laa_reference = seeded_application.laa_reference
 
     response = client.get(
         f"/applications/{laa_reference}/claims?assessed=true",
@@ -113,10 +18,14 @@ def test_200_returns_empty_list_when_application_has_no_claims(session, client):
     assert response.json() == []
 
 
-def test_200_assessed_true_returns_only_non_submitted_claims(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    _seed_claim(session, laa_reference, ClaimStatus.SUBMITTED)
-    assessed_claim = _seed_claim(session, laa_reference, ClaimStatus.ACCEPTED)
+def test_200_assessed_true_returns_only_non_submitted_claims(
+    session, client, seeded_application
+):
+    laa_reference = seeded_application.laa_reference
+    create_claim(session, seeded_application, status_id=ClaimStatus.SUBMITTED)
+    assessed_claim = create_claim(
+        session, seeded_application, status_id=ClaimStatus.ACCEPTED
+    )
 
     response = client.get(
         f"/applications/{laa_reference}/claims?assessed=true",
@@ -140,9 +49,9 @@ def test_200_assessed_true_returns_only_non_submitted_claims(session, client):
     }
 
 
-def test_200_includes_claim_status_for_each_claim(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    _seed_claim(session, laa_reference, ClaimStatus.ACCEPTED)
+def test_200_includes_claim_status_for_each_claim(session, client, seeded_application):
+    laa_reference = seeded_application.laa_reference
+    create_claim(session, seeded_application, status_id=ClaimStatus.ACCEPTED)
 
     response = client.get(
         f"/applications/{laa_reference}/claims?assessed=true",
@@ -153,10 +62,12 @@ def test_200_includes_claim_status_for_each_claim(session, client):
     assert response.json()[0]["statusId"] == "ACCEPTED"
 
 
-def test_200_includes_claim_decision_status_when_a_decision_exists(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    claim = _seed_claim(session, laa_reference, ClaimStatus.REJECTED)
-    _seed_decision(session, claim.claim_id, ClaimDecisionStatus.REJECT)
+def test_200_includes_claim_decision_status_when_a_decision_exists(
+    session, client, seeded_application
+):
+    laa_reference = seeded_application.laa_reference
+    claim = create_claim(session, seeded_application, status_id=ClaimStatus.REJECTED)
+    create_claim_decision(session, claim, decision=ClaimDecisionStatus.REJECT)
 
     response = client.get(
         f"/applications/{laa_reference}/claims?assessed=true",
@@ -167,9 +78,11 @@ def test_200_includes_claim_decision_status_when_a_decision_exists(session, clie
     assert response.json()[0]["claimDecisionStatus"] == "REJECT"
 
 
-def test_200_claim_decision_status_is_null_when_no_decision_exists(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    _seed_claim(session, laa_reference, ClaimStatus.ACCEPTED)
+def test_200_claim_decision_status_is_null_when_no_decision_exists(
+    session, client, seeded_application
+):
+    laa_reference = seeded_application.laa_reference
+    create_claim(session, seeded_application, status_id=ClaimStatus.ACCEPTED)
 
     response = client.get(
         f"/applications/{laa_reference}/claims?assessed=true",
@@ -180,10 +93,14 @@ def test_200_claim_decision_status_is_null_when_no_decision_exists(session, clie
     assert response.json()[0]["claimDecisionStatus"] is None
 
 
-def test_200_assessed_false_returns_only_submitted_claims(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    submitted_claim = _seed_claim(session, laa_reference, ClaimStatus.SUBMITTED)
-    _seed_claim(session, laa_reference, ClaimStatus.ACCEPTED)
+def test_200_assessed_false_returns_only_submitted_claims(
+    session, client, seeded_application
+):
+    laa_reference = seeded_application.laa_reference
+    submitted_claim = create_claim(
+        session, seeded_application, status_id=ClaimStatus.SUBMITTED
+    )
+    create_claim(session, seeded_application, status_id=ClaimStatus.ACCEPTED)
 
     response = client.get(
         f"/applications/{laa_reference}/claims?assessed=false",
@@ -196,9 +113,16 @@ def test_200_assessed_false_returns_only_submitted_claims(session, client):
     ]
 
 
-def test_200_returns_submitted_nil_bill_claim_for_providers(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    _seed_final_bill_claim(session, laa_reference, ClaimStatus.SUBMITTED)
+def test_200_returns_submitted_nil_bill_claim_for_providers(
+    session, client, seeded_application
+):
+    laa_reference = seeded_application.laa_reference
+    create_claim(
+        session,
+        seeded_application,
+        preset=build_nil_bill_claim,
+        status_id=ClaimStatus.SUBMITTED,
+    )
     response = client.get(
         f"/applications/{laa_reference}/claims?assessed=false",
         headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
@@ -209,9 +133,16 @@ def test_200_returns_submitted_nil_bill_claim_for_providers(session, client):
     assert body[0]["statusId"] == "SUBMITTED"
 
 
-def test_200_returns_pay_in_full_nil_bill_claim_for_providers(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    _seed_final_bill_claim(session, laa_reference, ClaimStatus.PAY_IN_FULL)
+def test_200_returns_pay_in_full_nil_bill_claim_for_providers(
+    session, client, seeded_application
+):
+    laa_reference = seeded_application.laa_reference
+    create_claim(
+        session,
+        seeded_application,
+        preset=build_nil_bill_claim,
+        status_id=ClaimStatus.PAY_IN_FULL,
+    )
     response = client.get(
         f"/applications/{laa_reference}/claims?assessed=true",
         headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
@@ -222,9 +153,11 @@ def test_200_returns_pay_in_full_nil_bill_claim_for_providers(session, client):
     assert body[0]["statusId"] == "PAY_IN_FULL"
 
 
-def test_200_returns_submitted_final_bill_claim_for_providers(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    _seed_claim(session, laa_reference, ClaimStatus.SUBMITTED, ClaimType.FINAL_BILL)
+def test_200_returns_submitted_final_bill_claim_for_providers(
+    session, client, seeded_application
+):
+    laa_reference = seeded_application.laa_reference
+    create_claim(session, seeded_application, status_id=ClaimStatus.SUBMITTED)
     response = client.get(
         f"/applications/{laa_reference}/claims?assessed=false",
         headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
@@ -235,9 +168,11 @@ def test_200_returns_submitted_final_bill_claim_for_providers(session, client):
     assert body[0]["statusId"] == "SUBMITTED"
 
 
-def test_200_returns_pay_in_full_final_bill_claim_for_providers(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    _seed_claim(session, laa_reference, ClaimStatus.PAY_IN_FULL, ClaimType.FINAL_BILL)
+def test_200_returns_pay_in_full_final_bill_claim_for_providers(
+    session, client, seeded_application
+):
+    laa_reference = seeded_application.laa_reference
+    create_claim(session, seeded_application, status_id=ClaimStatus.PAY_IN_FULL)
     response = client.get(
         f"/applications/{laa_reference}/claims?assessed=true",
         headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
@@ -248,8 +183,8 @@ def test_200_returns_pay_in_full_final_bill_claim_for_providers(session, client)
     assert body[0]["statusId"] == "PAY_IN_FULL"
 
 
-def test_422_when_assessed_query_param_is_missing(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+def test_422_when_assessed_query_param_is_missing(client, seeded_application):
+    laa_reference = seeded_application.laa_reference
 
     response = client.get(
         f"/applications/{laa_reference}/claims",
@@ -259,8 +194,8 @@ def test_422_when_assessed_query_param_is_missing(session, client):
     assert response.status_code == 422
 
 
-def test_422_when_assessed_query_param_is_not_a_boolean(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+def test_422_when_assessed_query_param_is_not_a_boolean(client, seeded_application):
+    laa_reference = seeded_application.laa_reference
 
     response = client.get(
         f"/applications/{laa_reference}/claims?assessed=maybe",

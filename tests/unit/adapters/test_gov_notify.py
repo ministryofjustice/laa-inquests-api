@@ -8,20 +8,20 @@ import pytest
 
 from app.adapters.gov_notify import GovNotifyAdapter
 from app.config import Config
-from app.models.claim.enums import ClaimType
-from app.models.claim.index import Claim
-from tests.unit.factories import (
-    create_base_application,
-    create_base_application_proceeding,
+from tests.factories.builders import (
+    build_application,
+    build_application_proceeding,
+    build_claim,
+    build_poa_claim,
 )
 
 
 def _create_test_application_and_proceeding():
     """Create test application with specific overrides for GovNotify tests."""
     utc = ZoneInfo("UTC")
-    application = create_base_application(
+    application = build_application(
         created_at=datetime(2026, 6, 18, 14, 3, tzinfo=utc),
-        proceeding=create_base_application_proceeding(
+        proceeding=build_application_proceeding(
             merits_decision="REFUSED",
             reason_for_refusal="NOT_IN_SCOPE",
             justification="The matter does not meet scope requirements.",
@@ -106,15 +106,12 @@ def test_gov_notify_adapter_sends_confirmation_email_successfully():
 
 def test_gov_notify_adapter_sends_claim_submit_confirmation_email_successfully():
     application, _ = _create_test_application_and_proceeding()
-    claim = Claim(
+    claim = build_poa_claim(
         claim_id=1,
         application_id=12345,
-        claim_type_id="PAYMENT_ON_ACCOUNT",
         claim_reference="INQC-ABCD-1234",
         submission_date=datetime(2026, 6, 18, 14, 3, tzinfo=ZoneInfo("UTC")),
-        total_profit_cost_net=1000,
-        total_profit_cost_gross=1200,
-        poa_type_id="PROFIT_COST",
+        total_profit_cost_vat_zero=None,
     )
     mock_notifications_client = Mock()
     mock_notifications_client.send_email_notification.return_value = {
@@ -160,15 +157,12 @@ def test_gov_notify_adapter_sends_claim_submit_confirmation_email_successfully()
 
 def test_gov_notify_adapter_sends_claim_rejected_decision_email_successfully():
     application, _ = _create_test_application_and_proceeding()
-    claim = Claim(
+    claim = build_poa_claim(
         claim_id=7,
         application_id=12345,
-        claim_type_id="PAYMENT_ON_ACCOUNT",
         claim_reference="INQC-ABCD-1234",
         submission_date=datetime(2026, 6, 18, 14, 3, tzinfo=ZoneInfo("UTC")),
-        total_profit_cost_net=1000,
-        total_profit_cost_gross=1200,
-        poa_type_id="PROFIT_COST",
+        total_profit_cost_vat_zero=None,
     )
     mock_notifications_client = Mock()
     mock_notifications_client.send_email_notification.return_value = {
@@ -222,13 +216,14 @@ def test_gov_notify_adapter_sends_claim_rejected_decision_email_successfully():
 
 def test_gov_notify_adapter_sends_final_bill_claim_rejection_email_successfully():
     application, _ = _create_test_application_and_proceeding()
-    claim = Claim(
+    claim = build_claim(
         claim_id=7,
         claim_reference="INQC-0007-0007",
         application_id=12345,
-        claim_type_id=ClaimType.FINAL_BILL,
         submission_date=datetime(2026, 6, 18, 14, 3, tzinfo=ZoneInfo("UTC")),
+        total_profit_cost_net=None,
         total_profit_cost_gross=1200,
+        total_profit_cost_vat_zero=None,
     )
     mock_notifications_client = Mock()
     mock_notifications_client.send_email_notification.return_value = {

@@ -15,12 +15,12 @@ from app.use_cases.exceptions import (
 from app.use_cases.generate_claim_backlog_report import (
     GenerateClaimBacklogReportUseCase,
 )
-from tests.helpers.csv_helpers import parse_csv_rows
-from tests.unit.factories import (
-    create_base_application,
-    create_base_claim,
-    create_base_provider,
+from tests.factories.builders import (
+    build_application,
+    build_claim,
+    build_provider,
 )
+from tests.helpers.csv_helpers import parse_csv_rows
 
 
 def _build_use_case(
@@ -55,7 +55,7 @@ class TestGenerateClaimBacklogReportUseCase:
         assert rows == []
 
     def test_returns_csv_row_for_open_claim(self):
-        claim = create_base_claim(
+        claim = build_claim(
             claim_id=10,
             claim_reference="INQC-0010-0010",
             application_id=12345,
@@ -64,8 +64,8 @@ class TestGenerateClaimBacklogReportUseCase:
             total_profit_cost_net=Decimal("100.00"),
             total_profit_cost_gross=Decimal("120.00"),
         )
-        claim.application = create_base_application(
-            provider=create_base_provider(firm_code="ABC123")
+        claim.application = build_application(
+            provider=build_provider(firm_code="ABC123")
         )
         use_case = _build_use_case(claims=[claim])
 
@@ -86,9 +86,9 @@ class TestGenerateClaimBacklogReportUseCase:
         assert row["Claim type"] == "FINAL_BILL"
 
     def test_raises_error_when_firm_name_missing_for_firm_code(self):
-        claim = create_base_claim(claim_id=13, application_id=12345)
-        claim.application = create_base_application(
-            provider=create_base_provider(firm_code="ABC123")
+        claim = build_claim(claim_id=13, application_id=12345)
+        claim.application = build_application(
+            provider=build_provider(firm_code="ABC123")
         )
         use_case = _build_use_case(claims=[claim], firms=[])
 
@@ -96,9 +96,9 @@ class TestGenerateClaimBacklogReportUseCase:
             use_case.execute()
 
     def test_raises_error_when_firms_retrieval_fails(self):
-        claim = create_base_claim(claim_id=14, application_id=12345)
-        claim.application = create_base_application(
-            provider=create_base_provider(firm_code="ABC123")
+        claim = build_claim(claim_id=14, application_id=12345)
+        claim.application = build_application(
+            provider=build_provider(firm_code="ABC123")
         )
 
         claim_backlog_port = MagicMock()
@@ -118,7 +118,7 @@ class TestGenerateClaimBacklogReportUseCase:
             use_case.execute()
 
     def test_deduplicates_firm_codes_before_calling_port(self):
-        claim_1 = create_base_claim(
+        claim_1 = build_claim(
             claim_id=15,
             application_id=100,
             claim_type_id=ClaimType.FINAL_BILL,
@@ -126,7 +126,7 @@ class TestGenerateClaimBacklogReportUseCase:
             total_profit_cost_net=Decimal("100.00"),
             total_profit_cost_gross=Decimal("120.00"),
         )
-        claim_2 = create_base_claim(
+        claim_2 = build_claim(
             claim_id=16,
             application_id=200,
             claim_type_id=ClaimType.FINAL_BILL,
@@ -134,9 +134,7 @@ class TestGenerateClaimBacklogReportUseCase:
             total_profit_cost_net=Decimal("100.00"),
             total_profit_cost_gross=Decimal("120.00"),
         )
-        application = create_base_application(
-            provider=create_base_provider(firm_code="ABC123")
-        )
+        application = build_application(provider=build_provider(firm_code="ABC123"))
         claim_1.application = application
         claim_2.application = application
 

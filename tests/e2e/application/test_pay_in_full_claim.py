@@ -1,20 +1,14 @@
-import uuid
-from datetime import UTC, datetime
 from decimal import Decimal
 
 from sqlmodel import select
 
 from app.auth.rbac import Role
-from app.models.application.index import Application
 from app.models.claim.enums import (
     ClaimStatus,
-    ClaimType,
     InvoiceTypeCode,
-    POAType,
     TaxCode,
 )
 from app.models.claim.index import (
-    Claim,
     ClaimDecision,
     ClaimDecisionAmount,
     ClaimPaymentExtract,
@@ -22,7 +16,14 @@ from app.models.claim.index import (
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.models.notifications.enums import NotificationType
-from tests.e2e.factories import create_application_in_db
+from tests.factories.builders import build_poa_claim
+from tests.factories.persisted import (
+    application_by_reference,
+    create_application,
+    create_claim,
+    create_payment_extracts,
+)
+from tests.factories.seed import SEED_LAA_REFERENCE
 
 
 def _pay_in_full_payload(overrides=None):
@@ -39,43 +40,11 @@ def _pay_in_full_payload(overrides=None):
     return payload
 
 
-def _seed_claim(
-    session,
-    laa_reference: int,
-    status: ClaimStatus = ClaimStatus.SUBMITTED,
-    claimant_id: str | None = "claimant-123@provider.co.uk",
-    claim_type: ClaimType = ClaimType.FINAL_BILL,
-) -> Claim:
-    application_id = (
-        session.exec(
-            select(Application).where(Application.laa_reference == laa_reference)
-        )
-        .one()
-        .application_id
-    )
-    claim = Claim(
-        application_id=application_id,
-        claim_type_id=claim_type,
-        status_id=status,
-        submission_date=datetime.now(UTC),
-        total_profit_cost_net=Decimal("1000.00"),
-        total_profit_cost_gross=Decimal("1200.00"),
-        total_profit_cost_vat_zero=Decimal("500.00"),
-        poa_type_id=POAType.PROFIT_COST,
-        claimant_id=claimant_id,
-        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
-    )
-    session.add(claim)
-    session.commit()
-    session.refresh(claim)
-    return claim
-
-
 def test_204_pay_in_full_claim_creates_decision_amount_and_updates_status(
-    session, client
+    session, client, seeded_application
 ):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    claim = _seed_claim(session, laa_reference)
+    laa_reference = seeded_application.laa_reference
+    claim = create_claim(session, seeded_application)
 
     response = client.patch(
         f"/applications/{laa_reference}/claims/{claim.claim_reference}/pay-in-full",
@@ -109,9 +78,11 @@ def test_204_pay_in_full_claim_creates_decision_amount_and_updates_status(
     assert claim.status_id == ClaimStatus.PAY_IN_FULL
 
 
-def test_204_pay_in_full_claim_creates_history_event(session, client):
-    application = session.exec(select(Application)).first()
-    claim = _seed_claim(session, application.laa_reference)
+def test_204_pay_in_full_claim_creates_history_event(
+    session, client, seeded_application
+):
+    application = seeded_application
+    claim = create_claim(session, application)
 
     response = client.patch(
         f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
@@ -143,9 +114,11 @@ def test_204_pay_in_full_claim_creates_history_event(session, client):
     assert history_event.event_data["disbursement_vat_zero"] == "50.00"
 
 
-def test_204_pay_in_full_claim_persists_partial_amounts_as_null(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    claim = _seed_claim(session, laa_reference)
+def test_204_pay_in_full_claim_persists_partial_amounts_as_null(
+    session, client, seeded_application
+):
+    laa_reference = seeded_application.laa_reference
+    claim = create_claim(session, seeded_application)
 
     response = client.patch(
         f"/applications/{laa_reference}/claims/{claim.claim_reference}/pay-in-full",
@@ -183,9 +156,11 @@ def test_204_pay_in_full_claim_persists_partial_amounts_as_null(session, client)
     assert amount.disbursement_vat_zero == Decimal("50.00")
 
 
-def test_204_pay_in_full_claim_creates_single_decision_and_amount(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    claim = _seed_claim(session, laa_reference)
+def test_204_pay_in_full_claim_creates_single_decision_and_amount(
+    session, client, seeded_application
+):
+    laa_reference = seeded_application.laa_reference
+    claim = create_claim(session, seeded_application)
 
     response = client.patch(
         f"/applications/{laa_reference}/claims/{claim.claim_reference}/pay-in-full",
@@ -226,8 +201,8 @@ def test_404_pay_in_full_claim_when_application_does_not_exist(client):
     assert response.json()["detail"] == "Application not found"
 
 
-def test_404_pay_in_full_claim_when_claim_does_not_exist(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
+def test_404_pay_in_full_claim_when_claim_does_not_exist(client, seeded_application):
+    laa_reference = seeded_application.laa_reference
 
     response = client.patch(
         f"/applications/{laa_reference}/claims/999999/pay-in-full",
@@ -243,12 +218,12 @@ def test_404_pay_in_full_claim_when_claim_does_not_exist(session, client):
 
 
 def test_404_pay_in_full_claim_when_claim_belongs_to_another_application(
-    session, client
+    session, client, seeded_application
 ):
-    existing = session.exec(select(Application)).first()
-    other_application = create_application_in_db(session)
+    existing = seeded_application
+    other_application = create_application(session)
 
-    claim = _seed_claim(session, existing.laa_reference)
+    claim = create_claim(session, existing)
 
     response = client.patch(
         f"/applications/{other_application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
@@ -264,8 +239,8 @@ def test_404_pay_in_full_claim_when_claim_belongs_to_another_application(
 
 
 def _post_pay_in_full(session, client, overrides):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    claim = _seed_claim(session, laa_reference)
+    laa_reference = SEED_LAA_REFERENCE
+    claim = create_claim(session, application_by_reference(session, laa_reference))
     return client.patch(
         f"/applications/{laa_reference}/claims/{claim.claim_reference}/pay-in-full",
         json=_pay_in_full_payload(overrides),
@@ -520,10 +495,10 @@ def test_204_pay_in_full_claim_allows_all_zero_disbursement_totals(session, clie
 
 
 def test_204_pay_in_full_claim_sends_final_bill_paid_email_to_provider(
-    session, client, mock_gov_notify
+    session, client, mock_gov_notify, seeded_application
 ):
-    application = session.exec(select(Application)).first()
-    claim = _seed_claim(session, application.laa_reference)
+    application = seeded_application
+    claim = create_claim(session, application)
 
     response = client.patch(
         f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
@@ -551,9 +526,11 @@ def test_204_pay_in_full_claim_sends_final_bill_paid_email_to_provider(
     assert call_kwargs["decision_amounts"].disbursement_vat_zero == Decimal("50.00")
 
 
-def test_204_pay_in_full_claim_creates_email_history_event(session, client):
-    application = session.exec(select(Application)).first()
-    claim = _seed_claim(session, application.laa_reference)
+def test_204_pay_in_full_claim_creates_email_history_event(
+    session, client, seeded_application
+):
+    application = seeded_application
+    claim = create_claim(session, application)
 
     response = client.patch(
         f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
@@ -589,10 +566,10 @@ def test_204_pay_in_full_claim_creates_email_history_event(session, client):
 
 
 def test_500_pay_in_full_claim_fails_when_final_bill_paid_email_fails(
-    session, client, mock_gov_notify
+    session, client, mock_gov_notify, seeded_application
 ):
-    application = session.exec(select(Application)).first()
-    claim = _seed_claim(session, application.laa_reference)
+    application = seeded_application
+    claim = create_claim(session, application)
     mock_gov_notify.send_claim_final_bill_paid_decision_email.side_effect = Exception(
         "Gov Notify unavailable"
     )
@@ -617,52 +594,6 @@ def test_500_pay_in_full_claim_fails_when_final_bill_paid_email_fails(
     assert claim.status_id == ClaimStatus.SUBMITTED
 
 
-def _seed_paid_poa_claim_with_extract(session, laa_reference: int) -> Claim:
-    application_id = (
-        session.exec(
-            select(Application).where(Application.laa_reference == laa_reference)
-        )
-        .one()
-        .application_id
-    )
-    poa_claim = Claim(
-        application_id=application_id,
-        claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
-        status_id=ClaimStatus.PAY_IN_FULL,
-        submission_date=datetime.now(UTC),
-        poa_type_id=POAType.PROFIT_COST,
-        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
-    )
-    session.add(poa_claim)
-    session.commit()
-    session.refresh(poa_claim)
-
-    session.add_all(
-        [
-            ClaimPaymentExtract(
-                claim_id=poa_claim.claim_id,
-                sequence_number=1,
-                invoice_number=f"{poa_claim.claim_reference}_001",
-                invoice_amount=Decimal("800.00"),
-                invoice_date=datetime.now(UTC).date(),
-                invoice_type=InvoiceTypeCode.POA,
-                tax_code=TaxCode.GB_VAT_20,
-            ),
-            ClaimPaymentExtract(
-                claim_id=poa_claim.claim_id,
-                sequence_number=2,
-                invoice_number=f"{poa_claim.claim_reference}_002",
-                invoice_amount=Decimal("200.00"),
-                invoice_date=datetime.now(UTC).date(),
-                invoice_type=InvoiceTypeCode.POA,
-                tax_code=TaxCode.ZERO_VAT,
-            ),
-        ]
-    )
-    session.commit()
-    return poa_claim
-
-
 def _extract_lines_for(session, claim_id: int) -> list[ClaimPaymentExtract]:
     return list(
         session.exec(
@@ -674,11 +605,32 @@ def _extract_lines_for(session, claim_id: int) -> list[ClaimPaymentExtract]:
 
 
 def test_204_pay_in_full_final_bill_creates_payment_extract_in_expected_order(
-    session, client
+    session, client, seeded_application
 ):
-    application = session.exec(select(Application)).first()
-    poa_claim = _seed_paid_poa_claim_with_extract(session, application.laa_reference)
-    claim = _seed_claim(session, application.laa_reference)
+    application = seeded_application
+    poa_claim = create_claim(
+        session,
+        application,
+        preset=build_poa_claim,
+        status_id=ClaimStatus.PAY_IN_FULL,
+    )
+    create_payment_extracts(
+        session,
+        poa_claim,
+        [
+            {
+                "invoice_number": f"{poa_claim.claim_reference}_001",
+                "invoice_amount": Decimal("800.00"),
+                "tax_code": TaxCode.GB_VAT_20,
+            },
+            {
+                "invoice_number": f"{poa_claim.claim_reference}_002",
+                "invoice_amount": Decimal("200.00"),
+                "tax_code": TaxCode.ZERO_VAT,
+            },
+        ],
+    )
+    claim = create_claim(session, application)
 
     response = client.patch(
         f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
@@ -739,10 +691,10 @@ def test_204_pay_in_full_final_bill_creates_payment_extract_in_expected_order(
 
 
 def test_204_pay_in_full_fees_line_uses_zero_vat_when_vat_zero_supplied(
-    session, client
+    session, client, seeded_application
 ):
-    application = session.exec(select(Application)).first()
-    claim = _seed_claim(session, application.laa_reference)
+    application = seeded_application
+    claim = create_claim(session, application)
 
     response = client.patch(
         f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
@@ -773,10 +725,10 @@ def test_204_pay_in_full_fees_line_uses_zero_vat_when_vat_zero_supplied(
 
 
 def test_204_pay_in_full_final_bill_creates_no_recoupments_without_paid_poa_claims(
-    session, client
+    session, client, seeded_application
 ):
-    application = session.exec(select(Application)).first()
-    claim = _seed_claim(session, application.laa_reference)
+    application = seeded_application
+    claim = create_claim(session, application)
 
     response = client.patch(
         f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
@@ -804,10 +756,10 @@ _NIL_BILL_PAYLOAD = {
 
 
 def test_204_pay_in_full_final_bill_nil_bill_creates_single_zero_fees_line(
-    session, client
+    session, client, seeded_application
 ):
-    application = session.exec(select(Application)).first()
-    claim = _seed_claim(session, application.laa_reference)
+    application = seeded_application
+    claim = create_claim(session, application)
 
     response = client.patch(
         f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
@@ -832,10 +784,10 @@ def test_204_pay_in_full_final_bill_nil_bill_creates_single_zero_fees_line(
 
 
 def test_204_pay_in_full_final_bill_nil_bill_via_vat_zero_fields_creates_single_zero_fees_line(
-    session, client
+    session, client, seeded_application
 ):
-    application = session.exec(select(Application)).first()
-    claim = _seed_claim(session, application.laa_reference)
+    application = seeded_application
+    claim = create_claim(session, application)
 
     response = client.patch(
         f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
@@ -867,11 +819,32 @@ def test_204_pay_in_full_final_bill_nil_bill_via_vat_zero_fields_creates_single_
 
 
 def test_204_pay_in_full_final_bill_nil_bill_creates_zero_fees_line_then_recoupments(
-    session, client
+    session, client, seeded_application
 ):
-    application = session.exec(select(Application)).first()
-    poa_claim = _seed_paid_poa_claim_with_extract(session, application.laa_reference)
-    claim = _seed_claim(session, application.laa_reference)
+    application = seeded_application
+    poa_claim = create_claim(
+        session,
+        application,
+        preset=build_poa_claim,
+        status_id=ClaimStatus.PAY_IN_FULL,
+    )
+    create_payment_extracts(
+        session,
+        poa_claim,
+        [
+            {
+                "invoice_number": f"{poa_claim.claim_reference}_001",
+                "invoice_amount": Decimal("800.00"),
+                "tax_code": TaxCode.GB_VAT_20,
+            },
+            {
+                "invoice_number": f"{poa_claim.claim_reference}_002",
+                "invoice_amount": Decimal("200.00"),
+                "tax_code": TaxCode.ZERO_VAT,
+            },
+        ],
+    )
+    claim = create_claim(session, application)
 
     response = client.patch(
         f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",

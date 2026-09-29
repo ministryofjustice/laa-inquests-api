@@ -16,7 +16,7 @@ from app.use_cases.exceptions import (
     ApplicationNotGrantedError,
 )
 from app.use_cases.update_public_bodies import UpdatePublicBodiesUseCase
-from tests.unit.factories import create_base_application
+from tests.factories.builders import build_application
 
 
 @pytest.fixture(autouse=True)
@@ -26,7 +26,7 @@ def entra_user_context() -> None:
 
 @pytest.fixture
 def application() -> Application:
-    application = create_base_application()
+    application = build_application()
     application.proceeding.merits_decision = MeritsDecision.GRANTED
     return application
 

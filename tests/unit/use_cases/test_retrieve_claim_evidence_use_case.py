@@ -12,13 +12,14 @@ from app.use_cases.exceptions import (
     InvalidClaimEvidenceDocumentIdError,
     SDSClaimEvidenceRetrievalError,
 )
+from tests.factories.domain import build_domain_claim_evidence
 
 
 def _make_claim_evidence(
     sds_file_name: str = "claim-evidence_abc123.pdf",
     file_name: str = "test-document.pdf",
 ) -> ClaimEvidence:
-    return ClaimEvidence(sds_file_name=sds_file_name, file_name=file_name)
+    return build_domain_claim_evidence(sds_file_name=sds_file_name, file_name=file_name)
 
 
 def _make_use_case(get_claim_evidence_port: MagicMock, sds_port: MagicMock):

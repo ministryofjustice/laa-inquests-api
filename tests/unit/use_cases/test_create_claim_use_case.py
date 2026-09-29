@@ -20,7 +20,7 @@ from app.models.claim.enums import (
     ReasonCode,
     TaxCode,
 )
-from app.models.claim.index import Claim, ClaimDecision
+from app.models.claim.index import Claim
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.notifications.enums import NotificationType
 from app.ports.application_lookup_port import ApplicationLookupPort
@@ -44,6 +44,12 @@ from app.use_cases.create_claim import (
     _build_payment_extract_lines,
 )
 from app.use_cases.exceptions import ApplicationNotFoundError, InvalidClaimError
+from tests.factories.builders import (
+    build_claim,
+    build_claim_decision,
+    build_granted_application,
+    build_poa_claim,
+)
 
 _UNSET = object()
 
@@ -74,28 +80,19 @@ def _make_command(overrides=None) -> CreateClaimCommand:
 
 
 def _make_created_claim() -> Claim:
-    return Claim(
+    return build_poa_claim(
         claim_id=1,
         claim_reference="INQC-0000-0001",
         application_id=12345,
-        claim_type_id="PAYMENT_ON_ACCOUNT",
-        total_profit_cost_net=1000,
-        total_profit_cost_gross=1200,
-        poa_type_id="PROFIT_COST",
+        total_profit_cost_vat_zero=None,
     )
 
 
 def _make_matching_application(firm_code: str = "0A123B") -> Application:
-    application = MagicMock(spec=Application)
-    application.application_id = 12345
-    proceeding = MagicMock()
-    proceeding.substantive_cost_limitation = 1000
-    proceeding.certificate_start_date = None
-    application.proceeding = proceeding
-    application.provider.firm_code = firm_code
-    application.provider.email_address = "provider@example.com"
-    application.overall_decision = MeritsDecision.GRANTED
-    return application
+    return build_granted_application(
+        substantive_cost_limitation=1000,
+        provider_overrides={"firm_code": firm_code},
+    )
 
 
 def _make_application_lookup_port(application: Application | None = _UNSET):
@@ -116,7 +113,7 @@ def _make_get_claims_port(claims: list[Claim] | None = None):
 
 def _make_create_claim_decision_port(claim_decision_id: int = 10):
     port = MagicMock(spec=CreateClaimDecisionPort)
-    port.create_claim_decision.return_value = ClaimDecision(
+    port.create_claim_decision.return_value = build_claim_decision(
         claim_decision_id=claim_decision_id,
         claim_id=1,
         decision=ClaimDecisionStatus.REJECT,
@@ -158,11 +155,10 @@ def _make_use_case(**kwargs):
 
 
 def _claim_with_poa(poa_type, net, gross, vat_zero=None) -> Claim:
-    return Claim(
+    return build_poa_claim(
         claim_id=1,
         claim_reference="INQC-0000-0001",
         application_id=12345,
-        claim_type_id="PAYMENT_ON_ACCOUNT",
         total_profit_cost_net=net,
         total_profit_cost_gross=gross,
         total_profit_cost_vat_zero=vat_zero,
@@ -179,12 +175,7 @@ def _execute_auto_approval(
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
 
-    application = MagicMock(spec=Application)
-    application.status = "LIVE"
-    application.overall_decision = "GRANTED"
-    application.proceeding = MagicMock()
-    application.proceeding.substantive_cost_limitation = 999999
-    application.proceeding.certificate_start_date = None
+    application = build_granted_application(substantive_cost_limitation=999999)
 
     use_case = _make_use_case(
         create_claim_port=create_claim_port,
@@ -247,7 +238,7 @@ def test_execute_raises_invalid_claim_error_when_application_not_granted():
     command = _make_command()
     create_claim_port = MagicMock(spec=CreateClaimPort)
     application = _make_matching_application()
-    application.overall_decision = MeritsDecision.PENDING
+    application.proceeding.merits_decision = MeritsDecision.PENDING
 
     use_case = _make_use_case(
         create_claim_port=create_claim_port,
@@ -262,14 +253,27 @@ def test_execute_raises_invalid_claim_error_when_application_not_granted():
 
 
 def _make_existing_claim(claim_type, status) -> Claim:
-    return Claim(
+    return build_claim(
         claim_id=99,
         claim_reference="INQC-9999-9999",
         application_id=12345,
         claim_type_id=claim_type,
         status_id=status,
         submission_date=datetime.now(UTC),
+        total_profit_cost_net=None,
         total_profit_cost_gross=Decimal("100.00"),
+        total_profit_cost_vat_zero=None,
+    )
+
+
+def _submitted_poa_claim(claim_id: int) -> Claim:
+    return build_poa_claim(
+        claim_id=claim_id,
+        application_id=12345,
+        submission_date=datetime.now(UTC),
+        total_profit_cost_net=Decimal("1.00"),
+        total_profit_cost_gross=Decimal("1.00"),
+        total_profit_cost_vat_zero=None,
     )
 
 
@@ -478,14 +482,7 @@ def test_execute_sends_claim_submission_email_when_application_exists():
     claim = _make_created_claim()
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
-    application = MagicMock(spec=Application)
-    proceeding = MagicMock()
-    proceeding.substantive_cost_limitation = 1000
-    proceeding.certificate_start_date = None
-    application.proceeding = proceeding
-    application.provider.firm_code = "0A123B"
-    application.provider.email_address = "provider@example.com"
-    application.overall_decision = MeritsDecision.GRANTED
+    application = _make_matching_application()
     gov_notify_port = MagicMock()
 
     use_case = _make_use_case(
@@ -959,11 +956,7 @@ def test_execute_does_not_raise_when_application_total_exceeds_limit():
     existing_claim = MagicMock(spec=Claim)
     existing_claim.total_profit_cost_gross = Decimal("9000.00")
 
-    application = MagicMock(spec=Application)
-    application.proceeding = MagicMock()
-    application.proceeding.substantive_cost_limitation = 1000
-    application.proceeding.certificate_start_date = None
-    application.overall_decision = MeritsDecision.GRANTED
+    application = build_granted_application(substantive_cost_limitation=1000)
 
     use_case = _make_use_case(
         create_claim_port=create_claim_port,
@@ -985,25 +978,9 @@ def test_execute_persists_auto_reject_and_returns_rejection_reasons_and_creates_
     update_claim_status_port = _make_update_claim_status_port()
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
 
-    application = MagicMock(spec=Application)
-    application.proceeding = MagicMock()
-    application.proceeding.substantive_cost_limitation = 999999
-    application.proceeding.certificate_start_date = None
-    application.overall_decision = MeritsDecision.GRANTED
+    application = build_granted_application(substantive_cost_limitation=999999)
 
-    existing_claims = [
-        Claim(
-            claim_id=index + 100,
-            application_id=12345,
-            claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
-            status_id=ClaimStatus.SUBMITTED,
-            poa_type_id=POAType.PROFIT_COST,
-            submission_date=datetime.now(UTC),
-            total_profit_cost_net=Decimal("1.00"),
-            total_profit_cost_gross=Decimal("1.00"),
-        )
-        for index in range(4)
-    ]
+    existing_claims = [_submitted_poa_claim(index + 100) for index in range(4)]
 
     use_case = _make_use_case(
         create_claim_port=create_claim_port,
@@ -1056,25 +1033,9 @@ def test_execute_returns_submitted_claim_when_auto_reject_persistence_fails_and_
     update_claim_status_port = _make_update_claim_status_port()
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
 
-    application = MagicMock(spec=Application)
-    application.proceeding = MagicMock()
-    application.proceeding.substantive_cost_limitation = 999999
-    application.proceeding.certificate_start_date = None
-    application.overall_decision = MeritsDecision.GRANTED
+    application = build_granted_application(substantive_cost_limitation=999999)
 
-    existing_claims = [
-        Claim(
-            claim_id=index + 200,
-            application_id=12345,
-            claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
-            status_id=ClaimStatus.SUBMITTED,
-            poa_type_id=POAType.PROFIT_COST,
-            submission_date=datetime.now(UTC),
-            total_profit_cost_net=Decimal("1.00"),
-            total_profit_cost_gross=Decimal("1.00"),
-        )
-        for index in range(4)
-    ]
+    existing_claims = [_submitted_poa_claim(index + 200) for index in range(4)]
 
     use_case = _make_use_case(
         create_claim_port=create_claim_port,
@@ -1120,25 +1081,9 @@ def test_execute_auto_reject_does_not_persist_when_auto_reject_create_history_ev
         Exception("Unable to create event"),
     ]
 
-    application = MagicMock(spec=Application)
-    application.proceeding = MagicMock()
-    application.proceeding.substantive_cost_limitation = 999999
-    application.proceeding.certificate_start_date = None
-    application.overall_decision = MeritsDecision.GRANTED
+    application = build_granted_application(substantive_cost_limitation=999999)
 
-    existing_claims = [
-        Claim(
-            claim_id=index + 100,
-            application_id=12345,
-            claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
-            status_id=ClaimStatus.SUBMITTED,
-            poa_type_id=POAType.PROFIT_COST,
-            submission_date=datetime.now(UTC),
-            total_profit_cost_net=Decimal("1.00"),
-            total_profit_cost_gross=Decimal("1.00"),
-        )
-        for index in range(4)
-    ]
+    existing_claims = [_submitted_poa_claim(index + 100) for index in range(4)]
 
     use_case = _make_use_case(
         create_claim_port=create_claim_port,
@@ -1254,12 +1199,7 @@ def test_execute_auto_approves_eligible_payment_on_account_claim():
     update_claim_status_port = _make_update_claim_status_port()
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
 
-    application = MagicMock(spec=Application)
-    application.status = "LIVE"
-    application.overall_decision = "GRANTED"
-    application.proceeding = MagicMock()
-    application.proceeding.substantive_cost_limitation = 999999
-    application.proceeding.certificate_start_date = None
+    application = build_granted_application(substantive_cost_limitation=999999)
 
     use_case = _make_use_case(
         create_claim_port=create_claim_port,
@@ -1474,12 +1414,7 @@ def test_execute_does_not_persist_decision_amount_when_claim_auto_rejected():
     create_claim_port.create_claim.return_value = claim
     amount_port = _make_create_claim_decision_amount_port()
 
-    application = MagicMock(spec=Application)
-    application.status = "LIVE"
-    application.overall_decision = "GRANTED"
-    application.proceeding = MagicMock()
-    application.proceeding.substantive_cost_limitation = 1000
-    application.proceeding.certificate_start_date = None
+    application = build_granted_application(substantive_cost_limitation=1000)
 
     use_case = _make_use_case(
         create_claim_port=create_claim_port,
@@ -1505,12 +1440,7 @@ def test_execute_does_not_persist_decision_amount_when_claim_needs_manual_review
     create_claim_port.create_claim.return_value = claim
     amount_port = _make_create_claim_decision_amount_port()
 
-    application = MagicMock(spec=Application)
-    application.status = "LIVE"
-    application.overall_decision = "GRANTED"
-    application.proceeding = MagicMock()
-    application.proceeding.substantive_cost_limitation = 999999
-    application.proceeding.certificate_start_date = None
+    application = build_granted_application(substantive_cost_limitation=999999)
 
     use_case = _make_use_case(
         create_claim_port=create_claim_port,
@@ -1540,12 +1470,7 @@ def test_execute_reverts_to_submitted_when_persisting_decision_amount_fails():
     )
     update_claim_status_port = _make_update_claim_status_port()
 
-    application = MagicMock(spec=Application)
-    application.status = "LIVE"
-    application.overall_decision = "GRANTED"
-    application.proceeding = MagicMock()
-    application.proceeding.substantive_cost_limitation = 999999
-    application.proceeding.certificate_start_date = None
+    application = build_granted_application(substantive_cost_limitation=999999)
 
     use_case = _make_use_case(
         create_claim_port=create_claim_port,
@@ -1576,13 +1501,7 @@ def test_execute_does_not_send_grant_email_when_auto_approving_poa_claim():
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
     gov_notify_port = MagicMock()
 
-    application = MagicMock(spec=Application)
-    application.status = "LIVE"
-    application.overall_decision = "GRANTED"
-    application.provider.email_address = "provider@example.com"
-    application.proceeding = MagicMock()
-    application.proceeding.substantive_cost_limitation = 999999
-    application.proceeding.certificate_start_date = None
+    application = build_granted_application(substantive_cost_limitation=999999)
 
     use_case = _make_use_case(
         create_claim_port=create_claim_port,
@@ -1614,12 +1533,7 @@ def test_execute_does_not_create_history_event_if_auto_approve_eligible_update_c
     )
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
 
-    application = MagicMock(spec=Application)
-    application.status = "LIVE"
-    application.overall_decision = "GRANTED"
-    application.proceeding = MagicMock()
-    application.proceeding.substantive_cost_limitation = 999999
-    application.proceeding.certificate_start_date = None
+    application = build_granted_application(substantive_cost_limitation=999999)
 
     use_case = _make_use_case(
         create_claim_port=create_claim_port,
@@ -1671,12 +1585,7 @@ def test_execute_does_not_auto_approve_if_create_history_event_fails():
         Exception("Unable to create event"),
     ]
 
-    application = MagicMock(spec=Application)
-    application.status = "LIVE"
-    application.overall_decision = "GRANTED"
-    application.proceeding = MagicMock()
-    application.proceeding.substantive_cost_limitation = 999999
-    application.proceeding.certificate_start_date = None
+    application = build_granted_application(substantive_cost_limitation=999999)
 
     use_case = _make_use_case(
         create_claim_port=create_claim_port,
@@ -1720,12 +1629,7 @@ def test_execute_does_not_auto_approve_when_amount_exceeds_threshold():
     create_claim_decision_port = _make_create_claim_decision_port()
     update_claim_status_port = _make_update_claim_status_port()
 
-    application = MagicMock(spec=Application)
-    application.status = "LIVE"
-    application.overall_decision = "GRANTED"
-    application.proceeding = MagicMock()
-    application.proceeding.substantive_cost_limitation = 999999
-    application.proceeding.certificate_start_date = None
+    application = build_granted_application(substantive_cost_limitation=999999)
 
     use_case = _make_use_case(
         create_claim_port=create_claim_port,
@@ -1772,12 +1676,7 @@ def test_execute_does_not_auto_approve_non_payment_on_account_claim():
     create_claim_decision_port = _make_create_claim_decision_port()
     update_claim_status_port = _make_update_claim_status_port()
 
-    application = MagicMock(spec=Application)
-    application.status = "LIVE"
-    application.overall_decision = "GRANTED"
-    application.proceeding = MagicMock()
-    application.proceeding.substantive_cost_limitation = 999999
-    application.proceeding.certificate_start_date = None
+    application = build_granted_application(substantive_cost_limitation=999999)
 
     use_case = _make_use_case(
         create_claim_port=create_claim_port,
@@ -1801,21 +1700,15 @@ def test_execute_sets_funds_from_cumulative_approved_claims_and_new_amount():
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
 
-    application = MagicMock(spec=Application)
-    application.status = "LIVE"
-    application.overall_decision = "GRANTED"
-    application.proceeding = MagicMock()
-    application.proceeding.substantive_cost_limitation = 10000
-    application.proceeding.certificate_start_date = None
+    application = build_granted_application(substantive_cost_limitation=10000)
 
     def _existing_claim(claim_id, gross=None, vat_zero=None):
-        return Claim(
+        return build_poa_claim(
             claim_id=claim_id,
             application_id=12345,
-            claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
             status_id=ClaimStatus.PAY_IN_FULL,
-            poa_type_id=POAType.PROFIT_COST,
             submission_date=datetime.now(UTC),
+            total_profit_cost_net=None,
             total_profit_cost_gross=gross,
             total_profit_cost_vat_zero=vat_zero,
         )
@@ -1827,18 +1720,18 @@ def test_execute_sets_funds_from_cumulative_approved_claims_and_new_amount():
 
     get_claim_decision_port = _make_get_claim_decision_port(
         {
-            2: ClaimDecision(
+            2: build_claim_decision(
                 claim_decision_id=2, claim_id=2, decision=ClaimDecisionStatus.GRANT
             ),
-            3: ClaimDecision(
+            3: build_claim_decision(
                 claim_decision_id=3,
                 claim_id=3,
                 decision=ClaimDecisionStatus.PAY_IN_FULL,
             ),
-            4: ClaimDecision(
+            4: build_claim_decision(
                 claim_decision_id=4, claim_id=4, decision=ClaimDecisionStatus.REJECT
             ),
-            5: ClaimDecision(
+            5: build_claim_decision(
                 claim_decision_id=5, claim_id=5, decision=ClaimDecisionStatus.PENDING
             ),
         }
@@ -1871,12 +1764,7 @@ def test_execute_sets_funds_deducting_new_amount_even_when_auto_approved():
     create_claim_decision_port = _make_create_claim_decision_port()
     update_claim_status_port = _make_update_claim_status_port()
 
-    application = MagicMock(spec=Application)
-    application.status = "LIVE"
-    application.overall_decision = "GRANTED"
-    application.proceeding = MagicMock()
-    application.proceeding.substantive_cost_limitation = 10000
-    application.proceeding.certificate_start_date = None
+    application = build_granted_application(substantive_cost_limitation=10000)
 
     use_case = _make_use_case(
         create_claim_port=create_claim_port,
@@ -1904,21 +1792,16 @@ def test_execute_sets_funds_without_decision_port_treats_existing_as_unapproved(
     create_claim_port = MagicMock(spec=CreateClaimPort)
     create_claim_port.create_claim.return_value = claim
 
-    application = MagicMock(spec=Application)
-    application.status = "LIVE"
-    application.overall_decision = "GRANTED"
-    application.proceeding = MagicMock()
-    application.proceeding.substantive_cost_limitation = 10000
-    application.proceeding.certificate_start_date = None
+    application = build_granted_application(substantive_cost_limitation=10000)
 
-    existing_claim = Claim(
+    existing_claim = build_poa_claim(
         claim_id=2,
         application_id=12345,
-        claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
         status_id=ClaimStatus.PAY_IN_FULL,
-        poa_type_id=POAType.PROFIT_COST,
         submission_date=datetime.now(UTC),
+        total_profit_cost_net=None,
         total_profit_cost_gross=Decimal("2000.00"),
+        total_profit_cost_vat_zero=None,
     )
 
     use_case = _make_use_case(

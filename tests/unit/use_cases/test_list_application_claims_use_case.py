@@ -2,8 +2,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ClaimType
-from app.models.claim.index import Claim, ClaimDecision
+from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus
+from app.models.claim.index import Claim
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.get_claim_decision_port import GetClaimDecisionPort
 from app.ports.claim.get_claims_for_application_port import (
@@ -11,14 +11,18 @@ from app.ports.claim.get_claims_for_application_port import (
 )
 from app.use_cases.exceptions import ApplicationNotFoundError
 from app.use_cases.list_application_claims import ListApplicationClaimsUseCase
+from tests.factories.builders import (
+    build_application,
+    build_claim_decision,
+    build_poa_claim,
+)
 
 
 def _claim(claim_id: int, status: ClaimStatus) -> Claim:
-    return Claim(
+    return build_poa_claim(
         claim_id=claim_id,
         claim_reference=f"INQC-0000-{claim_id:04d}",
         application_id=1,
-        claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
         status_id=status,
     )
 
@@ -26,7 +30,7 @@ def _claim(claim_id: int, status: ClaimStatus) -> Claim:
 def _build_use_case(claims_port, lookup_port=None, decision_port=None):
     if lookup_port is None:
         lookup_port = MagicMock(spec=ApplicationLookupPort)
-        application = MagicMock(application_id=1)
+        application = build_application(application_id=1)
         lookup_port.get_application_by_laa_reference.return_value = application
     if decision_port is None:
         decision_port = MagicMock(spec=GetClaimDecisionPort)
@@ -91,7 +95,7 @@ def test_includes_claim_status_and_decision_status():
         _claim(1, ClaimStatus.REJECTED),
     ]
     decision_port = MagicMock(spec=GetClaimDecisionPort)
-    decision_port.get_claim_decision_by_claim_id.return_value = ClaimDecision(
+    decision_port.get_claim_decision_by_claim_id.return_value = build_claim_decision(
         claim_decision_id=1,
         claim_id=1,
         decision=ClaimDecisionStatus.REJECT,

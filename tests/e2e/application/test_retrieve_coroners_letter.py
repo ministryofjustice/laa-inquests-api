@@ -1,14 +1,9 @@
-from sqlmodel import select
-
 from app.auth.rbac import Role
-from app.models.application.index import Application
 
 
-def test_200_retrieve_coroners_letter(session, client):
-    application = session.exec(select(Application)).first()
-
+def test_200_retrieve_coroners_letter(client, seeded_application):
     response = client.get(
-        f"/applications/{application.laa_reference}/coroners-letter",
+        f"/applications/{seeded_application.laa_reference}/coroners-letter",
         headers={"Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}"},
     )
 

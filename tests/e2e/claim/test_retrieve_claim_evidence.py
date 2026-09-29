@@ -1,28 +1,13 @@
 import uuid
 
-from sqlmodel import select
-
 from app.auth.rbac import Role
-from app.models.application.index import Application
-from app.models.claim.index import Claim, ClaimEvidence
-
-
-def _create_claim_evidence(session, claim_id: int | None = None) -> ClaimEvidence:
-    claim_evidence = ClaimEvidence(
-        sds_file_name="stored-claim-evidence_abc123.pdf",
-        file_name="claim_evidence.pdf",
-        claim_id=claim_id,
-    )
-    session.add(claim_evidence)
-    session.commit()
-    session.refresh(claim_evidence)
-    return claim_evidence
+from tests.factories.persisted import create_claim, create_claim_evidence
 
 
 def test_200_retrieve_claim_evidence_returns_file_content_before_claim_exists(
     session, client
 ):
-    claim_evidence = _create_claim_evidence(session)
+    claim_evidence = create_claim_evidence(session)
 
     response = client.get(
         f"/claims/{claim_evidence.claim_evidence_id}",
@@ -34,7 +19,7 @@ def test_200_retrieve_claim_evidence_returns_file_content_before_claim_exists(
 
 
 def test_200_retrieve_claim_evidence_defaults_to_inline_disposition(session, client):
-    claim_evidence = _create_claim_evidence(session)
+    claim_evidence = create_claim_evidence(session, file_name="claim_evidence.pdf")
 
     response = client.get(
         f"/claims/{claim_evidence.claim_evidence_id}",
@@ -49,7 +34,7 @@ def test_200_retrieve_claim_evidence_defaults_to_inline_disposition(session, cli
 
 
 def test_200_retrieve_claim_evidence_supports_attachment_disposition(session, client):
-    claim_evidence = _create_claim_evidence(session)
+    claim_evidence = create_claim_evidence(session, file_name="claim_evidence.pdf")
 
     response = client.get(
         f"/claims/{claim_evidence.claim_evidence_id}",
@@ -65,18 +50,11 @@ def test_200_retrieve_claim_evidence_supports_attachment_disposition(session, cl
 
 
 def test_200_retrieve_claim_evidence_returns_file_content_after_linked_to_claim(
-    session, client
+    session, client, seeded_application
 ):
-    application = session.exec(select(Application)).first()
-    claim = Claim(
-        application_id=application.application_id,
-        claim_type_id="PAYMENT_ON_ACCOUNT",
-        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
-    )
-    session.add(claim)
-    session.commit()
-    session.refresh(claim)
-    claim_evidence = _create_claim_evidence(session, claim_id=claim.claim_id)
+    application = seeded_application
+    claim = create_claim(session, application)
+    claim_evidence = create_claim_evidence(session, claim)
 
     response = client.get(
         f"/claims/{claim_evidence.claim_evidence_id}",
@@ -88,13 +66,11 @@ def test_200_retrieve_claim_evidence_returns_file_content_after_linked_to_claim(
 
 
 def test_200_retrieve_claim_evidence_returns_xlsx_content(session, client):
-    claim_evidence = ClaimEvidence(
+    claim_evidence = create_claim_evidence(
+        session,
         sds_file_name="stored-claim-evidence_abc123.xlsx",
         file_name="claim_cost_template.xlsx",
     )
-    session.add(claim_evidence)
-    session.commit()
-    session.refresh(claim_evidence)
 
     response = client.get(
         f"/claims/{claim_evidence.claim_evidence_id}",
@@ -114,13 +90,11 @@ def test_200_retrieve_claim_evidence_returns_xlsx_content(session, client):
 
 
 def test_200_retrieve_claim_evidence_returns_xls_content(session, client):
-    claim_evidence = ClaimEvidence(
+    claim_evidence = create_claim_evidence(
+        session,
         sds_file_name="stored-claim-evidence_abc123.xls",
         file_name="claim_cost_template.xls",
     )
-    session.add(claim_evidence)
-    session.commit()
-    session.refresh(claim_evidence)
 
     response = client.get(
         f"/claims/{claim_evidence.claim_evidence_id}",
@@ -148,13 +122,11 @@ def test_404_retrieve_claim_evidence_returns_404_when_not_found(client):
 def test_415_retrieve_claim_evidence_returns_415_for_unsupported_mime_type(
     session, client
 ):
-    claim_evidence = ClaimEvidence(
+    claim_evidence = create_claim_evidence(
+        session,
         sds_file_name="stored-claim-evidence_abc123.exe",
         file_name="claim_evidence.exe",
     )
-    session.add(claim_evidence)
-    session.commit()
-    session.refresh(claim_evidence)
 
     response = client.get(
         f"/claims/{claim_evidence.claim_evidence_id}",

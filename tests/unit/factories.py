@@ -21,8 +21,10 @@ from app.models.claim.index import Claim
 # Sentinel value to distinguish "not provided" from "explicitly None"
 _NOT_PROVIDED = object()
 
+# TODO: This file should be able to be deleted after refactor. Same with the one in unit tests.
 
-def create_base_home_address(**overrides):
+
+def build_home_address(**overrides):
     """Create a base home address with optional field overrides."""
     defaults = {
         "address_id": 1,
@@ -35,7 +37,7 @@ def create_base_home_address(**overrides):
     return Address(**(defaults | overrides))
 
 
-def create_base_correspondence_address(**overrides):
+def build_correspondence_address(**overrides):
     """Create a base correspondence address with optional field overrides."""
     defaults = {
         "address_id": 2,
@@ -47,7 +49,7 @@ def create_base_correspondence_address(**overrides):
     return Address(**(defaults | overrides))
 
 
-def create_base_office_address(**overrides):
+def build_office_address(**overrides):
     """Create a base office address with optional field overrides."""
     defaults = {
         "address_id": 3,
@@ -60,7 +62,7 @@ def create_base_office_address(**overrides):
     return Address(**(defaults | overrides))
 
 
-def create_base_client(
+def build_client(
     home_address=_NOT_PROVIDED,
     correspondence_address=_NOT_PROVIDED,
     correspondence_recipient_name=_NOT_PROVIDED,
@@ -69,10 +71,10 @@ def create_base_client(
 ):
     """Create a base client with optional field overrides."""
     if home_address is _NOT_PROVIDED:
-        home_address = create_base_home_address()
+        home_address = build_home_address()
 
     if correspondence_address is _NOT_PROVIDED:
-        correspondence_address = create_base_correspondence_address()
+        correspondence_address = build_correspondence_address()
 
     if (
         correspondence_recipient_name is _NOT_PROVIDED
@@ -111,7 +113,7 @@ def create_base_client(
     return Client(**(defaults | overrides))
 
 
-def create_base_deceased(**overrides):
+def build_deceased(**overrides):
     """Create a base deceased with optional field overrides."""
     defaults = {
         "deceased_id": 1,
@@ -127,7 +129,7 @@ def create_base_deceased(**overrides):
     return Deceased(**(defaults | overrides))
 
 
-def create_base_proceeding(**overrides):
+def build_proceeding(**overrides):
     """Create a base proceeding with optional field overrides."""
     defaults = {
         "id": 1,
@@ -139,10 +141,10 @@ def create_base_proceeding(**overrides):
     return Proceeding(**(defaults | overrides))
 
 
-def create_base_application_proceeding(proceeding=_NOT_PROVIDED, **overrides):
+def build_application_proceeding(proceeding=_NOT_PROVIDED, **overrides):
     """Create a base application proceeding with optional field overrides."""
     if proceeding is _NOT_PROVIDED:
-        proceeding = create_base_proceeding()
+        proceeding = build_proceeding()
 
     defaults = {
         "application_proceeding_id": 1,
@@ -157,7 +159,7 @@ def create_base_application_proceeding(proceeding=_NOT_PROVIDED, **overrides):
     return ApplicationProceeding(**(defaults | overrides))
 
 
-def create_base_public_body(**overrides):
+def build_public_body(**overrides):
     """Create a base public body with optional field overrides."""
     defaults = {
         "id": 1,
@@ -167,10 +169,10 @@ def create_base_public_body(**overrides):
     return PublicBody(**(defaults | overrides))
 
 
-def create_base_application_public_body(public_body=_NOT_PROVIDED, **overrides):
+def build_application_public_body(public_body=_NOT_PROVIDED, **overrides):
     """Create a base application public body with optional field overrides."""
     if public_body is _NOT_PROVIDED:
-        public_body = create_base_public_body()
+        public_body = build_public_body()
 
     defaults = {
         "application_public_body_id": 1,
@@ -181,7 +183,7 @@ def create_base_application_public_body(public_body=_NOT_PROVIDED, **overrides):
     return ApplicationPublicBody(**(defaults | overrides))
 
 
-def create_base_provider(**overrides):
+def build_provider(**overrides):
     """Create a base provider with optional field overrides."""
     defaults = {
         "provider_id": 1,
@@ -192,7 +194,7 @@ def create_base_provider(**overrides):
     return Provider(**(defaults | overrides))
 
 
-def create_base_application(
+def build_application(
     client=_NOT_PROVIDED,
     deceased=_NOT_PROVIDED,
     provider=_NOT_PROVIDED,
@@ -202,15 +204,15 @@ def create_base_application(
 ):
     """Create a base application with optional field overrides."""
     if client is _NOT_PROVIDED:
-        client = create_base_client()
+        client = build_client()
     if deceased is _NOT_PROVIDED:
-        deceased = create_base_deceased()
+        deceased = build_deceased()
     if provider is _NOT_PROVIDED:
-        provider = create_base_provider()
+        provider = build_provider()
     if proceeding is _NOT_PROVIDED:
-        proceeding = create_base_application_proceeding()
+        proceeding = build_application_proceeding()
     if public_bodies is _NOT_PROVIDED:
-        public_bodies = [create_base_application_public_body()]
+        public_bodies = [build_application_public_body()]
 
     defaults = {
         "application_id": 12345,
@@ -227,7 +229,7 @@ def create_base_application(
     return Application(**(defaults | overrides))
 
 
-def create_base_claim(**overrides) -> Claim:
+def build_claim(**overrides) -> Claim:
     """Create a base claim with optional field overrides."""
     defaults = {
         "claim_type_id": "FINAL_BILL",
@@ -237,7 +239,7 @@ def create_base_claim(**overrides) -> Claim:
     return Claim(**(defaults | overrides))
 
 
-def create_base_certificate(
+def build_certificate(
     application=_NOT_PROVIDED,
     application_proceeding=_NOT_PROVIDED,
     public_bodies=_NOT_PROVIDED,
@@ -245,11 +247,11 @@ def create_base_certificate(
 ):
     """Create a base certificate with optional field overrides."""
     if application is _NOT_PROVIDED:
-        application = create_base_application()
+        application = build_application()
     if application_proceeding is _NOT_PROVIDED:
-        application_proceeding = create_base_application_proceeding()
+        application_proceeding = build_application_proceeding()
     if public_bodies is _NOT_PROVIDED:
-        public_bodies = [create_base_application_public_body()]
+        public_bodies = [build_application_public_body()]
 
     client_address = (
         application.client.correspondence_address or application.client.home_address
@@ -258,7 +260,7 @@ def create_base_certificate(
         "client_name": f"{application.client.client_first_name} {application.client.client_last_name}",
         "client_address": client_address,
         "firm_name": application.provider.firm_code,
-        "office_address": create_base_office_address(),
+        "office_address": build_office_address(),
         "opponent_details": [body.public_body_description for body in public_bodies],
         "guardian_name": "Not applicable",
         "guardian_address": "Not applicable",

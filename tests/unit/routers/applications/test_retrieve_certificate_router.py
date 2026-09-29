@@ -12,12 +12,12 @@ from app.use_cases.exceptions import (
     ApplicationNotGrantedError,
     ProviderDetailsRetrievalError,
 )
-from tests.unit.factories import create_base_certificate
+from tests.factories.builders import build_certificate
 
 
 def test_read_certificate_calls_use_case_with_laa_reference():
     use_case = MagicMock()
-    use_case.execute.return_value = create_base_certificate()
+    use_case.execute.return_value = build_certificate()
 
     read_certificate("123", use_case=use_case)
 
@@ -26,7 +26,7 @@ def test_read_certificate_calls_use_case_with_laa_reference():
 
 def test_read_certificate_returns_certificate_context():
     use_case = MagicMock()
-    certificate_context = create_base_certificate()
+    certificate_context = build_certificate()
     use_case.execute.return_value = certificate_context
 
     result = read_certificate("123", use_case=use_case)

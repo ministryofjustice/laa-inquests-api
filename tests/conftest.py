@@ -3,29 +3,15 @@ from unittest.mock import MagicMock
 import pytest
 from fastapi import HTTPException, status
 from fastapi.testclient import TestClient
-from passlib.hash import argon2
 from sqlalchemy.orm import sessionmaker
-from sqlmodel import Session, SQLModel, StaticPool, create_engine
+from sqlmodel import Session, SQLModel, StaticPool, create_engine, select
 
 from app import api
 from app.auth.rbac import ROLE_PERMISSIONS_MAP
 from app.db import get_session
 from app.db.session import CustomSession
-from app.models import User
-from app.models.application.enums import MeritsDecision
 from app.models.application.index import (
-    Address,
     Application,
-    ApplicationProceeding,
-    ApplicationPublicBody,
-    Client,
-    CoronersLetter,
-    Deceased,
-    Proceeding,
-    ProceedingId,
-    Provider,
-    PublicBody,
-    PublicBodyId,
     SDSUploadClaimEvidenceResponse,
     SDSUploadCoronersLetterResponse,
 )
@@ -37,6 +23,14 @@ from app.routers.applications import (
     get_sds_port,
 )
 from app.routers.dependencies import get_entra_auth_port
+from tests.factories.builders import build_office_address
+from tests.factories.seed import (
+    SEED_LAA_REFERENCE,
+    TEST_USER_FIRM_CODE,
+    seed_application,
+    seed_reference_data,
+    seed_users,
+)
 
 SECRET_KEY = "TEST_KEY"
 
@@ -50,114 +44,19 @@ def session_fixture():
         autocommit=False, autoflush=False, bind=engine, class_=CustomSession
     )
     SQLModel.metadata.create_all(engine)
-    users_to_add = [
-        {"username": "test_user", "password": "test_password", "disabled": False},
-        {"username": "jane_doe", "password": "password", "disabled": True},
-    ]
-
     with test_session() as db_session:
-        for user in users_to_add:
-            username = user.get("username")
-            password = user.get("password")
-            disabled = user.get("disabled")
-
-            password = argon2.hash(password)
-            new_user = User(
-                username=username, hashed_password=password, disabled=disabled
-            )
-            db_session.add(new_user)
-        proceeding = Proceeding(
-            proceeding_id=ProceedingId.IQOT,
-            proceeding_name="Other",
-            proceeding_description="Other",
-        )
-        db_session.add(proceeding)
-        db_session.commit()
-        application_proceeding = ApplicationProceeding(
-            proceeding_id=ProceedingId.IQOT,
-            merits_decision=MeritsDecision.GRANTED,
-        )
-
-        new_public_body = PublicBody(
-            public_body_id=PublicBodyId.DEPARTMENT_FOR_TRANSPORT,
-            public_body_description="Department for Transport",
-        )
-        db_session.add(new_public_body)
-        new_public_body_2 = PublicBody(
-            public_body_id=PublicBodyId.DEPARTMENT_OF_HEALTH_AND_SOCIAL_CARE,
-            public_body_description="Department of Health and Social Care",
-        )
-        db_session.add(new_public_body_2)
-        db_session.commit()
-        application_public_bodies = [
-            ApplicationPublicBody(public_body_id=PublicBodyId.DEPARTMENT_FOR_TRANSPORT)
-        ]
-        home_address = Address(
-            address_line_1="1 Example Lane",
-            town_or_city="London",
-            postcode="SW1A 1AA",
-        )
-        db_session.add(home_address)
-        db_session.commit()
-        db_session.refresh(home_address)
-        new_client = Client(
-            client_first_name="Test",
-            client_last_name="Surname",
-            date_of_birth="01-02-2003",
-            correspondence_address_source="USE_CLIENT_HOME_ADDRESS",
-            correspondence_address_id=None,
-            home_address_id=home_address.address_id,
-        )
-        db_session.add(new_client)
-        db_session.commit()
-        db_session.refresh(new_client)
-
-        new_deceased = Deceased(
-            client_id=new_client.client_id,
-            deceased_first_name="Test",
-            deceased_last_name="Surname",
-            deceased_date_of_birth="01-02-1993",
-            deceased_date_of_death="01-01-2026",
-            coroners_reference="COR-2025-001",
-            further_information="Further details to be confirmed",
-            client_relationship_to_deceased="sibling",
-        )
-
-        db_session.add(new_deceased)
-        db_session.commit()
-        db_session.refresh(new_deceased)
-
-        new_provider = Provider(
-            firm_code="0A123B", office_id="0U651L", email_address="test@example.com"
-        )
-        db_session.add(new_provider)
-        db_session.commit()
-        db_session.refresh(new_provider)
-
-        new_application = Application(
-            proceeding=application_proceeding,
-            client_id=new_client.client_id,
-            deceased_id=new_deceased.deceased_id,
-            public_bodies=application_public_bodies,
-            provider_id=new_provider.provider_id,
-            laa_reference="INQ-123-456",
-        )
-
-        coroners_letter = CoronersLetter(
-            sds_file_name="test_sds_file.pdf", file_name="test_file.pdf"
-        )
-
-        db_session.add(coroners_letter)
-        db_session.commit()
-        db_session.refresh(coroners_letter)
-
-        new_application.coroners_letter_id = coroners_letter.coroners_letter_id
-
-        db_session.add(new_application)
-        db_session.commit()
-        db_session.refresh(new_application)
+        seed_users(db_session)
+        seed_reference_data(db_session)
+        seed_application(db_session)
 
         yield db_session
+
+
+@pytest.fixture
+def seeded_application(session: Session) -> Application:
+    return session.exec(
+        select(Application).where(Application.laa_reference == SEED_LAA_REFERENCE)
+    ).one()
 
 
 @pytest.fixture(name="client")
@@ -184,9 +83,11 @@ def client_fixture(session: Session):
         mock_port.get_firms_by_ids.side_effect = lambda firm_ids: [
             {"firmNumber": fid, "firmName": f"Firm {fid}"} for fid in firm_ids
         ]
-        mock_port.get_office_address.return_value = Address(
+        mock_port.get_office_address.return_value = build_office_address(
             address_line_1="Test Office Street",
+            address_line_2=None,
             town_or_city="Test City",
+            county=None,
             postcode="TE1 1ST",
         )
         return mock_port
@@ -248,7 +149,7 @@ def client_fixture(session: Session):
                 )
 
             return AuthenticatedUser(
-                firm_code="0A123B",
+                firm_code=TEST_USER_FIRM_CODE,
                 scopes=scopes,
                 name="Test Name",
                 app_roles=app_roles,

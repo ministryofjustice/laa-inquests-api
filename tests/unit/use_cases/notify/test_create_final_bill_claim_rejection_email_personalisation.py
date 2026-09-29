@@ -1,29 +1,28 @@
 from datetime import UTC, datetime
 from decimal import Decimal
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-from app.models.claim.enums import ClaimType
-from app.models.claim.index import Claim
 from app.models.gov_notify_templates.final_bill_claim_reject_personalisation import (
     NotifyFinalBillClaimRejectTemplatePersonalisation,
 )
 from app.use_cases.notify.create_final_bill_claim_rejection_email_personalisation import (
     create_final_bill_claim_rejection_email_personalisation,
 )
-from tests.unit.factories import create_base_application
+from tests.factories.builders import build_application, build_claim
 
 MODULE = "app.use_cases.notify.create_final_bill_claim_rejection_email_personalisation"
 
 
 def test_create_final_bill_claim_rejection_email_personalisation_returns_expected_data():
-    application = create_base_application()
-    claim = Claim(
+    application = build_application()
+    claim = build_claim(
         claim_id=7,
         claim_reference="INQC-0007-0007",
         application_id=12345,
-        claim_type_id=ClaimType.FINAL_BILL,
         submission_date=datetime(2026, 6, 18, 14, 3, tzinfo=UTC),
+        total_profit_cost_net=None,
         total_profit_cost_gross=Decimal("1200.00"),
+        total_profit_cost_vat_zero=None,
     )
 
     with patch(f"{MODULE}.datetime") as mock_datetime:
@@ -49,15 +48,16 @@ def test_create_final_bill_claim_rejection_email_personalisation_returns_expecte
 
 
 def test_final_bill_claim_rejection_personalisation_uses_vat_zero_amount():
-    claim = MagicMock(spec=Claim)
-    claim.claim_id = 7
-    claim.claim_type_id = ClaimType.FINAL_BILL
-    claim.submission_date = datetime(2026, 6, 18, 14, 3, tzinfo=UTC)
-    claim.total_profit_cost_vat_zero = Decimal("500.00")
-    claim.total_profit_cost_gross = Decimal("1200.00")
+    claim = build_claim(
+        claim_id=7,
+        submission_date=datetime(2026, 6, 18, 14, 3, tzinfo=UTC),
+        total_profit_cost_net=None,
+        total_profit_cost_vat_zero=Decimal("500.00"),
+        total_profit_cost_gross=Decimal("1200.00"),
+    )
 
     result = create_final_bill_claim_rejection_email_personalisation(
-        claim, create_base_application(), "reason", "Firm"
+        claim, build_application(), "reason", "Firm"
     )
 
     assert result.claimed_amount == "500.00"

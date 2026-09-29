@@ -1,25 +1,20 @@
 from datetime import UTC, datetime
-from decimal import Decimal
-from unittest.mock import MagicMock
 
-from app.models.claim.enums import ClaimType
-from app.models.claim.index import Claim
 from app.models.gov_notify_templates.claim_submit_personalisation import (
     NotifyClaimSubmitTemplatePersonalisation,
 )
 from app.use_cases.notify.create_claim_submission_email_personalisation import (
     create_claim_submission_email_personalisation,
 )
-from tests.unit.factories import create_base_application
+from tests.factories.builders import build_application, build_poa_claim
 
 
 def test_create_claim_submission_email_personalisation_returns_expected_data():
-    application = create_base_application()
-    claim = MagicMock(spec=Claim)
-    claim.submission_date = datetime(2026, 7, 28, 14, 3, tzinfo=UTC)
-    claim.claim_reference = "INQC-ABCD-1234"
-    claim.claim_type_id = ClaimType.PAYMENT_ON_ACCOUNT
-    claim.total_profit_cost_gross = Decimal("1200.00")
+    application = build_application()
+    claim = build_poa_claim(
+        submission_date=datetime(2026, 7, 28, 14, 3, tzinfo=UTC),
+        claim_reference="INQC-ABCD-1234",
+    )
 
     result = create_claim_submission_email_personalisation(
         claim, application, "Test Firm Name"
