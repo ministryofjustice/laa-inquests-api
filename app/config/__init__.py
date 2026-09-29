@@ -66,3 +66,10 @@ class Config:
     BANNED_WORDS_FILE_PATH = os.environ.get(
         "BANNED_WORDS_FILE_PATH", "app/static/banned-words.txt"
     )
+
+    SEED_DEV_APPLICATION_COUNT = int(os.environ.get("SEED_DEV_APPLICATION_COUNT", "0"))
+    SEED_DEV_FIRM_CODES = tuple(
+        code.strip()
+        for code in os.environ.get("SEED_DEV_FIRM_CODES", "").split(",")
+        if code.strip()
+    )

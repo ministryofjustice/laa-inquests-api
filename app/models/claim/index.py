@@ -198,7 +198,9 @@ class ClaimPaymentExtract(SQLModel, table=True):
         sa_column=Column(Enum(InvoiceTypeCode), nullable=False)
     )
     tax_code: TaxCode = Field(sa_column=Column(Enum(TaxCode), nullable=False))
-    created_at: datetime | None = Field(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime | None = Field(
+        default_factory=lambda: datetime.now(UTC), index=True
+    )
 
 
 class ClaimEvidence(SQLModel, table=True):
