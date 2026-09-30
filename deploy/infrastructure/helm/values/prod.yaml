@@ -106,6 +106,7 @@ env:
   SESSION_NAME: "sessionId"
   RATE_LIMIT_MAX: 900
   RATE_WINDOW_MINUTES: 15
+  RATE_LIMIT_EXEMPT_PATHS: "/,/openapi.json,/health,/status"
   NODE_ENV: "production"
   LOG_LEVEL: "warn"
 
