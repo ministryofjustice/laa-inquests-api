@@ -31,3 +31,6 @@ ignore:
     "SNYK-DEBIAN13-EXPAT-19964593":
         - "*":
               reason: "There is no fixed version for Debian:13 expat"
+    "SNYK-DEBIAN13-GCC14-20335537":
+        - "*":
+              reason: "There is no fixed version for Debian:13 gcc-14"
