@@ -14,7 +14,6 @@ from app.contexts.user import clear_entra_user_context
 from app.logging_utils import build_log_extra, duration_ms
 from app.rate_limit import (
     RATE_LIMIT_EXEMPT_PATHS,
-    RATE_LIMIT_RETRY_AFTER_SECONDS,
     create_rate_limiter,
 )
 from app.routers import applications, claims, monitoring, notifications, reports
