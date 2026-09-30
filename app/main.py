@@ -3,11 +3,11 @@ import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from uuid import uuid4
-from app.config import Config
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from app.config import Config
 from app.config.docs import docs_config
 from app.config.logging import configure_logging
 from app.contexts.request import clear_request_context, set_request_context
