@@ -7,6 +7,7 @@ class Config:
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "")
     RATE_LIMIT_MAX = int(os.environ.get("RATE_LIMIT_MAX", "900"))
     RATE_WINDOW_MINUTES = int(os.environ.get("RATE_WINDOW_MINUTES", "15"))
+    RATE_LIMIT_EXEMPT_PATHS = frozenset(os.environ.get("RATE_LIMIT_EXEMPT_PATHS", "/,/health,/status").replace(" ","").split(","))
 
     # The default DB parameters are set to allow you to connect to the Docker DB
     DB_USER = os.environ.get("DB_USER", "postgres")
