@@ -57,6 +57,7 @@ pygments==2.21.0
 pyjwt==2.15.0
 pypdf==6.19.0
 pyphen==0.18.1
+pyrate-limiter==4.5.0
 pytest==9.0.3
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.3

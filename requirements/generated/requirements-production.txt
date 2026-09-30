@@ -52,6 +52,7 @@ pydyf==0.12.1
 pygments==2.21.0
 pyjwt==2.15.0
 pyphen==0.18.1
+pyrate-limiter==4.5.0
 python-dotenv==1.2.3
 python-multipart==0.0.32
 pyyaml==6.0.3

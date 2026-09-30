@@ -50,10 +50,6 @@ inputs:
   kube-namespace:
     description: "Kubernetes cluster namespace"
     required: true
-  ratelimit_max:
-    description: "Rate limit max"
-  ratewindow_ms:
-    description: "Rate limit max"
   service_name:
     description: "Service name"
   session_name:
@@ -109,15 +105,11 @@ runs:
     - name: Set environment variables
       shell: bash
       env:
-        RATELIMIT_MAX_INPUT: ${{ inputs.ratelimit_max || '10000' }}
-        RATEWINDOW_MS_INPUT: ${{ inputs.ratewindow_ms || '900000' }}
         SERVICE_NAME_INPUT: ${{ inputs.service_name || 'Inquests' }}
         SESSION_NAME_INPUT: ${{ inputs.session_name || 'sessionId' }}
         SESSION_SECRET_INPUT: ${{ inputs.session_secret || 'default-session-secret' }}
       run: |
         echo "NODE_ENV=production" >> "$GITHUB_ENV"
-        echo "RATE_LIMIT_MAX=$RATELIMIT_MAX_INPUT" >> "$GITHUB_ENV"
-        echo "RATE_WINDOW_MS=$RATEWINDOW_MS_INPUT" >> "$GITHUB_ENV"
         echo "SERVICE_NAME=$SERVICE_NAME_INPUT" >> "$GITHUB_ENV"
         echo "SESSION_NAME=$SESSION_NAME_INPUT" >> "$GITHUB_ENV"
         echo "SESSION_SECRET=$SESSION_SECRET_INPUT" >> "$GITHUB_ENV"
