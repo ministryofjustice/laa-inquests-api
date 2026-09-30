@@ -63,8 +63,8 @@ def create_app():
                     response = JSONResponse(
                         status_code=429,
                         content={"detail": "Rate limit exceeded"},
-                        headers={"Retry-After": str(RATE_LIMIT_RETRY_AFTER_SECONDS)},
                     )
+                    logger.warning("Rate limit exceeded for client %s", client_ip)
             response.headers["x-request-id"] = request.state.request_id
             response.headers["x-correlation-id"] = request.state.correlation_id
             logger.info(

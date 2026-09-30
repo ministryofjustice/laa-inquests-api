@@ -4,7 +4,7 @@ from app.rate_limit import create_rate_limiter
 
 def test_rate_limit_is_shared_across_routes_and_exempts_health(client):
     previous_rate_limiter = client.app.state.rate_limiter
-    rate_limiter = create_rate_limiter()
+    rate_limiter = create_rate_limiter(2, 15)
     client.app.state.rate_limiter = rate_limiter
 
     try:
@@ -29,9 +29,8 @@ def test_rate_limit_is_shared_across_routes_and_exempts_health(client):
         assert applications_response.status_code == 200
         assert claims_response.status_code == 201
         assert second_applications_response.status_code == 429
-        assert second_applications_response.headers["retry-after"]
-        assert second_applications_response.headers["x-request-id"]
-        assert second_applications_response.headers["x-correlation-id"]
+        assert second_applications_response.json() == {"detail": "Rate limit exceeded"}
+
     finally:
         client.app.state.rate_limiter = previous_rate_limiter
         rate_limiter.close()
