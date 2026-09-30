@@ -106,14 +106,8 @@ class TestGenerateApplicationBacklogReportUseCase:
             use_case.execute()
 
     def test_multiple_applications_all_included(self):
-        app1 = build_application(
-            application_id=100,
-            provider=build_provider(firm_code="1"),
-        )
-        app2 = build_application(
-            application_id=200,
-            provider=build_provider(firm_code="2"),
-        )
+        app1 = build_application(provider=build_provider(firm_code="1"))
+        app2 = build_application(provider=build_provider(firm_code="2"))
 
         use_case = _build_use_case(
             applications=[app1, app2],
@@ -153,8 +147,8 @@ class TestGenerateApplicationBacklogReportUseCase:
 
     def test_deduplicates_firm_ids_before_calling_port(self):
         provider = build_provider(firm_code="123")
-        app1 = build_application(application_id=100, provider=provider)
-        app2 = build_application(application_id=200, provider=provider)
+        app1 = build_application(provider=provider)
+        app2 = build_application(provider=provider)
 
         backlog_port = MagicMock()
         backlog_port.get_pending_applications.return_value = [app1, app2]

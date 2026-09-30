@@ -75,10 +75,11 @@ Use the factories in `tests/factories/` so a change to a model only needs updati
 | Module | Use it for |
 | --- | --- |
 | `tests/factories/builders.py` | `build_*` returns an unsaved object. This is the only place default values live. |
-| `tests/factories/persisted.py` | `create_*(session, ...)` builds and commits the object. `update_*` helpers change the seeded proceeding. |
+| `tests/factories/persisted.py` | `create_*(session, ...)` builds and commits the object. `create_application(..., substantive_cost_limitation=N)` gives the application its own cost limit. |
 | `tests/factories/domain.py` | `build_*` for domain value objects (`Claim`, `PayInFullClaim`, ...). |
 | `tests/factories/seed.py` | The data every `session` starts with. Only edit this to change the seeded application. |
 
 - Nested objects are changed with `client_overrides`, `deceased_overrides`, `provider_overrides` and `proceeding_overrides`.
-- `for_db=True` (used by `create_*`) leaves ids to the database and refers to the seeded `Proceeding` and `PublicBody` rows instead of recreating them. #TODO Review this
+- `for_db=True` (used by `create_*`) builds a row that can be inserted: ids are left to the database, the seeded `Proceeding` and `PublicBody` rows are referenced instead of recreated, and `laa_reference` is unique.
+- In-memory builds only set the ids code under test reads (`application_id`, `client_id`, `deceased_id`, `claim_id`), from a counter. Never assert a literal id; use `application.application_id`.
 - `tests/unit/test_factories.py` fails first when a model change needs a default updated.

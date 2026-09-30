@@ -73,7 +73,6 @@ def seed_application(session: Session) -> Application:
             "has_applied_previously": False,
             "prev_application_reference": None,
             "home_address": builders.build_home_address(
-                for_db=True,
                 address_line_1="1 Example Lane",
                 address_line_2=None,
                 county=None,

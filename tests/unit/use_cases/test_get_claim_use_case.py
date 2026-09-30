@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
+from app.models.application.index import Application
 from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimType,
@@ -29,26 +30,17 @@ from tests.factories.builders import (
 
 
 def _claim(
-    claim_id: int = 1,
-    application_id: int = 1,
+    application: Application,
     claim_reference: str = "INQC-0000-0001",
     total_funds_remaining_after_claim: Decimal = Decimal(
         SUBSTANTIVE_CERTIFICATE_AMOUNT
     ),
 ) -> Claim:
     return build_poa_claim(
-        claim_id=claim_id,
         claim_reference=claim_reference,
-        application_id=application_id,
+        application_id=application.application_id,
         submission_date=datetime.now(UTC),
         total_funds_remaining_after_claim=total_funds_remaining_after_claim,
-    )
-
-
-def _application(application_id: int = 1, substantive_cost_limitation: int = 10000):
-    return build_granted_application(
-        application_id=application_id,
-        substantive_cost_limitation=substantive_cost_limitation,
     )
 
 
@@ -74,7 +66,8 @@ def _build_use_case(
 
 
 def test_returns_response_for_valid_application_and_claim():
-    use_case = _build_use_case(claim=_claim(), application=_application())
+    application = build_granted_application()
+    use_case = _build_use_case(claim=_claim(application), application=application)
 
     result = use_case.execute("1", "INQC-0000-0001")
 
@@ -84,14 +77,16 @@ def test_returns_response_for_valid_application_and_claim():
 
 
 def test_raises_application_not_found_when_application_missing():
-    use_case = _build_use_case(claim=_claim(), application=None)
+    use_case = _build_use_case(
+        claim=_claim(build_granted_application()), application=None
+    )
 
     with pytest.raises(ApplicationNotFoundError):
         use_case.execute("999999", "INQC-0000-0001")
 
 
 def test_raises_claim_not_found_when_claim_missing():
-    use_case = _build_use_case(claim=None, application=_application())
+    use_case = _build_use_case(claim=None, application=build_granted_application())
 
     with pytest.raises(ClaimNotFoundError):
         use_case.execute("1", "INQC-9999-9999")
@@ -99,8 +94,8 @@ def test_raises_claim_not_found_when_claim_missing():
 
 def test_raises_claim_not_found_when_claim_belongs_to_another_application():
     use_case = _build_use_case(
-        claim=_claim(claim_id=1, application_id=1),
-        application=_application(application_id=2),
+        claim=_claim(build_granted_application()),
+        application=build_granted_application(),
     )
 
     with pytest.raises(ClaimNotFoundError):
@@ -108,10 +103,8 @@ def test_raises_claim_not_found_when_claim_belongs_to_another_application():
 
 
 def test_maps_substantive_cost_limitation_from_application():
-    use_case = _build_use_case(
-        claim=_claim(),
-        application=_application(substantive_cost_limitation=25000),
-    )
+    application = build_granted_application(substantive_cost_limitation=25000)
+    use_case = _build_use_case(claim=_claim(application), application=application)
 
     result = use_case.execute("1", "INQC-0000-0001")
 
@@ -119,9 +112,11 @@ def test_maps_substantive_cost_limitation_from_application():
 
 
 def test_includes_claim_decision_when_present():
+    application = build_granted_application()
+    claim = _claim(application)
     decision = build_claim_decision(
         claim_decision_id=7,
-        claim_id=1,
+        claim_id=claim.claim_id,
         decision=ClaimDecisionStatus.REJECT,
         decision_reasons=[
             build_decision_reason(
@@ -132,9 +127,7 @@ def test_includes_claim_decision_when_present():
             )
         ],
     )
-    use_case = _build_use_case(
-        claim=_claim(), application=_application(), decision=decision
-    )
+    use_case = _build_use_case(claim=claim, application=application, decision=decision)
 
     result = use_case.execute("1", "INQC-0000-0001")
 
@@ -148,8 +141,9 @@ def test_includes_claim_decision_when_present():
 
 
 def test_claim_decision_is_none_when_absent():
+    application = build_granted_application()
     use_case = _build_use_case(
-        claim=_claim(), application=_application(), decision=None
+        claim=_claim(application), application=application, decision=None
     )
 
     result = use_case.execute("1", "INQC-0000-0001")
@@ -159,13 +153,14 @@ def test_claim_decision_is_none_when_absent():
 
 def test_cost_template_file_is_populated_when_present():
     file_id = uuid.uuid4()
-    claim = _claim()
+    application = build_granted_application()
+    claim = _claim(application)
     claim.claim_cost_template = build_claim_cost_template(
         claim_id=claim.claim_id,
         claim_cost_template_file_id=file_id,
         claim_cost_template_file_name="final_bill_costs.xlsx",
     )
-    use_case = _build_use_case(claim=claim, application=_application())
+    use_case = _build_use_case(claim=claim, application=application)
 
     result = use_case.execute("1", "INQC-0000-0001")
 
@@ -178,7 +173,8 @@ def test_cost_template_file_is_populated_when_present():
 
 
 def test_cost_template_file_is_none_when_absent():
-    use_case = _build_use_case(claim=_claim(), application=_application())
+    application = build_granted_application()
+    use_case = _build_use_case(claim=_claim(application), application=application)
 
     result = use_case.execute("1", "INQC-0000-0001")
 
@@ -186,9 +182,10 @@ def test_cost_template_file_is_none_when_absent():
 
 
 def test_returns_stored_total_funds_remaining_from_claim():
+    application = build_granted_application()
     use_case = _build_use_case(
-        claim=_claim(total_funds_remaining_after_claim=Decimal("8800.00")),
-        application=_application(),
+        claim=_claim(application, total_funds_remaining_after_claim=Decimal("8800.00")),
+        application=application,
     )
 
     result = use_case.execute("1", "INQC-0000-0001")
@@ -197,9 +194,10 @@ def test_returns_stored_total_funds_remaining_from_claim():
 
 
 def test_total_funds_remaining_defaults_to_certificate_amount_when_not_set():
+    application = build_granted_application()
     use_case = _build_use_case(
-        claim=_claim(),
-        application=_application(),
+        claim=_claim(application),
+        application=application,
     )
 
     result = use_case.execute("1", "INQC-0000-0001")

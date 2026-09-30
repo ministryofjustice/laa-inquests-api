@@ -6,6 +6,7 @@ import pytest
 
 from app.contexts.user import set_entra_user_context
 from app.domain.claim_error import ClaimErrorCode
+from app.models.application.index import Application
 from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
@@ -49,21 +50,13 @@ from tests.factories.builders import (
 )
 
 
-def _claim(claim_id: int = 1, application_id: int = 1) -> Claim:
+def _claim(application: Application) -> Claim:
     return build_poa_claim(
-        claim_id=claim_id,
-        application_id=application_id,
+        application_id=application.application_id,
         claim_reference="INQC-0000-0001",
         claim_type_id=ClaimType.FINAL_BILL,
         submission_date=datetime.now(UTC),
         claimant_id="claimant-123@provider.co.uk",
-    )
-
-
-def _application(application_id: int = 1):
-    return build_application(
-        application_id=application_id,
-        laa_reference=f"INQ-{application_id:03d}-REF",
     )
 
 
@@ -82,7 +75,7 @@ def _build_use_case(claim=None, application=None):
     create_decision_port = MagicMock(spec=CreateClaimDecisionPort)
     create_decision_port.create_claim_decision.return_value = build_claim_decision(
         claim_decision_id=42,
-        claim_id=claim.claim_id if claim is not None else 1,
+        claim_id=claim.claim_id if claim is not None else None,
         decision=ClaimDecisionStatus.PAY_IN_FULL,
     )
 
@@ -121,14 +114,14 @@ def _build_use_case(claim=None, application=None):
 
 
 def test_raises_application_not_found_when_application_missing():
-    use_case, *_ = _build_use_case(claim=_claim(), application=None)
+    use_case, *_ = _build_use_case(claim=_claim(build_application()), application=None)
 
     with pytest.raises(ApplicationNotFoundError):
         use_case.execute(PayInFullClaimCommand("999999", "INQC-0000-0001"))
 
 
 def test_raises_claim_not_found_when_claim_missing():
-    use_case, *_ = _build_use_case(claim=None, application=_application())
+    use_case, *_ = _build_use_case(claim=None, application=build_application())
 
     with pytest.raises(ClaimNotFoundError):
         use_case.execute(PayInFullClaimCommand("1", "INQC-9999-9999"))
@@ -136,8 +129,8 @@ def test_raises_claim_not_found_when_claim_missing():
 
 def test_raises_claim_not_found_when_claim_belongs_to_another_application():
     use_case, *_ = _build_use_case(
-        claim=_claim(claim_id=1, application_id=1),
-        application=_application(application_id=2),
+        claim=_claim(build_application()),
+        application=build_application(),
     )
 
     with pytest.raises(ClaimNotFoundError):
@@ -145,7 +138,8 @@ def test_raises_claim_not_found_when_claim_belongs_to_another_application():
 
 
 def test_creates_pay_in_full_decision_amount_updates_status_and_commits():
-    application = _application()
+    application = build_application()
+    claim = _claim(application)
 
     (
         use_case,
@@ -153,12 +147,12 @@ def test_creates_pay_in_full_decision_amount_updates_status_and_commits():
         create_decision_amount_port,
         update_status_port,
         create_history_event_port,
-    ) = _build_use_case(claim=_claim(claim_id=5), application=application)
+    ) = _build_use_case(claim=claim, application=application)
 
     use_case.execute(
         PayInFullClaimCommand(
             laa_reference="1",
-            claim_reference="INQC-0000-0005",
+            claim_reference=claim.claim_reference,
             profit_cost_net=Decimal("1000.00"),
             profit_cost_gross=Decimal("1200.00"),
             profit_cost_vat_zero=None,
@@ -169,7 +163,7 @@ def test_creates_pay_in_full_decision_amount_updates_status_and_commits():
     )
 
     create_decision_port.create_claim_decision.assert_called_once_with(
-        claim_id=5,
+        claim_id=claim.claim_id,
         decision_status=ClaimDecisionStatus.PAY_IN_FULL,
     )
     create_decision_amount_port.create_claim_decision_amount.assert_called_once_with(
@@ -182,7 +176,7 @@ def test_creates_pay_in_full_decision_amount_updates_status_and_commits():
         disbursement_vat_zero=Decimal("50.00"),
     )
     update_status_port.update_claim_status.assert_called_once_with(
-        claim_id=5,
+        claim_id=claim.claim_id,
         status=ClaimStatus.PAY_IN_FULL,
     )
 
@@ -191,7 +185,7 @@ def test_creates_pay_in_full_decision_amount_updates_status_and_commits():
         event_reference=HistoryEventReference.CLAIM_ASSESSMENT_COMPLETED,
         actor="Caseworker",
         actor_type=ActorType.CASEWORKER,
-        application_id=1,
+        application_id=application.application_id,
         event_data={
             "claim_type": ClaimType.FINAL_BILL,
             "claim_reference": "INQC-0000-0001",
@@ -208,7 +202,7 @@ def test_creates_pay_in_full_decision_amount_updates_status_and_commits():
         event_reference=HistoryEventReference.CLAIM_FINAL_BILL_PAID_EMAIL,
         actor=ActorType.SYSTEM,
         actor_type=ActorType.SYSTEM,
-        application_id=1,
+        application_id=application.application_id,
         event_data={
             "recipient": "provider@example.com",
             "channel": NotificationType.EMAIL,
@@ -220,13 +214,15 @@ def test_creates_pay_in_full_decision_amount_updates_status_and_commits():
 
 
 def test_history_event_not_created_when_update_claim_status_fails():
+    application = build_application()
+    claim = _claim(application)
     (
         use_case,
         create_decision_port,
         create_decision_amount_port,
         update_status_port,
         create_history_event_port,
-    ) = _build_use_case(claim=_claim(claim_id=5), application=_application())
+    ) = _build_use_case(claim=claim, application=application)
     update_status_port.update_claim_status.side_effect = RuntimeError(
         "Cannot update claim status"
     )
@@ -235,7 +231,7 @@ def test_history_event_not_created_when_update_claim_status_fails():
         use_case.execute(
             PayInFullClaimCommand(
                 "1",
-                "INQC-0000-0005",
+                claim.claim_reference,
                 profit_cost_net=Decimal("1000.00"),
                 profit_cost_gross=Decimal("1200.00"),
                 disbursement_net=Decimal("100.00"),
@@ -244,12 +240,12 @@ def test_history_event_not_created_when_update_claim_status_fails():
         )
 
     create_decision_port.create_claim_decision.assert_called_once_with(
-        claim_id=5,
+        claim_id=claim.claim_id,
         decision_status=ClaimDecisionStatus.PAY_IN_FULL,
     )
     create_decision_amount_port.create_claim_decision_amount.assert_called_once()
     update_status_port.update_claim_status.assert_called_once_with(
-        claim_id=5,
+        claim_id=claim.claim_id,
         status=ClaimStatus.PAY_IN_FULL,
     )
     create_history_event_port.create_history_event.assert_not_called()
@@ -258,13 +254,15 @@ def test_history_event_not_created_when_update_claim_status_fails():
 
 
 def test_pay_in_full_claim_not_committed_when_create_history_event_fails():
+    application = build_application()
+    claim = _claim(application)
     (
         use_case,
         _,
         _,
         update_status_port,
         create_history_event_port,
-    ) = _build_use_case(claim=_claim(claim_id=5), application=_application())
+    ) = _build_use_case(claim=claim, application=application)
     create_history_event_port.create_history_event.side_effect = RuntimeError(
         "Cannot create history event"
     )
@@ -273,7 +271,7 @@ def test_pay_in_full_claim_not_committed_when_create_history_event_fails():
         use_case.execute(
             PayInFullClaimCommand(
                 "1",
-                "INQC-0000-0005",
+                claim.claim_reference,
                 profit_cost_net=Decimal("1000.00"),
                 profit_cost_gross=Decimal("1200.00"),
                 disbursement_net=Decimal("100.00"),
@@ -286,19 +284,21 @@ def test_pay_in_full_claim_not_committed_when_create_history_event_fails():
 
 
 def test_raises_invalid_claim_error_when_profit_cost_totals_invalid():
+    application = build_application()
+    claim = _claim(application)
     (
         use_case,
         create_decision_port,
         _,
         update_status_port,
         _,
-    ) = _build_use_case(claim=_claim(claim_id=5), application=_application())
+    ) = _build_use_case(claim=claim, application=application)
 
     with pytest.raises(InvalidClaimError) as exc:
         use_case.execute(
             PayInFullClaimCommand(
                 "1",
-                "INQC-0000-0005",
+                claim.claim_reference,
                 profit_cost_net=Decimal("1000.00"),
             )
         )
@@ -309,19 +309,21 @@ def test_raises_invalid_claim_error_when_profit_cost_totals_invalid():
 
 
 def test_raises_invalid_claim_error_when_disbursement_totals_invalid():
+    application = build_application()
+    claim = _claim(application)
     (
         use_case,
         create_decision_port,
         _,
         update_status_port,
         _,
-    ) = _build_use_case(claim=_claim(claim_id=5), application=_application())
+    ) = _build_use_case(claim=claim, application=application)
 
     with pytest.raises(InvalidClaimError) as exc:
         use_case.execute(
             PayInFullClaimCommand(
                 "1",
-                "INQC-0000-0005",
+                claim.claim_reference,
                 profit_cost_net=Decimal("1000.00"),
                 profit_cost_gross=Decimal("1200.00"),
                 disbursement_net=Decimal("100.00"),
@@ -392,30 +394,28 @@ def _build_use_case_with_extract_ports(
     )
 
 
-def _final_bill_claim(claim_id: int = 5, application_id: int = 1) -> Claim:
+def _final_bill_claim(application: Application) -> Claim:
     return build_claim(
-        claim_id=claim_id,
-        claim_reference=f"INQC-0000-{claim_id:04d}",
-        application_id=application_id,
+        application_id=application.application_id,
         submission_date=datetime(2026, 3, 10, tzinfo=UTC),
     )
 
 
-def _paid_poa_claim() -> Claim:
+def _paid_poa_claim(application: Application) -> Claim:
     return build_poa_claim(
-        claim_id=9,
         claim_reference="INQC-0000-0009",
-        application_id=1,
+        application_id=application.application_id,
         status_id=ClaimStatus.PAY_IN_FULL,
         submission_date=datetime(2026, 1, 1, tzinfo=UTC),
     )
 
 
 def test_creates_final_bill_and_recoupment_extract_lines_in_order():
-    poa_claim = _paid_poa_claim()
+    application = build_application()
+    poa_claim = _paid_poa_claim(application)
     poa_extracts = [
         build_claim_payment_extract(
-            claim_id=9,
+            claim_id=poa_claim.claim_id,
             sequence_number=1,
             invoice_number="INQC-0000-0009_001",
             invoice_amount=Decimal("800.00"),
@@ -423,7 +423,7 @@ def test_creates_final_bill_and_recoupment_extract_lines_in_order():
             tax_code=TaxCode.GB_VAT_20,
         ),
         build_claim_payment_extract(
-            claim_id=9,
+            claim_id=poa_claim.claim_id,
             sequence_number=2,
             invoice_number="INQC-0000-0009_002",
             invoice_amount=Decimal("200.00"),
@@ -431,10 +431,10 @@ def test_creates_final_bill_and_recoupment_extract_lines_in_order():
             tax_code=TaxCode.ZERO_VAT,
         ),
     ]
-    claim = _final_bill_claim(claim_id=5)
+    claim = _final_bill_claim(application)
     (use_case, create_port) = _build_use_case_with_extract_ports(
         claim=claim,
-        application=_application(),
+        application=application,
         poa_claims=[claim, poa_claim],
         poa_extracts=poa_extracts,
     )
@@ -442,7 +442,7 @@ def test_creates_final_bill_and_recoupment_extract_lines_in_order():
     use_case.execute(
         PayInFullClaimCommand(
             laa_reference="1",
-            claim_reference=5,
+            claim_reference=claim.claim_reference,
             profit_cost_net=Decimal("1000.00"),
             profit_cost_gross=Decimal("1200.00"),
             disbursement_net=Decimal("100.00"),
@@ -453,7 +453,7 @@ def test_creates_final_bill_and_recoupment_extract_lines_in_order():
 
     create_port.create_payment_extract.assert_called_once()
     call = create_port.create_payment_extract.call_args
-    assert call.kwargs["claim_id"] == 5
+    assert call.kwargs["claim_id"] == claim.claim_id
     lines = call.kwargs["lines"]
 
     summary = [
@@ -470,7 +470,7 @@ def test_creates_final_bill_and_recoupment_extract_lines_in_order():
     assert summary == [
         (
             1,
-            "INQC-0000-0005_001",
+            f"{claim.claim_reference}_001",
             Decimal("1200.00"),
             InvoiceTypeCode.FINAL_BILL_FEES,
             TaxCode.GB_VAT_20,
@@ -478,7 +478,7 @@ def test_creates_final_bill_and_recoupment_extract_lines_in_order():
         ),
         (
             2,
-            "INQC-0000-0005_002",
+            f"{claim.claim_reference}_002",
             Decimal("150.00"),
             InvoiceTypeCode.FINAL_BILL_DISBURSEMENT,
             TaxCode.GB_VAT_20,
@@ -486,7 +486,7 @@ def test_creates_final_bill_and_recoupment_extract_lines_in_order():
         ),
         (
             3,
-            "INQC-0000-0005_003",
+            f"{claim.claim_reference}_003",
             Decimal("50.00"),
             InvoiceTypeCode.FINAL_BILL_DISBURSEMENT,
             TaxCode.ZERO_VAT,
@@ -512,17 +512,18 @@ def test_creates_final_bill_and_recoupment_extract_lines_in_order():
 
 
 def test_creates_no_recoupment_lines_without_paid_poa_claims():
-    claim = _final_bill_claim(claim_id=5)
+    application = build_application()
+    claim = _final_bill_claim(application)
     (use_case, create_port) = _build_use_case_with_extract_ports(
         claim=claim,
-        application=_application(),
+        application=application,
         poa_claims=[claim],
     )
 
     use_case.execute(
         PayInFullClaimCommand(
             laa_reference="1",
-            claim_reference=5,
+            claim_reference=claim.claim_reference,
             profit_cost_net=Decimal("1000.00"),
             profit_cost_gross=Decimal("1200.00"),
             disbursement_net=Decimal("100.00"),
@@ -535,17 +536,18 @@ def test_creates_no_recoupment_lines_without_paid_poa_claims():
 
 
 def test_creates_single_zero_fees_line_for_nil_final_bill():
-    claim = _final_bill_claim(claim_id=5)
+    application = build_application()
+    claim = _final_bill_claim(application)
     (use_case, create_port) = _build_use_case_with_extract_ports(
         claim=claim,
-        application=_application(),
+        application=application,
         poa_claims=[claim],
     )
 
     use_case.execute(
         PayInFullClaimCommand(
             laa_reference="1",
-            claim_reference=5,
+            claim_reference=claim.claim_reference,
             profit_cost_net=Decimal("0.00"),
             profit_cost_gross=Decimal("0.00"),
             disbursement_net=Decimal("0.00"),
@@ -570,7 +572,7 @@ def test_creates_single_zero_fees_line_for_nil_final_bill():
     assert summary == [
         (
             1,
-            "INQC-0000-0005_001",
+            f"{claim.claim_reference}_001",
             Decimal("0.00"),
             InvoiceTypeCode.FINAL_BILL_FEES,
             TaxCode.ZERO_VAT,
@@ -580,10 +582,11 @@ def test_creates_single_zero_fees_line_for_nil_final_bill():
 
 
 def test_creates_zero_fees_line_then_recoupment_lines_for_nil_final_bill():
-    poa_claim = _paid_poa_claim()
+    application = build_application()
+    poa_claim = _paid_poa_claim(application)
     poa_extracts = [
         build_claim_payment_extract(
-            claim_id=9,
+            claim_id=poa_claim.claim_id,
             sequence_number=1,
             invoice_number="INQC-0000-0009_001",
             invoice_amount=Decimal("800.00"),
@@ -591,10 +594,10 @@ def test_creates_zero_fees_line_then_recoupment_lines_for_nil_final_bill():
             tax_code=TaxCode.GB_VAT_20,
         ),
     ]
-    claim = _final_bill_claim(claim_id=5)
+    claim = _final_bill_claim(application)
     (use_case, create_port) = _build_use_case_with_extract_ports(
         claim=claim,
-        application=_application(),
+        application=application,
         poa_claims=[claim, poa_claim],
         poa_extracts=poa_extracts,
     )
@@ -602,7 +605,7 @@ def test_creates_zero_fees_line_then_recoupment_lines_for_nil_final_bill():
     use_case.execute(
         PayInFullClaimCommand(
             laa_reference="1",
-            claim_reference=5,
+            claim_reference=claim.claim_reference,
             profit_cost_net=Decimal("0.00"),
             profit_cost_gross=Decimal("0.00"),
             disbursement_net=Decimal("0.00"),
@@ -622,6 +625,11 @@ def test_creates_zero_fees_line_then_recoupment_lines_for_nil_final_bill():
         for line in lines
     ]
     assert summary == [
-        (1, "INQC-0000-0005_001", Decimal("0.00"), InvoiceTypeCode.FINAL_BILL_FEES),
+        (
+            1,
+            f"{claim.claim_reference}_001",
+            Decimal("0.00"),
+            InvoiceTypeCode.FINAL_BILL_FEES,
+        ),
         (2, "INQC-0000-0009_001-R", Decimal("-800.00"), InvoiceTypeCode.RECOUPED),
     ]

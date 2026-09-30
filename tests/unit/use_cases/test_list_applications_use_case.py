@@ -7,8 +7,8 @@ from tests.factories.builders import build_application
 
 def test_execute_returns_applications_from_list_applications_port():
     applications = [
-        build_application(application_id=1),
-        build_application(application_id=2, laa_reference="INQ-ZZZ-ZZZ"),
+        build_application(),
+        build_application(laa_reference="INQ-ZZZ-ZZZ"),
     ]
     list_applications_port = MagicMock(spec=ListApplicationsPort)
     list_applications_port.list_applications.return_value = applications

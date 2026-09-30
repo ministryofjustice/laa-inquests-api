@@ -110,7 +110,7 @@ def test_execute_raises_provider_details_retrieval_error_when_get_firm_name_rais
 
 def test_execute_returns_response_with_all_required_fields():
     provider = build_provider(firm_code="0A123B")
-    application = build_application(application_id=1, provider=provider, status="LIVE")
+    application = build_application(provider=provider, status="LIVE")
     use_case = _make_use_case(application=application, firm_name="My Firm")
 
     results = use_case.execute("1", "0A123B")

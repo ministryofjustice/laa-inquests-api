@@ -9,7 +9,7 @@ from app.models.history.index import HistoryEvent, HistoryEventResponse
 from app.models.notifications.enums import NotificationType
 from app.use_cases.exceptions import ApplicationNotFoundError
 from app.use_cases.get_application_history import GetApplicationHistoryUseCase
-from tests.factories.builders import build_history_event
+from tests.factories.builders import build_application, build_history_event
 
 
 def _make_use_case(
@@ -44,6 +44,7 @@ def test_execute_raises_application_not_found_error_when_no_matching_application
 
 
 def test_execute_returns_history_events_from_port():
+    application = build_application()
     history_event_1 = build_history_event(
         id=1,
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
@@ -51,7 +52,7 @@ def test_execute_returns_history_events_from_port():
         actor="provider@example.com",
         actor_type=ActorType.PROVIDER,
         event_data=None,
-        application_id=123456,
+        application_id=application.application_id,
     )
     history_event_2 = build_history_event(
         id=2,
@@ -60,10 +61,10 @@ def test_execute_returns_history_events_from_port():
         actor="caseworker@justice.gov.uk",
         actor_type=ActorType.CASEWORKER,
         event_data={"context": "Test data", "related_link": "/get-certificate/123456"},
-        application_id=123456,
+        application_id=application.application_id,
     )
     use_case = _make_use_case(
-        application=MagicMock(), history_events=[history_event_1, history_event_2]
+        application=application, history_events=[history_event_1, history_event_2]
     )
 
     result = use_case.execute("1")
@@ -83,6 +84,7 @@ def test_execute_returns_history_events_from_port():
 
 
 def test_execute_masks_provider_actor_as_provider():
+    application = build_application()
     history_event = build_history_event(
         id=1,
         event_reference=HistoryEventReference.APPLICATION_SUBMITTED,
@@ -90,9 +92,9 @@ def test_execute_masks_provider_actor_as_provider():
         actor="provider@example.com",
         actor_type=ActorType.PROVIDER,
         event_data=None,
-        application_id=123456,
+        application_id=application.application_id,
     )
-    use_case = _make_use_case(application=MagicMock(), history_events=[history_event])
+    use_case = _make_use_case(application=application, history_events=[history_event])
 
     result = use_case.execute("1")
 
@@ -100,6 +102,7 @@ def test_execute_masks_provider_actor_as_provider():
 
 
 def test_execute_masks_recipient_in_event_data():
+    application = build_application()
     history_event = build_history_event(
         id=1,
         event_reference=HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION,
@@ -110,9 +113,9 @@ def test_execute_masks_recipient_in_event_data():
             "recipient": "recipient@example.com",
             "channel": NotificationType.EMAIL,
         },
-        application_id=123456,
+        application_id=application.application_id,
     )
-    use_case = _make_use_case(application=MagicMock(), history_events=[history_event])
+    use_case = _make_use_case(application=application, history_events=[history_event])
 
     result = use_case.execute("1")
 
@@ -121,6 +124,7 @@ def test_execute_masks_recipient_in_event_data():
 
 
 def test_execute_preserves_non_provider_actor():
+    application = build_application()
     history_event = build_history_event(
         id=1,
         event_reference=HistoryEventReference.APPLICATION_ASSESSMENT_COMPLETED,
@@ -128,9 +132,9 @@ def test_execute_preserves_non_provider_actor():
         actor="caseworker@justice.gov.uk",
         actor_type=ActorType.CASEWORKER,
         event_data=None,
-        application_id=123456,
+        application_id=application.application_id,
     )
-    use_case = _make_use_case(application=MagicMock(), history_events=[history_event])
+    use_case = _make_use_case(application=application, history_events=[history_event])
 
     result = use_case.execute("1")
 

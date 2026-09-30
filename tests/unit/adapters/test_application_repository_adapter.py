@@ -192,7 +192,7 @@ def test_save_uploaded_coroners_letter_persists_and_commits():
 def test_update_decision_adds_entities_and_commits():
     mock_session = MagicMock()
     adapter = ApplicationRepositoryAdapter(mock_session)
-    proceeding = build_application_proceeding(application_id=1)
+    proceeding = build_application_proceeding()
 
     adapter.update_decision(proceeding)
 

@@ -4,7 +4,6 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.models.claim.index import Claim
 from app.models.history.enums import HistoryEventReference
 from app.ports.claim.list_auto_approved_poa_claims_port import (
     ListAutoApprovedPoaClaimsPort,
@@ -22,14 +21,6 @@ from tests.factories.builders import build_application, build_poa_claim
 def _event(reference: HistoryEventReference, claim_reference: str) -> SimpleNamespace:
     return SimpleNamespace(
         event_reference=reference, event_data={"claim_reference": claim_reference}
-    )
-
-
-def _claim(claim_id: int = 7) -> Claim:
-    return build_poa_claim(
-        claim_id=claim_id,
-        claim_reference=f"INQC-TEST-{claim_id:04d}",
-        application=build_application(application_id=12345),
     )
 
 
@@ -76,7 +67,7 @@ def use_case(
 def test_sends_grant_email_for_auto_approved_claim(
     use_case, list_port, history_port, create_history_port, gov_notify_port
 ):
-    claim = _claim()
+    claim = build_poa_claim(application=build_application())
     list_port.list_auto_approved_poa_claims.return_value = [claim]
     history_port.get_application_history.return_value = [
         _event(HistoryEventReference.POA_AUTO_APPROVED, claim.claim_reference)
@@ -101,7 +92,9 @@ def test_sends_grant_email_for_auto_approved_claim(
 def test_skips_claim_without_auto_approved_event(
     use_case, list_port, history_port, gov_notify_port, create_history_port
 ):
-    claim = _claim()
+    claim = build_poa_claim(
+        application=build_application(),
+    )
     list_port.list_auto_approved_poa_claims.return_value = [claim]
     history_port.get_application_history.return_value = []
 
@@ -114,7 +107,9 @@ def test_skips_claim_without_auto_approved_event(
 def test_skips_claim_when_email_already_sent(
     use_case, list_port, history_port, gov_notify_port, create_history_port
 ):
-    claim = _claim()
+    claim = build_poa_claim(
+        application=build_application(),
+    )
     list_port.list_auto_approved_poa_claims.return_value = [claim]
     history_port.get_application_history.return_value = [
         _event(HistoryEventReference.POA_AUTO_APPROVED, claim.claim_reference),
@@ -130,8 +125,12 @@ def test_skips_claim_when_email_already_sent(
 def test_one_claim_failure_does_not_block_others(
     use_case, list_port, history_port, gov_notify_port, create_history_port
 ):
-    failing = _claim(claim_id=1)
-    succeeding = _claim(claim_id=2)
+    failing = build_poa_claim(
+        application=build_application(),
+    )
+    succeeding = build_poa_claim(
+        application=build_application(),
+    )
     list_port.list_auto_approved_poa_claims.return_value = [failing, succeeding]
     history_port.get_application_history.side_effect = lambda _app_id: [
         _event(HistoryEventReference.POA_AUTO_APPROVED, failing.claim_reference),

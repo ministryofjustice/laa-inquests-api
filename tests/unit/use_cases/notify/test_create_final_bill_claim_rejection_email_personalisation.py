@@ -16,9 +16,8 @@ MODULE = "app.use_cases.notify.create_final_bill_claim_rejection_email_personali
 def test_create_final_bill_claim_rejection_email_personalisation_returns_expected_data():
     application = build_application()
     claim = build_claim(
-        claim_id=7,
         claim_reference="INQC-0007-0007",
-        application_id=12345,
+        application_id=application.application_id,
         submission_date=datetime(2026, 6, 18, 14, 3, tzinfo=UTC),
         total_profit_cost_net=None,
         total_profit_cost_gross=Decimal("1200.00"),
@@ -49,7 +48,6 @@ def test_create_final_bill_claim_rejection_email_personalisation_returns_expecte
 
 def test_final_bill_claim_rejection_personalisation_uses_vat_zero_amount():
     claim = build_claim(
-        claim_id=7,
         submission_date=datetime(2026, 6, 18, 14, 3, tzinfo=UTC),
         total_profit_cost_net=None,
         total_profit_cost_vat_zero=Decimal("500.00"),

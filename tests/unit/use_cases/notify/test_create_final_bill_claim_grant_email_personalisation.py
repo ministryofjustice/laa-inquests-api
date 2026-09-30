@@ -14,9 +14,7 @@ from tests.factories.builders import build_application, build_claim
 
 def _claim() -> Claim:
     return build_claim(
-        claim_id=7,
         claim_reference="INQC-0007-0007",
-        application_id=12345,
         submission_date=datetime(2026, 6, 18, 14, 3, tzinfo=UTC),
     )
 

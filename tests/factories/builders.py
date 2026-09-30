@@ -1,8 +1,9 @@
 """Single source of default values for every test data object.
 
-``build_*`` returns an unsaved object. With ``for_db=True`` surrogate ids are left to the
-database and the Proceeding/PublicBody reference rows (seeded by the ``session`` fixture)
-are referenced by id rather than re-created.
+``build_*`` returns an unsaved, in-memory object. ``for_db=True`` builds one that can be
+inserted: ids are left to the database, the Proceeding/PublicBody reference rows (seeded by
+the ``session`` fixture) are referenced by FK instead of re-created, and ``laa_reference``
+is unique instead of fixed.
 """
 
 import uuid
@@ -60,6 +61,7 @@ DEFAULT_SUBMISSION_DATE = datetime(2026, 1, 1, tzinfo=UTC)
 
 _laa_reference_sequence = count(1)
 _claim_reference_sequence = count(1)
+_id_sequence = count(1)
 
 
 def next_laa_reference() -> str:
@@ -72,16 +74,16 @@ def next_claim_reference() -> str:
     return f"INQC-{n // 10_000:04d}-{n % 10_000:04d}"
 
 
-def _ids(for_db: bool, **ids) -> dict:
-    return {} if for_db else ids
+def _generated_ids(for_db: bool, *names: str) -> dict:
+    """Unique in-memory ids for the keys code under test reads; the DB assigns its own."""
+    return {} if for_db else {name: next(_id_sequence) for name in names}
 
 
 # --- Addresses -------------------------------------------------------------
 
 
-def build_home_address(*, for_db: bool = False, **overrides) -> Address:
+def build_home_address(**overrides) -> Address:
     defaults = {
-        **_ids(for_db, address_id=1),
         "address_line_1": "123 Main St",
         "address_line_2": "Apt 4B",
         "town_or_city": "London",
@@ -91,9 +93,8 @@ def build_home_address(*, for_db: bool = False, **overrides) -> Address:
     return Address(**(defaults | overrides))
 
 
-def build_correspondence_address(*, for_db: bool = False, **overrides) -> Address:
+def build_correspondence_address(**overrides) -> Address:
     defaults = {
-        **_ids(for_db, address_id=2),
         "address_line_1": "456 Oak Ave",
         "town_or_city": "Manchester",
         "county": "Greater Manchester",
@@ -102,9 +103,8 @@ def build_correspondence_address(*, for_db: bool = False, **overrides) -> Addres
     return Address(**(defaults | overrides))
 
 
-def build_office_address(*, for_db: bool = False, **overrides) -> Address:
+def build_office_address(**overrides) -> Address:
     defaults = {
-        **_ids(for_db, address_id=3),
         "address_line_1": "123 Main St",
         "address_line_2": "Apt 4B",
         "town_or_city": "London",
@@ -127,9 +127,9 @@ def build_client(
     **overrides,
 ) -> Client:
     if home_address is UNSET:
-        home_address = build_home_address(for_db=for_db)
+        home_address = build_home_address()
     if correspondence_address is UNSET:
-        correspondence_address = build_correspondence_address(for_db=for_db)
+        correspondence_address = build_correspondence_address()
 
     if (
         correspondence_recipient_name is UNSET
@@ -149,7 +149,7 @@ def build_client(
         correspondence_recipient_name = "Recipient Name"
 
     defaults = {
-        **_ids(for_db, client_id=1, home_address_id=1, correspondence_address_id=2),
+        **_generated_ids(for_db, "client_id"),
         "client_first_name": "Jane",
         "client_last_name": "Doe",
         "client_last_name_at_birth": "Smith",
@@ -168,7 +168,7 @@ def build_client(
 
 def build_deceased(*, for_db: bool = False, **overrides) -> Deceased:
     defaults = {
-        **_ids(for_db, deceased_id=1, client_id=1),
+        **_generated_ids(for_db, "deceased_id"),
         "deceased_first_name": "Robert",
         "deceased_last_name": "Johnson",
         "deceased_date_of_birth": "01-01-1950",
@@ -180,9 +180,8 @@ def build_deceased(*, for_db: bool = False, **overrides) -> Deceased:
     return Deceased(**(defaults | overrides))
 
 
-def build_provider(*, for_db: bool = False, **overrides) -> Provider:
+def build_provider(**overrides) -> Provider:
     defaults = {
-        **_ids(for_db, provider_id=1),
         "firm_code": "ABC123",
         "office_id": "0U651L",
         "email_address": "provider@example.com",
@@ -190,10 +189,9 @@ def build_provider(*, for_db: bool = False, **overrides) -> Provider:
     return Provider(**(defaults | overrides))
 
 
-def build_proceeding(*, for_db: bool = False, **overrides) -> Proceeding:
+def build_proceeding(**overrides) -> Proceeding:
     """Reference data; in the database it is seeded once per session."""
     defaults = {
-        **_ids(for_db, id=1),
         "proceeding_id": ProceedingId.IQOT,
         "proceeding_name": "Inquest into death",
         "proceeding_description": "Inquest into death",
@@ -216,7 +214,6 @@ def build_application_proceeding(
     *, for_db: bool = False, proceeding=UNSET, **overrides
 ) -> ApplicationProceeding:
     defaults = {
-        **_ids(for_db, application_proceeding_id=1, application_id=12345),
         "proceeding_id": ProceedingId.IQOT,
         "merits_decision": MeritsDecision.PENDING,
         "certificate_start_date": datetime(2026, 6, 18, tzinfo=UTC),
@@ -235,7 +232,6 @@ def build_application_public_body(
     *, for_db: bool = False, public_body=UNSET, **overrides
 ) -> ApplicationPublicBody:
     defaults = {
-        **_ids(for_db, application_public_body_id=1, application_id=12345),
         "public_body_id": PublicBodyId.DEPARTMENT_FOR_TRANSPORT,
     }
     if not for_db:
@@ -274,7 +270,7 @@ def build_application(
     if deceased is UNSET:
         deceased = build_deceased(for_db=for_db, **(deceased_overrides or {}))
     if provider is UNSET:
-        provider = build_provider(for_db=for_db, **(provider_overrides or {}))
+        provider = build_provider(**(provider_overrides or {}))
     if proceeding is UNSET:
         proceeding = build_application_proceeding(
             for_db=for_db, **(proceeding_overrides or {})
@@ -285,7 +281,7 @@ def build_application(
         deceased.client = client  # FK is resolved by SQLAlchemy at flush
 
     defaults = {
-        **_ids(for_db, application_id=12345, client_id=1, deceased_id=1, provider_id=1),
+        **_generated_ids(for_db, "application_id"),
         "laa_reference": next_laa_reference() if for_db else "INQ-YYY-YYY",
         "client": client,
         "deceased": deceased,
@@ -318,9 +314,10 @@ def build_granted_application(
     )
 
 
-def build_claim(**overrides) -> Claim:
+def build_claim(*, for_db: bool = False, **overrides) -> Claim:
     """Final bill by default; use the presets for other coherent field sets."""
     defaults = {
+        **_generated_ids(for_db, "claim_id"),
         "claim_reference": next_claim_reference(),
         "claim_type_id": ClaimType.FINAL_BILL,
         "status_id": ClaimStatus.SUBMITTED,

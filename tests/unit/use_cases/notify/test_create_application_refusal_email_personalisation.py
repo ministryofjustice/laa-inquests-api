@@ -13,15 +13,13 @@ from app.use_cases.notify.create_application_refusal_email_personalisation impor
 from tests.factories.builders import build_application, build_application_proceeding
 
 
-def _create_test_application_and_proceeding(application_id: int = 12345):
+def _create_test_application_and_proceeding():
     proceeding = build_application_proceeding(
-        application_id=application_id,
         merits_decision=MeritsDecision.REFUSED,
         reason_for_refusal="NOT_IN_SCOPE",
         justification="The matter does not meet scope requirements.",
     )
     application = build_application(
-        application_id=application_id,
         created_at=datetime(2026, 6, 18, 14, 3, tzinfo=UTC),
         proceeding=proceeding,
     )
@@ -30,9 +28,7 @@ def _create_test_application_and_proceeding(application_id: int = 12345):
 
 
 def test_create_application_refusal_email_personalisation_returns_all_required_fields():
-    application, proceeding = _create_test_application_and_proceeding(
-        application_id=12345
-    )
+    application, proceeding = _create_test_application_and_proceeding()
 
     result = create_application_refusal_email_personalisation(application, proceeding)
 

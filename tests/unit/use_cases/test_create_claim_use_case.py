@@ -81,9 +81,7 @@ def _make_command(overrides=None) -> CreateClaimCommand:
 
 def _make_created_claim() -> Claim:
     return build_poa_claim(
-        claim_id=1,
         claim_reference="INQC-0000-0001",
-        application_id=12345,
         total_profit_cost_vat_zero=None,
     )
 
@@ -115,7 +113,6 @@ def _make_create_claim_decision_port(claim_decision_id: int = 10):
     port = MagicMock(spec=CreateClaimDecisionPort)
     port.create_claim_decision.return_value = build_claim_decision(
         claim_decision_id=claim_decision_id,
-        claim_id=1,
         decision=ClaimDecisionStatus.REJECT,
     )
     return port
@@ -156,9 +153,7 @@ def _make_use_case(**kwargs):
 
 def _claim_with_poa(poa_type, net, gross, vat_zero=None) -> Claim:
     return build_poa_claim(
-        claim_id=1,
         claim_reference="INQC-0000-0001",
-        application_id=12345,
         total_profit_cost_net=net,
         total_profit_cost_gross=gross,
         total_profit_cost_vat_zero=vat_zero,
@@ -254,9 +249,7 @@ def test_execute_raises_invalid_claim_error_when_application_not_granted():
 
 def _make_existing_claim(claim_type, status) -> Claim:
     return build_claim(
-        claim_id=99,
         claim_reference="INQC-9999-9999",
-        application_id=12345,
         claim_type_id=claim_type,
         status_id=status,
         submission_date=datetime.now(UTC),
@@ -266,10 +259,8 @@ def _make_existing_claim(claim_type, status) -> Claim:
     )
 
 
-def _submitted_poa_claim(claim_id: int) -> Claim:
+def _submitted_poa_claim() -> Claim:
     return build_poa_claim(
-        claim_id=claim_id,
-        application_id=12345,
         submission_date=datetime.now(UTC),
         total_profit_cost_net=Decimal("1.00"),
         total_profit_cost_gross=Decimal("1.00"),
@@ -980,7 +971,7 @@ def test_execute_persists_auto_reject_and_returns_rejection_reasons_and_creates_
 
     application = build_granted_application(substantive_cost_limitation=999999)
 
-    existing_claims = [_submitted_poa_claim(index + 100) for index in range(4)]
+    existing_claims = [_submitted_poa_claim() for _ in range(4)]
 
     use_case = _make_use_case(
         create_claim_port=create_claim_port,
@@ -997,7 +988,7 @@ def test_execute_persists_auto_reject_and_returns_rejection_reasons_and_creates_
     assert result.claim.status_id == ClaimStatus.REJECTED
     assert result.rejection_reasons == [ReasonCode.MAX_POA_CLAIMS_EXCEEDED]
     create_claim_decision_port.create_claim_decision.assert_called_once_with(
-        claim_id=1,
+        claim_id=claim.claim_id,
         decision_status=ClaimDecisionStatus.REJECT,
     )
     create_decision_reason_port.create_decision_reason.assert_called_once_with(
@@ -1006,7 +997,7 @@ def test_execute_persists_auto_reject_and_returns_rejection_reasons_and_creates_
         justification=None,
     )
     update_claim_status_port.update_claim_status.assert_called_once_with(
-        claim_id=1,
+        claim_id=claim.claim_id,
         status=ClaimStatus.REJECTED,
     )
     create_history_event_port.create_history_event.assert_any_call(
@@ -1035,7 +1026,7 @@ def test_execute_returns_submitted_claim_when_auto_reject_persistence_fails_and_
 
     application = build_granted_application(substantive_cost_limitation=999999)
 
-    existing_claims = [_submitted_poa_claim(index + 200) for index in range(4)]
+    existing_claims = [_submitted_poa_claim() for _ in range(4)]
 
     use_case = _make_use_case(
         create_claim_port=create_claim_port,
@@ -1083,7 +1074,7 @@ def test_execute_auto_reject_does_not_persist_when_auto_reject_create_history_ev
 
     application = build_granted_application(substantive_cost_limitation=999999)
 
-    existing_claims = [_submitted_poa_claim(index + 100) for index in range(4)]
+    existing_claims = [_submitted_poa_claim() for _ in range(4)]
 
     use_case = _make_use_case(
         create_claim_port=create_claim_port,
@@ -1105,7 +1096,7 @@ def test_execute_auto_reject_does_not_persist_when_auto_reject_create_history_ev
         justification=None,
     )
     update_claim_status_port.update_claim_status.assert_called_once_with(
-        claim_id=1,
+        claim_id=claim.claim_id,
         status=ClaimStatus.REJECTED,
     )
     create_history_event_port.create_history_event.assert_any_call(
@@ -1217,7 +1208,7 @@ def test_execute_auto_approves_eligible_payment_on_account_claim():
     assert result.claim.status_id == ClaimStatus.PAY_IN_FULL
     assert result.rejection_reasons is None
     create_claim_decision_port.create_claim_decision.assert_called_once_with(
-        claim_id=1,
+        claim_id=claim.claim_id,
         decision_status=ClaimDecisionStatus.PAY_IN_FULL,
     )
     create_claim_decision_amount_port.create_claim_decision_amount.assert_called_once_with(
@@ -1227,7 +1218,7 @@ def test_execute_auto_approves_eligible_payment_on_account_claim():
         profit_cost_vat_zero=claim.total_profit_cost_vat_zero,
     )
     create_payment_extract_port.create_payment_extract.assert_called_once_with(
-        claim_id=1,
+        claim_id=claim.claim_id,
         lines=[
             PaymentExtractLine(
                 sequence_number=1,
@@ -1240,7 +1231,7 @@ def test_execute_auto_approves_eligible_payment_on_account_claim():
         ],
     )
     update_claim_status_port.update_claim_status.assert_called_once_with(
-        claim_id=1,
+        claim_id=claim.claim_id,
         status=ClaimStatus.PAY_IN_FULL,
     )
     create_history_event_port.create_history_event.assert_any_call(
@@ -1277,7 +1268,7 @@ def test_execute_auto_approval_persists_profit_cost_amounts_for_profit_cost_poa(
         profit_cost_vat_zero=None,
     )
     extract_port.create_payment_extract.assert_called_once_with(
-        claim_id=1,
+        claim_id=claim.claim_id,
         lines=[
             PaymentExtractLine(
                 sequence_number=1,
@@ -1316,7 +1307,7 @@ def test_execute_auto_approval_persists_zero_vat_payment_extract_for_profit_cost
         profit_cost_vat_zero=Decimal("1000.00"),
     )
     extract_port.create_payment_extract.assert_called_once_with(
-        claim_id=1,
+        claim_id=claim.claim_id,
         lines=[
             PaymentExtractLine(
                 sequence_number=1,
@@ -1354,7 +1345,7 @@ def test_execute_auto_approval_persists_disbursement_amounts_for_expert_cost_poa
         disbursement_vat_zero=None,
     )
     extract_port.create_payment_extract.assert_called_once_with(
-        claim_id=1,
+        claim_id=claim.claim_id,
         lines=[
             PaymentExtractLine(
                 sequence_number=1,
@@ -1392,7 +1383,7 @@ def test_execute_auto_approval_persists_disbursement_amounts_for_non_expert_poa(
         disbursement_vat_zero=None,
     )
     extract_port.create_payment_extract.assert_called_once_with(
-        claim_id=1,
+        claim_id=claim.claim_id,
         lines=[
             PaymentExtractLine(
                 sequence_number=1,
@@ -1550,11 +1541,11 @@ def test_execute_does_not_create_history_event_if_auto_approve_eligible_update_c
     assert result.claim.status_id == ClaimStatus.SUBMITTED
     assert result.rejection_reasons is None
     create_claim_decision_port.create_claim_decision.assert_called_once_with(
-        claim_id=1,
+        claim_id=claim.claim_id,
         decision_status=ClaimDecisionStatus.PAY_IN_FULL,
     )
     update_claim_status_port.update_claim_status.assert_called_once_with(
-        claim_id=1,
+        claim_id=claim.claim_id,
         status=ClaimStatus.PAY_IN_FULL,
     )
     assert (
@@ -1602,11 +1593,11 @@ def test_execute_does_not_auto_approve_if_create_history_event_fails():
     assert result.claim.status_id == ClaimStatus.SUBMITTED
     assert result.rejection_reasons is None
     create_claim_decision_port.create_claim_decision.assert_called_once_with(
-        claim_id=1,
+        claim_id=claim.claim_id,
         decision_status=ClaimDecisionStatus.PAY_IN_FULL,
     )
     update_claim_status_port.update_claim_status.assert_called_once_with(
-        claim_id=1,
+        claim_id=claim.claim_id,
         status=ClaimStatus.PAY_IN_FULL,
     )
     create_history_event_port.create_history_event.assert_any_call(
@@ -1702,10 +1693,8 @@ def test_execute_sets_funds_from_cumulative_approved_claims_and_new_amount():
 
     application = build_granted_application(substantive_cost_limitation=10000)
 
-    def _existing_claim(claim_id, gross=None, vat_zero=None):
+    def _existing_claim(gross=None, vat_zero=None):
         return build_poa_claim(
-            claim_id=claim_id,
-            application_id=12345,
             status_id=ClaimStatus.PAY_IN_FULL,
             submission_date=datetime.now(UTC),
             total_profit_cost_net=None,
@@ -1713,26 +1702,32 @@ def test_execute_sets_funds_from_cumulative_approved_claims_and_new_amount():
             total_profit_cost_vat_zero=vat_zero,
         )
 
-    granted = _existing_claim(2, gross=Decimal("2000.00"))
-    paid_in_full = _existing_claim(3, vat_zero=Decimal("1500.00"))
-    rejected = _existing_claim(4, gross=Decimal("5000.00"))
-    pending = _existing_claim(5, gross=Decimal("3000.00"))
+    granted = _existing_claim(gross=Decimal("2000.00"))
+    paid_in_full = _existing_claim(vat_zero=Decimal("1500.00"))
+    rejected = _existing_claim(gross=Decimal("5000.00"))
+    pending = _existing_claim(gross=Decimal("3000.00"))
 
     get_claim_decision_port = _make_get_claim_decision_port(
         {
-            2: build_claim_decision(
-                claim_decision_id=2, claim_id=2, decision=ClaimDecisionStatus.GRANT
+            granted.claim_id: build_claim_decision(
+                claim_decision_id=2,
+                claim_id=granted.claim_id,
+                decision=ClaimDecisionStatus.GRANT,
             ),
-            3: build_claim_decision(
+            paid_in_full.claim_id: build_claim_decision(
                 claim_decision_id=3,
-                claim_id=3,
+                claim_id=paid_in_full.claim_id,
                 decision=ClaimDecisionStatus.PAY_IN_FULL,
             ),
-            4: build_claim_decision(
-                claim_decision_id=4, claim_id=4, decision=ClaimDecisionStatus.REJECT
+            rejected.claim_id: build_claim_decision(
+                claim_decision_id=4,
+                claim_id=rejected.claim_id,
+                decision=ClaimDecisionStatus.REJECT,
             ),
-            5: build_claim_decision(
-                claim_decision_id=5, claim_id=5, decision=ClaimDecisionStatus.PENDING
+            pending.claim_id: build_claim_decision(
+                claim_decision_id=5,
+                claim_id=pending.claim_id,
+                decision=ClaimDecisionStatus.PENDING,
             ),
         }
     )
@@ -1795,8 +1790,6 @@ def test_execute_sets_funds_without_decision_port_treats_existing_as_unapproved(
     application = build_granted_application(substantive_cost_limitation=10000)
 
     existing_claim = build_poa_claim(
-        claim_id=2,
-        application_id=12345,
         status_id=ClaimStatus.PAY_IN_FULL,
         submission_date=datetime.now(UTC),
         total_profit_cost_net=None,

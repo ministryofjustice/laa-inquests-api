@@ -66,6 +66,31 @@ def test_seeded_application_is_available(seeded_application):
     assert seeded_application.laa_reference == SEED_LAA_REFERENCE
 
 
+def test_built_applications_have_distinct_ids_for_the_keys_code_reads():
+    first = builders.build_application()
+    second = builders.build_application()
+
+    assert first.application_id != second.application_id
+    assert first.client.client_id is not None
+    assert first.deceased.deceased_id is not None
+
+
+def test_for_db_build_leaves_ids_to_the_database():
+    application = builders.build_application(for_db=True)
+
+    assert application.application_id is None
+    assert application.client.client_id is None
+    assert application.deceased.deceased_id is None
+
+
+def test_built_claims_have_distinct_ids():
+    assert builders.build_claim().claim_id != builders.build_poa_claim().claim_id
+
+
+def test_for_db_claim_build_leaves_id_to_the_database():
+    assert builders.build_poa_claim(for_db=True).claim_id is None
+
+
 # TODO: Review whether this test is necessary. We are testing the test fixture here, rather than application behaviour
 def test_create_application_persists_full_tree(session):
     application = create_application(session)

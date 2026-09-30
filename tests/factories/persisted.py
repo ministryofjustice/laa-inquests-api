@@ -72,7 +72,7 @@ def _create_dedicated_proceeding(session: Session, limit: int) -> Proceeding:
     return _persist(
         session,
         builders.build_proceeding(
-            for_db=True, proceeding_id=unused, substantive_cost_limitation=limit
+            proceeding_id=unused, substantive_cost_limitation=limit
         ),
     )
 
@@ -90,7 +90,8 @@ def create_claim(
 ) -> Claim:
     """``preset`` is any ``build_*claim`` builder, e.g. ``builders.build_poa_claim``."""
     return _persist(
-        session, preset(application_id=_application_id(application), **overrides)
+        session,
+        preset(application_id=_application_id(application), for_db=True, **overrides),
     )
 
 

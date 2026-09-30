@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, call
 import pytest
 
 from app.contexts.user import set_entra_user_context
+from app.models.application.index import Application
 from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
@@ -30,20 +31,12 @@ from tests.factories.builders import (
 )
 
 
-def _claim(claim_id: int = 1, application_id: int = 1) -> Claim:
+def _claim(application: Application) -> Claim:
     return build_poa_claim(
-        claim_id=claim_id,
-        application_id=application_id,
+        application_id=application.application_id,
         claim_reference="INQC-0000-0001",
         submission_date=datetime.now(UTC),
         claimant_id="claimant-123@provider.co.uk",
-    )
-
-
-def _application(application_id: int = 1):
-    return build_application(
-        application_id=application_id,
-        laa_reference=f"INQ-{application_id:03d}-REF",
     )
 
 
@@ -62,7 +55,7 @@ def _build_use_case(claim=None, application=None):
     create_decision_port = MagicMock(spec=CreateClaimDecisionPort)
     create_decision_port.create_claim_decision.return_value = build_claim_decision(
         claim_decision_id=42,
-        claim_id=claim.claim_id if claim is not None else 1,
+        claim_id=claim.claim_id if claim is not None else None,
         decision=ClaimDecisionStatus.REJECT,
     )
 
@@ -95,14 +88,14 @@ def _build_use_case(claim=None, application=None):
 
 
 def test_raises_application_not_found_when_application_missing():
-    use_case, *_ = _build_use_case(claim=_claim(), application=None)
+    use_case, *_ = _build_use_case(claim=_claim(build_application()), application=None)
 
     with pytest.raises(ApplicationNotFoundError):
         use_case.execute(RejectClaimCommand("999999", "INQC-0000-0001", "reason"))
 
 
 def test_raises_claim_not_found_when_claim_missing():
-    use_case, *_ = _build_use_case(claim=None, application=_application())
+    use_case, *_ = _build_use_case(claim=None, application=build_application())
 
     with pytest.raises(ClaimNotFoundError):
         use_case.execute(RejectClaimCommand("1", "INQC-9999-9999", "reason"))
@@ -110,8 +103,8 @@ def test_raises_claim_not_found_when_claim_missing():
 
 def test_raises_claim_not_found_when_claim_belongs_to_another_application():
     use_case, *_ = _build_use_case(
-        claim=_claim(claim_id=1, application_id=1),
-        application=_application(application_id=2),
+        claim=_claim(build_application()),
+        application=build_application(),
     )
 
     with pytest.raises(ClaimNotFoundError):
@@ -119,7 +112,8 @@ def test_raises_claim_not_found_when_claim_belongs_to_another_application():
 
 
 def test_creates_reject_decision_reason_updates_status_and_commits():
-    application = _application()
+    application = build_application()
+    claim = _claim(application)
 
     (
         use_case,
@@ -128,14 +122,14 @@ def test_creates_reject_decision_reason_updates_status_and_commits():
         update_status_port,
         create_history_event_port,
         _,
-    ) = _build_use_case(claim=_claim(claim_id=5), application=application)
+    ) = _build_use_case(claim=claim, application=application)
 
     use_case.execute(
-        RejectClaimCommand("1", "INQC-0000-0005", "Rejected after review.")
+        RejectClaimCommand("1", claim.claim_reference, "Rejected after review.")
     )
 
     create_decision_port.create_claim_decision.assert_called_once_with(
-        claim_id=5,
+        claim_id=claim.claim_id,
         decision_status=ClaimDecisionStatus.REJECT,
     )
     create_reason_port.create_decision_reason.assert_called_once_with(
@@ -144,7 +138,7 @@ def test_creates_reject_decision_reason_updates_status_and_commits():
         justification="Rejected after review.",
     )
     update_status_port.update_claim_status.assert_called_once_with(
-        claim_id=5,
+        claim_id=claim.claim_id,
         status=ClaimStatus.REJECTED,
     )
 
@@ -155,7 +149,7 @@ def test_creates_reject_decision_reason_updates_status_and_commits():
                 event_reference=HistoryEventReference.CLAIM_ASSESSMENT_COMPLETED,
                 actor="Caseworker",
                 actor_type=ActorType.CASEWORKER,
-                application_id=1,
+                application_id=application.application_id,
                 event_data={
                     "claim_type": ClaimType.PAYMENT_ON_ACCOUNT,
                     "claim_reference": "INQC-0000-0001",
@@ -167,7 +161,7 @@ def test_creates_reject_decision_reason_updates_status_and_commits():
                 event_reference=HistoryEventReference.CLAIM_REJECTED_EMAIL,
                 actor=ActorType.SYSTEM,
                 actor_type=ActorType.SYSTEM,
-                application_id=1,
+                application_id=application.application_id,
                 event_data={
                     "recipient": application.provider.email_address,
                     "channel": NotificationType.EMAIL,
@@ -181,6 +175,8 @@ def test_creates_reject_decision_reason_updates_status_and_commits():
 
 
 def test_history_event_not_created_when_update_claim_status_fails():
+    application = build_application()
+    claim = _claim(application)
     (
         use_case,
         create_decision_port,
@@ -188,18 +184,18 @@ def test_history_event_not_created_when_update_claim_status_fails():
         update_status_port,
         create_history_event_port,
         _,
-    ) = _build_use_case(claim=_claim(claim_id=5), application=_application())
+    ) = _build_use_case(claim=claim, application=application)
     update_status_port.update_claim_status.side_effect = RuntimeError(
         "Cannot update claim status"
     )
 
     with pytest.raises(RuntimeError):
         use_case.execute(
-            RejectClaimCommand("1", "INQC-0000-0005", "Rejected after review.")
+            RejectClaimCommand("1", claim.claim_reference, "Rejected after review.")
         )
 
     create_decision_port.create_claim_decision.assert_called_once_with(
-        claim_id=5,
+        claim_id=claim.claim_id,
         decision_status=ClaimDecisionStatus.REJECT,
     )
     create_reason_port.create_decision_reason.assert_called_once_with(
@@ -208,7 +204,7 @@ def test_history_event_not_created_when_update_claim_status_fails():
         justification="Rejected after review.",
     )
     update_status_port.update_claim_status.assert_called_once_with(
-        claim_id=5,
+        claim_id=claim.claim_id,
         status=ClaimStatus.REJECTED,
     )
     create_history_event_port.create_history_event.assert_not_called()
@@ -217,6 +213,8 @@ def test_history_event_not_created_when_update_claim_status_fails():
 
 
 def test_reject_claim_not_committed_when_create_history_event_fails():
+    application = build_application()
+    claim = _claim(application)
     (
         use_case,
         create_decision_port,
@@ -224,18 +222,18 @@ def test_reject_claim_not_committed_when_create_history_event_fails():
         update_status_port,
         create_history_event_port,
         _,
-    ) = _build_use_case(claim=_claim(claim_id=5), application=_application())
+    ) = _build_use_case(claim=claim, application=application)
     create_history_event_port.create_history_event.side_effect = RuntimeError(
         "Cannot create history event"
     )
 
     with pytest.raises(RuntimeError):
         use_case.execute(
-            RejectClaimCommand("1", "INQC-0000-0005", "Rejected after review.")
+            RejectClaimCommand("1", claim.claim_reference, "Rejected after review.")
         )
 
     create_decision_port.create_claim_decision.assert_called_once_with(
-        claim_id=5,
+        claim_id=claim.claim_id,
         decision_status=ClaimDecisionStatus.REJECT,
     )
     create_reason_port.create_decision_reason.assert_called_once_with(
@@ -244,14 +242,14 @@ def test_reject_claim_not_committed_when_create_history_event_fails():
         justification="Rejected after review.",
     )
     update_status_port.update_claim_status.assert_called_once_with(
-        claim_id=5,
+        claim_id=claim.claim_id,
         status=ClaimStatus.REJECTED,
     )
     create_history_event_port.create_history_event.assert_called_once_with(
         event_reference=HistoryEventReference.CLAIM_ASSESSMENT_COMPLETED,
         actor="Caseworker",
         actor_type=ActorType.CASEWORKER,
-        application_id=1,
+        application_id=application.application_id,
         event_data={
             "claim_type": ClaimType.PAYMENT_ON_ACCOUNT,
             "claim_reference": "INQC-0000-0001",
@@ -264,6 +262,8 @@ def test_reject_claim_not_committed_when_create_history_event_fails():
 
 
 def test_rolls_back_when_a_write_fails():
+    application = build_application()
+    claim = _claim(application)
     (
         use_case,
         create_decision_port,
@@ -271,19 +271,21 @@ def test_rolls_back_when_a_write_fails():
         update_status_port,
         __,
         _gov_notify_port,
-    ) = _build_use_case(claim=_claim(claim_id=5), application=_application())
+    ) = _build_use_case(claim=claim, application=application)
     create_decision_port.create_claim_decision.side_effect = RuntimeError(
         "Cannot create claim decision"
     )
 
     with pytest.raises(RuntimeError):
-        use_case.execute(RejectClaimCommand("1", "INQC-0000-0005", "reason"))
+        use_case.execute(RejectClaimCommand("1", claim.claim_reference, "reason"))
 
     update_status_port.rollback.assert_called_once()
     update_status_port.commit.assert_not_called()
 
 
 def test_sends_rejection_email_after_commit():
+    application = build_application()
+    claim = _claim(application)
     (
         use_case,
         _,
@@ -291,10 +293,10 @@ def test_sends_rejection_email_after_commit():
         _,
         _,
         gov_notify_port,
-    ) = _build_use_case(claim=_claim(claim_id=5), application=_application())
+    ) = _build_use_case(claim=claim, application=application)
 
     use_case.execute(
-        RejectClaimCommand("1", "INQC-0000-0005", "Rejected after review.")
+        RejectClaimCommand("1", claim.claim_reference, "Rejected after review.")
     )
 
     gov_notify_port.send_claim_rejected_decision_email.assert_called_once_with(
@@ -307,6 +309,8 @@ def test_sends_rejection_email_after_commit():
 
 
 def test_rejection_email_failure_does_not_throw_error():
+    application = build_application()
+    claim = _claim(application)
     (
         use_case,
         _,
@@ -314,13 +318,13 @@ def test_rejection_email_failure_does_not_throw_error():
         update_status_port,
         _,
         gov_notify_port,
-    ) = _build_use_case(claim=_claim(claim_id=5), application=_application())
+    ) = _build_use_case(claim=claim, application=application)
     gov_notify_port.send_claim_rejected_decision_email.side_effect = RuntimeError(
         "notify down"
     )
 
     use_case.execute(
-        RejectClaimCommand("1", "INQC-0000-0005", "Rejected after review.")
+        RejectClaimCommand("1", claim.claim_reference, "Rejected after review.")
     )
 
     update_status_port.commit.assert_called_once()

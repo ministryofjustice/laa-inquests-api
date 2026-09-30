@@ -107,8 +107,7 @@ def test_gov_notify_adapter_sends_confirmation_email_successfully():
 def test_gov_notify_adapter_sends_claim_submit_confirmation_email_successfully():
     application, _ = _create_test_application_and_proceeding()
     claim = build_poa_claim(
-        claim_id=1,
-        application_id=12345,
+        application_id=application.application_id,
         claim_reference="INQC-ABCD-1234",
         submission_date=datetime(2026, 6, 18, 14, 3, tzinfo=ZoneInfo("UTC")),
         total_profit_cost_vat_zero=None,
@@ -158,8 +157,7 @@ def test_gov_notify_adapter_sends_claim_submit_confirmation_email_successfully()
 def test_gov_notify_adapter_sends_claim_rejected_decision_email_successfully():
     application, _ = _create_test_application_and_proceeding()
     claim = build_poa_claim(
-        claim_id=7,
-        application_id=12345,
+        application_id=application.application_id,
         claim_reference="INQC-ABCD-1234",
         submission_date=datetime(2026, 6, 18, 14, 3, tzinfo=ZoneInfo("UTC")),
         total_profit_cost_vat_zero=None,
@@ -217,9 +215,8 @@ def test_gov_notify_adapter_sends_claim_rejected_decision_email_successfully():
 def test_gov_notify_adapter_sends_final_bill_claim_rejection_email_successfully():
     application, _ = _create_test_application_and_proceeding()
     claim = build_claim(
-        claim_id=7,
         claim_reference="INQC-0007-0007",
-        application_id=12345,
+        application_id=application.application_id,
         submission_date=datetime(2026, 6, 18, 14, 3, tzinfo=ZoneInfo("UTC")),
         total_profit_cost_net=None,
         total_profit_cost_gross=1200,
