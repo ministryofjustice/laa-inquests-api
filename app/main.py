@@ -13,9 +13,7 @@ from app.config.logging import configure_logging
 from app.contexts.request import clear_request_context, set_request_context
 from app.contexts.user import clear_entra_user_context
 from app.logging_utils import build_log_extra, duration_ms
-from app.rate_limit import (
-    create_rate_limiter,
-)
+from app.rate_limit import create_rate_limiter
 from app.routers import applications, claims, monitoring, notifications, reports
 
 logger = logging.getLogger(__name__)
@@ -23,7 +21,9 @@ logger = logging.getLogger(__name__)
 
 def create_app():
     configure_logging()
-    rate_limiter = create_rate_limiter(Config.RATE_LIMIT_MAX, Config.RATE_WINDOW_MINUTES)
+    rate_limiter = create_rate_limiter(
+        Config.RATE_LIMIT_MAX, Config.RATE_WINDOW_MINUTES
+    )
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
