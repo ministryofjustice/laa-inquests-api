@@ -54,6 +54,7 @@ ROLE_PERMISSIONS_MAP: dict[Role, set[Permission]] = {
         Permission.APPLICATION_SEARCH,
         Permission.CLAIM_CREATE,
         Permission.CLAIM_DELETE,
+        Permission.CLAIM_READ,
         Permission.PROVIDER_OFFICES_READ,
     },
     Role.APPLICATIONS_CASEWORKER: {

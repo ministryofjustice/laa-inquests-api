@@ -52,10 +52,11 @@ class GenerateClaimBacklogReportUseCase:
 
                 writer.writerow(
                     [
-                        str(claim.claim_reference),
+                        application.laa_reference,
                         firm_name,
                         firm_code,
                         claim.submission_date.strftime("%Y-%m-%d %H:%M:%S"),
+                        str(claim.claim_reference),
                         claim.status_id.value,
                         (
                             f"{claim.total_profit_cost_vat_zero:.2f}"

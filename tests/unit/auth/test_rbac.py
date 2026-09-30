@@ -107,6 +107,7 @@ def test_external_provider_claims_user_permission_set():
         Permission.APPLICATION_SEARCH,
         Permission.CLAIM_CREATE,
         Permission.CLAIM_DELETE,
+        Permission.CLAIM_READ,
         Permission.PROVIDER_OFFICES_READ,
     }
 

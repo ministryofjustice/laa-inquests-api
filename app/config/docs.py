@@ -35,6 +35,20 @@ Authorised providers can:
 * Retrieve a piece of claim evidence from SDS by sending a get request to **/claims/{claim_evidence_id}**.
 
 
+## Reports
+
+Reports are returned as CSV file downloads.
+
+### Workflow reporting
+Authorised workflow reporting users can:
+* Download a report of open applications pending assessment or decision by sending a get request to **/reports/applications/backlog**.
+* Download a report of open claims pending assessment or decision by sending a get request to **/reports/claims/backlog**.
+
+### Finance and assurance
+Authorised finance and assurance users can:
+* Download the payment extract by sending a get request to **/reports/payment-extract**. The **from** and **to** query parameters (YYYY-MM-DD, inclusive) are required and filter on when each payment line was created. If any report data cannot be retrieved, an error is returned instead of a file.
+
+
 ## Notifications
 
 Used by GovNotify for changes in status of notification delivery.

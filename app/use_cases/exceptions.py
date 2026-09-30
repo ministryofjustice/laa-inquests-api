@@ -70,6 +70,10 @@ class InvalidClaimEvidenceDocumentIdError(Exception):
     pass
 
 
+class InvalidDateRangeError(Exception):
+    pass
+
+
 class SDSClaimEvidenceRetrievalError(Exception):
     pass
 

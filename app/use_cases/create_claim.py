@@ -211,6 +211,23 @@ class CreateClaimUseCase:
                 application.application_id
             )
         )
+        existing_summaries = [
+            ExistingClaimSummary(
+                claim_type=c.claim_type_id,
+                status=c.status_id,
+                poa_type=c.poa_type_id,
+                submission_date=c.submission_date,
+                net=c.total_profit_cost_net,
+                gross=c.total_profit_cost_gross,
+                vat_zero_total=c.total_profit_cost_vat_zero,
+            )
+            for c in existing_claims
+        ]
+
+        try:
+            validated_claim.validate_no_active_final_bill(existing_summaries)
+        except ClaimValidationError as e:
+            raise InvalidClaimError(code=e.code, message=e.message) from e
 
         total_funds_remaining_after_claim = self._calculate_total_funds_remaining(
             application, existing_claims, validated_claim
@@ -323,17 +340,6 @@ class CreateClaimUseCase:
 
         if application is not None:
             reference_date = datetime.now(UTC)
-            existing_summaries = [
-                ExistingClaimSummary(
-                    status=c.status_id,
-                    poa_type=c.poa_type_id,
-                    submission_date=c.submission_date,
-                    net=c.total_profit_cost_net,
-                    gross=c.total_profit_cost_gross,
-                    vat_zero_total=c.total_profit_cost_vat_zero,
-                )
-                for c in existing_claims
-            ]
             rejection = validated_claim.should_auto_reject(
                 application, existing_summaries, reference_date
             )
