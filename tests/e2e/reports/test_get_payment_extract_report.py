@@ -3,7 +3,7 @@ from decimal import Decimal
 from unittest.mock import MagicMock
 
 import pytest
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from app import api
 from app.auth.rbac import Role
@@ -12,7 +12,8 @@ from app.models.claim.enums import ClaimType, InvoiceTypeCode, POAType, TaxCode
 from app.models.claim.index import Claim, ClaimPaymentExtract
 from app.routers.applications import get_provider_details_port
 from app.use_cases.exceptions import ProviderDetailsRetrievalError
-from tests.e2e.factories import create_claim_in_db
+from tests.factories.persisted import application_by_reference, create_claim
+from tests.factories.seed import SEED_LAA_REFERENCE
 from tests.helpers.csv_helpers import parse_csv_fieldnames, parse_csv_rows
 
 PAYMENT_EXTRACT_REPORT_HEADERS = [
@@ -39,7 +40,7 @@ DEFAULT_PARAMS = {"from": "2025-03-01", "to": "2025-03-31"}
 
 
 def _application(session: Session) -> Application:
-    return session.exec(select(Application)).first()
+    return application_by_reference(session, SEED_LAA_REFERENCE)
 
 
 def _claim(
@@ -47,11 +48,11 @@ def _claim(
     claim_type: ClaimType = ClaimType.FINAL_BILL,
     poa_type: POAType | None = None,
 ) -> Claim:
-    return create_claim_in_db(
+    return create_claim(
         session,
-        application_id=_application(session).application_id,
-        claim_type=claim_type,
-        poa_type=poa_type,
+        _application(session),
+        claim_type_id=claim_type,
+        poa_type_id=poa_type,
     )
 
 
