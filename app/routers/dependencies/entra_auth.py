@@ -58,6 +58,18 @@ def get_current_provider_firm_code(
     return user.firm_code
 
 
+def get_current_provider_office_codes(
+    user: Annotated[AuthenticatedUser, Depends(verify_entra_provider_token)],
+) -> frozenset[str]:
+    if not user.office_codes:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Provider office codes missing from token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user.office_codes
+
+
 async def verify_entra_caseworker_token(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_http_bearer)],
     entra_auth: Annotated[EntraAuthPort, Depends(get_entra_auth_port)],

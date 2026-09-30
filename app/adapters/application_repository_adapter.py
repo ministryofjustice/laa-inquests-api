@@ -91,6 +91,7 @@ class ApplicationRepositoryAdapter(
         self,
         laa_reference: str,
         firm_code: str,
+        office_codes: frozenset[str],
         merits_decision: MeritsDecision | None = None,
     ) -> list[Application]:
         laa_reference = laa_reference.strip().upper()
@@ -104,6 +105,7 @@ class ApplicationRepositoryAdapter(
             )
             .where(Application.laa_reference == laa_reference)
             .where(Provider.firm_code == firm_code)
+            .where(Provider.office_id.in_(office_codes))
         )
 
         if merits_decision is not None:

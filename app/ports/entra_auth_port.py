@@ -9,6 +9,7 @@ class AuthenticatedUser:
     name: str
     entra_object_id: str | None = None
     app_roles: frozenset[str] = frozenset()
+    office_codes: frozenset[str] = frozenset()
 
 
 class EntraAuthPort(Protocol):

@@ -22,12 +22,13 @@ class SearchApplicationUseCase:
         self,
         laa_reference: str,
         firm_code: str,
+        office_codes: frozenset[str],
         merits_decision: MeritsDecision | None = None,
     ) -> list[ApplicationSearchResponse]:
         try:
             laa_reference = laa_reference.strip().upper()
             matching_applications = self.search_application_port.search_applications(
-                laa_reference, firm_code, merits_decision
+                laa_reference, firm_code, office_codes, merits_decision
             )
             if not matching_applications:
                 logger.info(
@@ -54,6 +55,7 @@ class SearchApplicationUseCase:
                     date_submitted=application.created_at,
                     firm_name=firm_name,
                     firm_number=application.provider.firm_code,
+                    office_codes=sorted(office_codes),
                     overall_decision=application.overall_decision,
                 )
                 for application in matching_applications
@@ -75,6 +77,7 @@ class SearchApplicationUseCase:
                     event="search_application_failed",
                     laa_reference=laa_reference,
                     firm_code=firm_code,
+                    office_codes=office_codes,
                 ),
             )
             raise

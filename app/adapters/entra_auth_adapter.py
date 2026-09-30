@@ -41,7 +41,7 @@ class EntraAuthAdapter:
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-    def _format_name(self, name: str | None) -> str | None:
+    def _format_name(self, name: str | None) -> str:
         if name is None:
             return ""
         cleaned = re.sub(r"\[.*?\]", "", name)
@@ -89,6 +89,7 @@ class EntraAuthAdapter:
             token_scopes = frozenset((payload.get("scp") or "").split())
             token_roles = frozenset(payload.get("roles") or [])
             app_roles = self._parse_app_roles(payload.get("LAA_APP_ROLES"))
+            office_codes = frozenset(payload.get("ACCOUNTS") or frozenset())
             logger.debug(
                 "Entra token validated",
                 extra=build_log_extra(
@@ -97,6 +98,7 @@ class EntraAuthAdapter:
             )
             return AuthenticatedUser(
                 firm_code=payload.get("FIRM_CODE"),
+                office_codes=office_codes,
                 scopes=token_scopes | token_roles,
                 name=self._format_name(payload.get("name")),
                 entra_object_id=payload.get("oid"),

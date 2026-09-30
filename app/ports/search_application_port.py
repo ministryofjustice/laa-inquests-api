@@ -10,5 +10,6 @@ class SearchApplicationPort(ABC):
         self,
         laa_reference: str,
         firm_code: str,
+        office_codes: frozenset[str],
         merits_decision: MeritsDecision | None = None,
     ) -> list[Application]: ...

@@ -86,6 +86,7 @@ from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 from app.routers.dependencies import (
     get_claim_db_adapter,
     get_current_provider_firm_code,
+    get_current_provider_office_codes,
     get_sds_port,
 )
 from app.use_cases.create_application import CreateApplicationUseCase
@@ -696,13 +697,16 @@ def list_public_bodies(
 async def search_application(
     laa_reference: str,
     firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
+    office_codes: Annotated[frozenset[str], Depends(get_current_provider_office_codes)],
     merits_decision: MeritsDecision | None = None,
     request: Request = None,
     use_case: SearchApplicationUseCase = Depends(get_search_application_use_case),
 ) -> list[ApplicationSearchResponse]:
     """Search for an application by exact LAA reference number."""
     try:
-        results = use_case.execute(laa_reference, firm_code, merits_decision)
+        results = use_case.execute(
+            laa_reference, firm_code, office_codes, merits_decision
+        )
         return results
     except ProviderDetailsRetrievalError:
         logger.warning(
