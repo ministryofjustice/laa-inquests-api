@@ -30,7 +30,6 @@ from app.models.application.index import (
     SDSUploadCoronersLetterResponse,
 )
 from app.ports.entra_auth_port import AuthenticatedUser
-from app.rate_limit import create_rate_limiter
 from app.routers.applications import (
     get_gov_notify_port,
     get_pdf_generation_port,
@@ -267,15 +266,9 @@ def client_fixture(session: Session):
     api.dependency_overrides[get_sds_port] = get_sds_port_override
     api.dependency_overrides[get_entra_auth_port] = get_entra_auth_port_override
 
-    previous_rate_limiter = api.state.rate_limiter
-    test_rate_limiter = create_rate_limiter(100_000)
-    api.state.rate_limiter = test_rate_limiter
-
     client = TestClient(api, raise_server_exceptions=False)
     yield client
     api.dependency_overrides.clear()
-    api.state.rate_limiter = previous_rate_limiter
-    test_rate_limiter.close()
 
 
 @pytest.fixture
