@@ -9,16 +9,20 @@ from app.domain.constants.claim_messages import (
     DISB_MISSING_GROSS_TOTAL_MESSAGE,
     DISB_MISSING_NET_TOTAL_MESSAGE,
     DISB_MISSING_TOTAL_MESSAGE,
+    DISB_NOT_ALLOWED_FOR_NIL_BILL_MESSAGE,
     NET_GT_GROSS_MESSAGE,
     PIF_MISSING_GROSS_TOTAL_MESSAGE,
     PIF_MISSING_NET_TOTAL_MESSAGE,
     PIF_MISSING_TOTAL_CLAIM_COST_MESSAGE,
     PIF_PROFIT_COST_MIXED_VAT_MESSAGE,
+    PIF_PROFIT_COST_NOT_ALLOWED_FOR_NIL_BILL_MESSAGE,
 )
+from app.models.claim.enums import ClaimType
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class PayInFullClaim:
+    claim_type_id: ClaimType
     profit_cost_net: Decimal | None = None
     profit_cost_gross: Decimal | None = None
     profit_cost_vat_zero: Decimal | None = None
@@ -46,6 +50,14 @@ class PayInFullClaim:
         has_net = self.profit_cost_net is not None
         has_gross = self.profit_cost_gross is not None
         has_vat_zero = self.profit_cost_vat_zero is not None
+
+        if self.claim_type_id == ClaimType.NIL_BILL:
+            if has_net or has_gross or has_vat_zero:
+                raise ClaimValidationError(
+                    ClaimErrorCode.PROFIT_COST_NOT_ALLOWED_FOR_NIL_BILL_CLAIM,
+                    PIF_PROFIT_COST_NOT_ALLOWED_FOR_NIL_BILL_MESSAGE,
+                )
+            return
 
         if not has_net and not has_gross and not has_vat_zero:
             raise ClaimValidationError(
@@ -85,6 +97,14 @@ class PayInFullClaim:
         has_net = self.disbursement_net is not None
         has_gross = self.disbursement_gross is not None
         has_vat_zero = self.disbursement_vat_zero is not None
+
+        if self.claim_type_id == ClaimType.NIL_BILL:
+            if has_net or has_gross or has_vat_zero:
+                raise ClaimValidationError(
+                    ClaimErrorCode.DISBURSEMENT_NOT_ALLOWED_FOR_NIL_BILL_CLAIM,
+                    DISB_NOT_ALLOWED_FOR_NIL_BILL_MESSAGE,
+                )
+            return
 
         if not has_net and not has_gross and not has_vat_zero:
             raise ClaimValidationError(

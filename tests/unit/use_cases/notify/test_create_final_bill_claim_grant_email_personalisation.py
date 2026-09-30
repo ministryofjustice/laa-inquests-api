@@ -26,6 +26,7 @@ def _claim() -> Claim:
 def test_create_final_bill_claim_grant_email_personalisation_returns_expected_data():
     application = create_base_application()
     decision_amounts = PayInFullClaim(
+        claim_type_id=ClaimType.FINAL_BILL,
         profit_cost_net=Decimal("1000.00"),
         profit_cost_gross=Decimal("1200.00"),
         disbursement_net=Decimal("100.00"),
@@ -58,6 +59,7 @@ def test_create_final_bill_claim_grant_email_personalisation_returns_expected_da
 
 def test_final_bill_claim_grant_personalisation_totals_gross_profit_and_disbursement():
     decision_amounts = PayInFullClaim(
+        claim_type_id=ClaimType.FINAL_BILL,
         profit_cost_net=Decimal("1000.00"),
         profit_cost_gross=Decimal("1200.00"),
         disbursement_net=Decimal("100.00"),
@@ -73,6 +75,7 @@ def test_final_bill_claim_grant_personalisation_totals_gross_profit_and_disburse
 
 def test_final_bill_claim_grant_personalisation_totals_use_vat_zero_when_no_gross():
     decision_amounts = PayInFullClaim(
+        claim_type_id=ClaimType.FINAL_BILL,
         profit_cost_vat_zero=Decimal("500.00"),
         disbursement_vat_zero=Decimal("50.00"),
     )

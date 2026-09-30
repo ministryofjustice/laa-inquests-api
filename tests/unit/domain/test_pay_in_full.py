@@ -4,6 +4,7 @@ import pytest
 
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
 from app.domain.pay_in_full import PayInFullClaim
+from app.models.claim.enums import ClaimType
 
 VALID_PROFIT_COST = {
     "profit_cost_net": Decimal("1000.00"),
@@ -20,6 +21,7 @@ VALID_DISBURSEMENT = {
 
 def test_valid_with_net_and_gross():
     PayInFullClaim(
+        claim_type_id=ClaimType.FINAL_BILL,
         profit_cost_net=Decimal("1000.00"),
         profit_cost_gross=Decimal("1200.00"),
         **VALID_DISBURSEMENT,
@@ -28,6 +30,7 @@ def test_valid_with_net_and_gross():
 
 def test_valid_with_vat_zero_only():
     PayInFullClaim(
+        claim_type_id=ClaimType.FINAL_BILL,
         profit_cost_vat_zero=Decimal("500.00"),
         **VALID_DISBURSEMENT,
     ).validate()
@@ -35,6 +38,7 @@ def test_valid_with_vat_zero_only():
 
 def test_valid_with_zero_net_and_gross():
     PayInFullClaim(
+        claim_type_id=ClaimType.FINAL_BILL,
         profit_cost_net=Decimal("0.00"),
         profit_cost_gross=Decimal("0.00"),
         **VALID_DISBURSEMENT,
@@ -43,6 +47,7 @@ def test_valid_with_zero_net_and_gross():
 
 def test_valid_with_equal_net_and_gross():
     PayInFullClaim(
+        claim_type_id=ClaimType.FINAL_BILL,
         profit_cost_net=Decimal("1200.00"),
         profit_cost_gross=Decimal("1200.00"),
         **VALID_DISBURSEMENT,
@@ -51,7 +56,9 @@ def test_valid_with_equal_net_and_gross():
 
 def test_raises_when_all_totals_missing():
     with pytest.raises(ClaimValidationError) as exc:
-        PayInFullClaim(**VALID_DISBURSEMENT).validate()
+        PayInFullClaim(
+            claim_type_id=ClaimType.FINAL_BILL, **VALID_DISBURSEMENT
+        ).validate()
 
     assert exc.value.code == ClaimErrorCode.MISSING_TOTAL_CLAIM_COST
 
@@ -59,6 +66,7 @@ def test_raises_when_all_totals_missing():
 def test_raises_mixed_vat_when_vat_zero_with_net():
     with pytest.raises(ClaimValidationError) as exc:
         PayInFullClaim(
+            claim_type_id=ClaimType.FINAL_BILL,
             profit_cost_net=Decimal("1000.00"),
             profit_cost_vat_zero=Decimal("500.00"),
             **VALID_DISBURSEMENT,
@@ -70,6 +78,7 @@ def test_raises_mixed_vat_when_vat_zero_with_net():
 def test_raises_mixed_vat_when_vat_zero_with_gross():
     with pytest.raises(ClaimValidationError) as exc:
         PayInFullClaim(
+            claim_type_id=ClaimType.FINAL_BILL,
             profit_cost_gross=Decimal("1200.00"),
             profit_cost_vat_zero=Decimal("500.00"),
             **VALID_DISBURSEMENT,
@@ -81,6 +90,7 @@ def test_raises_mixed_vat_when_vat_zero_with_gross():
 def test_raises_missing_gross_when_net_only():
     with pytest.raises(ClaimValidationError) as exc:
         PayInFullClaim(
+            claim_type_id=ClaimType.FINAL_BILL,
             profit_cost_net=Decimal("1000.00"),
             **VALID_DISBURSEMENT,
         ).validate()
@@ -91,6 +101,7 @@ def test_raises_missing_gross_when_net_only():
 def test_raises_missing_net_when_gross_only():
     with pytest.raises(ClaimValidationError) as exc:
         PayInFullClaim(
+            claim_type_id=ClaimType.FINAL_BILL,
             profit_cost_gross=Decimal("1200.00"),
             **VALID_DISBURSEMENT,
         ).validate()
@@ -101,6 +112,7 @@ def test_raises_missing_net_when_gross_only():
 def test_raises_when_net_higher_than_gross():
     with pytest.raises(ClaimValidationError) as exc:
         PayInFullClaim(
+            claim_type_id=ClaimType.FINAL_BILL,
             profit_cost_net=Decimal("1300.00"),
             profit_cost_gross=Decimal("1200.00"),
             **VALID_DISBURSEMENT,
@@ -109,11 +121,66 @@ def test_raises_when_net_higher_than_gross():
     assert exc.value.code == ClaimErrorCode.NET_TOTAL_HIGHER_THAN_GROSS_TOTAL
 
 
+# Nil bill claim type
+
+
+def test_valid_nil_bill_claim_with_no_amounts_at_all():
+    PayInFullClaim(claim_type_id=ClaimType.NIL_BILL).validate()
+
+
+def test_raises_when_profit_cost_amounts_supplied_for_nil_bill_claim():
+    with pytest.raises(ClaimValidationError) as exc:
+        PayInFullClaim(
+            claim_type_id=ClaimType.NIL_BILL,
+            profit_cost_net=Decimal("0.00"),
+            profit_cost_gross=Decimal("0.00"),
+        ).validate()
+
+    assert exc.value.code == ClaimErrorCode.PROFIT_COST_NOT_ALLOWED_FOR_NIL_BILL_CLAIM
+
+
+def test_raises_when_disbursement_amounts_supplied_for_nil_bill_claim():
+    with pytest.raises(ClaimValidationError) as exc:
+        PayInFullClaim(
+            claim_type_id=ClaimType.NIL_BILL,
+            disbursement_net=Decimal("0.00"),
+            disbursement_gross=Decimal("0.00"),
+        ).validate()
+
+    assert exc.value.code == ClaimErrorCode.DISBURSEMENT_NOT_ALLOWED_FOR_NIL_BILL_CLAIM
+
+
+@pytest.mark.parametrize(
+    "claim_type",
+    [ClaimType.FINAL_BILL, ClaimType.PAYMENT_ON_ACCOUNT],
+)
+def test_raises_when_all_totals_missing_for_non_nil_bill_claim_types(claim_type):
+    with pytest.raises(ClaimValidationError) as exc:
+        PayInFullClaim(claim_type_id=claim_type).validate()
+
+    assert exc.value.code == ClaimErrorCode.MISSING_TOTAL_CLAIM_COST
+
+
+def test_raises_profit_cost_not_allowed_for_nil_bill_even_with_mixed_vat_shape():
+    """A nil bill's profit-cost check takes priority over the general mixed-VAT
+    rule, since no profit cost amounts are allowed at all for a nil bill."""
+    with pytest.raises(ClaimValidationError) as exc:
+        PayInFullClaim(
+            claim_type_id=ClaimType.NIL_BILL,
+            profit_cost_net=Decimal("1000.00"),
+            profit_cost_vat_zero=Decimal("500.00"),
+            **VALID_DISBURSEMENT,
+        ).validate()
+
+    assert exc.value.code == ClaimErrorCode.PROFIT_COST_NOT_ALLOWED_FOR_NIL_BILL_CLAIM
+
+
 # Disbursement group
 
 
 def test_valid_disbursement_with_net_and_gross():
     PayInFullClaim(
+        claim_type_id=ClaimType.FINAL_BILL,
         **VALID_PROFIT_COST,
         disbursement_net=Decimal("100.00"),
         disbursement_gross=Decimal("120.00"),
@@ -122,6 +189,7 @@ def test_valid_disbursement_with_net_and_gross():
 
 def test_valid_disbursement_with_vat_zero_only():
     PayInFullClaim(
+        claim_type_id=ClaimType.FINAL_BILL,
         **VALID_PROFIT_COST,
         disbursement_vat_zero=Decimal("50.00"),
     ).validate()
@@ -129,6 +197,7 @@ def test_valid_disbursement_with_vat_zero_only():
 
 def test_valid_disbursement_with_vat_zero_net_and_gross():
     PayInFullClaim(
+        claim_type_id=ClaimType.FINAL_BILL,
         **VALID_PROFIT_COST,
         disbursement_net=Decimal("100.00"),
         disbursement_gross=Decimal("200.00"),
@@ -138,6 +207,7 @@ def test_valid_disbursement_with_vat_zero_net_and_gross():
 
 def test_valid_disbursement_with_zero_net():
     PayInFullClaim(
+        claim_type_id=ClaimType.FINAL_BILL,
         **VALID_PROFIT_COST,
         disbursement_net=Decimal("0.00"),
         disbursement_gross=Decimal("120.00"),
@@ -146,7 +216,9 @@ def test_valid_disbursement_with_zero_net():
 
 def test_raises_when_disbursement_totals_missing():
     with pytest.raises(ClaimValidationError) as exc:
-        PayInFullClaim(**VALID_PROFIT_COST).validate()
+        PayInFullClaim(
+            claim_type_id=ClaimType.FINAL_BILL, **VALID_PROFIT_COST
+        ).validate()
 
     assert exc.value.code == ClaimErrorCode.MISSING_DISBURSEMENT_TOTAL
 
@@ -154,6 +226,7 @@ def test_raises_when_disbursement_totals_missing():
 def test_raises_missing_disbursement_gross_when_net_only():
     with pytest.raises(ClaimValidationError) as exc:
         PayInFullClaim(
+            claim_type_id=ClaimType.FINAL_BILL,
             **VALID_PROFIT_COST,
             disbursement_net=Decimal("100.00"),
         ).validate()
@@ -164,6 +237,7 @@ def test_raises_missing_disbursement_gross_when_net_only():
 def test_raises_missing_disbursement_net_when_gross_only():
     with pytest.raises(ClaimValidationError) as exc:
         PayInFullClaim(
+            claim_type_id=ClaimType.FINAL_BILL,
             **VALID_PROFIT_COST,
             disbursement_gross=Decimal("120.00"),
         ).validate()
@@ -174,6 +248,7 @@ def test_raises_missing_disbursement_net_when_gross_only():
 def test_raises_when_disbursement_gross_not_greater_than_net():
     with pytest.raises(ClaimValidationError) as exc:
         PayInFullClaim(
+            claim_type_id=ClaimType.FINAL_BILL,
             **VALID_PROFIT_COST,
             disbursement_net=Decimal("120.00"),
             disbursement_gross=Decimal("120.00"),
@@ -185,6 +260,7 @@ def test_raises_when_disbursement_gross_not_greater_than_net():
 def test_raises_when_disbursement_gross_not_greater_than_vat_zero_plus_net():
     with pytest.raises(ClaimValidationError) as exc:
         PayInFullClaim(
+            claim_type_id=ClaimType.FINAL_BILL,
             **VALID_PROFIT_COST,
             disbursement_net=Decimal("100.00"),
             disbursement_gross=Decimal("120.00"),
@@ -196,6 +272,7 @@ def test_raises_when_disbursement_gross_not_greater_than_vat_zero_plus_net():
 
 def test_valid_with_all_zero_disbursement_totals():
     PayInFullClaim(
+        claim_type_id=ClaimType.FINAL_BILL,
         **VALID_PROFIT_COST,
         disbursement_net=Decimal("0.00"),
         disbursement_gross=Decimal("0.00"),
@@ -205,6 +282,7 @@ def test_valid_with_all_zero_disbursement_totals():
 
 def test_valid_with_zero_net_and_gross_and_vat_zero_amount():
     PayInFullClaim(
+        claim_type_id=ClaimType.FINAL_BILL,
         **VALID_PROFIT_COST,
         disbursement_net=Decimal("0.00"),
         disbursement_gross=Decimal("0.00"),
@@ -214,6 +292,7 @@ def test_valid_with_zero_net_and_gross_and_vat_zero_amount():
 
 def test_valid_with_zero_net_and_gross_and_no_vat_zero():
     PayInFullClaim(
+        claim_type_id=ClaimType.FINAL_BILL,
         **VALID_PROFIT_COST,
         disbursement_net=Decimal("0.00"),
         disbursement_gross=Decimal("0.00"),
@@ -222,7 +301,9 @@ def test_valid_with_zero_net_and_gross_and_no_vat_zero():
 
 def test_profit_cost_error_takes_priority_over_disbursement_error():
     with pytest.raises(ClaimValidationError) as exc:
-        PayInFullClaim().validate()
+        PayInFullClaim(
+            claim_type_id=ClaimType.FINAL_BILL,
+        ).validate()
 
     assert exc.value.code == ClaimErrorCode.MISSING_TOTAL_CLAIM_COST
 
@@ -259,7 +340,10 @@ ZERO = Decimal("0.00")
     ],
 )
 def test_is_nil_bill_when_all_approved_amounts_are_zero(amounts):
-    assert PayInFullClaim(**amounts).is_nil_bill is True
+    assert (
+        PayInFullClaim(claim_type_id=ClaimType.FINAL_BILL, **amounts).is_nil_bill
+        is True
+    )
 
 
 @pytest.mark.parametrize(
@@ -289,4 +373,7 @@ def test_is_nil_bill_when_all_approved_amounts_are_zero(amounts):
     ],
 )
 def test_is_not_nil_bill_when_any_approved_amount_is_non_zero(amounts):
-    assert PayInFullClaim(**amounts).is_nil_bill is False
+    assert (
+        PayInFullClaim(claim_type_id=ClaimType.FINAL_BILL, **amounts).is_nil_bill
+        is False
+    )

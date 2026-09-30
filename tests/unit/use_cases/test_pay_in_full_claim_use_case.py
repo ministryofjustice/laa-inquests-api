@@ -45,12 +45,16 @@ from app.use_cases.exceptions import (
 from app.use_cases.pay_in_full_claim import PayInFullClaimCommand, PayInFullClaimUseCase
 
 
-def _claim(claim_id: int = 1, application_id: int = 1) -> Claim:
+def _claim(
+    claim_id: int = 1,
+    application_id: int = 1,
+    claim_type: ClaimType = ClaimType.FINAL_BILL,
+) -> Claim:
     return Claim(
         claim_id=claim_id,
         application_id=application_id,
         claim_reference="INQC-0000-0001",
-        claim_type_id=ClaimType.FINAL_BILL,
+        claim_type_id=claim_type,
         status_id=ClaimStatus.SUBMITTED,
         submission_date=datetime.now(UTC),
         total_profit_cost_net=Decimal("1000.00"),
@@ -334,6 +338,39 @@ def test_raises_invalid_claim_error_when_disbursement_totals_invalid():
     assert exc.value.code == ClaimErrorCode.MISSING_DISBURSEMENT_GROSS_WHEN_NET_ENTERED
     create_decision_port.create_claim_decision.assert_not_called()
     update_status_port.commit.assert_not_called()
+
+
+def test_pays_in_full_a_nil_bill_claim_type_with_no_amounts_supplied():
+    (
+        use_case,
+        _,
+        create_decision_amount_port,
+        update_status_port,
+        _,
+    ) = _build_use_case(
+        claim=_claim(claim_id=5, claim_type=ClaimType.NIL_BILL),
+        application=_application(),
+    )
+
+    use_case.execute(
+        PayInFullClaimCommand(laa_reference="1", claim_reference="INQC-0000-0005")
+    )
+
+    create_decision_amount_port.create_claim_decision_amount.assert_called_once_with(
+        claim_decision_id=42,
+        profit_cost_net=None,
+        profit_cost_gross=None,
+        profit_cost_vat_zero=None,
+        disbursement_net=None,
+        disbursement_gross=None,
+        disbursement_vat_zero=None,
+    )
+    update_status_port.update_claim_status.assert_called_once_with(
+        claim_id=5,
+        status=ClaimStatus.PAY_IN_FULL,
+    )
+    update_status_port.commit.assert_called_once()
+    update_status_port.rollback.assert_not_called()
 
 
 def _build_use_case_with_extract_ports(

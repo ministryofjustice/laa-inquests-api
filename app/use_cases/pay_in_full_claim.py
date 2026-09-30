@@ -101,6 +101,7 @@ class PayInFullClaimUseCase:
 
         try:
             decision_amounts = PayInFullClaim(
+                claim_type_id=claim.claim_type_id,
                 profit_cost_net=command.profit_cost_net,
                 profit_cost_gross=command.profit_cost_gross,
                 profit_cost_vat_zero=command.profit_cost_vat_zero,
