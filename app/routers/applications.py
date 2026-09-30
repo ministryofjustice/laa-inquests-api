@@ -682,8 +682,6 @@ async def read_all_applications(
     ],
 )
 def list_public_bodies(
-    request: Request,
-    response: Response,
     use_case: ListPublicBodiesUseCase = Depends(get_list_public_bodies_use_case),
 ) -> list[PublicBody]:
     public_bodies = use_case.execute()
