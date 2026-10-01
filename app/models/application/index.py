@@ -629,7 +629,6 @@ class ApplicationSearchResponse(BaseModel):
     firm_name: str
     firm_number: str
     overall_decision: str
-    office_codes: list[str]
 
 
 @dataclass
