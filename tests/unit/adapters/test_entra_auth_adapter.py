@@ -21,7 +21,7 @@ def adapter():
         yield EntraAuthAdapter(tenant_id="test-tenant", client_id="test-client-id")
 
 
-def test_verify_token_returns_user_with_firm_code_and_name_when_token_is_valid(adapter):
+def test_verify_token_returns_user_with_required_data_when_token_is_valid(adapter):
     mock_signing_key = MagicMock()
     adapter._jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
 
@@ -34,6 +34,7 @@ def test_verify_token_returns_user_with_firm_code_and_name_when_token_is_valid(a
             "name": "Test Name",
             "oid": "some-entra-object-id",
             "LAA_APP_ROLES": Role.PROVIDER_APPLICATION_USER.value,
+            "ACCOUNTS": ["A001B", "A002B"],
         },
     ):
         user = adapter.verify_token("valid.jwt.token")
@@ -43,6 +44,35 @@ def test_verify_token_returns_user_with_firm_code_and_name_when_token_is_valid(a
     assert user.entra_object_id == "some-entra-object-id"
     assert "User.Provider" in user.scopes
     assert user.app_roles == frozenset({Role.PROVIDER_APPLICATION_USER.value})
+    assert user.office_codes == frozenset(["A001B", "A002B"])
+
+
+def test_verify_token_returns_user_with_required_data_when_accounts_is_single_value(
+    adapter,
+):
+    mock_signing_key = MagicMock()
+    adapter._jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
+
+    with patch(
+        "app.adapters.entra_auth_adapter.jwt.decode",
+        return_value={
+            "sub": "user",
+            "scp": "User.Provider",
+            "FIRM_CODE": "0A123B",
+            "name": "Test Name",
+            "oid": "some-entra-object-id",
+            "LAA_APP_ROLES": Role.PROVIDER_APPLICATION_USER.value,
+            "ACCOUNTS": "A001B",
+        },
+    ):
+        user = adapter.verify_token("valid.jwt.token")
+
+    assert user.firm_code == "0A123B"
+    assert user.name == "Test Name"
+    assert user.entra_object_id == "some-entra-object-id"
+    assert "User.Provider" in user.scopes
+    assert user.app_roles == frozenset({Role.PROVIDER_APPLICATION_USER.value})
+    assert user.office_codes == frozenset(["A001B"])
 
 
 def test_verify_token_returns_none_firm_code_when_claim_absent(adapter):
@@ -98,6 +128,7 @@ def test_verify_token_parses_laa_app_roles_claim(adapter, claim_value, expected)
             "sub": "user",
             "scp": "User.Provider",
             "LAA_APP_ROLES": claim_value,
+            "ACCOUNTS": "0U651L",
         },
     ):
         user = adapter.verify_token("valid.jwt.token")

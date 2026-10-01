@@ -82,6 +82,10 @@ class ProviderDetailsRetrievalError(Exception):
     pass
 
 
+class ProviderOfficeMismatchError(Exception):
+    pass
+
+
 class ReportGenerationError(Exception):
     pass
 

@@ -43,7 +43,11 @@ from app.use_cases.create_claim import (
     CreateClaimUseCase,
     _build_payment_extract_lines,
 )
-from app.use_cases.exceptions import ApplicationNotFoundError, InvalidClaimError
+from app.use_cases.exceptions import (
+    ApplicationNotFoundError,
+    InvalidClaimError,
+    ProviderOfficeMismatchError,
+)
 
 _UNSET = object()
 
@@ -60,6 +64,7 @@ def _make_command(overrides=None) -> CreateClaimCommand:
     payload = {
         "laa_reference": "12345",
         "firm_code": "0A123B",
+        "office_codes": frozenset(["0U651L"]),
         "claim_type": ClaimType.PAYMENT_ON_ACCOUNT,
         "poa_type": POAType.PROFIT_COST,
         "net": Decimal("1000.00"),
@@ -85,7 +90,9 @@ def _make_created_claim() -> Claim:
     )
 
 
-def _make_matching_application(firm_code: str = "0A123B") -> Application:
+def _make_matching_application(
+    firm_code: str = "0A123B", office_id: str = "0U651L"
+) -> Application:
     application = MagicMock(spec=Application)
     application.application_id = 12345
     proceeding = MagicMock()
@@ -93,6 +100,7 @@ def _make_matching_application(firm_code: str = "0A123B") -> Application:
     proceeding.certificate_start_date = None
     application.proceeding = proceeding
     application.provider.firm_code = firm_code
+    application.provider.office_id = office_id
     application.provider.email_address = "provider@example.com"
     application.overall_decision = MeritsDecision.GRANTED
     return application
@@ -103,6 +111,7 @@ def _make_application_lookup_port(application: Application | None = _UNSET):
         application = _make_matching_application()
     if application is not None:
         application.provider.firm_code = "0A123B"
+        application.provider.office_id = "0U651L"
     port = MagicMock(spec=ApplicationLookupPort)
     port.get_application_by_laa_reference.return_value = application
     return port
@@ -227,6 +236,37 @@ def test_execute_raises_application_not_found_when_firm_code_does_not_match():
     with pytest.raises(ApplicationNotFoundError):
         use_case.execute(command)
     create_claim_port.create_claim.assert_not_called()
+
+
+def test_execute_raises_provider_office_mismatch_when_office_id_not_in_office_codes():
+    command = _make_command(overrides={"office_codes": frozenset(["00AABB"])})
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    use_case = _make_use_case(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(),
+        get_claims_for_application_port=_make_get_claims_port(),
+    )
+
+    with pytest.raises(ProviderOfficeMismatchError):
+        use_case.execute(command)
+    create_claim_port.create_claim.assert_not_called()
+
+
+def test_execute_creates_claim_when_office_id_is_one_of_multiple_office_codes():
+    command = _make_command(
+        overrides={"office_codes": frozenset(["00AABB", "0U651L", "00CCDD"])}
+    )
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = _make_created_claim()
+    use_case = _make_use_case(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(),
+        get_claims_for_application_port=_make_get_claims_port(),
+    )
+
+    use_case.execute(command)
+
+    create_claim_port.create_claim.assert_called_once()
 
 
 def test_execute_raises_application_not_found_when_application_missing():

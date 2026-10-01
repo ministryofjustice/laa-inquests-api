@@ -46,6 +46,7 @@ class ClaimErrorCode(str, enum.Enum):
         "DISBURSEMENT_NOT_ALLOWED_FOR_NIL_BILL_CLAIM"
     )
     ACTIVE_FINAL_BILL_EXISTS = "ACTIVE_FINAL_BILL_EXISTS"
+    PROVIDER_OFFICE_ID_MISMATCH = "PROVIDER_OFFICE_ID_MISMATCH"
 
 
 class ClaimValidationError(Exception):

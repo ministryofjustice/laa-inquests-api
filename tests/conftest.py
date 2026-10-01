@@ -252,6 +252,7 @@ def client_fixture(session: Session):
                 scopes=scopes,
                 name="Test Name",
                 app_roles=app_roles,
+                office_codes=frozenset(["0U651L"]),
             )
 
         mock_auth.verify_token.side_effect = verify_token

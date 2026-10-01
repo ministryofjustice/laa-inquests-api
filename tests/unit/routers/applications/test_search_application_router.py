@@ -15,11 +15,17 @@ def test_search_application_calls_use_case_with_the_laa_reference():
 
     asyncio.run(
         search_application(
-            "  1  ", merits_decision=None, firm_code="0A123B", use_case=use_case
+            "  1  ",
+            merits_decision=None,
+            firm_code="0A123B",
+            office_codes=frozenset(["0U651L"]),
+            use_case=use_case,
         )
     )
 
-    use_case.execute.assert_called_once_with("  1  ", "0A123B", None)
+    use_case.execute.assert_called_once_with(
+        "  1  ", "0A123B", frozenset(["0U651L"]), None
+    )
 
 
 def test_search_application_calls_use_case_with_merits_decision_when_provided():
@@ -31,11 +37,14 @@ def test_search_application_calls_use_case_with_merits_decision_when_provided():
             "1",
             merits_decision=MeritsDecision.GRANTED,
             firm_code="0A123B",
+            office_codes=frozenset(["0U651L"]),
             use_case=use_case,
         )
     )
 
-    use_case.execute.assert_called_once_with("1", "0A123B", MeritsDecision.GRANTED)
+    use_case.execute.assert_called_once_with(
+        "1", "0A123B", frozenset(["0U651L"]), MeritsDecision.GRANTED
+    )
 
 
 def test_search_application_returns_empty_list_when_use_case_returns_empty():
@@ -44,7 +53,11 @@ def test_search_application_returns_empty_list_when_use_case_returns_empty():
 
     result = asyncio.run(
         search_application(
-            "99999", merits_decision=None, firm_code="0A123B", use_case=use_case
+            "99999",
+            merits_decision=None,
+            firm_code="0A123B",
+            office_codes=frozenset(["0U651L"]),
+            use_case=use_case,
         )
     )
 
@@ -58,7 +71,11 @@ def test_search_application_raises_500_when_provider_details_lookup_fails():
     with pytest.raises(HTTPException) as exception:
         asyncio.run(
             search_application(
-                "1", merits_decision=None, firm_code="0A123B", use_case=use_case
+                "1",
+                merits_decision=None,
+                firm_code="0A123B",
+                office_codes=frozenset(["0U651L"]),
+                use_case=use_case,
             )
         )
 

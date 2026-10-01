@@ -19,6 +19,9 @@ MAX_POA_CLAIMS_EXCEEDED_MESSAGE = "Maximum number of POA claims exceeded"
 APPLICATION_NOT_GRANTED_MESSAGE = (
     "Claims may only be submitted for applications that have been granted"
 )
+PROVIDER_OFFICE_ID_MISMATCH_MESSAGE = (
+    "Claims may only be submitted by an office associated with the application"
+)
 MISSING_INQUEST_OUTCOMES_MESSAGE = (
     "At least one inquest outcome is required for final bill and nil bill claims"
 )

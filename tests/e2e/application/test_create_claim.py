@@ -1531,6 +1531,30 @@ class TestCreateClaimValidation:
         assert response.status_code == 422
         mock_gov_notify.send_claim_submit_confirmation_email.assert_not_called()
 
+    def test_403_create_claim_when_provider_has_office_id_not_matching_application(
+        self, session, client
+    ):
+        other_application = create_application_in_db(
+            session,
+            provider_overrides={
+                "firm_code": "0A123B",
+                "office_id": "00AABB",
+                "email_address": "other@example.com",
+            },
+        )
+
+        response = client.post(
+            f"/applications/{other_application.laa_reference}/claim",
+            json=_make_request_body(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
+            },
+        )
+
+        assert response.status_code == 403
+        assert response.json()["detail"]["errorCode"] == "PROVIDER_OFFICE_ID_MISMATCH"
+
 
 class TestCreateClaimAutoDecisionRules:
     def test_201_create_claim_when_existing_claims_push_application_total_over_limit(
