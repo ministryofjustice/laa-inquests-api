@@ -284,7 +284,7 @@ class TestSearchApplications:
         adapter = ApplicationRepositoryAdapter(session)
 
         result = adapter.search_applications(
-            str(test_app_reference), "ZZ999Z", frozenset(["00AABB"])
+            str(test_app_reference), "0A123B", frozenset(["00AABB"])
         )
 
         assert result == []
@@ -296,7 +296,7 @@ class TestSearchApplications:
         adapter = ApplicationRepositoryAdapter(session)
 
         result = adapter.search_applications(
-            str(test_app_reference), "ZZ999Z", frozenset(["00AABB", "00CCDD"])
+            str(test_app_reference), "0A123B", frozenset(["00AABB", "00CCDD"])
         )
 
         assert result == []
