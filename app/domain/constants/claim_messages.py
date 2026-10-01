@@ -71,6 +71,9 @@ PIF_PROFIT_COST_MIXED_VAT_MESSAGE = (
 )
 PIF_MISSING_GROSS_TOTAL_MESSAGE = "Enter the gross total for profit costs including VAT"
 PIF_MISSING_NET_TOTAL_MESSAGE = "Enter the net total for profit costs excluding VAT"
+PIF_PROFIT_COST_NOT_ALLOWED_FOR_NIL_BILL_MESSAGE = (
+    "Profit cost amounts are not allowed for a nil bill claim"
+)
 
 # Pay-in-full disbursement validation messages
 DISB_MISSING_TOTAL_MESSAGE = "Enter the total of the claim to continue"
@@ -80,4 +83,7 @@ DISB_MISSING_NET_TOTAL_MESSAGE = (
 )
 DISB_GROSS_NOT_GREATER_THAN_TOTAL_MESSAGE = (
     "The gross total must be greater than the 0% VAT and net total combined"
+)
+DISB_NOT_ALLOWED_FOR_NIL_BILL_MESSAGE = (
+    "Disbursement amounts are not allowed for a nil bill claim"
 )

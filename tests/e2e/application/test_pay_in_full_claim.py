@@ -907,3 +907,54 @@ def test_204_pay_in_full_final_bill_nil_bill_creates_zero_fees_line_then_recoupm
     assert recoup_zero.invoice_number == f"{poa_claim.claim_reference}_002-R"
     assert recoup_zero.invoice_amount == Decimal("-200.00")
     assert recoup_zero.invoice_type == InvoiceTypeCode.RECOUPED
+
+
+_NO_AMOUNTS_PAYLOAD = {
+    "profitCostNet": None,
+    "profitCostGross": None,
+    "profitCostVatZero": None,
+    "disbursementNet": None,
+    "disbursementGross": None,
+    "disbursementVatZero": None,
+}
+
+
+def test_204_pay_in_full_nil_bill_claim_type_with_no_amounts_creates_single_zero_fees_line(
+    session, client
+):
+    application = session.exec(select(Application)).first()
+    claim = _seed_claim(
+        session, application.laa_reference, claim_type=ClaimType.NIL_BILL
+    )
+
+    response = client.patch(
+        f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
+        json=_pay_in_full_payload(_NO_AMOUNTS_PAYLOAD),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
+        },
+    )
+
+    assert response.status_code == 204
+
+    lines = _extract_lines_for(session, claim.claim_id)
+    assert len(lines) == 1
+    (fees,) = lines
+    assert fees.sequence_number == 1
+    assert fees.invoice_number == f"{claim.claim_reference}_001"
+    assert fees.invoice_amount == Decimal("0.00")
+    assert fees.invoice_type == InvoiceTypeCode.FINAL_BILL_FEES
+    assert fees.tax_code == TaxCode.ZERO_VAT
+    assert fees.invoice_date == claim.submission_date.date()
+
+
+def test_422_pay_in_full_final_bill_claim_type_still_requires_totals_when_no_amounts_supplied(
+    session, client
+):
+    """Regression: the relaxed validation only applies to Nil bill claims."""
+    response = _post_pay_in_full(session, client, _NO_AMOUNTS_PAYLOAD)
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["errorCode"] == "MISSING_TOTAL_CLAIM_COST"
