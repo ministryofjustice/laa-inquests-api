@@ -277,12 +277,26 @@ class TestSearchApplications:
 
         assert result == []
 
-    def test_returns_empty_list_when_office_id_does_not_match(self, session):
+    def test_returns_empty_list_when_office_id_does_not_match_office_code(
+        self, session
+    ):
         test_app_reference = session.exec(select(Application)).first().laa_reference
         adapter = ApplicationRepositoryAdapter(session)
 
         result = adapter.search_applications(
             str(test_app_reference), "ZZ999Z", frozenset(["00AABB"])
+        )
+
+        assert result == []
+
+    def test_returns_empty_list_when_office_id_does_not_match_multiple_office_codes(
+        self, session
+    ):
+        test_app_reference = session.exec(select(Application)).first().laa_reference
+        adapter = ApplicationRepositoryAdapter(session)
+
+        result = adapter.search_applications(
+            str(test_app_reference), "ZZ999Z", frozenset(["00AABB", "00CCDD"])
         )
 
         assert result == []
