@@ -10,19 +10,23 @@ from app.domain.constants.claim_messages import (
     DISB_MISSING_NET_TOTAL_MESSAGE,
     DISB_MISSING_TOTAL_MESSAGE,
     DISB_NOT_ALLOWED_FOR_NIL_BILL_MESSAGE,
+    DISB_NOT_ALLOWED_FOR_POA_MESSAGE,
     NET_GT_GROSS_MESSAGE,
     PIF_MISSING_GROSS_TOTAL_MESSAGE,
     PIF_MISSING_NET_TOTAL_MESSAGE,
     PIF_MISSING_TOTAL_CLAIM_COST_MESSAGE,
     PIF_PROFIT_COST_MIXED_VAT_MESSAGE,
     PIF_PROFIT_COST_NOT_ALLOWED_FOR_NIL_BILL_MESSAGE,
+    PIF_PROFIT_COST_NOT_ALLOWED_FOR_POA_MESSAGE,
 )
-from app.models.claim.enums import ClaimType
+from app.models.claim.enums import ClaimType, POAType
+from app.models.claim.index import Claim
 
 
 @dataclass(frozen=True, kw_only=True)
 class PayInFullClaim:
     claim_type_id: ClaimType
+    poa_type_id: POAType | None = None
     profit_cost_net: Decimal | None = None
     profit_cost_gross: Decimal | None = None
     profit_cost_vat_zero: Decimal | None = None
@@ -46,6 +50,19 @@ class PayInFullClaim:
         )
         return all(amount is None or amount == 0 for amount in amounts)
 
+    def _profit_cost_not_applicable(self) -> bool:
+        return (
+            self.claim_type_id == ClaimType.PAYMENT_ON_ACCOUNT
+            and self.poa_type_id is not None
+            and self.poa_type_id != POAType.PROFIT_COST
+        )
+
+    def _disbursement_not_applicable(self) -> bool:
+        return (
+            self.claim_type_id == ClaimType.PAYMENT_ON_ACCOUNT
+            and self.poa_type_id == POAType.PROFIT_COST
+        )
+
     def _validate_profit_cost(self) -> None:
         has_net = self.profit_cost_net is not None
         has_gross = self.profit_cost_gross is not None
@@ -56,6 +73,14 @@ class PayInFullClaim:
                 raise ClaimValidationError(
                     ClaimErrorCode.PROFIT_COST_NOT_ALLOWED_FOR_NIL_BILL_CLAIM,
                     PIF_PROFIT_COST_NOT_ALLOWED_FOR_NIL_BILL_MESSAGE,
+                )
+            return
+
+        if self._profit_cost_not_applicable():
+            if has_net or has_gross or has_vat_zero:
+                raise ClaimValidationError(
+                    ClaimErrorCode.PROFIT_COST_NOT_ALLOWED_FOR_POA_CLAIM,
+                    PIF_PROFIT_COST_NOT_ALLOWED_FOR_POA_MESSAGE,
                 )
             return
 
@@ -106,6 +131,14 @@ class PayInFullClaim:
                 )
             return
 
+        if self._disbursement_not_applicable():
+            if has_net or has_gross or has_vat_zero:
+                raise ClaimValidationError(
+                    ClaimErrorCode.DISBURSEMENT_NOT_ALLOWED_FOR_POA_CLAIM,
+                    DISB_NOT_ALLOWED_FOR_POA_MESSAGE,
+                )
+            return
+
         if not has_net and not has_gross and not has_vat_zero:
             raise ClaimValidationError(
                 ClaimErrorCode.MISSING_DISBURSEMENT_TOTAL,
@@ -137,3 +170,26 @@ class PayInFullClaim:
                     ClaimErrorCode.DISBURSEMENT_GROSS_NOT_GREATER_THAN_TOTAL,
                     DISB_GROSS_NOT_GREATER_THAN_TOTAL_MESSAGE,
                 )
+
+
+def pay_in_full_claim_from_submitted_poa_claim(claim: Claim) -> PayInFullClaim:
+    """Reconstruct the decision amounts a provider originally submitted for
+    a Payment on account claim, so a manual 'Pay in full' decision -- or
+    auto-approval -- can reuse them without the amounts being re-entered."""
+    is_profit_cost = claim.poa_type_id == POAType.PROFIT_COST
+    return PayInFullClaim(
+        claim_type_id=claim.claim_type_id,
+        poa_type_id=claim.poa_type_id,
+        profit_cost_net=claim.total_profit_cost_net if is_profit_cost else None,
+        profit_cost_gross=claim.total_profit_cost_gross if is_profit_cost else None,
+        profit_cost_vat_zero=claim.total_profit_cost_vat_zero
+        if is_profit_cost
+        else None,
+        disbursement_net=claim.total_profit_cost_net if not is_profit_cost else None,
+        disbursement_gross=claim.total_profit_cost_gross
+        if not is_profit_cost
+        else None,
+        disbursement_vat_zero=claim.total_profit_cost_vat_zero
+        if not is_profit_cost
+        else None,
+    )

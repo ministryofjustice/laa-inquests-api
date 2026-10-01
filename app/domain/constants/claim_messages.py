@@ -74,6 +74,9 @@ PIF_MISSING_NET_TOTAL_MESSAGE = "Enter the net total for profit costs excluding 
 PIF_PROFIT_COST_NOT_ALLOWED_FOR_NIL_BILL_MESSAGE = (
     "Profit cost amounts are not allowed for a nil bill claim"
 )
+PIF_PROFIT_COST_NOT_ALLOWED_FOR_POA_MESSAGE = (
+    "Profit cost amounts are not allowed for this payment on account claim type"
+)
 
 # Pay-in-full disbursement validation messages
 DISB_MISSING_TOTAL_MESSAGE = "Enter the total of the claim to continue"
@@ -86,4 +89,7 @@ DISB_GROSS_NOT_GREATER_THAN_TOTAL_MESSAGE = (
 )
 DISB_NOT_ALLOWED_FOR_NIL_BILL_MESSAGE = (
     "Disbursement amounts are not allowed for a nil bill claim"
+)
+DISB_NOT_ALLOWED_FOR_POA_MESSAGE = (
+    "Disbursement amounts are not allowed for this payment on account claim type"
 )

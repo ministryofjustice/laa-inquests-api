@@ -18,11 +18,8 @@ from app.domain.constants.claim_messages import (
     APPLICATION_NOT_GRANTED_MESSAGE,
     CLAIM_EVIDENCE_NOT_ALLOWED_MESSAGE,
 )
-from app.domain.payment_extract import (
-    PaymentExtractLine,
-    build_poa_disbursement_extract,
-    build_poa_profit_cost_extract,
-)
+from app.domain.pay_in_full import pay_in_full_claim_from_submitted_poa_claim
+from app.domain.payment_extract import poa_claim_payment_extract_lines
 from app.logging_utils import build_log_extra
 from app.models.claim.enums import (
     ClaimDecisionStatus,
@@ -55,41 +52,6 @@ from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.exceptions import ApplicationNotFoundError, InvalidClaimError
 
 logger = logging.getLogger(__name__)
-
-
-def _claim_decision_amount_fields(claim: Claim) -> dict[str, Decimal | None]:
-    if claim.poa_type_id == POAType.PROFIT_COST:
-        return {
-            "profit_cost_net": claim.total_profit_cost_net,
-            "profit_cost_gross": claim.total_profit_cost_gross,
-            "profit_cost_vat_zero": claim.total_profit_cost_vat_zero,
-        }
-    return {
-        "disbursement_net": claim.total_profit_cost_net,
-        "disbursement_gross": claim.total_profit_cost_gross,
-        "disbursement_vat_zero": claim.total_profit_cost_vat_zero,
-    }
-
-
-def _build_payment_extract_lines(claim: Claim) -> list[PaymentExtractLine]:
-    if claim.poa_type_id == POAType.PROFIT_COST:
-        return [
-            build_poa_profit_cost_extract(
-                claim_reference=claim.claim_reference,
-                sequence=1,
-                submission_date=claim.submission_date,
-                net=claim.total_profit_cost_net,
-                vat_zero_amount=claim.total_profit_cost_vat_zero,
-            )
-        ]
-    if claim.poa_type_id in (POAType.EXPERT_COST, POAType.NON_EXPERT_DISBURSEMENT):
-        return build_poa_disbursement_extract(
-            claim_reference=claim.claim_reference,
-            submission_date=claim.submission_date,
-            gross=claim.total_profit_cost_gross,
-            vat_zero_amount=claim.total_profit_cost_vat_zero,
-        )
-    return []
 
 
 @dataclass(frozen=True)
@@ -411,14 +373,22 @@ class CreateClaimUseCase:
                             decision_status=ClaimDecisionStatus.PAY_IN_FULL,
                         )
                     )
+                    decision_amounts = pay_in_full_claim_from_submitted_poa_claim(claim)
                     self.create_claim_decision_amount_port.create_claim_decision_amount(
                         claim_decision_id=claim_decision.claim_decision_id,
-                        **_claim_decision_amount_fields(claim),
+                        profit_cost_net=decision_amounts.profit_cost_net,
+                        profit_cost_gross=decision_amounts.profit_cost_gross,
+                        profit_cost_vat_zero=decision_amounts.profit_cost_vat_zero,
+                        disbursement_net=decision_amounts.disbursement_net,
+                        disbursement_gross=decision_amounts.disbursement_gross,
+                        disbursement_vat_zero=decision_amounts.disbursement_vat_zero,
                     )
                     if self.create_payment_extract_port is not None:
                         self.create_payment_extract_port.create_payment_extract(
                             claim_id=claim.claim_id,
-                            lines=_build_payment_extract_lines(claim),
+                            lines=poa_claim_payment_extract_lines(
+                                claim, decision_amounts
+                            ),
                         )
                     self.update_claim_status_port.update_claim_status(
                         claim_id=claim.claim_id,

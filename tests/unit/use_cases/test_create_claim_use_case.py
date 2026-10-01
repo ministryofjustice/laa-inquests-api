@@ -6,7 +6,11 @@ from unittest.mock import MagicMock, call
 import pytest
 
 from app.domain.claim_error import ClaimErrorCode
-from app.domain.payment_extract import PaymentExtractLine
+from app.domain.pay_in_full import pay_in_full_claim_from_submitted_poa_claim
+from app.domain.payment_extract import (
+    PaymentExtractLine,
+    poa_claim_payment_extract_lines,
+)
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 from app.models.claim.enums import (
@@ -41,7 +45,6 @@ from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.create_claim import (
     CreateClaimCommand,
     CreateClaimUseCase,
-    _build_payment_extract_lines,
 )
 from app.use_cases.exceptions import ApplicationNotFoundError, InvalidClaimError
 
@@ -1179,7 +1182,9 @@ def test_execute_auto_reject_does_not_persist_when_auto_reject_create_history_ev
 def test_build_payment_extract_maps_vat_profit_cost_claim():
     claim = _claim_with_poa(POAType.PROFIT_COST, Decimal("1000.00"), Decimal("1200.00"))
 
-    lines = _build_payment_extract_lines(claim)
+    lines = poa_claim_payment_extract_lines(
+        claim, pay_in_full_claim_from_submitted_poa_claim(claim)
+    )
 
     assert lines == [
         PaymentExtractLine(
@@ -1198,7 +1203,9 @@ def test_build_payment_extract_maps_zero_vat_profit_cost_claim():
         POAType.PROFIT_COST, None, None, vat_zero=Decimal("1000.00")
     )
 
-    lines = _build_payment_extract_lines(claim)
+    lines = poa_claim_payment_extract_lines(
+        claim, pay_in_full_claim_from_submitted_poa_claim(claim)
+    )
 
     assert lines == [
         PaymentExtractLine(
@@ -1220,7 +1227,9 @@ def test_build_payment_extract_maps_disbursement_claim_to_two_lines():
         vat_zero=Decimal("200.00"),
     )
 
-    lines = _build_payment_extract_lines(claim)
+    lines = poa_claim_payment_extract_lines(
+        claim, pay_in_full_claim_from_submitted_poa_claim(claim)
+    )
 
     assert lines == [
         PaymentExtractLine(
@@ -1285,6 +1294,9 @@ def test_execute_auto_approves_eligible_payment_on_account_claim():
         profit_cost_net=claim.total_profit_cost_net,
         profit_cost_gross=claim.total_profit_cost_gross,
         profit_cost_vat_zero=claim.total_profit_cost_vat_zero,
+        disbursement_net=None,
+        disbursement_gross=None,
+        disbursement_vat_zero=None,
     )
     create_payment_extract_port.create_payment_extract.assert_called_once_with(
         claim_id=1,
@@ -1335,6 +1347,9 @@ def test_execute_auto_approval_persists_profit_cost_amounts_for_profit_cost_poa(
         profit_cost_net=Decimal("40000.00"),
         profit_cost_gross=Decimal("40000.00"),
         profit_cost_vat_zero=None,
+        disbursement_net=None,
+        disbursement_gross=None,
+        disbursement_vat_zero=None,
     )
     extract_port.create_payment_extract.assert_called_once_with(
         claim_id=1,
@@ -1374,6 +1389,9 @@ def test_execute_auto_approval_persists_zero_vat_payment_extract_for_profit_cost
         profit_cost_net=None,
         profit_cost_gross=None,
         profit_cost_vat_zero=Decimal("1000.00"),
+        disbursement_net=None,
+        disbursement_gross=None,
+        disbursement_vat_zero=None,
     )
     extract_port.create_payment_extract.assert_called_once_with(
         claim_id=1,
@@ -1409,6 +1427,9 @@ def test_execute_auto_approval_persists_disbursement_amounts_for_expert_cost_poa
     assert result.claim.status_id == ClaimStatus.PAY_IN_FULL
     amount_port.create_claim_decision_amount.assert_called_once_with(
         claim_decision_id=10,
+        profit_cost_net=None,
+        profit_cost_gross=None,
+        profit_cost_vat_zero=None,
         disbursement_net=Decimal("40000.00"),
         disbursement_gross=Decimal("40000.00"),
         disbursement_vat_zero=None,
@@ -1447,6 +1468,9 @@ def test_execute_auto_approval_persists_disbursement_amounts_for_non_expert_poa(
     assert result.claim.status_id == ClaimStatus.PAY_IN_FULL
     amount_port.create_claim_decision_amount.assert_called_once_with(
         claim_decision_id=10,
+        profit_cost_net=None,
+        profit_cost_gross=None,
+        profit_cost_vat_zero=None,
         disbursement_net=Decimal("40000.00"),
         disbursement_gross=Decimal("40000.00"),
         disbursement_vat_zero=None,
