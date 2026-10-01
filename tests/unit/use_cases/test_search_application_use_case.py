@@ -10,8 +10,6 @@ from app.use_cases.exceptions import ProviderDetailsRetrievalError
 from app.use_cases.search_application import SearchApplicationUseCase
 from tests.unit.factories import create_base_application, create_base_provider
 
-# TODO: Add required tests for office codes
-
 
 def _make_use_case(
     application: Application | None = None,

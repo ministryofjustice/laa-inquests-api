@@ -8,8 +8,6 @@ from app.models.application.enums import MeritsDecision
 from app.routers.applications import search_application
 from app.use_cases.exceptions import ProviderDetailsRetrievalError
 
-# TODO: Add required tests for office codes
-
 
 def test_search_application_calls_use_case_with_the_laa_reference():
     use_case = MagicMock()

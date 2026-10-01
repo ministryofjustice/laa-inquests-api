@@ -657,20 +657,6 @@ class TestCreateClaimFundsAndPersistence:
         assert stored_evidence.claim_id == claim_id
 
 
-def _seed_application_for_other_office_in_same_firm(
-    session, office_id: str = "00AABB"
-) -> str:
-    other_application = create_application_in_db(
-        session,
-        provider_overrides={
-            "firm_code": "0A123B",
-            "office_id": office_id,
-            "email_address": "other@example.com",
-        },
-    )
-    return other_application.laa_reference
-
-
 class TestCreateClaimValidation:
     def test_422_create_claim_with_empty_evidence_ids_returns_error(
         self, session, client

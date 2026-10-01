@@ -118,9 +118,7 @@ def test_verify_token_returns_none_firm_code_when_claim_absent(adapter):
         ("", frozenset()),
     ],
 )
-def test_verify_token_parses_laa_app_roles_and_office_codes_claim(
-    adapter, claim_value, expected
-):
+def test_verify_token_parses_laa_app_roles_claim(adapter, claim_value, expected):
     mock_signing_key = MagicMock()
     adapter._jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
 
@@ -130,13 +128,12 @@ def test_verify_token_parses_laa_app_roles_and_office_codes_claim(
             "sub": "user",
             "scp": "User.Provider",
             "LAA_APP_ROLES": claim_value,
-            "ACCOUNTS": ["0U651L"],
+            "ACCOUNTS": "0U651L",
         },
     ):
         user = adapter.verify_token("valid.jwt.token")
 
     assert user.app_roles == expected
-    assert user.office_codes == frozenset(["0U651L"])
 
 
 def test_verify_token_raises_403_when_required_scope_missing(adapter):
