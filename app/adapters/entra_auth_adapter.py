@@ -89,7 +89,12 @@ class EntraAuthAdapter:
             token_scopes = frozenset((payload.get("scp") or "").split())
             token_roles = frozenset(payload.get("roles") or [])
             app_roles = self._parse_app_roles(payload.get("LAA_APP_ROLES"))
-            office_codes = frozenset(payload.get("ACCOUNTS") or frozenset())
+            accounts = payload.get("ACCOUNTS")
+            office_codes = (
+                frozenset(accounts)
+                if isinstance(accounts, list)
+                else frozenset([accounts])
+            )
             logger.debug(
                 "Entra token validated",
                 extra=build_log_extra(
