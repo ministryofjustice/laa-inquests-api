@@ -1548,10 +1548,17 @@ class TestCreateClaimValidation:
     def test_403_create_claim_when_provider_has_office_id_not_matching_application(
         self, session, client
     ):
-        other_firm_reference = _seed_application_for_other_office_in_same_firm(session)
+        other_application = create_application_in_db(
+            session,
+            provider_overrides={
+                "firm_code": "0A123B",
+                "office_id": "00AABB",
+                "email_address": "other@example.com",
+            },
+        )
 
         response = client.post(
-            f"/applications/{other_firm_reference}/claim",
+            f"/applications/{other_application.laa_reference}/claim",
             json=_make_request_body(),
             headers={
                 "Content-Type": "application/json",

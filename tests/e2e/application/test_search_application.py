@@ -18,20 +18,6 @@ def _seed_application_for_other_firm(session, firm_code: str = "ZZ999Z") -> str:
     return other_application.laa_reference
 
 
-def _seed_application_for_other_office_in_same_firm(
-    session, office_id: str = "00AABB"
-) -> str:
-    other_application = create_application_in_db(
-        session,
-        provider_overrides={
-            "firm_code": "0A123B",
-            "office_id": office_id,
-            "email_address": "other@example.com",
-        },
-    )
-    return other_application.laa_reference
-
-
 def test_200_search_application_by_reference_returns_expected_fields(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
     response = client.get(
@@ -169,11 +155,18 @@ def test_200_search_application_excludes_application_belonging_to_another_firm(
 def test_200_search_application_excludes_application_belonging_to_another_office_in_the_same_firm(
     session, client
 ):
-    other_firm_reference = _seed_application_for_other_office_in_same_firm(session)
+    other_application = create_application_in_db(
+        session,
+        provider_overrides={
+            "firm_code": "0A123B",
+            "office_id": "00AABB",
+            "email_address": "other@example.com",
+        },
+    )
 
     response = client.get(
         "/applications/search",
-        params={"laa_reference": str(other_firm_reference)},
+        params={"laa_reference": str(other_application.laa_reference)},
         headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
     )
 
