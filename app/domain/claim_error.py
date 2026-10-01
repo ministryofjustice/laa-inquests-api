@@ -40,6 +40,7 @@ class ClaimErrorCode(str, enum.Enum):
         "DISBURSEMENT_GROSS_NOT_GREATER_THAN_TOTAL"
     )
     ACTIVE_FINAL_BILL_EXISTS = "ACTIVE_FINAL_BILL_EXISTS"
+    PROVIDER_OFFICE_ID_MISMATCH = "PROVIDER_OFFICE_ID_MISMATCH"
 
 
 class ClaimValidationError(Exception):

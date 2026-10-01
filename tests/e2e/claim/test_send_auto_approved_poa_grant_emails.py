@@ -23,6 +23,7 @@ from tests.e2e.factories import create_application_in_db
 FIRM_NAME = "Test Firm Name"
 BATCH_RUN_TIME = datetime(2026, 9, 7, 9, 0, tzinfo=UTC)
 FIRM_CODE = "0A123B"
+OFFICE_ID = "0U651L"
 
 
 def _make_request_body(overrides=None):
@@ -139,7 +140,7 @@ def test_multiple_auto_approved_poa_claims_are_emailed_in_a_single_batch_run(
         session,
         provider_overrides={
             "firm_code": FIRM_CODE,
-            "office_id": "0U777L",
+            "office_id": OFFICE_ID,
             "email_address": "second@example.com",
         },
         proceeding_overrides={"merits_decision": MeritsDecision.GRANTED},

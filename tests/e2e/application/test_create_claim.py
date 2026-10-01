@@ -657,6 +657,20 @@ class TestCreateClaimFundsAndPersistence:
         assert stored_evidence.claim_id == claim_id
 
 
+def _seed_application_for_other_office_in_same_firm(
+    session, office_id: str = "00AABB"
+) -> str:
+    other_application = create_application_in_db(
+        session,
+        provider_overrides={
+            "firm_code": "0A123B",
+            "office_id": office_id,
+            "email_address": "other@example.com",
+        },
+    )
+    return other_application.laa_reference
+
+
 class TestCreateClaimValidation:
     def test_422_create_claim_with_empty_evidence_ids_returns_error(
         self, session, client
@@ -1530,6 +1544,23 @@ class TestCreateClaimValidation:
 
         assert response.status_code == 422
         mock_gov_notify.send_claim_submit_confirmation_email.assert_not_called()
+
+    def test_403_create_claim_when_provider_has_office_id_not_matching_application(
+        self, session, client
+    ):
+        other_firm_reference = _seed_application_for_other_office_in_same_firm(session)
+
+        response = client.post(
+            f"/applications/{other_firm_reference}/claim",
+            json=_make_request_body(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
+            },
+        )
+
+        assert response.status_code == 403
+        assert response.json()["detail"]["errorCode"] == "PROVIDER_OFFICE_ID_MISMATCH"
 
 
 class TestCreateClaimAutoDecisionRules:

@@ -25,6 +25,8 @@ from app.adapters.provider_details_adapter import ProviderDetailsAdapter
 from app.auth.rbac import Permission, require_permission_from
 from app.config import Config
 from app.db import get_session
+from app.domain.claim_error import ClaimErrorCode
+from app.domain.constants.claim_messages import PROVIDER_OFFICE_ID_MISMATCH_MESSAGE
 from app.logging_utils import build_log_extra
 from app.models.application.certificate import ApplicationCertificateResponse
 from app.models.application.enums import MeritsDecision
@@ -106,6 +108,7 @@ from app.use_cases.exceptions import (
     InvalidClaimError,
     InvalidCoronersLetterDocumentIdError,
     ProviderDetailsRetrievalError,
+    ProviderOfficeMismatchError,
 )
 from app.use_cases.get_application import GetApplicationUseCase
 from app.use_cases.get_application_history import GetApplicationHistoryUseCase
@@ -581,6 +584,7 @@ def create_claim(
     laa_reference: str,
     request: ClaimCreate,
     firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
+    office_codes: Annotated[frozenset[str], Depends(get_current_provider_office_codes)],
     use_case: CreateClaimUseCase = Depends(get_create_claim_use_case),
 ) -> ClaimResponse:
     """Creates a new claim against an application."""
@@ -588,6 +592,7 @@ def create_claim(
         command = CreateClaimCommand(
             laa_reference=laa_reference,
             firm_code=firm_code,
+            office_codes=office_codes,
             claim_type=request.claim_type,
             poa_type=request.poa_type_id,
             net=request.total_profit_cost_net,
@@ -633,6 +638,14 @@ def create_claim(
         return JSONResponse(content=jsonable_encoder(payload), status_code=201)
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
+    except ProviderOfficeMismatchError:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "errorCode": ClaimErrorCode.PROVIDER_OFFICE_ID_MISMATCH,
+                "message": PROVIDER_OFFICE_ID_MISMATCH_MESSAGE,
+            },
+        )
     except InvalidClaimError as e:
         raise HTTPException(
             status_code=422, detail={"errorCode": e.code, "message": e.message}

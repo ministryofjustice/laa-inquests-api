@@ -52,7 +52,11 @@ from app.ports.claim.update_claim_status_port import (
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.provider_details_port import ProviderDetailsPort
-from app.use_cases.exceptions import ApplicationNotFoundError, InvalidClaimError
+from app.use_cases.exceptions import (
+    ApplicationNotFoundError,
+    InvalidClaimError,
+    ProviderOfficeMismatchError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +100,7 @@ def _build_payment_extract_lines(claim: Claim) -> list[PaymentExtractLine]:
 class CreateClaimCommand:
     laa_reference: str
     firm_code: str
+    office_codes: frozenset[str]
     claim_type: ClaimType
     poa_type: POAType | None
     net: Decimal | None
@@ -170,6 +175,18 @@ class CreateClaimUseCase:
         )
         if application is None or application.provider.firm_code != command.firm_code:
             raise ApplicationNotFoundError(command.laa_reference)
+
+        if application.provider.office_id not in command.office_codes:
+            logger.warning(
+                "Claim creation blocked by provider office mismatch",
+                extra=build_log_extra(
+                    event="claim_created_failed_office_mismatch",
+                    laa_reference=command.laa_reference,
+                    firm_code=command.firm_code,
+                    status_code=403,
+                ),
+            )
+            raise ProviderOfficeMismatchError(command.laa_reference)
 
         domain_application = ApplicationDomain(
             overall_decision=application.overall_decision
