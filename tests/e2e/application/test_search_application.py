@@ -6,12 +6,26 @@ from app.models.application.index import Application
 from tests.e2e.factories import create_application_in_db
 
 
-def _seed_application_for_other_firm(session, firm_code: str = "ZZ999Z") -> int:
+def _seed_application_for_other_firm(session, firm_code: str = "ZZ999Z") -> str:
     other_application = create_application_in_db(
         session,
         provider_overrides={
             "firm_code": firm_code,
             "office_id": "002",
+            "email_address": "other@example.com",
+        },
+    )
+    return other_application.laa_reference
+
+
+def _seed_application_for_other_office_in_same_firm(
+    session, office_id: str = "00AABB"
+) -> str:
+    other_application = create_application_in_db(
+        session,
+        provider_overrides={
+            "firm_code": "0A123B",
+            "office_id": office_id,
             "email_address": "other@example.com",
         },
     )
@@ -141,6 +155,21 @@ def test_200_search_application_excludes_application_belonging_to_another_firm(
     session, client
 ):
     other_firm_reference = _seed_application_for_other_firm(session)
+
+    response = client.get(
+        "/applications/search",
+        params={"laa_reference": str(other_firm_reference)},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_200_search_application_excludes_application_belonging_to_another_office_in_the_same_firm(
+    session, client
+):
+    other_firm_reference = _seed_application_for_other_office_in_same_firm(session)
 
     response = client.get(
         "/applications/search",
