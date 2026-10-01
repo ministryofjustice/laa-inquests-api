@@ -141,7 +141,7 @@ class TestGetPaymentExtractReport:
             "VENDOR NAME": f"Firm {application.provider.firm_code}",
             "VENDOR SITE CODE": application.provider.office_id,
             "CASE REFERENCE": application.laa_reference,
-            "CLIENT NAME": "",
+            "CLIENT NAME": f"{application.client.client_first_name} {application.client.client_last_name}",
             "TAX CODE": "GB VAT 20%",
             "MODEL NUMBER": "Profit costs",
             "PROVIDER CASE REF NO": "",
