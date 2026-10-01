@@ -173,7 +173,9 @@ class GeneratePaymentExtractReportUseCase:
             firm_name,
             line.office_id,
             line.laa_reference,
-            "",
+            " ".join(
+                name for name in (line.client_first_name, line.client_last_name) if name
+            ),
             line.tax_code.value,
             classification.model_number,
             "",

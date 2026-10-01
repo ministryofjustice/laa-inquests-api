@@ -21,7 +21,7 @@ from app.domain.payment_extract_report import (
 )
 from app.domain.reference_rules import ReferenceRules
 from app.logging_utils import build_log_extra
-from app.models.application.index import Application, Provider
+from app.models.application.index import Application, Client, Provider
 from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
@@ -324,6 +324,8 @@ class ClaimRepositoryAdapter(
                 Provider.firm_code,
                 Provider.office_id,
                 Application.laa_reference,
+                Client.client_first_name,
+                Client.client_last_name,
                 created_from=created_from,
                 created_before=created_before,
             )
@@ -345,6 +347,8 @@ class ClaimRepositoryAdapter(
             firm_code,
             office_id,
             laa_reference,
+            client_first_name,
+            client_last_name,
         ) in self.session.exec(statement):
             yield PaymentExtractReportSourceLine(
                 invoice_number=invoice_number,
@@ -359,6 +363,8 @@ class ClaimRepositoryAdapter(
                 firm_code=firm_code,
                 office_id=office_id,
                 laa_reference=laa_reference,
+                client_first_name=client_first_name,
+                client_last_name=client_last_name,
             )
 
     def _payment_extract_report_statement(
@@ -370,6 +376,7 @@ class ClaimRepositoryAdapter(
             .join(Claim, ClaimPaymentExtract.claim_id == Claim.claim_id)
             .join(Application, Claim.application_id == Application.application_id)
             .join(Provider, Application.provider_id == Provider.provider_id)
+            .outerjoin(Client, Application.client_id == Client.client_id)
             .outerjoin(
                 _OriginalExtract,
                 and_(

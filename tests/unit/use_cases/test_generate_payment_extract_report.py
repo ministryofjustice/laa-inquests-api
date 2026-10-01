@@ -32,6 +32,8 @@ def _line(
     firm_code: str = "ABC123",
     line_type: PaymentLineType = FINAL_BILL_FEES,
     office_id: str = OFFICE_ID,
+    client_first_name: str | None = "FirstName",
+    client_last_name: str | None = "LastName",
 ) -> PaymentExtractReportSourceLine:
     return PaymentExtractReportSourceLine(
         invoice_number=invoice_number,
@@ -42,6 +44,8 @@ def _line(
         firm_code=firm_code,
         office_id=office_id,
         laa_reference="INQ-123-456",
+        client_first_name=client_first_name,
+        client_last_name=client_last_name,
     )
 
 
@@ -99,7 +103,7 @@ class TestGeneratePaymentExtractReportUseCase:
                 "VENDOR NAME": "Test Firm",
                 "VENDOR SITE CODE": OFFICE_ID,
                 "CASE REFERENCE": "INQ-123-456",
-                "CLIENT NAME": "",
+                "CLIENT NAME": "FirstName LastName",
                 "TAX CODE": "GB VAT 20%",
                 "MODEL NUMBER": "Profit costs",
                 "PROVIDER CASE REF NO": "",

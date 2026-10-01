@@ -39,6 +39,8 @@ class PaymentExtractReportSourceLine:
     firm_code: str
     office_id: str
     laa_reference: str
+    client_first_name: str | None
+    client_last_name: str | None
 
 
 def classify_payment_line(line_type: PaymentLineType) -> PaymentLineClassification:
