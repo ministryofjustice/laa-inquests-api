@@ -806,9 +806,7 @@ def test_poa_profit_cost_claim_with_empty_command_creates_extract_line_at_paymen
     )
 
     create_payment_extract_port.create_payment_extract.assert_called_once()
-    lines = create_payment_extract_port.create_payment_extract.call_args.kwargs[
-        "lines"
-    ]
+    lines = create_payment_extract_port.create_payment_extract.call_args.kwargs["lines"]
     assert len(lines) == 1
     (line,) = lines
     assert line.invoice_type == InvoiceTypeCode.POA
@@ -835,9 +833,7 @@ def test_poa_disbursement_claim_with_empty_command_creates_disbursement_extract_
         PayInFullClaimCommand(laa_reference="1", claim_reference="INQC-0000-0005")
     )
 
-    lines = create_payment_extract_port.create_payment_extract.call_args.kwargs[
-        "lines"
-    ]
+    lines = create_payment_extract_port.create_payment_extract.call_args.kwargs["lines"]
     summary = [(line.invoice_amount, line.tax_code) for line in lines]
     assert summary == [
         (Decimal("120.00"), TaxCode.GB_VAT_20),
@@ -885,9 +881,7 @@ def test_poa_claim_with_empty_command_creates_no_recoupment_lines():
         PayInFullClaimCommand(laa_reference="1", claim_reference="INQC-0000-0005")
     )
 
-    lines = create_payment_extract_port.create_payment_extract.call_args.kwargs[
-        "lines"
-    ]
+    lines = create_payment_extract_port.create_payment_extract.call_args.kwargs["lines"]
     assert len(lines) == 1
     assert all(line.invoice_type != InvoiceTypeCode.RECOUPED for line in lines)
 
