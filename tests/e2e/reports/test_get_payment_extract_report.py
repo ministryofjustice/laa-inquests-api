@@ -1,3 +1,4 @@
+import sys
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from unittest.mock import MagicMock
@@ -107,13 +108,23 @@ def _override_provider_details_port(mock_port: MagicMock) -> None:
 class TestGetPaymentExtractReport:
     """E2E tests for GET /reports/payment-extract."""
 
-    def test_200_returns_csv_attachment_with_expected_headers(self, client):
+    def test_200_returns_csv_attachment_with_expected_headers(
+        self, client, monkeypatch
+    ):
+        class FixedDatetime(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return datetime(2026, 9, 1, 16, 45, 1, tzinfo=tz)
+
+        monkeypatch.setattr(
+            sys.modules["app.routers.reports"], "datetime", FixedDatetime
+        )
         response = _get(client)
         assert response.status_code == 200
         assert "text/csv" in response.headers["content-type"]
         assert "attachment" in response.headers["content-disposition"]
         assert (
-            f"{datetime.now(UTC).today().strftime('%d-%m-%y')} - Report - IDDS Financial Payments - OFFICIAL-SENSITIVE - LAA Use Only.csv"
+            "2026-09-01-164501 - Report - IDDS Financial Payments - OFFICIAL-SENSITIVE - LAA Use Only.csv"
             in response.headers["content-disposition"]
         )
         assert parse_csv_fieldnames(response.text) == PAYMENT_EXTRACT_REPORT_HEADERS
