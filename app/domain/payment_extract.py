@@ -5,7 +5,9 @@ from datetime import date, datetime
 from decimal import ROUND_HALF_EVEN, Decimal
 
 from app.domain.constants.claims import PROFIT_COST_PAYMENT_RATE, VAT_MULTIPLIER
-from app.models.claim.enums import InvoiceTypeCode, TaxCode
+from app.domain.pay_in_full import PayInFullClaim
+from app.models.claim.enums import InvoiceTypeCode, POAType, TaxCode
+from app.models.claim.index import Claim
 
 _TWO_DECIMAL_PLACES = Decimal("0.01")
 
@@ -202,3 +204,28 @@ def build_recoupment_extract(
             )
         )
     return lines
+
+
+def poa_claim_payment_extract_lines(
+    claim: Claim, decision_amounts: PayInFullClaim
+) -> list[PaymentExtractLine]:
+    """The payment extract line(s) for a Payment on account claim being
+    paid in full -- identical rules for auto-approval and manual decisions."""
+    if claim.poa_type_id == POAType.PROFIT_COST:
+        return [
+            build_poa_profit_cost_extract(
+                claim_reference=claim.claim_reference,
+                sequence=1,
+                submission_date=claim.submission_date,
+                net=decision_amounts.profit_cost_net,
+                vat_zero_amount=decision_amounts.profit_cost_vat_zero,
+            )
+        ]
+    if claim.poa_type_id in (POAType.EXPERT_COST, POAType.NON_EXPERT_DISBURSEMENT):
+        return build_poa_disbursement_extract(
+            claim_reference=claim.claim_reference,
+            submission_date=claim.submission_date,
+            gross=decision_amounts.disbursement_gross,
+            vat_zero_amount=decision_amounts.disbursement_vat_zero,
+        )
+    return []

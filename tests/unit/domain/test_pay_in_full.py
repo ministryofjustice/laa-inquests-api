@@ -4,7 +4,7 @@ import pytest
 
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
 from app.domain.pay_in_full import PayInFullClaim
-from app.models.claim.enums import ClaimType
+from app.models.claim.enums import ClaimType, POAType
 
 VALID_PROFIT_COST = {
     "profit_cost_net": Decimal("1000.00"),
@@ -377,3 +377,77 @@ def test_is_not_nil_bill_when_any_approved_amount_is_non_zero(amounts):
         PayInFullClaim(claim_type_id=ClaimType.FINAL_BILL, **amounts).is_nil_bill
         is False
     )
+
+
+# Payment on account claim type (manual "pay in full" fast-track)
+
+
+def test_valid_poa_profit_cost_claim_with_only_profit_cost_amounts():
+    PayInFullClaim(
+        claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
+        poa_type_id=POAType.PROFIT_COST,
+        **VALID_PROFIT_COST,
+    ).validate()
+
+
+def test_raises_disbursement_not_allowed_for_poa_profit_cost_claim():
+    with pytest.raises(ClaimValidationError) as exc:
+        PayInFullClaim(
+            claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
+            poa_type_id=POAType.PROFIT_COST,
+            **VALID_PROFIT_COST,
+            disbursement_net=Decimal("100.00"),
+            disbursement_gross=Decimal("200.00"),
+        ).validate()
+
+    assert exc.value.code == ClaimErrorCode.DISBURSEMENT_NOT_ALLOWED_FOR_POA_CLAIM
+
+
+@pytest.mark.parametrize(
+    "poa_type", [POAType.EXPERT_COST, POAType.NON_EXPERT_DISBURSEMENT]
+)
+def test_valid_poa_disbursement_claim_with_only_disbursement_amounts(poa_type):
+    PayInFullClaim(
+        claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
+        poa_type_id=poa_type,
+        **VALID_DISBURSEMENT,
+    ).validate()
+
+
+@pytest.mark.parametrize(
+    "poa_type", [POAType.EXPERT_COST, POAType.NON_EXPERT_DISBURSEMENT]
+)
+def test_raises_profit_cost_not_allowed_for_poa_disbursement_claim(poa_type):
+    with pytest.raises(ClaimValidationError) as exc:
+        PayInFullClaim(
+            claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
+            poa_type_id=poa_type,
+            **VALID_DISBURSEMENT,
+            profit_cost_net=Decimal("1000.00"),
+            profit_cost_gross=Decimal("1200.00"),
+        ).validate()
+
+    assert exc.value.code == ClaimErrorCode.PROFIT_COST_NOT_ALLOWED_FOR_POA_CLAIM
+
+
+def test_poa_claim_with_no_poa_type_still_requires_profit_cost_totals():
+    """Safe default: if poa_type_id is missing (shouldn't happen for a real
+    POA claim), normal (final-bill-style) validation applies to both
+    groups."""
+    with pytest.raises(ClaimValidationError) as exc:
+        PayInFullClaim(
+            claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
+            **VALID_DISBURSEMENT,
+        ).validate()
+
+    assert exc.value.code == ClaimErrorCode.MISSING_TOTAL_CLAIM_COST
+
+
+def test_poa_claim_with_no_poa_type_still_requires_disbursement_totals():
+    with pytest.raises(ClaimValidationError) as exc:
+        PayInFullClaim(
+            claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
+            **VALID_PROFIT_COST,
+        ).validate()
+
+    assert exc.value.code == ClaimErrorCode.MISSING_DISBURSEMENT_TOTAL
