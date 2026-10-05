@@ -958,3 +958,276 @@ def test_422_pay_in_full_final_bill_claim_type_still_requires_totals_when_no_amo
     assert response.status_code == 422
     detail = response.json()["detail"]
     assert detail["errorCode"] == "MISSING_TOTAL_CLAIM_COST"
+
+
+# Payment on account fast-track ("pay in full" with no amounts supplied)
+
+
+def _seed_poa_claim(
+    session,
+    laa_reference: int,
+    poa_type: POAType = POAType.PROFIT_COST,
+    net: Decimal | None = Decimal("1000.00"),
+    gross: Decimal | None = Decimal("1200.00"),
+    vat_zero: Decimal | None = None,
+) -> Claim:
+    application_id = (
+        session.exec(
+            select(Application).where(Application.laa_reference == laa_reference)
+        )
+        .one()
+        .application_id
+    )
+    claim = Claim(
+        application_id=application_id,
+        claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
+        status_id=ClaimStatus.SUBMITTED,
+        submission_date=datetime.now(UTC),
+        total_profit_cost_net=net,
+        total_profit_cost_gross=gross,
+        total_profit_cost_vat_zero=vat_zero,
+        poa_type_id=poa_type,
+        claimant_id="claimant-123@provider.co.uk",
+        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
+    )
+    session.add(claim)
+    session.commit()
+    session.refresh(claim)
+    return claim
+
+
+def test_204_pay_in_full_poa_profit_cost_claim_with_no_amounts_derives_decision_from_claim_totals(
+    session, client
+):
+    application = session.exec(select(Application)).first()
+    claim = _seed_poa_claim(session, application.laa_reference)
+
+    response = client.patch(
+        f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
+        json={},
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
+        },
+    )
+
+    assert response.status_code == 204
+
+    decision = session.exec(
+        select(ClaimDecision).where(ClaimDecision.claim_id == claim.claim_id)
+    ).one()
+    amount = session.exec(
+        select(ClaimDecisionAmount).where(
+            ClaimDecisionAmount.claim_decision_id == decision.claim_decision_id
+        )
+    ).one()
+    assert amount.profit_cost_net == Decimal("1000.00")
+    assert amount.profit_cost_gross == Decimal("1200.00")
+    assert amount.profit_cost_vat_zero is None
+    assert amount.disbursement_net is None
+    assert amount.disbursement_gross is None
+    assert amount.disbursement_vat_zero is None
+
+    session.refresh(claim)
+    assert claim.status_id == ClaimStatus.PAY_IN_FULL
+
+
+def test_204_pay_in_full_poa_profit_cost_claim_with_no_amounts_creates_extract_line_at_payment_rate(
+    session, client
+):
+    application = session.exec(select(Application)).first()
+    claim = _seed_poa_claim(session, application.laa_reference)
+
+    response = client.patch(
+        f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
+        json={},
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
+        },
+    )
+
+    assert response.status_code == 204
+
+    lines = _extract_lines_for(session, claim.claim_id)
+    assert len(lines) == 1
+    (line,) = lines
+    assert line.invoice_number == f"{claim.claim_reference}_001"
+    # 80% POA payment rate applied to the net amount, grossed up for VAT:
+    # 1000.00 * 0.8 * 1.2 = 960.00
+    assert line.invoice_amount == Decimal("960.00")
+    assert line.invoice_type == InvoiceTypeCode.POA
+    assert line.tax_code == TaxCode.GB_VAT_20
+
+
+def test_204_pay_in_full_poa_disbursement_claim_with_no_amounts_creates_disbursement_extract_lines(
+    session, client
+):
+    application = session.exec(select(Application)).first()
+    claim = _seed_poa_claim(
+        session,
+        application.laa_reference,
+        poa_type=POAType.EXPERT_COST,
+        net=Decimal("100.00"),
+        gross=Decimal("150.00"),
+        vat_zero=Decimal("30.00"),
+    )
+
+    response = client.patch(
+        f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
+        json={},
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
+        },
+    )
+
+    assert response.status_code == 204
+
+    lines = _extract_lines_for(session, claim.claim_id)
+    assert all(line.invoice_type == InvoiceTypeCode.POA for line in lines)
+    summary = [(line.invoice_amount, line.tax_code) for line in lines]
+    # gross (150.00) split into standard-rated (gross - vat_zero = 120.00) and
+    # zero-rated (30.00) lines, mirroring build_poa_disbursement_extract.
+    assert summary == [
+        (Decimal("120.00"), TaxCode.GB_VAT_20),
+        (Decimal("30.00"), TaxCode.ZERO_VAT),
+    ]
+
+
+def test_204_pay_in_full_poa_claim_with_no_amounts_creates_no_recoupment_lines(
+    session, client
+):
+    application = session.exec(select(Application)).first()
+    _seed_paid_poa_claim_with_extract(session, application.laa_reference)
+    claim = _seed_poa_claim(session, application.laa_reference)
+
+    response = client.patch(
+        f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
+        json={},
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
+        },
+    )
+
+    assert response.status_code == 204
+
+    lines = _extract_lines_for(session, claim.claim_id)
+    assert len(lines) == 1
+    assert all(line.invoice_type != InvoiceTypeCode.RECOUPED for line in lines)
+
+
+def test_204_pay_in_full_poa_claim_with_no_amounts_sends_granted_email_not_final_bill_email(
+    session, client, mock_gov_notify
+):
+    application = session.exec(select(Application)).first()
+    claim = _seed_poa_claim(session, application.laa_reference)
+
+    response = client.patch(
+        f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
+        json={},
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
+        },
+    )
+
+    assert response.status_code == 204
+    mock_gov_notify.send_claim_granted_decision_email.assert_called_once()
+    mock_gov_notify.send_claim_final_bill_paid_decision_email.assert_not_called()
+
+    call_kwargs = mock_gov_notify.send_claim_granted_decision_email.call_args.kwargs
+    assert call_kwargs["claim"].claim_id == claim.claim_id
+    assert call_kwargs["application"].laa_reference == application.laa_reference
+    assert call_kwargs["recipient_email"] == application.provider.email_address
+    assert call_kwargs["firm_name"] == "Test Firm Name"
+
+
+def test_204_pay_in_full_poa_claim_with_no_amounts_creates_assessment_completed_event_with_derived_amounts(
+    session, client
+):
+    application = session.exec(select(Application)).first()
+    claim = _seed_poa_claim(session, application.laa_reference)
+
+    response = client.patch(
+        f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
+        json={},
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
+        },
+    )
+
+    assert response.status_code == 204
+
+    history_event = session.exec(
+        select(HistoryEvent).where(
+            (HistoryEvent.application_id == application.application_id)
+            & (
+                HistoryEvent.event_reference
+                == HistoryEventReference.CLAIM_ASSESSMENT_COMPLETED
+            )
+        )
+    ).one()
+
+    assert history_event.event_data["claim_type"] == ClaimType.PAYMENT_ON_ACCOUNT
+    assert history_event.event_data["claim_decision"] == ClaimStatus.PAY_IN_FULL
+    assert history_event.event_data["profit_cost_net"] == "1000.00"
+    assert history_event.event_data["profit_cost_gross"] == "1200.00"
+    assert history_event.event_data["disbursement_net"] is None
+    assert history_event.event_data["disbursement_gross"] is None
+
+
+def test_422_pay_in_full_poa_profit_cost_claim_rejects_manual_disbursement_amounts(
+    session, client
+):
+    """Regression: manual overrides are still validated per POA type group,
+    even though the fast-track (empty body) path bypasses the command fields
+    entirely."""
+    application = session.exec(select(Application)).first()
+    claim = _seed_poa_claim(session, application.laa_reference)
+
+    response = client.patch(
+        f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
+        json={
+            "profitCostNet": "1000.00",
+            "profitCostGross": "1200.00",
+            "disbursementNet": "100.00",
+            "disbursementGross": "200.00",
+        },
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
+        },
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["errorCode"] == "DISBURSEMENT_NOT_ALLOWED_FOR_POA_CLAIM"
+
+
+def test_422_pay_in_full_poa_disbursement_claim_rejects_manual_profit_cost_amounts(
+    session, client
+):
+    application = session.exec(select(Application)).first()
+    claim = _seed_poa_claim(
+        session,
+        application.laa_reference,
+        poa_type=POAType.NON_EXPERT_DISBURSEMENT,
+        net=Decimal("100.00"),
+        gross=Decimal("150.00"),
+    )
+
+    response = client.patch(
+        f"/applications/{application.laa_reference}/claims/{claim.claim_reference}/pay-in-full",
+        json={"profitCostNet": "1000.00", "profitCostGross": "1200.00"},
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
+        },
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["errorCode"] == "PROFIT_COST_NOT_ALLOWED_FOR_POA_CLAIM"

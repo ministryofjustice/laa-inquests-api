@@ -676,3 +676,304 @@ def test_creates_zero_fees_line_then_recoupment_lines_for_nil_final_bill():
         (1, "INQC-0000-0005_001", Decimal("0.00"), InvoiceTypeCode.FINAL_BILL_FEES),
         (2, "INQC-0000-0009_001-R", Decimal("-800.00"), InvoiceTypeCode.RECOUPED),
     ]
+
+
+# Payment on account claim type (manual "pay in full" fast-track)
+
+
+def _poa_claim(
+    claim_id: int = 5,
+    application_id: int = 1,
+    poa_type: POAType = POAType.PROFIT_COST,
+    net: Decimal | None = Decimal("1000.00"),
+    gross: Decimal | None = Decimal("1200.00"),
+    vat_zero: Decimal | None = None,
+) -> Claim:
+    return Claim(
+        claim_id=claim_id,
+        claim_reference=f"INQC-0000-{claim_id:04d}",
+        application_id=application_id,
+        claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
+        status_id=ClaimStatus.SUBMITTED,
+        submission_date=datetime(2026, 3, 10, tzinfo=UTC),
+        total_profit_cost_net=net,
+        total_profit_cost_gross=gross,
+        total_profit_cost_vat_zero=vat_zero,
+        poa_type_id=poa_type,
+    )
+
+
+def _build_full_use_case(claim, application, poa_claims=None, poa_extracts=None):
+    """Like `_build_use_case_with_extract_ports`, but also returns the
+    decision amount / history event / gov notify mocks needed to assert on
+    the POA fast-track branching."""
+    lookup_port = MagicMock(spec=ApplicationLookupPort)
+    lookup_port.get_application_by_laa_reference.return_value = application
+
+    get_claim_port = MagicMock(spec=GetClaimByIdPort)
+    get_claim_port.get_claim_by_reference.return_value = claim
+
+    create_decision_port = MagicMock(spec=CreateClaimDecisionPort)
+    create_decision_port.create_claim_decision.return_value = ClaimDecision(
+        claim_decision_id=42,
+        claim_id=claim.claim_id,
+        decision=ClaimDecisionStatus.PAY_IN_FULL,
+        created_at=datetime(2026, 9, 21, tzinfo=UTC),
+    )
+
+    create_decision_amount_port = MagicMock(spec=CreateClaimDecisionAmountPort)
+    create_decision_amount_port.create_claim_decision_amount.return_value = (
+        ClaimDecisionAmount(claim_decision_amount_id=7, claim_decision_id=42)
+    )
+
+    update_status_port = MagicMock(spec=UpdateClaimStatusPort)
+    create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
+    provider_details_port = MagicMock(spec=ProviderDetailsPort)
+    provider_details_port.get_firm_name.return_value = "Test Firm Name"
+    gov_notify_port = MagicMock(spec=GovNotifyPort)
+
+    get_claims_for_application_port = MagicMock(spec=GetClaimsForApplicationPort)
+    get_claims_for_application_port.get_claims_by_application_id.return_value = (
+        poa_claims or []
+    )
+
+    get_payment_extracts_for_claim_port = MagicMock(spec=GetPaymentExtractsForClaimPort)
+    get_payment_extracts_for_claim_port.get_payment_extracts_by_claim_id.return_value = (
+        poa_extracts or []
+    )
+
+    create_payment_extract_port = MagicMock(spec=CreatePaymentExtractPort)
+
+    use_case = PayInFullClaimUseCase(
+        application_lookup_port=lookup_port,
+        get_claim_by_id_port=get_claim_port,
+        create_claim_decision_port=create_decision_port,
+        create_claim_decision_amount_port=create_decision_amount_port,
+        update_claim_status_port=update_status_port,
+        create_history_event_port=create_history_event_port,
+        provider_details_port=provider_details_port,
+        gov_notify_port=gov_notify_port,
+        get_claims_for_application_port=get_claims_for_application_port,
+        get_payment_extracts_for_claim_port=get_payment_extracts_for_claim_port,
+        create_payment_extract_port=create_payment_extract_port,
+    )
+    return (
+        use_case,
+        create_decision_amount_port,
+        create_history_event_port,
+        gov_notify_port,
+        create_payment_extract_port,
+    )
+
+
+def test_poa_claim_with_empty_command_derives_decision_amounts_from_claim_totals():
+    claim = _poa_claim()
+    (
+        use_case,
+        create_decision_amount_port,
+        _,
+        _,
+        _,
+    ) = _build_full_use_case(claim=claim, application=_application())
+
+    use_case.execute(
+        PayInFullClaimCommand(laa_reference="1", claim_reference="INQC-0000-0005")
+    )
+
+    create_decision_amount_port.create_claim_decision_amount.assert_called_once_with(
+        claim_decision_id=42,
+        profit_cost_net=Decimal("1000.00"),
+        profit_cost_gross=Decimal("1200.00"),
+        profit_cost_vat_zero=None,
+        disbursement_net=None,
+        disbursement_gross=None,
+        disbursement_vat_zero=None,
+    )
+
+
+def test_poa_profit_cost_claim_with_empty_command_creates_extract_line_at_payment_rate():
+    claim = _poa_claim()
+    (
+        use_case,
+        _,
+        _,
+        _,
+        create_payment_extract_port,
+    ) = _build_full_use_case(claim=claim, application=_application())
+
+    use_case.execute(
+        PayInFullClaimCommand(laa_reference="1", claim_reference="INQC-0000-0005")
+    )
+
+    create_payment_extract_port.create_payment_extract.assert_called_once()
+    lines = create_payment_extract_port.create_payment_extract.call_args.kwargs["lines"]
+    assert len(lines) == 1
+    (line,) = lines
+    assert line.invoice_type == InvoiceTypeCode.POA
+    assert line.invoice_amount == Decimal("960.00")
+    assert line.tax_code == TaxCode.GB_VAT_20
+
+
+def test_poa_disbursement_claim_with_empty_command_creates_disbursement_extract_lines():
+    claim = _poa_claim(
+        poa_type=POAType.EXPERT_COST,
+        net=Decimal("100.00"),
+        gross=Decimal("150.00"),
+        vat_zero=Decimal("30.00"),
+    )
+    (
+        use_case,
+        _,
+        _,
+        _,
+        create_payment_extract_port,
+    ) = _build_full_use_case(claim=claim, application=_application())
+
+    use_case.execute(
+        PayInFullClaimCommand(laa_reference="1", claim_reference="INQC-0000-0005")
+    )
+
+    lines = create_payment_extract_port.create_payment_extract.call_args.kwargs["lines"]
+    summary = [(line.invoice_amount, line.tax_code) for line in lines]
+    assert summary == [
+        (Decimal("120.00"), TaxCode.GB_VAT_20),
+        (Decimal("30.00"), TaxCode.ZERO_VAT),
+    ]
+    assert all(line.invoice_type == InvoiceTypeCode.POA for line in lines)
+
+
+def test_poa_claim_with_empty_command_creates_no_recoupment_lines():
+    claim = _poa_claim()
+    paid_poa_claim = Claim(
+        claim_id=9,
+        claim_reference="INQC-0000-0009",
+        application_id=1,
+        claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
+        status_id=ClaimStatus.PAY_IN_FULL,
+        submission_date=datetime(2026, 1, 1, tzinfo=UTC),
+        poa_type_id=POAType.PROFIT_COST,
+    )
+    poa_extracts = [
+        ClaimPaymentExtract(
+            claim_id=9,
+            sequence_number=1,
+            invoice_number="INQC-0000-0009_001",
+            invoice_amount=Decimal("800.00"),
+            invoice_date=date(2026, 1, 1),
+            invoice_type=InvoiceTypeCode.POA,
+            tax_code=TaxCode.GB_VAT_20,
+        ),
+    ]
+    (
+        use_case,
+        _,
+        _,
+        _,
+        create_payment_extract_port,
+    ) = _build_full_use_case(
+        claim=claim,
+        application=_application(),
+        poa_claims=[claim, paid_poa_claim],
+        poa_extracts=poa_extracts,
+    )
+
+    use_case.execute(
+        PayInFullClaimCommand(laa_reference="1", claim_reference="INQC-0000-0005")
+    )
+
+    lines = create_payment_extract_port.create_payment_extract.call_args.kwargs["lines"]
+    assert len(lines) == 1
+    assert all(line.invoice_type != InvoiceTypeCode.RECOUPED for line in lines)
+
+
+def test_poa_claim_with_empty_command_sends_granted_email_not_final_bill_email():
+    claim = _poa_claim()
+    application = _application()
+    (
+        use_case,
+        _,
+        create_history_event_port,
+        gov_notify_port,
+        _,
+    ) = _build_full_use_case(claim=claim, application=application)
+
+    use_case.execute(
+        PayInFullClaimCommand(laa_reference="1", claim_reference="INQC-0000-0005")
+    )
+
+    gov_notify_port.send_claim_granted_decision_email.assert_called_once_with(
+        claim=claim,
+        application=application,
+        recipient_email=application.provider.email_address,
+        firm_name="Test Firm Name",
+    )
+    gov_notify_port.send_claim_final_bill_paid_decision_email.assert_not_called()
+    create_history_event_port.create_history_event.assert_any_call(
+        event_reference=HistoryEventReference.CLAIM_APPROVED_EMAIL,
+        actor=ActorType.SYSTEM,
+        actor_type=ActorType.SYSTEM,
+        application_id=1,
+        event_data={
+            "recipient": application.provider.email_address,
+            "channel": NotificationType.EMAIL,
+        },
+    )
+
+
+def test_poa_claim_with_empty_command_creates_assessment_completed_event_with_derived_amounts():
+    claim = _poa_claim()
+    (
+        use_case,
+        _,
+        create_history_event_port,
+        _,
+        _,
+    ) = _build_full_use_case(claim=claim, application=_application())
+
+    use_case.execute(
+        PayInFullClaimCommand(laa_reference="1", claim_reference="INQC-0000-0005")
+    )
+
+    create_history_event_port.create_history_event.assert_any_call(
+        event_reference=HistoryEventReference.CLAIM_ASSESSMENT_COMPLETED,
+        actor="Caseworker",
+        actor_type=ActorType.CASEWORKER,
+        application_id=1,
+        event_data={
+            "claim_type": ClaimType.PAYMENT_ON_ACCOUNT,
+            "claim_reference": "INQC-0000-0005",
+            "claim_decision": ClaimStatus.PAY_IN_FULL,
+            "profit_cost_net": "1000.00",
+            "profit_cost_gross": "1200.00",
+            "profit_cost_vat_zero": None,
+            "disbursement_net": None,
+            "disbursement_gross": None,
+            "disbursement_vat_zero": None,
+        },
+    )
+
+
+def test_raises_invalid_claim_error_for_poa_claim_manual_override_with_disallowed_disbursement():
+    (
+        use_case,
+        create_decision_port,
+        _,
+        update_status_port,
+        _,
+    ) = _build_use_case(claim=_poa_claim(claim_id=5), application=_application())
+
+    with pytest.raises(InvalidClaimError) as exc:
+        use_case.execute(
+            PayInFullClaimCommand(
+                laa_reference="1",
+                claim_reference="INQC-0000-0005",
+                profit_cost_net=Decimal("1000.00"),
+                profit_cost_gross=Decimal("1200.00"),
+                disbursement_net=Decimal("100.00"),
+                disbursement_gross=Decimal("200.00"),
+            )
+        )
+
+    assert exc.value.code == ClaimErrorCode.DISBURSEMENT_NOT_ALLOWED_FOR_POA_CLAIM
+    create_decision_port.create_claim_decision.assert_not_called()
+    update_status_port.commit.assert_not_called()

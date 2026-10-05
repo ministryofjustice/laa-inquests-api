@@ -250,7 +250,7 @@ def seed_dev():
             status_id=ClaimStatus.SUBMITTED,
             total_profit_cost_net=Decimal("1000.00"),
             total_profit_cost_gross=Decimal("1200.00"),
-            total_profit_cost_vat_zero=Decimal("500.00"),
+            total_profit_cost_vat_zero=None,
             poa_type_id=POAType.PROFIT_COST,
             claimant_id="claimant-123@provider.co.uk",
             claim_evidence=[
@@ -360,7 +360,7 @@ def seed_dev():
             status_id=ClaimStatus.SUBMITTED,
             total_profit_cost_net=Decimal("1000.00"),
             total_profit_cost_gross=Decimal("1200.00"),
-            total_profit_cost_vat_zero=Decimal("500.00"),
+            total_profit_cost_vat_zero=None,
             poa_type_id=POAType.PROFIT_COST,
             claimant_id="claimant-123@provider.co.uk",
             claim_evidence=[
@@ -490,7 +490,7 @@ def _seed_bulk_claims(db_session, reference_rules, used_references, application_
         submission_date=base_submission_date,
         total_profit_cost_net=Decimal("1000.00"),
         total_profit_cost_gross=Decimal("1200.00"),
-        total_profit_cost_vat_zero=Decimal("500.00"),
+        total_profit_cost_vat_zero=None,
         total_funds_remaining_after_claim=Decimal("10000.00"),
         poa_type_id=POAType.PROFIT_COST,
         claimant_id=BULK_CLAIMANT_ID,

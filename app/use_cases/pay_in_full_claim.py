@@ -5,7 +5,10 @@ from decimal import Decimal
 
 from app.contexts.user import get_entra_user_name
 from app.domain.claim_error import ClaimValidationError
-from app.domain.pay_in_full import PayInFullClaim
+from app.domain.pay_in_full import (
+    PayInFullClaim,
+    pay_in_full_claim_from_submitted_poa_claim,
+)
 from app.domain.payment_extract import (
     PaymentExtractLine,
     RecoupmentSourceLine,
@@ -13,7 +16,9 @@ from app.domain.payment_extract import (
     build_final_bill_fees_extract,
     build_final_bill_nil_fees_extract,
     build_recoupment_extract,
+    poa_claim_payment_extract_lines,
 )
+from app.models.application.index import Application
 from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ClaimType
 from app.models.claim.index import Claim
 from app.models.history.enums import ActorType, HistoryEventReference
@@ -56,6 +61,19 @@ class PayInFullClaimCommand:
     disbursement_net: Decimal | None = None
     disbursement_gross: Decimal | None = None
     disbursement_vat_zero: Decimal | None = None
+
+    def has_no_amounts(self) -> bool:
+        return all(
+            amount is None
+            for amount in (
+                self.profit_cost_net,
+                self.profit_cost_gross,
+                self.profit_cost_vat_zero,
+                self.disbursement_net,
+                self.disbursement_gross,
+                self.disbursement_vat_zero,
+            )
+        )
 
 
 class PayInFullClaimUseCase:
@@ -100,15 +118,22 @@ class PayInFullClaimUseCase:
             raise ClaimNotFoundError(command.claim_reference)
 
         try:
-            decision_amounts = PayInFullClaim(
-                claim_type_id=claim.claim_type_id,
-                profit_cost_net=command.profit_cost_net,
-                profit_cost_gross=command.profit_cost_gross,
-                profit_cost_vat_zero=command.profit_cost_vat_zero,
-                disbursement_net=command.disbursement_net,
-                disbursement_gross=command.disbursement_gross,
-                disbursement_vat_zero=command.disbursement_vat_zero,
-            )
+            if (
+                claim.claim_type_id == ClaimType.PAYMENT_ON_ACCOUNT
+                and command.has_no_amounts()
+            ):
+                decision_amounts = pay_in_full_claim_from_submitted_poa_claim(claim)
+            else:
+                decision_amounts = PayInFullClaim(
+                    claim_type_id=claim.claim_type_id,
+                    poa_type_id=claim.poa_type_id,
+                    profit_cost_net=command.profit_cost_net,
+                    profit_cost_gross=command.profit_cost_gross,
+                    profit_cost_vat_zero=command.profit_cost_vat_zero,
+                    disbursement_net=command.disbursement_net,
+                    disbursement_gross=command.disbursement_gross,
+                    disbursement_vat_zero=command.disbursement_vat_zero,
+                )
             decision_amounts.validate()
         except ClaimValidationError as e:
             raise InvalidClaimError(code=e.code, message=e.message) from e
@@ -120,12 +145,12 @@ class PayInFullClaimUseCase:
             )
             self.create_claim_decision_amount_port.create_claim_decision_amount(
                 claim_decision_id=claim_decision.claim_decision_id,
-                profit_cost_net=command.profit_cost_net,
-                profit_cost_gross=command.profit_cost_gross,
-                profit_cost_vat_zero=command.profit_cost_vat_zero,
-                disbursement_net=command.disbursement_net,
-                disbursement_gross=command.disbursement_gross,
-                disbursement_vat_zero=command.disbursement_vat_zero,
+                profit_cost_net=decision_amounts.profit_cost_net,
+                profit_cost_gross=decision_amounts.profit_cost_gross,
+                profit_cost_vat_zero=decision_amounts.profit_cost_vat_zero,
+                disbursement_net=decision_amounts.disbursement_net,
+                disbursement_gross=decision_amounts.disbursement_gross,
+                disbursement_vat_zero=decision_amounts.disbursement_vat_zero,
             )
             self.update_claim_status_port.update_claim_status(
                 claim_id=claim.claim_id,
@@ -148,15 +173,23 @@ class PayInFullClaimUseCase:
                     "claim_type": claim.claim_type_id,
                     "claim_reference": claim.claim_reference,
                     "claim_decision": ClaimStatus.PAY_IN_FULL,
-                    "profit_cost_net": _to_json_amount(command.profit_cost_net),
-                    "profit_cost_gross": _to_json_amount(command.profit_cost_gross),
-                    "profit_cost_vat_zero": _to_json_amount(
-                        command.profit_cost_vat_zero
+                    "profit_cost_net": _to_json_amount(
+                        decision_amounts.profit_cost_net
                     ),
-                    "disbursement_net": _to_json_amount(command.disbursement_net),
-                    "disbursement_gross": _to_json_amount(command.disbursement_gross),
+                    "profit_cost_gross": _to_json_amount(
+                        decision_amounts.profit_cost_gross
+                    ),
+                    "profit_cost_vat_zero": _to_json_amount(
+                        decision_amounts.profit_cost_vat_zero
+                    ),
+                    "disbursement_net": _to_json_amount(
+                        decision_amounts.disbursement_net
+                    ),
+                    "disbursement_gross": _to_json_amount(
+                        decision_amounts.disbursement_gross
+                    ),
                     "disbursement_vat_zero": _to_json_amount(
-                        command.disbursement_vat_zero
+                        decision_amounts.disbursement_vat_zero
                     ),
                 },
             )
@@ -164,22 +197,11 @@ class PayInFullClaimUseCase:
             firm_name = self.provider_details_port.get_firm_name(
                 application.provider.firm_code
             )
-            self.gov_notify_port.send_claim_final_bill_paid_decision_email(
+            self._send_pay_in_full_decision_email(
                 claim=claim,
                 application=application,
-                recipient_email=application.provider.email_address,
                 firm_name=firm_name,
                 decision_amounts=decision_amounts,
-            )
-            self.create_history_event_port.create_history_event(
-                event_reference=HistoryEventReference.CLAIM_FINAL_BILL_PAID_EMAIL,
-                actor=ActorType.SYSTEM,
-                actor_type=ActorType.SYSTEM,
-                application_id=application.application_id,
-                event_data={
-                    "recipient": application.provider.email_address,
-                    "channel": NotificationType.EMAIL,
-                },
             )
 
             self.update_claim_status_port.commit()
@@ -197,6 +219,30 @@ class PayInFullClaimUseCase:
         if self.create_payment_extract_port is None:
             return
 
+        if claim.claim_type_id == ClaimType.PAYMENT_ON_ACCOUNT:
+            lines = poa_claim_payment_extract_lines(claim, decision_amounts)
+        else:
+            lines = self._final_or_nil_bill_payment_extract_lines(
+                claim, decision_amounts
+            )
+            lines.extend(
+                self._recoupment_lines(
+                    claim,
+                    application_id,
+                    start_sequence=len(lines) + 1,
+                    decision_date=decision_date,
+                )
+            )
+
+        if lines:
+            self.create_payment_extract_port.create_payment_extract(
+                claim_id=claim.claim_id,
+                lines=lines,
+            )
+
+    def _final_or_nil_bill_payment_extract_lines(
+        self, claim: Claim, decision_amounts: PayInFullClaim
+    ) -> list[PaymentExtractLine]:
         lines: list[PaymentExtractLine] = []
         sequence = 1
         invoice_date = claim.submission_date.date()
@@ -209,7 +255,6 @@ class PayInFullClaimUseCase:
                     invoice_date=invoice_date,
                 )
             )
-            sequence += 1
         else:
             fees_line = build_final_bill_fees_extract(
                 claim_reference=claim.claim_reference,
@@ -230,7 +275,18 @@ class PayInFullClaimUseCase:
                 vat_zero_amount=decision_amounts.disbursement_vat_zero,
             )
             lines.extend(disbursement_lines)
-            sequence += len(disbursement_lines)
+
+        return lines
+
+    def _recoupment_lines(
+        self,
+        claim: Claim,
+        application_id: int,
+        start_sequence: int,
+        decision_date: date,
+    ) -> list[PaymentExtractLine]:
+        lines: list[PaymentExtractLine] = []
+        sequence = start_sequence
 
         for poa_claim in self._recoupable_poa_claims(application_id, claim.claim_id):
             sources = [
@@ -251,10 +307,49 @@ class PayInFullClaimUseCase:
             lines.extend(recoupment_lines)
             sequence += len(recoupment_lines)
 
-        if lines:
-            self.create_payment_extract_port.create_payment_extract(
-                claim_id=claim.claim_id,
-                lines=lines,
+        return lines
+
+    def _send_pay_in_full_decision_email(
+        self,
+        claim: Claim,
+        application: Application,
+        firm_name: str,
+        decision_amounts: PayInFullClaim,
+    ) -> None:
+        if claim.claim_type_id == ClaimType.PAYMENT_ON_ACCOUNT:
+            self.gov_notify_port.send_claim_granted_decision_email(
+                claim=claim,
+                application=application,
+                recipient_email=application.provider.email_address,
+                firm_name=firm_name,
+            )
+            self.create_history_event_port.create_history_event(
+                event_reference=HistoryEventReference.CLAIM_APPROVED_EMAIL,
+                actor=ActorType.SYSTEM,
+                actor_type=ActorType.SYSTEM,
+                application_id=application.application_id,
+                event_data={
+                    "recipient": application.provider.email_address,
+                    "channel": NotificationType.EMAIL,
+                },
+            )
+        else:
+            self.gov_notify_port.send_claim_final_bill_paid_decision_email(
+                claim=claim,
+                application=application,
+                recipient_email=application.provider.email_address,
+                firm_name=firm_name,
+                decision_amounts=decision_amounts,
+            )
+            self.create_history_event_port.create_history_event(
+                event_reference=HistoryEventReference.CLAIM_FINAL_BILL_PAID_EMAIL,
+                actor=ActorType.SYSTEM,
+                actor_type=ActorType.SYSTEM,
+                application_id=application.application_id,
+                event_data={
+                    "recipient": application.provider.email_address,
+                    "channel": NotificationType.EMAIL,
+                },
             )
 
     def _recoupable_poa_claims(
