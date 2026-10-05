@@ -165,7 +165,6 @@ class Claim:
             and self.poa_type != POAType.PROFIT_COST
         ):
             self._validate_non_profit_cost_has_at_least_one_total()
-            self._normalize_non_profit_cost_totals()
 
         if self.poa_type == POAType.PROFIT_COST:
             self._validate_profit_cost()
@@ -341,23 +340,6 @@ class Claim:
         if raw_limit is None:
             return None
         return Decimal(str(raw_limit))
-
-    def _normalize_non_profit_cost_totals(self) -> None:
-        object.__setattr__(
-            self,
-            "net",
-            self.net if self.net is not None else Decimal("0.00"),
-        )
-        object.__setattr__(
-            self,
-            "gross",
-            self.gross if self.gross is not None else Decimal("0.00"),
-        )
-        object.__setattr__(
-            self,
-            "vat_zero_total",
-            self.vat_zero_total if self.vat_zero_total is not None else Decimal("0.00"),
-        )
 
     def _validate_non_profit_cost_has_at_least_one_total(self) -> None:
         if self.net is None and self.gross is None and self.vat_zero_total is None:

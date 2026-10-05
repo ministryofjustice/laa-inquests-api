@@ -159,7 +159,7 @@ def test_raises_when_non_profit_cost_has_no_totals():
     assert exc_info.value.code == ClaimErrorCode.MISSING_NON_PROFIT_COST_TOTAL
 
 
-def test_non_profit_cost_defaults_missing_totals_to_zero():
+def test_non_profit_cost_leaves_unset_totals_as_none():
     claim = Claim(
         claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
         poa_type=POAType.EXPERT_COST,
@@ -170,9 +170,23 @@ def test_non_profit_cost_defaults_missing_totals_to_zero():
 
     claim.validate_total_claim_cost()
 
-    assert claim.net == Decimal("0.00")
-    assert claim.gross == Decimal("0.00")
+    assert claim.net is None
+    assert claim.gross is None
     assert claim.vat_zero_total == Decimal("150.00")
+
+
+def test_non_profit_cost_gross_or_vat_zero_cost_returns_vat_zero_when_gross_unset():
+    claim = Claim(
+        claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+        poa_type=POAType.EXPERT_COST,
+        net=None,
+        gross=None,
+        vat_zero_total=Decimal("150.00"),
+    )
+
+    claim.validate_total_claim_cost()
+
+    assert claim.gross_or_vat_zero_cost() == Decimal("150.00")
 
 
 def test_raises_when_non_profit_cost_net_higher_than_gross():

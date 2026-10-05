@@ -423,7 +423,7 @@ class TestCreateClaimFundsAndPersistence:
 
         assert decision_amount.disbursement_net == Decimal("1000.00")
         assert decision_amount.disbursement_gross == Decimal("1200.00")
-        assert decision_amount.disbursement_vat_zero == Decimal("0.00")
+        assert decision_amount.disbursement_vat_zero is None
         assert decision_amount.profit_cost_net is None
         assert decision_amount.profit_cost_gross is None
         assert decision_amount.profit_cost_vat_zero is None
@@ -1420,7 +1420,7 @@ class TestCreateClaimValidation:
         assert response.status_code == 422
         assert response.json()["detail"]["errorCode"] == "PROFIT_COST_MIXED_VAT"
 
-    def test_201_non_profit_cost_with_vat_zero_only_defaults_missing_totals(
+    def test_201_non_profit_cost_with_vat_zero_only_leaves_other_totals_unset(
         self, session, client
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
@@ -1449,8 +1449,8 @@ class TestCreateClaimValidation:
             select(Claim).where(Claim.claim_reference == claim["claimReference"])
         ).one()
         assert stored_claim is not None
-        assert Decimal(str(stored_claim.total_profit_cost_net)) == Decimal("0.00")
-        assert Decimal(str(stored_claim.total_profit_cost_gross)) == Decimal("0.00")
+        assert stored_claim.total_profit_cost_net is None
+        assert stored_claim.total_profit_cost_gross is None
         assert Decimal(str(stored_claim.total_profit_cost_vat_zero)) == Decimal(
             "150.00"
         )
