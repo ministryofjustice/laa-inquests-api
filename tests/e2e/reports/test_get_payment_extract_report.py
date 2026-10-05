@@ -17,18 +17,18 @@ from tests.e2e.factories import create_claim_in_db
 from tests.helpers.csv_helpers import parse_csv_fieldnames, parse_csv_rows
 
 PAYMENT_EXTRACT_REPORT_HEADERS = [
-    "DESCRIPTION",
-    "INVOICE AMOUNT",
-    "INVOICE DATE",
-    "INVOICE TYPE",
-    "INVOICE NUM",
-    "VENDOR NAME",
-    "VENDOR SITE CODE",
-    "CASE REFERENCE",
-    "CLIENT NAME",
-    "TAX CODE",
-    "MODEL NUMBER",
-    "PROVIDER CASE REF NO",
+    "Description",
+    "Invoice Amount",
+    "Invoice Date",
+    "Invoice Type",
+    "Invoice Num",
+    "Vendor Name",
+    "Vendor Site Code",
+    "Case Reference",
+    "Client Name",
+    "Tax Code",
+    "Model Number",
+    "Provider Case Ref No",
 ]
 
 URL = "/reports/payment-extract"
@@ -144,18 +144,18 @@ class TestGetPaymentExtractReport:
         row = _single_row(client)
 
         assert row == {
-            "DESCRIPTION": "Profit costs",
-            "INVOICE AMOUNT": "1234.50",
-            "INVOICE DATE": "2025-03-10",
-            "INVOICE TYPE": "Inq Final Bill (Fees)",
-            "INVOICE NUM": f"{claim.claim_reference}_001",
-            "VENDOR NAME": f"Firm {application.provider.firm_code}",
-            "VENDOR SITE CODE": application.provider.office_id,
-            "CASE REFERENCE": application.laa_reference,
-            "CLIENT NAME": f"{application.client.client_first_name} {application.client.client_last_name}",
-            "TAX CODE": "GB VAT 20%",
-            "MODEL NUMBER": "Profit costs",
-            "PROVIDER CASE REF NO": "",
+            "Description": "Profit costs",
+            "Invoice Amount": "1234.50",
+            "Invoice Date": "2025-03-10",
+            "Invoice Type": "Inq Final Bill (Fees)",
+            "Invoice Num": f"{claim.claim_reference}_001",
+            "Vendor Name": f"Firm {application.provider.firm_code}",
+            "Vendor Site Code": application.provider.office_id,
+            "Case Reference": application.laa_reference,
+            "Client Name": f"{application.client.client_first_name} {application.client.client_last_name}",
+            "Tax Code": "GB VAT 20%",
+            "Model Number": "Profit costs",
+            "Provider Case Ref No": "",
         }
 
     def test_200_final_bill_disbursement_row_is_expert_costs_disbursements(
@@ -171,10 +171,10 @@ class TestGetPaymentExtractReport:
 
         row = _single_row(client)
 
-        assert row["DESCRIPTION"] == "Expert costs"
-        assert row["MODEL NUMBER"] == "Disbursements"
-        assert row["INVOICE TYPE"] == "Inq Final Bill (Disb)"
-        assert row["TAX CODE"] == "ZERO VAT"
+        assert row["Description"] == "Expert costs"
+        assert row["Model Number"] == "Disbursements"
+        assert row["Invoice Type"] == "Inq Final Bill (Disb)"
+        assert row["Tax Code"] == "ZERO VAT"
 
     def test_200_poa_profit_cost_row_is_profit_costs_80_percent(self, session, client):
         claim = _claim(session, ClaimType.PAYMENT_ON_ACCOUNT, POAType.PROFIT_COST)
@@ -182,9 +182,9 @@ class TestGetPaymentExtractReport:
 
         row = _single_row(client)
 
-        assert row["DESCRIPTION"] == "Profit costs (80%)"
-        assert row["MODEL NUMBER"] == "Profit costs"
-        assert row["INVOICE TYPE"] == "Inq POA"
+        assert row["Description"] == "Profit costs (80%)"
+        assert row["Model Number"] == "Profit costs"
+        assert row["Invoice Type"] == "Inq POA"
 
     @pytest.mark.parametrize(
         "poa_type", [POAType.EXPERT_COST, POAType.NON_EXPERT_DISBURSEMENT]
@@ -197,8 +197,8 @@ class TestGetPaymentExtractReport:
 
         row = _single_row(client)
 
-        assert row["DESCRIPTION"] == "Expert costs"
-        assert row["MODEL NUMBER"] == "Disbursements"
+        assert row["Description"] == "Expert costs"
+        assert row["Model Number"] == "Disbursements"
 
     @pytest.mark.parametrize(
         ("poa_type", "description", "model_number"),
@@ -228,11 +228,11 @@ class TestGetPaymentExtractReport:
 
         row = _single_row(client)
 
-        assert row["INVOICE TYPE"] == "Inq Recouped POA"
-        assert row["INVOICE NUM"] == f"{original.invoice_number}-R"
-        assert row["INVOICE AMOUNT"] == "-100.00"
-        assert row["DESCRIPTION"] == description
-        assert row["MODEL NUMBER"] == model_number
+        assert row["Invoice Type"] == "Inq Recouped POA"
+        assert row["Invoice Num"] == f"{original.invoice_number}-R"
+        assert row["Invoice Amount"] == "-100.00"
+        assert row["Description"] == description
+        assert row["Model Number"] == model_number
 
     def test_200_nil_bill_zero_amount_row_is_included(self, session, client):
         claim = _claim(session)
@@ -246,8 +246,8 @@ class TestGetPaymentExtractReport:
 
         row = _single_row(client)
 
-        assert row["INVOICE AMOUNT"] == "0.00"
-        assert row["DESCRIPTION"] == "Profit costs"
+        assert row["Invoice Amount"] == "0.00"
+        assert row["Description"] == "Profit costs"
 
     def test_200_filters_rows_on_created_at_with_inclusive_dates(self, session, client):
         claim = _claim(session)
@@ -270,7 +270,7 @@ class TestGetPaymentExtractReport:
 
         response = _get(client)
 
-        invoice_nums = [row["INVOICE NUM"] for row in parse_csv_rows(response.text)]
+        invoice_nums = [row["Invoice Num"] for row in parse_csv_rows(response.text)]
         assert invoice_nums == [invoice_numbers["start"], invoice_numbers["end"]]
 
     def test_200_rows_are_ordered_by_created_at(self, session, client):
@@ -292,7 +292,7 @@ class TestGetPaymentExtractReport:
 
         response = _get(client)
 
-        invoice_nums = [row["INVOICE NUM"] for row in parse_csv_rows(response.text)]
+        invoice_nums = [row["Invoice Num"] for row in parse_csv_rows(response.text)]
         assert invoice_nums == [earlier.invoice_number, later.invoice_number]
 
     def test_200_returns_headers_only_when_no_rows_in_range(self, session, client):
