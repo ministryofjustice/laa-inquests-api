@@ -4,7 +4,6 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.domain.constants.report_csv_headers import PAYMENT_EXTRACT_REPORT_HEADERS
 from app.domain.payment_extract_report import (
     PaymentExtractReportSourceLine,
     PaymentLineType,
@@ -25,6 +24,20 @@ FROM_DATE = date(2025, 3, 1)
 TO_DATE = date(2025, 3, 31)
 FINAL_BILL_FEES = PaymentLineType(invoice_type=InvoiceTypeCode.FINAL_BILL_FEES)
 OFFICE_ID = "9Z999Z"
+PAYMENT_EXTRACT_REPORT_HEADERS = [
+    "Description",
+    "Invoice Amount",
+    "Invoice Date",
+    "Invoice Type",
+    "Invoice Num",
+    "Vendor Name",
+    "Vendor Site Code",
+    "Case Reference",
+    "Client Name",
+    "Tax Code",
+    "Model Number",
+    "Provider Case Ref No",
+]
 
 
 def _line(
@@ -95,18 +108,18 @@ class TestGeneratePaymentExtractReportUseCase:
 
         assert rows == [
             {
-                "DESCRIPTION": "Profit costs",
-                "INVOICE AMOUNT": "120.50",
-                "INVOICE DATE": "2025-03-10",
-                "INVOICE TYPE": "Inq Final Bill (Fees)",
-                "INVOICE NUM": "INQC-AAAA-BBBB_001",
-                "VENDOR NAME": "Test Firm",
-                "VENDOR SITE CODE": OFFICE_ID,
-                "CASE REFERENCE": "INQ-123-456",
-                "CLIENT NAME": "FirstName LastName",
-                "TAX CODE": "GB VAT 20%",
-                "MODEL NUMBER": "Profit costs",
-                "PROVIDER CASE REF NO": "",
+                "Description": "Profit costs",
+                "Invoice Amount": "120.50",
+                "Invoice Date": "2025-03-10",
+                "Invoice Type": "Inq Final Bill (Fees)",
+                "Invoice Num": "INQC-AAAA-BBBB_001",
+                "Vendor Name": "Test Firm",
+                "Vendor Site Code": OFFICE_ID,
+                "Case Reference": "INQ-123-456",
+                "Client Name": "FirstName LastName",
+                "Tax Code": "GB VAT 20%",
+                "Model Number": "Profit costs",
+                "Provider Case Ref No": "",
             }
         ]
 
@@ -120,7 +133,7 @@ class TestGeneratePaymentExtractReportUseCase:
 
         rows = parse_csv_rows(_csv(use_case.execute(FROM_DATE, TO_DATE)))
 
-        assert [(row["DESCRIPTION"], row["MODEL NUMBER"]) for row in rows] == [
+        assert [(row["Description"], row["Model Number"]) for row in rows] == [
             ("Profit costs", "Profit costs"),
             ("Expert costs", "Disbursements"),
         ]
@@ -144,7 +157,7 @@ class TestGeneratePaymentExtractReportUseCase:
         provider_details_port.get_firms_by_ids.assert_called_once_with(
             ["ABC123", "XYZ789"]
         )
-        assert [row["VENDOR NAME"] for row in rows] == ["Firm A", "Firm A", "Firm X"]
+        assert [row["Vendor Name"] for row in rows] == ["Firm A", "Firm A", "Firm X"]
 
     def test_skips_firm_lookup_when_no_lines(self):
         use_case, _, provider_details_port = _build_use_case(lines=[])
@@ -235,7 +248,7 @@ class TestGeneratePaymentExtractReportUseCase:
 
         assert len(chunks) == 3
         rows = parse_csv_rows(_csv(chunks))
-        assert [row["INVOICE NUM"] for row in rows] == [f"A_{i:03d}" for i in range(5)]
+        assert [row["Invoice Num"] for row in rows] == [f"A_{i:03d}" for i in range(5)]
 
     def test_raises_invalid_date_range_when_from_after_to(self):
         use_case, _, _ = _build_use_case(lines=[_line()])

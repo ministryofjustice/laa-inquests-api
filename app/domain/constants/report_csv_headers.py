@@ -22,16 +22,16 @@ CLAIMS_BACKLOG_REPORT_HEADERS = [
 ]
 
 PAYMENT_EXTRACT_REPORT_HEADERS = [
-    "DESCRIPTION",
-    "INVOICE AMOUNT",
-    "INVOICE DATE",
-    "INVOICE TYPE",
-    "INVOICE NUM",
-    "VENDOR NAME",
-    "VENDOR SITE CODE",
-    "CASE REFERENCE",
-    "CLIENT NAME",
-    "TAX CODE",
-    "MODEL NUMBER",
-    "PROVIDER CASE REF NO",
+    "Description",
+    "Invoice Amount",
+    "Invoice Date",
+    "Invoice Type",
+    "Invoice Num",
+    "Vendor Name",
+    "Vendor Site Code",
+    "Case Reference",
+    "Client Name",
+    "Tax Code",
+    "Model Number",
+    "Provider Case Ref No",
 ]
