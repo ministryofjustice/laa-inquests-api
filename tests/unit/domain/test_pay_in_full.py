@@ -3,8 +3,12 @@ from decimal import Decimal
 import pytest
 
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
-from app.domain.pay_in_full import PayInFullClaim
+from app.domain.pay_in_full import (
+    PayInFullClaim,
+    pay_in_full_claim_from_submitted_poa_claim,
+)
 from app.models.claim.enums import ClaimType, POAType
+from app.models.claim.index import Claim
 
 VALID_PROFIT_COST = {
     "profit_cost_net": Decimal("1000.00"),
@@ -270,6 +274,29 @@ def test_raises_when_disbursement_gross_not_greater_than_vat_zero_plus_net():
     assert exc.value.code == ClaimErrorCode.DISBURSEMENT_GROSS_NOT_GREATER_THAN_TOTAL
 
 
+def test_valid_disbursement_with_zero_net_and_gross_equal_to_vat_zero():
+    PayInFullClaim(
+        claim_type_id=ClaimType.FINAL_BILL,
+        **VALID_PROFIT_COST,
+        disbursement_net=Decimal("0.00"),
+        disbursement_gross=Decimal("50.00"),
+        disbursement_vat_zero=Decimal("50.00"),
+    ).validate()
+
+
+def test_raises_when_disbursement_gross_less_than_vat_zero_with_zero_net():
+    with pytest.raises(ClaimValidationError) as exc:
+        PayInFullClaim(
+            claim_type_id=ClaimType.FINAL_BILL,
+            **VALID_PROFIT_COST,
+            disbursement_net=Decimal("0.00"),
+            disbursement_gross=Decimal("40.00"),
+            disbursement_vat_zero=Decimal("50.00"),
+        ).validate()
+
+    assert exc.value.code == ClaimErrorCode.DISBURSEMENT_GROSS_NOT_GREATER_THAN_TOTAL
+
+
 def test_valid_with_all_zero_disbursement_totals():
     PayInFullClaim(
         claim_type_id=ClaimType.FINAL_BILL,
@@ -451,3 +478,25 @@ def test_poa_claim_with_no_poa_type_still_requires_disbursement_totals():
         ).validate()
 
     assert exc.value.code == ClaimErrorCode.MISSING_DISBURSEMENT_TOTAL
+
+
+@pytest.mark.parametrize(
+    ("net", "gross", "vat_zero"),
+    [
+        ("0.00", "150.00", "150.00"),
+        ("0.00", "0.00", "150.00"),
+        ("0.00", "150.00", "100.00"),
+        ("1000.00", "1320.00", "120.00"),
+        ("1000.00", "1200.00", "0.00"),
+    ],
+)
+def test_submitted_disbursement_poa_claim_can_be_paid_in_full(net, gross, vat_zero):
+    claim = Claim(
+        claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
+        poa_type_id=POAType.EXPERT_COST,
+        total_profit_cost_net=Decimal(net),
+        total_profit_cost_gross=Decimal(gross),
+        total_profit_cost_vat_zero=Decimal(vat_zero),
+    )
+
+    pay_in_full_claim_from_submitted_poa_claim(claim).validate()

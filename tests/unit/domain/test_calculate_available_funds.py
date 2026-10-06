@@ -49,6 +49,20 @@ def test_uses_vat_zero_when_gross_is_absent():
     assert result == Decimal("9500.00")
 
 
+def test_uses_vat_zero_when_gross_is_zero():
+    claims = [
+        _amount(
+            ClaimDecisionStatus.GRANT,
+            gross=Decimal("0.00"),
+            vat_zero_total=Decimal("500.00"),
+        )
+    ]
+
+    result = calculate_available_funds(10000, claims)
+
+    assert result == Decimal("9500.00")
+
+
 def test_prefers_gross_over_vat_zero_when_both_present():
     claims = [
         _amount(

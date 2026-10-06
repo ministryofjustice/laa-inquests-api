@@ -2,6 +2,7 @@
 
 from decimal import Decimal
 
+from app.domain.claim_total import resolve_claim_total
 from app.models.application.index import Application
 from app.models.claim.index import Claim
 from app.models.gov_notify_templates.claim_submit_personalisation import (
@@ -28,5 +29,10 @@ def create_claim_submission_email_personalisation(
         date_of_claim=format_date(claim.submission_date),
         claim_type=format_claim_type(claim.claim_type_id),
         claim_reference=str(claim.claim_reference),
-        claimed_amount=format_amount(claim.total_profit_cost_gross or Decimal("0.00")),
+        claimed_amount=format_amount(
+            resolve_claim_total(
+                claim.total_profit_cost_gross, claim.total_profit_cost_vat_zero
+            )
+            or Decimal("0.00")
+        ),
     )

@@ -5,12 +5,13 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, computed_field, field_validator
 from pydantic import Field as PydanticField
 from pydantic.alias_generators import to_camel
 from sqlalchemy import Boolean, Column, Date, Numeric, UniqueConstraint
 from sqlmodel import Enum, Field, Relationship, SQLModel
 
+from app.domain.claim_total import resolve_claim_total
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
 from app.models.application.index import Application
 from app.models.claim.enums import (
@@ -374,6 +375,13 @@ class ClaimSummaryBase(BaseModel):
     total_profit_cost_vat_zero: Decimal | None = None
     total_funds_remaining_after_claim: Decimal
     poa_type_id: POAType | None = None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def total_amount(self) -> Decimal | None:
+        return resolve_claim_total(
+            self.total_profit_cost_gross, self.total_profit_cost_vat_zero
+        )
 
 
 class ClaimSummaryResponse(ClaimSummaryBase):

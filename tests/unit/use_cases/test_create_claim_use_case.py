@@ -935,7 +935,7 @@ def test_execute_uses_validated_domain_values_when_calling_port():
 
     _, kwargs = port.create_claim.call_args
     assert kwargs["claim"].net == Decimal("0.00")
-    assert kwargs["claim"].gross == Decimal("0.00")
+    assert kwargs["claim"].gross == Decimal("150.00")
     assert kwargs["claim"].vat_zero_total == Decimal("150.00")
 
 

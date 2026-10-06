@@ -2,6 +2,7 @@ import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 
+import pytest
 from sqlmodel import select
 
 from app.auth.rbac import Role
@@ -107,6 +108,7 @@ def test_200_get_claim_by_id_returns_expected_base_properties(session, client):
     assert body["totalProfitCostNet"] == "1000.00"
     assert body["totalProfitCostGross"] == "1200.00"
     assert body["totalProfitCostVatZero"] == "500.00"
+    assert body["totalAmount"] == "1200.00"
     assert body["poaTypeId"] == "PROFIT_COST"
     assert isinstance(body["submissionDate"], str)
     assert set(body.keys()) == {
@@ -116,6 +118,7 @@ def test_200_get_claim_by_id_returns_expected_base_properties(session, client):
         "totalProfitCostNet",
         "totalProfitCostGross",
         "totalProfitCostVatZero",
+        "totalAmount",
         "poaTypeId",
         "substantiveCostLimitation",
         "totalFundsRemainingAfterClaim",
@@ -133,6 +136,36 @@ def test_200_get_claim_by_id_returns_expected_base_properties(session, client):
         "payingParty",
         "numberOfCounselInstructed",
     }
+
+
+@pytest.mark.parametrize(
+    ("net", "gross", "vat_zero", "expected_total"),
+    [
+        ("0.00", "150.00", "150.00", "150.00"),
+        ("0.00", "0.00", "150.00", "150.00"),
+        ("1000.00", "1320.00", "120.00", "1320.00"),
+        ("1000.00", "1200.00", "0.00", "1200.00"),
+    ],
+)
+def test_200_get_claim_by_id_returns_total_amount_for_disbursement(
+    session, client, net, gross, vat_zero, expected_total
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    claim = _seed_claim(session, laa_reference)
+    claim.poa_type_id = POAType.EXPERT_COST
+    claim.total_profit_cost_net = Decimal(net)
+    claim.total_profit_cost_gross = Decimal(gross)
+    claim.total_profit_cost_vat_zero = Decimal(vat_zero)
+    session.add(claim)
+    session.commit()
+
+    response = client.get(
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}",
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["totalAmount"] == expected_total
 
 
 def test_200_get_claim_by_id_returns_final_bill_details(session, client):

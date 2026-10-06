@@ -34,3 +34,18 @@ def test_create_claim_submission_email_personalisation_returns_expected_data():
     assert result.claim_type == "Payment on account"
     assert result.claim_reference == "INQC-ABCD-1234"
     assert result.claimed_amount == "1,200.00"
+
+
+def test_claimed_amount_uses_vat_zero_total_when_gross_is_missing():
+    claim = MagicMock(spec=Claim)
+    claim.submission_date = datetime(2026, 7, 28, 14, 3, tzinfo=UTC)
+    claim.claim_reference = "INQC-ABCD-1234"
+    claim.claim_type_id = ClaimType.PAYMENT_ON_ACCOUNT
+    claim.total_profit_cost_gross = None
+    claim.total_profit_cost_vat_zero = Decimal("500.00")
+
+    result = create_claim_submission_email_personalisation(
+        claim, create_base_application(), "Test Firm Name"
+    )
+
+    assert result.claimed_amount == "500.00"

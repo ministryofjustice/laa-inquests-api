@@ -1,8 +1,9 @@
 """Use case for building rejection email personalisation data from Claim objects."""
 
 from datetime import UTC, datetime
+from decimal import Decimal
 
-from app.domain.claim import total_claim_amount
+from app.domain.claim_total import resolve_claim_total
 from app.models.application.index import Application
 from app.models.claim.index import Claim
 from app.models.gov_notify_templates.claim_reject_personalisation import (
@@ -32,9 +33,10 @@ def create_claim_rejection_email_personalisation(
         claim_type=format_claim_type(claim.claim_type_id),
         claim_ref=str(claim.claim_reference),
         total_claim_amount=format_amount(
-            total_claim_amount(
-                claim.total_profit_cost_vat_zero, claim.total_profit_cost_gross
+            resolve_claim_total(
+                claim.total_profit_cost_gross, claim.total_profit_cost_vat_zero
             )
+            or Decimal("0.00")
         ),
         date_of_rejection=format_date(datetime.now(UTC)),
         justification=justification,
