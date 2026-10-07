@@ -48,7 +48,7 @@ def test_create_final_bill_claim_rejection_email_personalisation_returns_expecte
     assert result.date_of_rejection == "18 August 2026 09:30 UTC"
 
 
-def test_final_bill_claim_rejection_personalisation_uses_vat_zero_amount():
+def test_final_bill_claim_rejection_personalisation_prefers_gross_amount():
     claim = MagicMock(spec=Claim)
     claim.claim_id = 7
     claim.claim_type_id = ClaimType.FINAL_BILL
@@ -60,4 +60,4 @@ def test_final_bill_claim_rejection_personalisation_uses_vat_zero_amount():
         claim, create_base_application(), "reason", "Firm"
     )
 
-    assert result.claimed_amount == "500.00"
+    assert result.claimed_amount == "1,200.00"

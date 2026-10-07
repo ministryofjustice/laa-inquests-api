@@ -1420,19 +1420,34 @@ class TestCreateClaimValidation:
         assert response.status_code == 422
         assert response.json()["detail"]["errorCode"] == "PROFIT_COST_MIXED_VAT"
 
-    def test_201_non_profit_cost_with_vat_zero_only_defaults_missing_totals(
-        self, session, client
+    @pytest.mark.parametrize(
+        ("submitted", "expected"),
+        [
+            # only a 0% VAT total, with and without a mis-entered 0.00 gross
+            ((None, None, "150.00"), ("0.00", "150.00", "150.00")),
+            ((None, "0.00", "150.00"), ("0.00", "150.00", "150.00")),
+            (("0.00", "0.00", "150.00"), ("0.00", "150.00", "150.00")),
+            # a supplied gross is stored as given
+            ((None, "150.00", "100.00"), ("0.00", "150.00", "100.00")),
+            (("1000.00", "1320.00", "120.00"), ("1000.00", "1320.00", "120.00")),
+            (("1000.00", "1200.00", None), ("1000.00", "1200.00", "0.00")),
+            ((None, "500.00", None), ("0.00", "500.00", "0.00")),
+        ],
+    )
+    def test_201_non_profit_cost_stores_gross_as_total(
+        self, session, client, submitted, expected
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
+        net, gross, vat_zero = submitted
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
             json=_make_request_body(
                 {
                     "poaTypeId": "EXPERT_COST",
-                    "totalProfitCostNet": None,
-                    "totalProfitCostGross": None,
-                    "totalProfitCostVatZero": "150.00",
+                    "totalProfitCostNet": net,
+                    "totalProfitCostGross": gross,
+                    "totalProfitCostVatZero": vat_zero,
                 }
             ),
             headers={
@@ -1443,17 +1458,110 @@ class TestCreateClaimValidation:
 
         assert response.status_code == 201
         claim = response.json()
-        assert set(claim.keys()) == {"claimReference"}
 
         stored_claim = session.exec(
             select(Claim).where(Claim.claim_reference == claim["claimReference"])
         ).one()
-        assert stored_claim is not None
-        assert Decimal(str(stored_claim.total_profit_cost_net)) == Decimal("0.00")
-        assert Decimal(str(stored_claim.total_profit_cost_gross)) == Decimal("0.00")
-        assert Decimal(str(stored_claim.total_profit_cost_vat_zero)) == Decimal(
-            "150.00"
+        assert (
+            Decimal(str(stored_claim.total_profit_cost_net)),
+            Decimal(str(stored_claim.total_profit_cost_gross)),
+            Decimal(str(stored_claim.total_profit_cost_vat_zero)),
+        ) == tuple(Decimal(value) for value in expected)
+
+    @pytest.mark.parametrize("vat_zero", [None, "120.00"])
+    def test_422_non_profit_cost_with_net_and_no_gross(self, session, client, vat_zero):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+
+        response = client.post(
+            f"/applications/{laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "poaTypeId": "NON_EXPERT_DISBURSEMENT",
+                    "totalProfitCostNet": "1000.00",
+                    "totalProfitCostGross": None,
+                    "totalProfitCostVatZero": vat_zero,
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
+            },
         )
+
+        assert response.status_code == 422
+        assert (
+            response.json()["detail"]["errorCode"]
+            == "MISSING_GROSS_TOTAL_WHEN_NET_ENTERED"
+        )
+
+    def test_201_vat_zero_only_disbursement_over_cost_limit_is_auto_rejected(
+        self, session, client
+    ):
+        application = session.exec(select(Application)).first()
+        application_proceeding = application.proceeding
+        application_proceeding.proceeding.substantive_cost_limitation = 10000
+        application_proceeding.certificate_start_date = datetime(2000, 1, 1, tzinfo=UTC)
+        application_proceeding.merits_decision = MeritsDecision.GRANTED
+        session.add(application_proceeding.proceeding)
+        session.add(application_proceeding)
+        session.commit()
+
+        response = client.post(
+            f"/applications/{application.laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "poaTypeId": "EXPERT_COST",
+                    "totalProfitCostNet": None,
+                    "totalProfitCostGross": None,
+                    "totalProfitCostVatZero": "15000.00",
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
+            },
+        )
+
+        assert response.status_code == 201
+        assert response.json()["rejectionReasons"] == [
+            "CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT"
+        ]
+
+    def test_201_vat_zero_only_disbursement_over_50000_is_held_for_manual_review(
+        self, session, client
+    ):
+        application = session.exec(select(Application)).first()
+        application_proceeding = application.proceeding
+        application_proceeding.proceeding.substantive_cost_limitation = 100000
+        application_proceeding.certificate_start_date = datetime(2000, 1, 1, tzinfo=UTC)
+        application_proceeding.merits_decision = MeritsDecision.GRANTED
+        session.add(application_proceeding.proceeding)
+        session.add(application_proceeding)
+        session.commit()
+
+        response = client.post(
+            f"/applications/{application.laa_reference}/claim",
+            json=_make_request_body(
+                {
+                    "poaTypeId": "EXPERT_COST",
+                    "totalProfitCostNet": None,
+                    "totalProfitCostGross": None,
+                    "totalProfitCostVatZero": "60000.00",
+                }
+            ),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
+            },
+        )
+
+        assert response.status_code == 201
+        stored_claim = session.exec(
+            select(Claim).where(
+                Claim.claim_reference == response.json()["claimReference"]
+            )
+        ).one()
+        assert stored_claim.status_id == ClaimStatus.SUBMITTED
 
     def test_422_non_profit_cost_with_no_cost_fields(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference

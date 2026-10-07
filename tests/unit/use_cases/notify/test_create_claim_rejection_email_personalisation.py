@@ -73,8 +73,25 @@ def test_total_claim_amount_uses_gross_when_no_vat_zero():
     assert result.total_claim_amount == "2,400.00"
 
 
-def test_uses_vat_zero_amount_when_vat_zero_present():
-    claim = _claim(total_profit_cost_vat_zero=Decimal("500.00"))
+def test_prefers_gross_when_vat_zero_also_present():
+    claim = _claim(
+        total_profit_cost_gross=Decimal("1320.00"),
+        total_profit_cost_vat_zero=Decimal("120.00"),
+    )
+
+    result = create_claim_rejection_email_personalisation(
+        claim, create_base_application(), "reason", "Firm"
+    )
+
+    assert result.total_claim_amount == "1,320.00"
+
+
+@pytest.mark.parametrize("gross", [None, Decimal("0.00")])
+def test_uses_vat_zero_amount_when_gross_missing_or_zero(gross):
+    claim = _claim(
+        total_profit_cost_gross=gross,
+        total_profit_cost_vat_zero=Decimal("500.00"),
+    )
 
     result = create_claim_rejection_email_personalisation(
         claim, create_base_application(), "reason", "Firm"
@@ -83,13 +100,14 @@ def test_uses_vat_zero_amount_when_vat_zero_present():
     assert result.total_claim_amount == "500.00"
 
 
-def test_raises_when_neither_vat_zero_nor_gross_is_set():
+def test_total_claim_amount_is_zero_when_neither_vat_zero_nor_gross_is_set():
     claim = _claim(total_profit_cost_gross=None, total_profit_cost_vat_zero=None)
 
-    with pytest.raises(ValueError):
-        create_claim_rejection_email_personalisation(
-            claim, create_base_application(), "reason", "Firm"
-        )
+    result = create_claim_rejection_email_personalisation(
+        claim, create_base_application(), "reason", "Firm"
+    )
+
+    assert result.total_claim_amount == "0.00"
 
 
 def test_claim_type_final_bill_uses_friendly_label():

@@ -7,6 +7,7 @@ from decimal import Decimal
 
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
 from app.domain.claim_rejection import ClaimRejection, ClaimRejectionReason
+from app.domain.claim_total import resolve_claim_total
 from app.domain.constants.claim_messages import (
     ACTIVE_FINAL_BILL_EXISTS_MESSAGE,
     COST_TEMPLATE_FILE_NOT_ALLOWED_MESSAGE,
@@ -79,11 +80,8 @@ class ApprovedClaimAmount:
 
     @property
     def payment_amount(self) -> Decimal:
-        if self.gross is not None:
-            return self.gross
-        if self.vat_zero_total is not None:
-            return self.vat_zero_total
-        return Decimal(0)
+        total = resolve_claim_total(self.gross, self.vat_zero_total)
+        return total if total is not None else Decimal(0)
 
 
 def calculate_available_funds(
@@ -100,18 +98,6 @@ def calculate_available_funds(
         Decimal(0),
     )
     return limit - total_approved
-
-
-def total_claim_amount(
-    vat_zero_total: Decimal | None, gross: Decimal | None
-) -> Decimal:
-    """The claim's total claimed figure: its VAT-zero total when present,
-    otherwise its gross. Raises when neither is set."""
-    if vat_zero_total is not None:
-        return vat_zero_total
-    if gross is not None:
-        return gross
-    raise ValueError("Claim has no zero-rated or gross amount to report")
 
 
 @dataclass(frozen=True)
@@ -165,6 +151,7 @@ class Claim:
             and self.poa_type != POAType.PROFIT_COST
         ):
             self._validate_non_profit_cost_has_at_least_one_total()
+            self._validate_non_profit_cost_gross_present_when_net_entered()
             self._normalize_non_profit_cost_totals()
 
         if self.poa_type == POAType.PROFIT_COST:
@@ -184,14 +171,11 @@ class Claim:
                 ACTIVE_FINAL_BILL_EXISTS_MESSAGE,
             )
 
-    def gross_or_vat_zero_cost(self) -> Decimal | None:
-        return self.gross if self.gross is not None else self.vat_zero_total
-
     def is_eligible_for_auto_approval(self, application: Application) -> bool:
         if self.claim_type != ClaimType.PAYMENT_ON_ACCOUNT:
             return False
 
-        if self.gross_or_vat_zero_cost() is None:
+        if resolve_claim_total(self.gross, self.vat_zero_total) is None:
             return False
 
         if self._exceeds_hard_poa_limit():
@@ -228,7 +212,7 @@ class Claim:
         if self.claim_type != ClaimType.PAYMENT_ON_ACCOUNT:
             return None
 
-        total = self.gross_or_vat_zero_cost()
+        total = resolve_claim_total(self.gross, self.vat_zero_total)
         if total is None:
             return None
 
@@ -251,7 +235,7 @@ class Claim:
         if self.claim_type != ClaimType.PAYMENT_ON_ACCOUNT:
             return False
 
-        new_claim_cost = self.gross_or_vat_zero_cost()
+        new_claim_cost = resolve_claim_total(self.gross, self.vat_zero_total)
         if new_claim_cost is None:
             return False
 
@@ -263,7 +247,7 @@ class Claim:
             c for c in existing_claims if c.status == ClaimStatus.PAY_IN_FULL
         ]
         existing_total = sum(
-            ((c.gross if c.gross is not None else c.vat_zero_total) or Decimal(0))
+            (resolve_claim_total(c.gross, c.vat_zero_total) or Decimal(0))
             for c in approved_claims
         )
         total = existing_total + new_claim_cost
@@ -285,7 +269,7 @@ class Claim:
     def _exceeds_hard_poa_limit(self) -> bool:
         if self.claim_type != ClaimType.PAYMENT_ON_ACCOUNT:
             return False
-        total = self.gross_or_vat_zero_cost()
+        total = resolve_claim_total(self.gross, self.vat_zero_total)
         return total is not None and total > AUTO_APPROVAL_MAX_TOTAL
 
     def should_auto_reject(
@@ -343,6 +327,7 @@ class Claim:
         return Decimal(str(raw_limit))
 
     def _normalize_non_profit_cost_totals(self) -> None:
+        gross = resolve_claim_total(self.gross, self.vat_zero_total)
         object.__setattr__(
             self,
             "net",
@@ -351,7 +336,7 @@ class Claim:
         object.__setattr__(
             self,
             "gross",
-            self.gross if self.gross is not None else Decimal("0.00"),
+            gross if gross is not None else Decimal("0.00"),
         )
         object.__setattr__(
             self,
@@ -364,6 +349,13 @@ class Claim:
             raise ClaimValidationError(
                 ClaimErrorCode.MISSING_NON_PROFIT_COST_TOTAL,
                 MISSING_NON_PROFIT_COST_TOTAL_MESSAGE,
+            )
+
+    def _validate_non_profit_cost_gross_present_when_net_entered(self) -> None:
+        if self.net is not None and self.gross is None:
+            raise ClaimValidationError(
+                ClaimErrorCode.MISSING_GROSS_TOTAL_WHEN_NET_ENTERED,
+                MISSING_GROSS_MESSAGE,
             )
 
     def _validate_claim_type_poa_combination(self) -> None:

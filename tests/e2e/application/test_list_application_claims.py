@@ -133,11 +133,44 @@ def test_200_assessed_true_returns_only_non_submitted_claims(session, client):
         "totalProfitCostNet",
         "totalProfitCostGross",
         "totalProfitCostVatZero",
+        "totalAmount",
         "totalFundsRemainingAfterClaim",
         "poaTypeId",
         "statusId",
         "claimDecisionStatus",
     }
+
+
+def test_200_total_amount_uses_vat_zero_when_gross_is_zero(session, client):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    claim = _seed_claim(session, laa_reference, ClaimStatus.ACCEPTED)
+    claim.poa_type_id = POAType.EXPERT_COST
+    claim.total_profit_cost_net = Decimal("0.00")
+    claim.total_profit_cost_gross = Decimal("0.00")
+    claim.total_profit_cost_vat_zero = Decimal("150.00")
+    session.add(claim)
+    session.commit()
+
+    response = client.get(
+        f"/applications/{laa_reference}/claims?assessed=true",
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()[0]["totalAmount"] == "150.00"
+
+
+def test_200_total_amount_prefers_gross_when_vat_zero_also_present(session, client):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    _seed_claim(session, laa_reference, ClaimStatus.ACCEPTED)
+
+    response = client.get(
+        f"/applications/{laa_reference}/claims?assessed=true",
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()[0]["totalAmount"] == "1200.00"
 
 
 def test_200_includes_claim_status_for_each_claim(session, client):

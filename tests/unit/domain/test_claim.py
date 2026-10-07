@@ -5,9 +5,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.domain.claim import Claim, ExistingClaimSummary, total_claim_amount
+from app.domain.claim import Claim, ExistingClaimSummary
 from app.domain.claim_error import ClaimErrorCode, ClaimValidationError
 from app.domain.claim_rejection import ClaimRejectionReason
+from app.domain.claim_total import resolve_claim_total
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 from app.models.claim.enums import (
@@ -19,19 +20,34 @@ from app.models.claim.enums import (
 )
 
 
-def test_total_claim_amount_returns_vat_zero_when_present():
-    assert total_claim_amount(Decimal("500.00"), Decimal("1200.00")) == Decimal(
-        "500.00"
+def test_resolve_claim_total_prefers_gross_when_both_present():
+    assert resolve_claim_total(Decimal("1320.00"), Decimal("120.00")) == Decimal(
+        "1320.00"
     )
 
 
-def test_total_claim_amount_returns_gross_when_no_vat_zero():
-    assert total_claim_amount(None, Decimal("1200.00")) == Decimal("1200.00")
+def test_resolve_claim_total_returns_gross_when_no_vat_zero():
+    assert resolve_claim_total(Decimal("1200.00"), None) == Decimal("1200.00")
 
 
-def test_total_claim_amount_raises_when_neither_set():
-    with pytest.raises(ValueError):
-        total_claim_amount(None, None)
+def test_resolve_claim_total_returns_vat_zero_when_gross_is_none():
+    assert resolve_claim_total(None, Decimal("500.00")) == Decimal("500.00")
+
+
+def test_resolve_claim_total_returns_vat_zero_when_gross_is_zero():
+    assert resolve_claim_total(Decimal("0.00"), Decimal("150.00")) == Decimal("150.00")
+
+
+def test_resolve_claim_total_returns_zero_when_gross_and_vat_zero_are_zero():
+    assert resolve_claim_total(Decimal("0.00"), Decimal("0.00")) == Decimal("0.00")
+
+
+def test_resolve_claim_total_returns_zero_gross_when_no_vat_zero():
+    assert resolve_claim_total(Decimal("0.00"), None) == Decimal("0.00")
+
+
+def test_resolve_claim_total_returns_none_when_neither_set():
+    assert resolve_claim_total(None, None) is None
 
 
 def test_valid_with_net_and_gross():
@@ -159,20 +175,126 @@ def test_raises_when_non_profit_cost_has_no_totals():
     assert exc_info.value.code == ClaimErrorCode.MISSING_NON_PROFIT_COST_TOTAL
 
 
-def test_non_profit_cost_defaults_missing_totals_to_zero():
-    claim = Claim(
+def _disbursement_claim(
+    net: Decimal | None,
+    gross: Decimal | None,
+    vat_zero_total: Decimal | None,
+    poa_type: POAType = POAType.EXPERT_COST,
+) -> Claim:
+    return Claim(
         claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
-        poa_type=POAType.EXPERT_COST,
-        net=None,
-        gross=None,
-        vat_zero_total=Decimal("150.00"),
+        poa_type=poa_type,
+        net=net,
+        gross=gross,
+        vat_zero_total=vat_zero_total,
     )
+
+
+@pytest.mark.parametrize(
+    "poa_type", [POAType.EXPERT_COST, POAType.NON_EXPERT_DISBURSEMENT]
+)
+@pytest.mark.parametrize(
+    ("net", "gross"),
+    [
+        (None, None),
+        (None, Decimal("0.00")),
+        (Decimal("0.00"), Decimal("0.00")),
+    ],
+)
+def test_disbursement_with_only_vat_zero_stores_gross_as_vat_zero(poa_type, net, gross):
+    claim = _disbursement_claim(net, gross, Decimal("150.00"), poa_type)
 
     claim.validate_total_claim_cost()
 
     assert claim.net == Decimal("0.00")
-    assert claim.gross == Decimal("0.00")
+    assert claim.gross == Decimal("150.00")
     assert claim.vat_zero_total == Decimal("150.00")
+
+
+def test_disbursement_with_vat_zero_and_gross_keeps_supplied_gross():
+    claim = _disbursement_claim(None, Decimal("150.00"), Decimal("100.00"))
+
+    claim.validate_total_claim_cost()
+
+    assert claim.net == Decimal("0.00")
+    assert claim.gross == Decimal("150.00")
+    assert claim.vat_zero_total == Decimal("100.00")
+
+
+def test_disbursement_with_net_vat_zero_and_gross_keeps_all_three():
+    claim = _disbursement_claim(
+        Decimal("1000.00"), Decimal("1320.00"), Decimal("120.00")
+    )
+
+    claim.validate_total_claim_cost()
+
+    assert claim.net == Decimal("1000.00")
+    assert claim.gross == Decimal("1320.00")
+    assert claim.vat_zero_total == Decimal("120.00")
+
+
+def test_disbursement_with_net_and_gross_defaults_vat_zero_to_zero():
+    claim = _disbursement_claim(Decimal("1000.00"), Decimal("1200.00"), None)
+
+    claim.validate_total_claim_cost()
+
+    assert claim.gross == Decimal("1200.00")
+    assert claim.vat_zero_total == Decimal("0.00")
+
+
+def test_disbursement_with_gross_only_defaults_net_and_vat_zero_to_zero():
+    claim = _disbursement_claim(None, Decimal("500.00"), None)
+
+    claim.validate_total_claim_cost()
+
+    assert claim.net == Decimal("0.00")
+    assert claim.gross == Decimal("500.00")
+    assert claim.vat_zero_total == Decimal("0.00")
+
+
+@pytest.mark.parametrize("vat_zero_total", [None, Decimal("120.00")])
+def test_raises_when_disbursement_net_provided_without_gross(vat_zero_total):
+    claim = _disbursement_claim(Decimal("1000.00"), None, vat_zero_total)
+
+    with pytest.raises(ClaimValidationError) as exc_info:
+        claim.validate_total_claim_cost()
+
+    assert exc_info.value.code == ClaimErrorCode.MISSING_GROSS_TOTAL_WHEN_NET_ENTERED
+
+
+def test_disbursement_vat_zero_only_claim_counts_vat_zero_towards_limit():
+    claim = _disbursement_claim(None, None, Decimal("1500.00"))
+    claim.validate_total_claim_cost()
+
+    reason = claim.should_auto_reject_for_limit(_make_application(limit=1000))
+
+    assert reason is ClaimRejectionReason.CLAIM_EXCEEDS_SUBSTANTIVE_COST_LIMIT
+
+
+def test_disbursement_vat_zero_only_claim_over_hard_limit_is_not_auto_approved():
+    claim = _disbursement_claim(None, None, Decimal("50000.01"))
+    claim.validate_total_claim_cost()
+    application = _make_application(limit=1000000)
+    application.status = "ACTIVE"
+    application.overall_decision = MeritsDecision.GRANTED
+
+    assert claim.is_eligible_for_auto_approval(application) is False
+    assert claim.requires_manual_review(application, []) is True
+
+
+def test_disbursement_vat_zero_only_claim_counts_towards_aggregate_limit():
+    claim = _disbursement_claim(None, None, Decimal("600.00"))
+    claim.validate_total_claim_cost()
+    existing = [
+        _make_existing_claim(
+            net=Decimal("0.00"),
+            gross=Decimal("0.00"),
+            vat_zero_total=Decimal("500.00"),
+            status=ClaimStatus.PAY_IN_FULL,
+        )
+    ]
+
+    assert claim.exceeds_aggregate_cost_limit(_make_application(limit=1000), existing)
 
 
 def test_raises_when_non_profit_cost_net_higher_than_gross():

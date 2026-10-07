@@ -159,8 +159,9 @@ class PayInFullClaim:
 
         if self.disbursement_net is not None and self.disbursement_gross is not None:
             vat_zero = self.disbursement_vat_zero or Decimal(0)
-            has_no_standard_rated_disbursement = (
-                self.disbursement_gross == 0 and self.disbursement_net == 0
+            # Gross equal to the 0% VAT total is how a 0%-only claim is stored.
+            has_no_standard_rated_disbursement = self.disbursement_net == 0 and (
+                self.disbursement_gross in (0, vat_zero)
             )
             if (
                 not has_no_standard_rated_disbursement
