@@ -202,7 +202,7 @@ FROM application a
 WHERE a.laa_reference = 'INQ-123-000';
 
 INSERT INTO claim_inquest_outcome (claim_id, inquest_outcome_id)
-SELECT claim_id, 'NATURAL_CAUSES'::inquestoutcomecode
+SELECT claim_id, 'ACCIDENT_OR_MISADVENTURE'::inquestoutcomecode
 FROM claim
 WHERE claim_reference = 'INQC-123A-0005';
 
