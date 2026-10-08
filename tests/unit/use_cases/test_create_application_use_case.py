@@ -1,5 +1,5 @@
 import uuid
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 
@@ -11,7 +11,10 @@ from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.create_application import CreateApplicationUseCase
-from app.use_cases.exceptions import ProviderDetailsRetrievalError
+from app.use_cases.exceptions import (
+    ProviderDetailsRetrievalError,
+    ProviderOfficeMismatchError,
+)
 from tests.unit.factories import create_base_application
 
 
@@ -70,7 +73,7 @@ def test_execute_creates_application_sends_confirmation_email_and_commits():
         provider_details_port=provider_details_port,
     )
 
-    result = use_case.execute(request, "0A123B")
+    result = use_case.execute(request, "0A123B", frozenset(["0U651L"]))
 
     assert result == application
     create_application_port.create_application.assert_called_once_with(
@@ -126,7 +129,7 @@ def test_execute_passes_authenticated_firm_code_to_create_application_port():
         provider_details_port=provider_details_port,
     )
 
-    use_case.execute(request, "1473")
+    use_case.execute(request, "1473", frozenset(["0U651L"]))
 
     create_application_port.create_application.assert_called_once_with(request, "1473")
 
@@ -150,7 +153,7 @@ def test_execute_rolls_back_and_reraises_when_notify_fails():
     )
 
     with pytest.raises(RuntimeError, match="notify failed"):
-        use_case.execute(request, "0A123B")
+        use_case.execute(request, "0A123B", frozenset(["0U651L"]))
 
     create_application_port.commit.assert_not_called()
     create_application_port.rollback.assert_called_once_with()
@@ -174,12 +177,44 @@ def test_execute_rolls_back_and_reraises_when_commit_fails():
     )
 
     with pytest.raises(RuntimeError, match="commit failed"):
-        use_case.execute(request, "0A123B")
+        use_case.execute(request, "0A123B", frozenset(["0U651L"]))
 
     gov_notify_port.send_application_submit_confirmation_email.assert_called_once_with(
         application,
         "provider@example.com",
     )
+    create_application_port.rollback.assert_called_once_with()
+
+
+def test_execute_rolls_back_and_reraises_when_provider_office_mismatch():
+    request = _make_request()
+    application = create_base_application()
+    create_application_port = MagicMock(spec=CreateApplicationPort)
+    create_application_port.create_application.return_value = application
+    create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
+    gov_notify_port = MagicMock(spec=GovNotifyPort)
+    provider_details_port = MagicMock(spec=ProviderDetailsPort)
+    provider_details_port.does_office_exist.return_value = False
+
+    use_case = CreateApplicationUseCase(
+        create_application_port=create_application_port,
+        create_history_event_port=create_history_event_port,
+        gov_notify_port=gov_notify_port,
+        provider_details_port=provider_details_port,
+    )
+
+    with (
+        patch("app.use_cases.create_application.logger") as mock_logger,
+        pytest.raises(ProviderOfficeMismatchError),
+    ):
+        use_case.execute(request, "0A123B", frozenset(["OfficeNotInApplication"]))
+
+    mock_logger.error.assert_called_once_with(
+        "Office id 0U651L is not in the user's office codes"
+    )
+    create_history_event_port.create_history_event.assert_not_called()
+    gov_notify_port.send_application_submit_confirmation_email.assert_not_called()
+    create_application_port.commit.assert_not_called()
     create_application_port.rollback.assert_called_once_with()
 
 
@@ -201,7 +236,7 @@ def test_execute_rolls_back_and_reraises_when_does_office_exist_fails():
     )
 
     with pytest.raises(ProviderDetailsRetrievalError):
-        use_case.execute(request, "0A123B")
+        use_case.execute(request, "0A123B", frozenset(["0U651L"]))
 
     provider_details_port.does_office_exist.assert_called_once_with(
         application.provider.office_id
