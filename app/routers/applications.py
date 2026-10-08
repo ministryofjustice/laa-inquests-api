@@ -516,11 +516,19 @@ def get_delete_coroners_letter_use_case(
 def create_application(
     request: ApplicationCreate,
     firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
+    user_office_codes: Annotated[
+        frozenset[str], Depends(get_current_provider_office_codes)
+    ],
     use_case: CreateApplicationUseCase = Depends(get_create_application_use_case),
 ) -> Application:
     """Creates a new application with proceedings and public bodies."""
-    application = use_case.execute(request, firm_code)
-    return application
+    try:
+        application = use_case.execute(request, firm_code, user_office_codes)
+        return application
+    except ProviderOfficeMismatchError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except ProviderDetailsRetrievalError as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post(

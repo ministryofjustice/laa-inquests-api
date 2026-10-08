@@ -1,5 +1,6 @@
 import uuid
 
+from app.routers.dependencies.entra_auth import get_current_provider_office_codes
 import pytest
 from sqlmodel import select
 
@@ -400,6 +401,29 @@ class TestCreateApplication:
 
         assert response.status_code == 201
         assert response.json()["provider"]["emailAddress"] == "provider@example.com"
+
+    def test_403_create_application_forbidden_when_provider_cant_access_office(
+        self, client
+    ):
+        body = _make_request_body()
+
+        def get_current_provider_office_codes_override():
+            return ["1"]
+
+        api.dependency_overrides[get_current_provider_office_codes] = (
+            get_current_provider_office_codes_override
+        )
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 403
 
     def test_422_create_application_rejected_when_provider_email_missing(self, client):
         body = _make_request_body()
