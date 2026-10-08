@@ -86,7 +86,7 @@ BEGIN
   RETURNING deceased_id INTO v_deceased_id;
 
   INSERT INTO provider (firm_code, office_id, email_address)
-  VALUES ('1473', '0A123B', 'P.JONES@PJS.CO.UK')
+  VALUES ('1473', '0U651L', 'P.JONES@PJS.CO.UK')
   RETURNING provider_id INTO v_provider_id;
 
   INSERT INTO application (
