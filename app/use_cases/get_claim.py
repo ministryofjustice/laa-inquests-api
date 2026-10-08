@@ -9,6 +9,7 @@ from app.models.claim.index import (
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.ports.claim.get_claim_decision_port import GetClaimDecisionPort
+from app.ports.claim.get_claim_evidence_port import GetClaimEvidencePort
 from app.use_cases.exceptions import ApplicationNotFoundError, ClaimNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -19,10 +20,12 @@ class GetClaimUseCase:
         self,
         get_claim_by_id_port: GetClaimByIdPort,
         get_claim_decision_port: GetClaimDecisionPort,
+        get_claim_evidence_port: GetClaimEvidencePort,
         application_lookup_port: ApplicationLookupPort,
     ) -> None:
         self.get_claim_by_id_port = get_claim_by_id_port
         self.get_claim_decision_port = get_claim_decision_port
+        self.get_claim_evidence_port = get_claim_evidence_port
         self.application_lookup_port = application_lookup_port
 
     def execute(self, laa_reference: str, claim_reference: str) -> ClaimByIdResponse:
@@ -67,6 +70,13 @@ class GetClaimUseCase:
             response.claim_cost_template_file = CostTemplateFileResponse.model_validate(
                 claim.claim_cost_template
             )
+            template_evidence = self.get_claim_evidence_port.get_claim_evidence_by_id(
+                claim.claim_cost_template.claim_cost_template_file_id
+            )
+            if template_evidence is not None:
+                response.claim_cost_template_file.file_size = (
+                    template_evidence.file_size
+                )
 
         logger.info(
             "Claim retrieved",

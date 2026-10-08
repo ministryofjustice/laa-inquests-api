@@ -73,6 +73,7 @@ class UploadClaimEvidenceUseCase:
         new_claim_evidence = ClaimEvidence(
             sds_file_name=response_body.sds_file_name,
             file_name=file_name,
+            file_size=len(claim_evidence),
         )
         claim_evidence_id = (
             self.upload_claim_evidence_port.save_uploaded_claim_evidence(

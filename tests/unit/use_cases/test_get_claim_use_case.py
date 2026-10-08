@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from app.domain.claim_evidence import ClaimEvidence as DomainClaimEvidence
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
 from app.models.claim.enums import (
     ClaimDecisionStatus,
@@ -22,6 +23,7 @@ from app.models.claim.index import (
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.ports.claim.get_claim_decision_port import GetClaimDecisionPort
+from app.ports.claim.get_claim_evidence_port import GetClaimEvidencePort
 from app.use_cases.exceptions import ApplicationNotFoundError, ClaimNotFoundError
 from app.use_cases.get_claim import GetClaimUseCase
 
@@ -60,6 +62,7 @@ def _build_use_case(
     claim=None,
     application=None,
     decision=None,
+    claim_evidence=None,
 ):
     claim_port = MagicMock(spec=GetClaimByIdPort)
     claim_port.get_claim_by_reference.return_value = claim
@@ -70,8 +73,12 @@ def _build_use_case(
     lookup_port = MagicMock(spec=ApplicationLookupPort)
     lookup_port.get_application_by_laa_reference.return_value = application
 
+    evidence_port = MagicMock(spec=GetClaimEvidencePort)
+    evidence_port.get_claim_evidence_by_id.return_value = claim_evidence
+
     return GetClaimUseCase(
         get_claim_by_id_port=claim_port,
+        get_claim_evidence_port=evidence_port,
         get_claim_decision_port=decision_port,
         application_lookup_port=lookup_port,
     )
@@ -179,6 +186,43 @@ def test_cost_template_file_is_populated_when_present():
         result.claim_cost_template_file.claim_cost_template_file_name
         == "final_bill_costs.xlsx"
     )
+
+
+def test_cost_template_file_includes_file_size_from_stored_evidence():
+    file_id = uuid.uuid4()
+    claim = _claim()
+    claim.claim_cost_template = ClaimCostTemplate(
+        claim_id=1,
+        claim_cost_template_file_id=file_id,
+        claim_cost_template_file_name="final_bill_costs.xlsx",
+    )
+    use_case = _build_use_case(
+        claim=claim,
+        application=_application(),
+        claim_evidence=DomainClaimEvidence(
+            sds_file_name="template_abc123.xlsx",
+            file_name="final_bill_costs.xlsx",
+            file_size=20480,
+        ),
+    )
+
+    result = use_case.execute("1", "INQC-0000-0001")
+
+    assert result.claim_cost_template_file.file_size == 20480
+
+
+def test_cost_template_file_size_is_none_when_evidence_not_found():
+    claim = _claim()
+    claim.claim_cost_template = ClaimCostTemplate(
+        claim_id=1,
+        claim_cost_template_file_id=uuid.uuid4(),
+        claim_cost_template_file_name="final_bill_costs.xlsx",
+    )
+    use_case = _build_use_case(claim=claim, application=_application())
+
+    result = use_case.execute("1", "INQC-0000-0001")
+
+    assert result.claim_cost_template_file.file_size is None
 
 
 def test_cost_template_file_is_none_when_absent():

@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 from app import api
 from app.auth.rbac import Permission, Role, get_current_user_permissions
+from app.models.claim.index import ClaimEvidence
 from app.routers.claims import get_sds_port
 
 
@@ -31,6 +32,18 @@ def test_201_upload_claim_evidence_returns_claim_evidence_id(client):
     body = response.json()
     assert "claimEvidenceId" in body
     assert is_valid_uuid(body["claimEvidenceId"])
+
+
+def test_201_upload_claim_evidence_stores_file_size(client, session):
+    content = b"test content"
+    response = client.post(
+        "/claims/evidence",
+        files={"file": ("claim_evidence.pdf", io.BytesIO(content), "application/pdf")},
+        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
+    )
+    assert response.status_code == 201
+    evidence = session.get(ClaimEvidence, uuid.UUID(response.json()["claimEvidenceId"]))
+    assert evidence.file_size == len(content)
 
 
 def test_201_upload_claim_evidence_accepts_xlsx(client):

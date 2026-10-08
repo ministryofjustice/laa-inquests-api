@@ -556,6 +556,7 @@ class ClaimRepositoryAdapter(
         claim_evidence_model = ClaimEvidenceModel(
             sds_file_name=claim_evidence.sds_file_name,
             file_name=claim_evidence.file_name,
+            file_size=claim_evidence.file_size,
         )
         self.session.add(claim_evidence_model)
         self.session.flush()
@@ -580,6 +581,7 @@ class ClaimRepositoryAdapter(
         return DomainClaimEvidence(
             sds_file_name=claim_evidence_model.sds_file_name,
             file_name=claim_evidence_model.file_name,
+            file_size=claim_evidence_model.file_size,
         )
 
     def delete_claim_evidence_by_id(
