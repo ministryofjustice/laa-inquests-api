@@ -3,37 +3,59 @@ ignore:
 
     "SNYK-DEBIAN13-ATTR-17678182":
         - "*":
+              expires: 2026-11-07T00:00:00.000Z
+              created: 2026-10-08T00:00:00.000Z
               reason: "There is no fixed version for Debian:13 attr"
     "SNYK-DEBIAN13-ACL-17677866":
         - "*":
+              expires: 2026-11-07T00:00:00.000Z
+              created: 2026-10-08T00:00:00.000Z
               reason: "There is no fixed version for Debian:13 acl"
     "SNYK-DEBIAN13-EXPAT-18968950":
         - "*":
+              expires: 2026-11-07T00:00:00.000Z
+              created: 2026-10-08T00:00:00.000Z
               reason:
                   "There is no fixed version for Debian:13 expat; Expat through
                   2.8.3 contains a denial of service vulnerability caused by quadratic
                   algorithmic complexity in the storeAtts() function in xmlparse.c"
     "snyk:lic:pip:pyphen:(GPL-2.0_OR_LGPL-2.0_OR_MPL-1.1)":
         - "*":
+              expires: 2026-11-07T00:00:00.000Z
+              created: 2026-10-08T00:00:00.000Z
               reason: "Triple-licensed; project complies with LGPL-2.0 terms"
     "SNYK-DEBIAN13-UTILLINUX-19513282":
         - "*":
+              expires: 2026-11-07T00:00:00.000Z
+              created: 2026-10-08T00:00:00.000Z
               reason: "There is no fixed version for Debian:13 util-linux"
     "SNYK-DEBIAN13-UTILLINUX-19513289":
         - "*":
+              expires: 2026-11-07T00:00:00.000Z
+              created: 2026-10-08T00:00:00.000Z
               reason: "There is no fixed version for Debian:13 util-linux"
     "SNYK-DEBIAN13-UTILLINUX-19513292":
         - "*":
+              expires: 2026-11-07T00:00:00.000Z
+              created: 2026-10-08T00:00:00.000Z
               reason: "There is no fixed version for Debian:13 util-linux"
     "SNYK-DEBIAN13-ZLIB-19520500":
         - "*":
+              expires: 2026-11-07T00:00:00.000Z
+              created: 2026-10-08T00:00:00.000Z
               reason: "There is no fixed version for Debian:13 zlib"
     "SNYK-DEBIAN13-EXPAT-19964593":
         - "*":
+              expires: 2026-11-07T00:00:00.000Z
+              created: 2026-10-08T00:00:00.000Z
               reason: "There is no fixed version for Debian:13 expat"
     "SNYK-DEBIAN13-GCC14-20335537":
         - "*":
+              expires: 2026-11-07T00:00:00.000Z
+              created: 2026-10-08T00:00:00.000Z
               reason: "There is no fixed version for Debian:13 gcc-14"
     "SNYK-DEBIAN13-GCC14-20386241":
         - "*":
+              expires: 2026-11-07T00:00:00.000Z
+              created: 2026-10-08T00:00:00.000Z
               reason: "There is no fixed version for Debian:13 gcc-14"
