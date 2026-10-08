@@ -1,6 +1,5 @@
 import uuid
 
-from app.routers.dependencies.entra_auth import get_current_provider_office_codes
 import pytest
 from sqlmodel import select
 
@@ -10,6 +9,7 @@ from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
+from app.routers.dependencies.entra_auth import get_current_provider_office_codes
 
 pytestmark = pytest.mark.usefixtures("mock_gov_notify")
 

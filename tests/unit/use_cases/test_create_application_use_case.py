@@ -9,12 +9,12 @@ from app.models.notifications.enums import NotificationType
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
+from app.ports.provider_details_port import ProviderDetailsPort
+from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.exceptions import (
     ProviderDetailsRetrievalError,
     ProviderOfficeMismatchError,
 )
-from app.ports.provider_details_port import ProviderDetailsPort
-from app.use_cases.create_application import CreateApplicationUseCase
 from tests.unit.factories import create_base_application
 
 
@@ -203,9 +203,11 @@ def test_execute_rolls_back_and_reraises_when_provider_office_mismatch():
         provider_details_port=provider_details_port,
     )
 
-    with patch("app.use_cases.create_application.logger") as mock_logger:
-        with pytest.raises(ProviderOfficeMismatchError):
-            use_case.execute(request, "0A123B", frozenset(["OfficeNotInApplication"]))
+    with (
+        patch("app.use_cases.create_application.logger") as mock_logger,
+        pytest.raises(ProviderOfficeMismatchError),
+    ):
+        use_case.execute(request, "0A123B", frozenset(["OfficeNotInApplication"]))
 
     mock_logger.error.assert_called_once_with(
         "Office id 0U651L is not in the user's office codes"
