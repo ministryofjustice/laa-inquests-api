@@ -5,3 +5,4 @@ from dataclasses import dataclass
 class ClaimEvidence:
     sds_file_name: str
     file_name: str
+    file_size: int | None = None

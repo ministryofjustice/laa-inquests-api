@@ -213,6 +213,7 @@ class ClaimEvidence(SQLModel, table=True):
     )
     sds_file_name: str
     file_name: str
+    file_size: int | None = Field(default=None)
     claim_id: int | None = Field(default=None, foreign_key="claim.claim_id")
     claim: Optional["Claim"] = Relationship(back_populates="claim_evidence")
 
@@ -397,6 +398,7 @@ class ClaimEvidenceResponse(BaseModel):
     )
     claim_evidence_id: uuid.UUID
     file_name: str
+    file_size: int | None = None
 
 
 class DecisionReasonResponse(BaseModel):
@@ -428,6 +430,7 @@ class CostTemplateFileResponse(BaseModel):
     )
     claim_cost_template_file_id: uuid.UUID
     claim_cost_template_file_name: str
+    file_size: int | None = None
 
 
 class ClaimByIdResponse(ClaimSummaryBase):
