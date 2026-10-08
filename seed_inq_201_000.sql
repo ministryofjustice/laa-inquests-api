@@ -87,7 +87,7 @@ BEGIN
   VALUES ('DEPARTMENT_OF_HEALTH_AND_SOCIAL_CARE', v_application_id);
 END $$;
 
--- 2. Nil bill: zero gross, no net or VAT-zero total, no counsel details, no recovery.
+-- 2. Nil bill: zero gross, no net or VAT-zero total, no counsel details; recovery costs awarded.
 INSERT INTO claim (
   application_id, claim_reference, claim_type_id, status_id, submission_date,
   total_profit_cost_gross, total_funds_remaining_after_claim, claimant_id,
@@ -98,8 +98,8 @@ INSERT INTO claim (
 SELECT
   a.application_id, 'INQC-201A-0001', 'NIL_BILL'::claimtype, 'SUBMITTED'::claimstatus,
   '2026-10-05 09:00:00+00', 0.00, 10000.00, 'nil.bill@example.com',
-  false, false,
-  0.00, 0.00, 0.00, 0.00, 'N/A'
+  false, true,
+  100.00, 250.00, 500.00, 25.00, 'Manchester City Council'
 FROM application a
 WHERE a.laa_reference = 'INQ-201-000';
 
