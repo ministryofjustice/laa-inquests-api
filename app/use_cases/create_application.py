@@ -8,7 +8,10 @@ from app.ports.create_application_port import CreateApplicationPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.provider_details_port import ProviderDetailsPort
-from app.use_cases.exceptions import ProviderDetailsRetrievalError
+from app.use_cases.exceptions import (
+    ProviderDetailsRetrievalError,
+    ProviderOfficeMismatchError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -26,12 +29,25 @@ class CreateApplicationUseCase:
         self.gov_notify_port = gov_notify_port
         self.provider_details_port = provider_details_port
 
-    def execute(self, request: ApplicationCreate, firm_code: str) -> Application:
+    def execute(
+        self,
+        request: ApplicationCreate,
+        firm_code: str,
+        user_office_codes: frozenset[str],
+    ) -> Application:
         application = self.create_application_port.create_application(
             request, firm_code
         )
 
         try:
+            if application.provider.office_id not in user_office_codes:
+                logger.error(
+                    f"Office id {application.provider.office_id} is not in the user's office codes"
+                )
+                raise ProviderOfficeMismatchError(
+                    f"Office id {application.provider.office_id} is not in the user's office codes"
+                )
+
             if not self.provider_details_port.does_office_exist(
                 application.provider.office_id
             ):
