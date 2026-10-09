@@ -5,12 +5,68 @@
 -- A nil bill takes no evidence file or cost template, so no psql variables are needed.
 BEGIN;
 
--- 0. Abort if the application has already been seeded.
+-- 0. Replace any earlier seed of this application. Refuses to touch an application that
+-- was not created by this script (identified by its seed coroners letter).
 DO $$
+DECLARE
+  v_application_id integer;
+  v_client_id integer;
+  v_deceased_id integer;
+  v_provider_id integer;
+  v_coroners_letter_id uuid;
+  v_correspondence_address_id integer;
+  v_home_address_id integer;
+  v_is_seeded boolean;
 BEGIN
-  IF EXISTS (SELECT 1 FROM application WHERE laa_reference = 'INQ-202-000') THEN
-    RAISE EXCEPTION 'Application INQ-202-000 already exists';
+  SELECT a.application_id, a.client_id, a.deceased_id, a.provider_id, a.coroners_letter_id,
+         cl.sds_file_name = 'seed-inq-202-000-coroners-letter'
+  INTO v_application_id, v_client_id, v_deceased_id, v_provider_id, v_coroners_letter_id, v_is_seeded
+  FROM application a
+  LEFT JOIN coroners_letter cl ON cl.coroners_letter_id = a.coroners_letter_id
+  WHERE a.laa_reference = 'INQ-202-000';
+
+  IF v_application_id IS NULL THEN
+    RETURN;
   END IF;
+  IF v_is_seeded IS NOT TRUE THEN
+    RAISE EXCEPTION 'Application INQ-202-000 exists but was not created by this script';
+  END IF;
+
+  SELECT correspondence_address_id, home_address_id
+  INTO v_correspondence_address_id, v_home_address_id
+  FROM client
+  WHERE client_id = v_client_id;
+
+  DELETE FROM history_event WHERE application_id = v_application_id;
+  DELETE FROM decision_reason WHERE claim_decision_id IN (
+    SELECT claim_decision_id FROM claim_decision WHERE claim_id IN (
+      SELECT claim_id FROM claim WHERE application_id = v_application_id));
+  DELETE FROM claim_decision_amount WHERE claim_decision_id IN (
+    SELECT claim_decision_id FROM claim_decision WHERE claim_id IN (
+      SELECT claim_id FROM claim WHERE application_id = v_application_id));
+  DELETE FROM claim_decision WHERE claim_id IN (
+    SELECT claim_id FROM claim WHERE application_id = v_application_id);
+  DELETE FROM claim_payment_extract WHERE claim_id IN (
+    SELECT claim_id FROM claim WHERE application_id = v_application_id);
+  DELETE FROM claim_inquest_outcome WHERE claim_id IN (
+    SELECT claim_id FROM claim WHERE application_id = v_application_id);
+  -- The cost template file is an unlinked claim_evidence row, so it is removed by id.
+  DELETE FROM claim_evidence WHERE claim_evidence_id IN (
+    SELECT claim_cost_template_file_id FROM claim_cost_template WHERE claim_id IN (
+      SELECT claim_id FROM claim WHERE application_id = v_application_id));
+  DELETE FROM claim_cost_template WHERE claim_id IN (
+    SELECT claim_id FROM claim WHERE application_id = v_application_id);
+  DELETE FROM claim_evidence WHERE claim_id IN (
+    SELECT claim_id FROM claim WHERE application_id = v_application_id);
+  DELETE FROM claim WHERE application_id = v_application_id;
+  DELETE FROM application_public_body WHERE application_id = v_application_id;
+  DELETE FROM application_proceeding WHERE application_id = v_application_id;
+  DELETE FROM application WHERE application_id = v_application_id;
+  DELETE FROM deceased WHERE deceased_id = v_deceased_id;
+  DELETE FROM client WHERE client_id = v_client_id;
+  DELETE FROM address WHERE address_id IN (v_correspondence_address_id, v_home_address_id);
+  DELETE FROM provider WHERE provider_id = v_provider_id;
+  DELETE FROM coroners_letter WHERE coroners_letter_id = v_coroners_letter_id;
 END $$;
 
 -- 1. Granted application with its client, deceased, provider, letter and proceeding.
