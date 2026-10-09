@@ -16,8 +16,9 @@ from fastapi.responses import StreamingResponse
 
 from app.auth.rbac import Permission, require_permission_from
 from app.logging_utils import build_log_extra
-from app.models.claim.index import UploadClaimEvidenceResponse
+from app.models.claim.index import ClaimApplicationResponse, UploadClaimEvidenceResponse
 from app.ports.claim.delete_claim_evidence_port import DeleteClaimEvidencePort
+from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.ports.claim.get_claim_evidence_port import GetClaimEvidencePort
 from app.ports.claim.upload_claim_evidence_port import UploadClaimEvidencePort
 from app.ports.sds_port import SdsPort
@@ -32,6 +33,10 @@ from app.use_cases.exceptions import (
     ClaimEvidenceRetrievalError,
     ClaimEvidenceUploadError,
     ClaimEvidenceVirusDetectedError,
+    ClaimNotFoundError,
+)
+from app.use_cases.retrieve_application_for_claim import (
+    RetrieveApplicationForClaimUseCase,
 )
 from app.use_cases.retrieve_claim_evidence import RetrieveClaimEvidenceUseCase
 from app.use_cases.upload_claim_evidence import UploadClaimEvidenceUseCase
@@ -86,6 +91,14 @@ def get_delete_claim_evidence_use_case(
         get_claim_evidence_port=get_claim_evidence_port,
         delete_claim_evidence_port=delete_claim_evidence_port,
         sds_port=sds_port,
+    )
+
+
+def get_retrieve_application_for_claim_use_case(
+    get_claim_by_id_port: GetClaimByIdPort = Depends(get_claim_db_adapter),
+) -> RetrieveApplicationForClaimUseCase:
+    return RetrieveApplicationForClaimUseCase(
+        get_claim_by_id_port=get_claim_by_id_port,
     )
 
 
@@ -205,6 +218,24 @@ def retrieve_claim_evidence(
             "Content-Disposition": f'{disposition}; filename="{result.file_name}"'
         },
     )
+
+
+@router.get(
+    "/{claim_reference}/application",
+    response_model=ClaimApplicationResponse,
+    dependencies=[Depends(require_permission_from(Permission.CLAIM_READ))],
+)
+def retrieve_application_for_claim(
+    claim_reference: str,
+    use_case: RetrieveApplicationForClaimUseCase = Depends(
+        get_retrieve_application_for_claim_use_case
+    ),
+) -> ClaimApplicationResponse:
+    try:
+        laa_reference = use_case.execute(claim_reference)
+        return ClaimApplicationResponse(laa_reference=laa_reference)
+    except ClaimNotFoundError:
+        raise HTTPException(status_code=404, detail="Claim not found")
 
 
 @router.delete(
