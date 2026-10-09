@@ -361,6 +361,15 @@ class ClaimResponse(BaseModel):
     rejection_reasons: list[ReasonCode] | None = None
 
 
+class ClaimApplicationResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        from_attributes=True,
+        populate_by_name=True,
+    )
+    laa_reference: str
+
+
 class ClaimSummaryBase(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
