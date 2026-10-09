@@ -61,10 +61,13 @@ def _seed_claim(
     return claim
 
 
-def _seed_evidence(session, claim_id: int) -> ClaimEvidence:
+def _seed_evidence(
+    session, claim_id: int, file_size: int | None = None
+) -> ClaimEvidence:
     evidence = ClaimEvidence(
         sds_file_name="evidence_abc123.pdf",
         file_name="evidence.pdf",
+        file_size=file_size,
         claim_id=claim_id,
     )
     session.add(evidence)
@@ -274,6 +277,36 @@ def test_200_get_claim_by_id_includes_claim_evidence(session, client):
     assert claim_evidence[0]["fileName"] == "evidence.pdf"
 
 
+def test_200_get_claim_by_id_includes_claim_evidence_file_size(session, client):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    claim = _seed_claim(session, laa_reference)
+    _seed_evidence(session, claim.claim_id, file_size=104448)
+
+    response = client.get(
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}",
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["claimEvidence"][0]["fileSize"] == 104448
+
+
+def test_200_get_claim_by_id_claim_evidence_file_size_is_null_when_not_stored(
+    session, client
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    claim = _seed_claim(session, laa_reference)
+    _seed_evidence(session, claim.claim_id)
+
+    response = client.get(
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}",
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["claimEvidence"][0]["fileSize"] is None
+
+
 def test_200_get_claim_by_id_returns_empty_claim_evidence_when_none_linked(
     session, client
 ):
@@ -392,6 +425,36 @@ def test_200_get_claim_by_id_includes_cost_template_file(session, client):
     assert (
         claim_cost_template_file["claimCostTemplateFileName"] == "final_bill_costs.xlsx"
     )
+
+
+def test_200_get_claim_by_id_includes_cost_template_file_size(session, client):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    claim = _seed_claim(session, laa_reference, claim_type=ClaimType.FINAL_BILL)
+    file_id = uuid.uuid4()
+    session.add(
+        ClaimEvidence(
+            claim_evidence_id=file_id,
+            sds_file_name="template_abc123.xlsx",
+            file_name="final_bill_costs.xlsx",
+            file_size=20480,
+        )
+    )
+    session.add(
+        ClaimCostTemplate(
+            claim_id=claim.claim_id,
+            claim_cost_template_file_id=file_id,
+            claim_cost_template_file_name="final_bill_costs.xlsx",
+        )
+    )
+    session.commit()
+
+    response = client.get(
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}",
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["claimCostTemplateFile"]["fileSize"] == 20480
 
 
 def test_200_get_claim_by_id_returns_null_cost_template_file_when_none_linked(

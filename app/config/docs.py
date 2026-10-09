@@ -11,7 +11,7 @@ Authorised caseworkers can:
 * Read a given application by sending a get request to **/applications/{laa_reference}**.
 * Read the evidence associated with an application by sending a get request to **/applications/{laa_reference}coroners-letter**.
 * Read the claims associated with an application by sending a get request to **/applications/{laa_reference}/claims**. Filter by assessment status with the **assessed** query parameter (true returns claims that are not submitted, false returns submitted claims).
-* Read a single claim for an application by sending a get request to **/applications/{laa_reference}/claims/{claim_id}**.
+* Read a single claim for an application by sending a get request to **/applications/{laa_reference}/claims/{claim_id}**. The claim evidence and cost template file include their size in bytes where it is known.
 * Update the merits decision for an application to refused by sending a patch request to **/applications/{laa_reference}/refuse-decision**.
 * Update the merits decision for an application to granted by sending a patch request to **/applications/{laa_reference}/grant-decision**.
 
@@ -31,7 +31,7 @@ Authorised caseworkers can:
 
 ### Providers
 Authorised providers can:
-* Upload claim evidence to SDS by posting to **/claims/evidence**.
+* Upload claim evidence to SDS by posting to **/claims/evidence**. The size of the uploaded file is stored with the evidence.
 * Retrieve a piece of claim evidence from SDS by sending a get request to **/claims/{claim_evidence_id}**.
 
 
