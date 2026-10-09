@@ -6,6 +6,7 @@ from app.use_cases.exceptions import ClaimNotFoundError
 
 logger = logging.getLogger(__name__)
 
+
 class RetrieveApplicationForClaimUseCase:
     def __init__(self, get_claim_by_id_port: GetClaimByIdPort) -> None:
         self.get_claim_by_id_port = get_claim_by_id_port
