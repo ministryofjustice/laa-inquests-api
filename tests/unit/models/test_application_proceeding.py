@@ -5,7 +5,7 @@ from tests.unit.factories import create_base_application_proceeding
 
 def test_substantive_cost_limitation_is_zero_when_pending():
     application_proceeding = create_base_application_proceeding(
-        merits_decision=MeritsDecision.PENDING
+        merits_decision=MeritsDecision.SUBMITTED
     )
 
     assert (

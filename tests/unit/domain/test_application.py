@@ -9,7 +9,7 @@ def test_is_granted_true_when_overall_decision_is_granted():
 
 
 def test_is_granted_false_when_overall_decision_is_pending():
-    application = ApplicationDomain(overall_decision=MeritsDecision.PENDING)
+    application = ApplicationDomain(overall_decision=MeritsDecision.SUBMITTED)
 
     assert application.is_granted is False
 

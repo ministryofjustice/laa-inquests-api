@@ -5,7 +5,6 @@ from sqlmodel import select
 
 from app import api
 from app.auth.rbac import Permission, Role, get_current_user_permissions
-from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
@@ -101,7 +100,7 @@ class TestCreateApplication:
         assert proceeding["levelOfService"] == "FULL_REPRESENTATION"
         assert proceeding["certificateType"] == "SUBSTANTIVE"
         assert proceeding["clientInvolvementType"] == "RESPONDENT"
-        assert proceeding["meritsDecision"] == MeritsDecision.PENDING
+        assert proceeding["meritsDecision"] == "SUBMITTED"
         assert proceeding["substantiveCostLimitation"] == 0
         assert isinstance(proceeding["scopeDescription"], str)
         assert isinstance(proceeding["proceedingName"], str)

@@ -53,7 +53,7 @@ class TestGenerateApplicationBacklogReportUseCase:
     def test_returns_csv_row_for_pending_application(self):
         provider = create_base_provider(firm_code="123")
         proceeding = create_base_application_proceeding(
-            merits_decision=MeritsDecision.PENDING,
+            merits_decision=MeritsDecision.SUBMITTED,
         )
         application = create_base_application(
             provider=provider,
@@ -73,7 +73,7 @@ class TestGenerateApplicationBacklogReportUseCase:
         assert row["Application / Case Reference Number"] == str(
             application.laa_reference
         )
-        assert row["Current Application Status"] == MeritsDecision.PENDING
+        assert row["Current Application Status"] == MeritsDecision.SUBMITTED
         assert row["Firm Account Number"] == "123"
         assert row["Firm Name"] == "Test Firm"
         assert row["Proceeding Code"] == "IQOT"

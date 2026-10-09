@@ -2,7 +2,7 @@ import enum
 
 
 class MeritsDecision(str, enum.Enum):
-    PENDING = "PENDING"
+    SUBMITTED = "SUBMITTED"
     REFUSED = "REFUSED"
     GRANTED = "GRANTED"
 

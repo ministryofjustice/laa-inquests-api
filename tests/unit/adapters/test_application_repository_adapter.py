@@ -220,7 +220,7 @@ class TestSearchApplications:
 
     def test_returns_empty_list_when_application_is_pending(self, session):
         app = session.exec(select(Application)).first()
-        app.proceeding.merits_decision = MeritsDecision.PENDING
+        app.proceeding.merits_decision = MeritsDecision.SUBMITTED
         session.add(app.proceeding)
         session.flush()
 
@@ -254,7 +254,7 @@ class TestSearchApplications:
 
     def test_returns_pending_application_when_no_merits_filter(self, session):
         app = session.exec(select(Application)).first()
-        app.proceeding.merits_decision = MeritsDecision.PENDING
+        app.proceeding.merits_decision = MeritsDecision.SUBMITTED
         session.add(app.proceeding)
         session.flush()
 
@@ -402,7 +402,7 @@ class TestGetLaaReference:
 class TestGetPendingApplications:
     def test_returns_applications_with_pending_decision(self, session):
         app = session.exec(select(Application)).first()
-        app.proceeding.merits_decision = MeritsDecision.PENDING
+        app.proceeding.merits_decision = MeritsDecision.SUBMITTED
         session.add(app.proceeding)
         session.flush()
 
@@ -411,7 +411,7 @@ class TestGetPendingApplications:
         result = adapter.get_pending_applications()
 
         assert len(result) == 1
-        assert result[0].proceeding.merits_decision == "PENDING"
+        assert result[0].proceeding.merits_decision == "SUBMITTED"
 
     def test_excludes_granted_applications(self, session):
         app = session.exec(select(Application)).first()
@@ -439,7 +439,7 @@ class TestGetPendingApplications:
 
     def test_ordered_by_created_at_ascending(self, session):
         app = session.exec(select(Application)).first()
-        app.proceeding.merits_decision = MeritsDecision.PENDING
+        app.proceeding.merits_decision = MeritsDecision.SUBMITTED
         session.add(app.proceeding)
         session.flush()
 
