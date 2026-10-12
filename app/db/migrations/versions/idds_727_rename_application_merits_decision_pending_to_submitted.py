@@ -1,6 +1,6 @@
 """Rename application merits decision PENDING to SUBMITTED.
 
-Revision ID: idds_727_merits_decision_submitted
+Revision ID: idds_727_merits_submitted
 Revises: idds_597_cpe_created_at_idx
 Create Date: 2026-10-09 00:00:00.000000
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "idds_727_merits_decision_submitted"
+revision: str = "idds_727_merits_submitted"
 down_revision: Union[str, None] = "idds_597_cpe_created_at_idx"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
