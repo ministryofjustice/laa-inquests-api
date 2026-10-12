@@ -222,7 +222,7 @@ class ApplicationProceeding(SQLModel, table=True):
     __tablename__ = "application_proceeding"
     application_proceeding_id: int = Field(primary_key=True, nullable=False)
     client_involvement_type: str | None = "RESPONDENT"
-    merits_decision: str = MeritsDecision.PENDING
+    merits_decision: str = MeritsDecision.SUBMITTED
     reason_for_refusal: str | None = None
     justification: str | None = None
     application_id: int = Field(foreign_key="application.application_id")

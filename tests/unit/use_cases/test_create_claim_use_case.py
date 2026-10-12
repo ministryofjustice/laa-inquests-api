@@ -290,7 +290,7 @@ def test_execute_raises_invalid_claim_error_when_application_not_granted():
     command = _make_command()
     create_claim_port = MagicMock(spec=CreateClaimPort)
     application = _make_matching_application()
-    application.overall_decision = MeritsDecision.PENDING
+    application.overall_decision = MeritsDecision.SUBMITTED
 
     use_case = _make_use_case(
         create_claim_port=create_claim_port,

@@ -88,7 +88,7 @@ def test_execute_raises_application_not_found_error_when_application_is_missing(
 
 
 @pytest.mark.parametrize(
-    "overall_decision", [MeritsDecision.PENDING, MeritsDecision.REFUSED]
+    "overall_decision", [MeritsDecision.SUBMITTED, MeritsDecision.REFUSED]
 )
 def test_execute_raises_application_not_granted_error_when_application_not_granted(
     overall_decision,

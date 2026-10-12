@@ -1942,7 +1942,7 @@ class TestCreateClaimAutoDecisionRules:
 
     def test_422_create_claim_when_application_not_granted(self, session, client):
         application = session.exec(select(Application)).first()
-        application.proceeding.merits_decision = MeritsDecision.PENDING
+        application.proceeding.merits_decision = MeritsDecision.SUBMITTED
         session.add(application.proceeding)
         session.commit()
 

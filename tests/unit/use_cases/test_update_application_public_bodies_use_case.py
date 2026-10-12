@@ -83,7 +83,7 @@ def test_update_public_bodies_calls_ports_and_commits(
 
 
 @pytest.mark.parametrize(
-    "merits_decision", [MeritsDecision.PENDING, MeritsDecision.REFUSED]
+    "merits_decision", [MeritsDecision.SUBMITTED, MeritsDecision.REFUSED]
 )
 def test_update_public_bodies_raises_exception_when_application_not_granted(
     use_case,
