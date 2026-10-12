@@ -153,7 +153,9 @@ def test_commits_transaction(session):
         actor_type=ActorType.CASEWORKER,
         application_id=application.application_id,
     )
+    assert session.get_transaction() is not None
     adapter.commit()
+    assert session.get_transaction() is None
 
     stored = session.get(HistoryEvent, created.id)
     assert stored is not None
@@ -171,7 +173,9 @@ def test_rollback_discards_uncommitted_event(session):
         application_id=application.application_id,
     )
     event_id = created.id
+    assert session.get_transaction() is not None
     adapter.rollback()
+    assert session.get_transaction() is None
 
     stored = session.get(HistoryEvent, event_id)
     assert stored is None
