@@ -105,3 +105,14 @@ async def _verify_entra_token_with_scopes(
     )
     set_entra_user_context(user.entra_object_id, user.name)
     return user
+
+
+async def _audit_report_download(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_http_bearer)],
+    entra_auth: Annotated[EntraAuthPort, Depends(get_entra_auth_port)],
+    report_type: ReportType,
+):
+    email_address = await run_in_threadpool(
+        entra_auth.get_email_address, credentials.credentials
+    )
+    pass

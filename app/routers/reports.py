@@ -143,6 +143,7 @@ def get_application_backlog_report(
 @router.get(
     "/claims/backlog",
     dependencies=[
+        user_email_address=Depends(get_email_address()),
         Depends(require_permission_from(Permission.REPORTS_CLAIM_WORKFLOW_READ))
     ],
 )
