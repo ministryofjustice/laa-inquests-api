@@ -2,6 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
+import jwt
 import pytest
 from fastapi import HTTPException
 from jwt.exceptions import (
@@ -220,7 +221,7 @@ def test_get_email_address_returns_None_when_preferred_username_missing(adapter)
 def test_get_email_address_returns_None_when_jwt_decode_fails(adapter):
     with patch(
         "app.adapters.entra_auth_adapter.jwt.decode",
-        side_effect=Exception("JWT decode failed"),
+        side_effect=jwt.PyJWTError("JWT decode failed"),
     ):
         email = adapter.get_email_address("valid.jwt.token")
     assert email is None
