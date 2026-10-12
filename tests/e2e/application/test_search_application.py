@@ -68,7 +68,7 @@ def test_200_search_application_includes_pending_application_when_no_merits_filt
     session, client
 ):
     app = session.exec(select(Application)).first()
-    app.proceeding.merits_decision = MeritsDecision.PENDING
+    app.proceeding.merits_decision = MeritsDecision.SUBMITTED
     session.add(app.proceeding)
     session.commit()
 
@@ -109,7 +109,7 @@ def test_200_search_application_with_granted_filter_excludes_pending_application
     session, client
 ):
     app = session.exec(select(Application)).first()
-    app.proceeding.merits_decision = MeritsDecision.PENDING
+    app.proceeding.merits_decision = MeritsDecision.SUBMITTED
     session.add(app.proceeding)
     session.commit()
 

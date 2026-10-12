@@ -71,7 +71,7 @@ def test_422_update_application_public_bodies_when_application_not_granted(
     original_public_body_ids = [
         public_body.public_body_id for public_body in application.public_bodies
     ]
-    application.proceeding.merits_decision = MeritsDecision.PENDING
+    application.proceeding.merits_decision = MeritsDecision.SUBMITTED
     session.add(application.proceeding)
     session.commit()
 

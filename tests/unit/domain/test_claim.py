@@ -1407,7 +1407,7 @@ def test_is_not_eligible_for_auto_approval_when_merits_decision_pending():
     )
     application = _make_application_with_certificate(start=None)
     application.status = "LIVE"
-    application.overall_decision = MeritsDecision.PENDING
+    application.overall_decision = MeritsDecision.SUBMITTED
 
     assert claim.is_eligible_for_auto_approval(application) is False
 

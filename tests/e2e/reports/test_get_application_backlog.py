@@ -28,7 +28,7 @@ class TestGetApplicationBacklogReport:
 
     def test_200_csv_contains_expected_headers(self, session, client):
         application = session.exec(select(Application)).first()
-        application.proceeding.merits_decision = MeritsDecision.PENDING
+        application.proceeding.merits_decision = MeritsDecision.SUBMITTED
         session.add(application.proceeding)
         session.commit()
 
@@ -47,7 +47,7 @@ class TestGetApplicationBacklogReport:
         self, session, client
     ):
         application = session.exec(select(Application)).first()
-        application.proceeding.merits_decision = MeritsDecision.PENDING
+        application.proceeding.merits_decision = MeritsDecision.SUBMITTED
         session.add(application.proceeding)
         session.commit()
 
@@ -61,7 +61,7 @@ class TestGetApplicationBacklogReport:
         rows = parse_csv_rows(response.text)
 
         row = rows[0]
-        assert row["Current Application Status"] == MeritsDecision.PENDING
+        assert row["Current Application Status"] == MeritsDecision.SUBMITTED
         for header in APPLICATION_BACKLOG_REPORT_HEADERS:
             assert row[header] != "", f"Expected '{header}' to be non-empty"
 
@@ -95,7 +95,7 @@ class TestGetApplicationBacklogReport:
         self, session, client
     ):
         application = session.exec(select(Application)).first()
-        application.proceeding.merits_decision = MeritsDecision.PENDING
+        application.proceeding.merits_decision = MeritsDecision.SUBMITTED
         session.add(application.proceeding)
         session.commit()
 

@@ -360,7 +360,7 @@ class ApplicationRepositoryAdapter(
                 ApplicationProceeding,
                 Application.application_id == ApplicationProceeding.application_id,
             )
-            .where(ApplicationProceeding.merits_decision == "PENDING")
+            .where(ApplicationProceeding.merits_decision == "SUBMITTED")
             .order_by(Application.created_at.asc())
         )
         return list(self.session.exec(statement).unique().all())

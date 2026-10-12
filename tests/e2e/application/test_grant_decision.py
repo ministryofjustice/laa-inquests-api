@@ -17,7 +17,7 @@ def _grant_decision_payload(overrides=None):
 def test_204_grant_decision_to_granted(session, client):
     application = session.exec(select(Application)).first()
     laa_reference = application.laa_reference
-    application.proceeding.merits_decision = MeritsDecision.PENDING
+    application.proceeding.merits_decision = MeritsDecision.SUBMITTED
     session.add(application.proceeding)
     session.commit()
     session.refresh(application)
