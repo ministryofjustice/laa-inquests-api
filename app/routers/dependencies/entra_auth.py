@@ -1,10 +1,14 @@
 from typing import Annotated
 
+from app.db import get_session
+from sqlmodel import Session
 from fastapi import Depends, HTTPException, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.adapters.entra_auth_adapter import EntraAuthAdapter
+from app.adapters.audit_repository_adapter import AuditRepositoryAdapter
+from app.models.audit.enums import ReportType
 from app.config import Config
 from app.contexts.user import set_entra_user_context
 from app.ports.entra_auth_port import AuthenticatedUser, EntraAuthPort
@@ -26,6 +30,12 @@ def get_entra_auth_port() -> EntraAuthPort:
         client_id=Config.INQUESTS_API_CLIENT_ID,
         default_scopes=_configured_entra_scopes(),
     )
+
+
+def get_audit_repository_adapter(
+    session: Session = Depends(get_session),
+) -> AuditRepositoryAdapter:
+    return AuditRepositoryAdapter(session=session)
 
 
 async def verify_entra_token(
@@ -107,12 +117,19 @@ async def _verify_entra_token_with_scopes(
     return user
 
 
-async def _audit_report_download(
+async def audit_report_download(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_http_bearer)],
     entra_auth: Annotated[EntraAuthPort, Depends(get_entra_auth_port)],
-    report_type: ReportType,
+    audit_port: Annotated[
+        AuditRepositoryAdapter, Depends(get_audit_repository_adapter)
+    ],
+    # report_type: ReportType #TODO: Introduce parameter for report type
 ):
     email_address = await run_in_threadpool(
         entra_auth.get_email_address, credentials.credentials
     )
-    pass
+    audit_port.audit_report_download(
+        user_email_address=email_address,
+        report_type=ReportType.CLAIMS_BACKLOG,
+    )
+    return

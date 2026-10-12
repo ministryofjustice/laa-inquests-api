@@ -2,6 +2,7 @@ import logging
 from datetime import UTC, date, datetime
 from typing import Annotated
 
+from app.routers.dependencies.entra_auth import audit_report_download
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.exc import SQLAlchemyError
@@ -143,8 +144,8 @@ def get_application_backlog_report(
 @router.get(
     "/claims/backlog",
     dependencies=[
-        user_email_address=Depends(get_email_address()),
-        Depends(require_permission_from(Permission.REPORTS_CLAIM_WORKFLOW_READ))
+        Depends(audit_report_download),
+        Depends(require_permission_from(Permission.REPORTS_CLAIM_WORKFLOW_READ)),
     ],
 )
 def get_claim_backlog_report(

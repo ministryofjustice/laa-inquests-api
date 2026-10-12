@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
 
-from app.adapters.audit_event_repository_adapter import AuditRepositoryAdapter
+from app.adapters.audit_repository_adapter import AuditRepositoryAdapter
 from app.models.audit.enums import ReportType
 from app.models.audit.index import ReportDownloadAudit
 

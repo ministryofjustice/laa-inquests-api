@@ -255,7 +255,11 @@ def client_fixture(session: Session):
                 office_codes=frozenset(["0U651L"]),
             )
 
+        def get_email_address(token: str) -> str:
+            return "test@example.com"
+
         mock_auth.verify_token.side_effect = verify_token
+        mock_auth.get_email_address.side_effect = get_email_address
         return mock_auth
 
     api.dependency_overrides[get_session] = get_session_override

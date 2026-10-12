@@ -182,6 +182,50 @@ def test_verify_token_raises_401_for_invalid_token(adapter, side_effect):
     assert exc_info.value.status_code == 401
 
 
+def test_get_email_address_returns_preferred_username(adapter):
+    with patch(
+        "app.adapters.entra_auth_adapter.jwt.decode",
+        return_value={
+            "sub": "user",
+            "scp": "User.Provider",
+            "FIRM_CODE": "0A123B",
+            "name": "Test Name",
+            "oid": "some-entra-object-id",
+            "LAA_APP_ROLES": Role.PROVIDER_APPLICATION_USER.value,
+            "ACCOUNTS": ["A001B", "A002B"],
+            "preferred_username": "test@example.com",
+        },
+    ):
+        email = adapter.get_email_address("valid.jwt.token")
+    assert email == "test@example.com"
+
+
+def test_get_email_address_returns_None_when_preferred_username_missing(adapter):
+    with patch(
+        "app.adapters.entra_auth_adapter.jwt.decode",
+        return_value={
+            "sub": "user",
+            "scp": "User.Provider",
+            "FIRM_CODE": "0A123B",
+            "name": "Test Name",
+            "oid": "some-entra-object-id",
+            "LAA_APP_ROLES": Role.PROVIDER_APPLICATION_USER.value,
+            "ACCOUNTS": ["A001B", "A002B"],
+        },
+    ):
+        email = adapter.get_email_address("valid.jwt.token")
+    assert email is None
+
+
+def test_get_email_address_returns_None_when_jwt_decode_fails(adapter):
+    with patch(
+        "app.adapters.entra_auth_adapter.jwt.decode",
+        side_effect=Exception("JWT decode failed"),
+    ):
+        email = adapter.get_email_address("valid.jwt.token")
+    assert email is None
+
+
 class TestFormatName:
     def test_returns_none_when_name_is_none(self, adapter):
         assert adapter._format_name(None) == ""
