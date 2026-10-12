@@ -1,78 +1,33 @@
--- Seed application INQ-202-000 (Ginny Weasley) with a single SUBMITTED nil bill claim.
+-- Seed the first unused application INQ-202-nnn (001-999) (Ginny Weasley) with a single SUBMITTED nil bill claim.
 -- Run via psql through laa-inquest-dev RDS db's port-forward pod and review the
 -- dry-run output (w ROLLBACK on the last line) before running with COMMIT.
 -- Requires reference data from bin/seed.py (proceeding IQPC, public body MINISTRY_OF_DEFENCE).
 -- A nil bill takes no evidence file or cost template, so no psql variables are needed.
 BEGIN;
 
--- 0. Replace any earlier seed of this application. Refuses to touch an application that
--- was not created by this script (identified by its seed coroners letter).
+-- 0. Pick the first unused INQ-202-nnn reference (001 to 999); fails when all are taken.
+CREATE TEMP TABLE seed_ref ON COMMIT DROP AS
+SELECT 'INQ-202-' || lpad(n::text, 3, '0') AS laa_reference, lpad(n::text, 3, '0') AS suffix
+FROM generate_series(1, 999) AS n
+WHERE NOT EXISTS (
+  SELECT 1 FROM application WHERE laa_reference = 'INQ-202-' || lpad(n::text, 3, '0')
+)
+ORDER BY n
+LIMIT 1;
+
 DO $$
-DECLARE
-  v_application_id integer;
-  v_client_id integer;
-  v_deceased_id integer;
-  v_provider_id integer;
-  v_coroners_letter_id uuid;
-  v_correspondence_address_id integer;
-  v_home_address_id integer;
-  v_is_seeded boolean;
 BEGIN
-  SELECT a.application_id, a.client_id, a.deceased_id, a.provider_id, a.coroners_letter_id,
-         cl.sds_file_name = 'seed-inq-202-000-coroners-letter'
-  INTO v_application_id, v_client_id, v_deceased_id, v_provider_id, v_coroners_letter_id, v_is_seeded
-  FROM application a
-  LEFT JOIN coroners_letter cl ON cl.coroners_letter_id = a.coroners_letter_id
-  WHERE a.laa_reference = 'INQ-202-000';
-
-  IF v_application_id IS NULL THEN
-    RETURN;
+  IF NOT EXISTS (SELECT 1 FROM seed_ref) THEN
+    RAISE EXCEPTION 'No free application reference left between INQ-202-001 and INQ-202-999';
   END IF;
-  IF v_is_seeded IS NOT TRUE THEN
-    RAISE EXCEPTION 'Application INQ-202-000 exists but was not created by this script';
-  END IF;
-
-  SELECT correspondence_address_id, home_address_id
-  INTO v_correspondence_address_id, v_home_address_id
-  FROM client
-  WHERE client_id = v_client_id;
-
-  DELETE FROM history_event WHERE application_id = v_application_id;
-  DELETE FROM decision_reason WHERE claim_decision_id IN (
-    SELECT claim_decision_id FROM claim_decision WHERE claim_id IN (
-      SELECT claim_id FROM claim WHERE application_id = v_application_id));
-  DELETE FROM claim_decision_amount WHERE claim_decision_id IN (
-    SELECT claim_decision_id FROM claim_decision WHERE claim_id IN (
-      SELECT claim_id FROM claim WHERE application_id = v_application_id));
-  DELETE FROM claim_decision WHERE claim_id IN (
-    SELECT claim_id FROM claim WHERE application_id = v_application_id);
-  DELETE FROM claim_payment_extract WHERE claim_id IN (
-    SELECT claim_id FROM claim WHERE application_id = v_application_id);
-  DELETE FROM claim_inquest_outcome WHERE claim_id IN (
-    SELECT claim_id FROM claim WHERE application_id = v_application_id);
-  -- The cost template file is an unlinked claim_evidence row, so it is removed by id.
-  DELETE FROM claim_evidence WHERE claim_evidence_id IN (
-    SELECT claim_cost_template_file_id FROM claim_cost_template WHERE claim_id IN (
-      SELECT claim_id FROM claim WHERE application_id = v_application_id));
-  DELETE FROM claim_cost_template WHERE claim_id IN (
-    SELECT claim_id FROM claim WHERE application_id = v_application_id);
-  DELETE FROM claim_evidence WHERE claim_id IN (
-    SELECT claim_id FROM claim WHERE application_id = v_application_id);
-  DELETE FROM claim WHERE application_id = v_application_id;
-  DELETE FROM application_public_body WHERE application_id = v_application_id;
-  DELETE FROM application_proceeding WHERE application_id = v_application_id;
-  DELETE FROM application WHERE application_id = v_application_id;
-  DELETE FROM deceased WHERE deceased_id = v_deceased_id;
-  DELETE FROM client WHERE client_id = v_client_id;
-  DELETE FROM address WHERE address_id IN (v_correspondence_address_id, v_home_address_id);
-  DELETE FROM provider WHERE provider_id = v_provider_id;
-  DELETE FROM coroners_letter WHERE coroners_letter_id = v_coroners_letter_id;
 END $$;
 
 -- 1. Granted application with its client, deceased, provider, letter and proceeding.
 DO $$
 DECLARE
   v_coroners_letter_id uuid := gen_random_uuid();
+  v_laa_reference text;
+  v_suffix text;
   v_correspondence_address_id integer;
   v_home_address_id integer;
   v_client_id integer;
@@ -80,8 +35,10 @@ DECLARE
   v_provider_id integer;
   v_application_id integer;
 BEGIN
+  SELECT laa_reference, suffix INTO v_laa_reference, v_suffix FROM seed_ref;
+
   INSERT INTO coroners_letter (coroners_letter_id, sds_file_name, file_name)
-  VALUES (v_coroners_letter_id, 'seed-inq-202-000-coroners-letter', 'coroners-letter.pdf');
+  VALUES (v_coroners_letter_id, 'seed-inq-202-' || v_suffix || '-coroners-letter', 'coroners-letter.pdf');
 
   INSERT INTO address (address_line_1, address_line_2, town_or_city, county, postcode)
   VALUES ('34 Example Street', NULL, 'Bristol', 'Bristol', 'BS1 1AA')
@@ -125,7 +82,7 @@ BEGIN
     application_type, auto_grant, client_id, deceased_id, provider_id, coroners_letter_id
   )
   VALUES (
-    'INQ-202-000', '2025-10-01 09:00:00+00', '2025-10-01 09:00:00+00', 'LIVE', true,
+    v_laa_reference, '2025-10-01 09:00:00+00', '2025-10-01 09:00:00+00', 'LIVE', true,
     'INITIAL', true, v_client_id, v_deceased_id, v_provider_id, v_coroners_letter_id
   )
   RETURNING application_id INTO v_application_id;
@@ -152,17 +109,17 @@ INSERT INTO claim (
   financial_recovery_damages, financial_recovery_interest, paying_party
 )
 SELECT
-  a.application_id, 'INQC-202A-0001', 'NIL_BILL'::claimtype, 'SUBMITTED'::claimstatus,
+  a.application_id, 'INQC-202-' || (SELECT suffix FROM seed_ref) || '-1', 'NIL_BILL'::claimtype, 'SUBMITTED'::claimstatus,
   '2026-10-05 09:00:00+00', 0.00, 10000.00, 'nil.bill@example.com',
   false, false,
   0.00, 0.00, 0.00, 0.00, 'N/A'
 FROM application a
-WHERE a.laa_reference = 'INQ-202-000';
+WHERE a.laa_reference = (SELECT laa_reference FROM seed_ref);
 
 INSERT INTO claim_inquest_outcome (claim_id, inquest_outcome_id)
-SELECT claim_id, 'ACCIDENT_OR_MISADVENTURE'::inquestoutcomecode
+SELECT claim_id, 'INDUSTRIAL_DISEASE'::inquestoutcomecode
 FROM claim
-WHERE claim_reference = 'INQC-202A-0001';
+WHERE claim_reference = 'INQC-202-' || (SELECT suffix FROM seed_ref) || '-1';
 
 -- 3. Application history: submitted, assessed, certificate created, grant email and letter.
 INSERT INTO history_event (event_reference, timestamp, actor, actor_type, event_data, application_id)
@@ -173,17 +130,17 @@ FROM (VALUES
   ('APPLICATION_SUBMITTED', '2025-10-01 09:00:00+00', 'nil.bill@example.com', 'PROVIDER', NULL),
   ('APPLICATION_SUBMISSION_CONFIRMATION', '2025-10-01 09:00:05+00', 'System', 'SYSTEM',
     '{"recipient": "nil.bill@example.com", "channel": "email"}'),
-  ('APPLICATION_ASSESSMENT_COMPLETED', '2025-10-01 10:00:00+00', 'Seed Caseworker', 'CASEWORKER',
+  ('APPLICATION_ASSESSMENT_COMPLETED', '2025-10-01 10:00:00+00', 'Test Caseworker', 'CASEWORKER',
     '{"merits_decision": "Granted"}'),
-  ('CERTIFICATE_CREATED', '2025-10-01 10:00:01+00', 'Seed Caseworker', 'CASEWORKER',
-    '{"laa_reference": "INQ-202-000"}'),
+  ('CERTIFICATE_CREATED', '2025-10-01 10:00:01+00', 'Test Caseworker', 'CASEWORKER',
+    '{"laa_reference": "' || (SELECT laa_reference FROM seed_ref) || '"}'),
   ('APPLICATION_GRANTED_EMAIL', '2025-10-01 10:00:02+00', 'System', 'SYSTEM',
     '{"recipient": "nil.bill@example.com", "channel": "email"}'),
   ('APPLICATION_GRANTED_LETTER', '2025-10-01 10:00:03+00', 'System', 'SYSTEM',
     '{"recipient": {"address_line_1": "c/o Ginny Weasley 34 Example Street", "address_line_2": null, "town_or_city": "Bristol", "county": "Bristol", "postcode": "BS1 1AA"}, "channel": "letter"}')
 ) AS e(event_reference, event_timestamp, actor, actor_type, event_data)
 CROSS JOIN application a
-WHERE a.laa_reference = 'INQ-202-000';
+WHERE a.laa_reference = (SELECT laa_reference FROM seed_ref);
 
 -- 4. Claim history: submitted and confirmation email.
 INSERT INTO history_event (event_reference, timestamp, actor, actor_type, event_data, application_id)
@@ -205,7 +162,7 @@ CROSS JOIN (VALUES
   ('CLAIM_SUBMITTED', 'PROVIDER', interval '0 seconds'),
   ('CLAIM_SUBMISSION_CONFIRMATION', 'SYSTEM', interval '5 seconds')
 ) AS e(event_reference, actor_type, delay)
-WHERE a.laa_reference = 'INQ-202-000';
+WHERE a.laa_reference = (SELECT laa_reference FROM seed_ref);
 
 -- 5. Expect 1 SUBMITTED NIL_BILL claim with 0.00 gross.
 SELECT
@@ -214,15 +171,18 @@ SELECT
   c.total_funds_remaining_after_claim
 FROM claim c
 JOIN application a ON a.application_id = c.application_id
-WHERE a.laa_reference = 'INQ-202-000';
+WHERE a.laa_reference = (SELECT laa_reference FROM seed_ref);
 
 -- Expect 8 events: 6 for the application and 2 for the claim.
 SELECT h.timestamp, h.event_reference, h.actor_type, h.actor, h.event_data
 FROM history_event h
 JOIN application a ON a.application_id = h.application_id
-WHERE a.laa_reference = 'INQ-202-000'
+WHERE a.laa_reference = (SELECT laa_reference FROM seed_ref)
 ORDER BY h.timestamp, h.id;
 
+-- Reference chosen for this run.
+SELECT laa_reference FROM seed_ref;
+
 -- Only swap to COMMIT once both result sets look correct.
-ROLLBACK;
--- COMMIT;
+-- ROLLBACK;
+COMMIT;
