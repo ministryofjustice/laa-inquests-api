@@ -420,6 +420,20 @@ class DecisionReasonResponse(BaseModel):
     justification: str | None = None
 
 
+class ClaimDecisionAmountResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        from_attributes=True,
+        populate_by_name=True,
+    )
+    profit_cost_net: Decimal | None = None
+    profit_cost_gross: Decimal | None = None
+    profit_cost_vat_zero: Decimal | None = None
+    disbursement_net: Decimal | None = None
+    disbursement_gross: Decimal | None = None
+    disbursement_vat_zero: Decimal | None = None
+
+
 class ClaimDecisionResponse(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -429,6 +443,7 @@ class ClaimDecisionResponse(BaseModel):
     claim_decision_id: int
     decision: ClaimDecisionStatus
     decision_reasons: list[DecisionReasonResponse] = []
+    decision_amount: ClaimDecisionAmountResponse | None = None
 
 
 class CostTemplateFileResponse(BaseModel):

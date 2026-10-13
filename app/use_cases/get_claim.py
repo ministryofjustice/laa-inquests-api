@@ -3,11 +3,15 @@ import logging
 from app.logging_utils import build_log_extra
 from app.models.claim.index import (
     ClaimByIdResponse,
+    ClaimDecisionAmountResponse,
     ClaimDecisionResponse,
     CostTemplateFileResponse,
 )
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
+from app.ports.claim.get_claim_decision_amount_port import (
+    GetClaimDecisionAmountPort,
+)
 from app.ports.claim.get_claim_decision_port import GetClaimDecisionPort
 from app.ports.claim.get_claim_evidence_port import GetClaimEvidencePort
 from app.use_cases.exceptions import ApplicationNotFoundError, ClaimNotFoundError
@@ -21,11 +25,13 @@ class GetClaimUseCase:
         get_claim_by_id_port: GetClaimByIdPort,
         get_claim_decision_port: GetClaimDecisionPort,
         get_claim_evidence_port: GetClaimEvidencePort,
+        get_claim_decision_amount_port: GetClaimDecisionAmountPort,
         application_lookup_port: ApplicationLookupPort,
     ) -> None:
         self.get_claim_by_id_port = get_claim_by_id_port
         self.get_claim_decision_port = get_claim_decision_port
         self.get_claim_evidence_port = get_claim_evidence_port
+        self.get_claim_decision_amount_port = get_claim_decision_amount_port
         self.application_lookup_port = application_lookup_port
 
     def execute(self, laa_reference: str, claim_reference: str) -> ClaimByIdResponse:
@@ -65,6 +71,13 @@ class GetClaimUseCase:
         )
         if decision is not None:
             response.claim_decision = ClaimDecisionResponse.model_validate(decision)
+            decision_amount = self.get_claim_decision_amount_port.get_claim_decision_amount_by_decision_id(
+                decision.claim_decision_id
+            )
+            if decision_amount is not None:
+                response.claim_decision.decision_amount = (
+                    ClaimDecisionAmountResponse.model_validate(decision_amount)
+                )
 
         if claim.claim_cost_template is not None:
             response.claim_cost_template_file = CostTemplateFileResponse.model_validate(
