@@ -2,7 +2,8 @@ import logging
 from datetime import UTC, date, datetime
 from typing import Annotated
 
-from app.routers.dependencies.entra_auth import audit_report_download
+from app.routers.dependencies.audit_writer import AuditWriter
+from app.models.audit.enums import ReportType
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.exc import SQLAlchemyError
@@ -39,6 +40,8 @@ router = APIRouter(
 )
 
 logger = logging.getLogger(__name__)
+
+audit_report_download_writer = AuditWriter(report_type=ReportType.CLAIMS_BACKLOG)
 
 
 def _route(request: Request | None) -> str | None:
@@ -144,7 +147,7 @@ def get_application_backlog_report(
 @router.get(
     "/claims/backlog",
     dependencies=[
-        Depends(audit_report_download),
+        Depends(audit_report_download_writer),
         Depends(require_permission_from(Permission.REPORTS_CLAIM_WORKFLOW_READ)),
     ],
 )

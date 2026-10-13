@@ -283,6 +283,12 @@ def mock_gov_notify(client):
 
 
 @pytest.fixture
+def mock_entra_auth_port(client):
+    """Return the shared mock entra auth port for E2E tests."""
+    return api.dependency_overrides[get_entra_auth_port]()
+
+
+@pytest.fixture
 def mock_pdf_generation_port(client):
     """Return the shared mock PDF generation port for E2E tests."""
     return api.dependency_overrides[get_pdf_generation_port]()
