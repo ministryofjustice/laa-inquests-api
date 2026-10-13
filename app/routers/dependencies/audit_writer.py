@@ -1,11 +1,11 @@
 from typing import Annotated
+from app.db import get_session
 from app.models.audit.enums import ReportType
 from sqlmodel import Session
 from fastapi import Depends
 
 from app.adapters.audit_repository_adapter import AuditRepositoryAdapter
 from app.routers.dependencies.entra_auth import (
-    get_session,
     HTTPAuthorizationCredentials,
     HTTPBearer,
     EntraAuthPort,
