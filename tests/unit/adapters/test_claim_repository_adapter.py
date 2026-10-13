@@ -583,3 +583,44 @@ def test_get_claim_reference_raises_after_max_attempts(session):
     assert (
         str(exc_info.value) == "Maximum attempts reached for generating claim reference"
     )
+
+
+def test_get_claim_decision_amount_returns_the_amount_for_the_decision(session):
+    application_id = session.exec(select(Application)).first().application_id
+    adapter = ClaimRepositoryAdapter(session)
+    claim = adapter.create_claim(
+        application_id, _make_domain_claim(), "claimant@example.com"
+    )
+    decision = adapter.create_claim_decision(
+        claim.claim_id, ClaimDecisionStatus.PAY_IN_FULL
+    )
+    adapter.create_claim_decision_amount(
+        decision.claim_decision_id,
+        profit_cost_net=Decimal("1000.00"),
+        profit_cost_gross=Decimal("1200.00"),
+        disbursement_net=Decimal("100.00"),
+        disbursement_gross=Decimal("120.00"),
+    )
+
+    amount = adapter.get_claim_decision_amount_by_decision_id(
+        decision.claim_decision_id
+    )
+
+    assert amount is not None
+    assert amount.claim_decision_id == decision.claim_decision_id
+    assert amount.profit_cost_net == Decimal("1000.00")
+    assert amount.disbursement_gross == Decimal("120.00")
+
+
+def test_get_claim_decision_amount_returns_none_when_decision_has_no_amount(session):
+    application_id = session.exec(select(Application)).first().application_id
+    adapter = ClaimRepositoryAdapter(session)
+    claim = adapter.create_claim(
+        application_id, _make_domain_claim(), "claimant@example.com"
+    )
+    decision = adapter.create_claim_decision(claim.claim_id, ClaimDecisionStatus.REJECT)
+
+    assert (
+        adapter.get_claim_decision_amount_by_decision_id(decision.claim_decision_id)
+        is None
+    )

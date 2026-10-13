@@ -21,6 +21,7 @@ from app.models.claim.index import (
     Claim,
     ClaimCostTemplate,
     ClaimDecision,
+    ClaimDecisionAmount,
     ClaimEvidence,
     ClaimInquestOutcome,
     DecisionReason,
@@ -342,6 +343,91 @@ def test_200_get_claim_by_id_includes_claim_decision_when_one_exists(session, cl
             "justification": "Too many payment on account claims",
         }
     ]
+
+
+def _seed_pay_in_full_decision(
+    session, claim_id: int, **amounts: Decimal | None
+) -> ClaimDecision:
+    decision = ClaimDecision(
+        claim_id=claim_id, decision=ClaimDecisionStatus.PAY_IN_FULL
+    )
+    session.add(decision)
+    session.commit()
+    session.refresh(decision)
+    session.add(
+        ClaimDecisionAmount(claim_decision_id=decision.claim_decision_id, **amounts)
+    )
+    session.commit()
+    return decision
+
+
+def test_200_get_claim_by_id_includes_decision_amount_for_a_pay_in_full_decision(
+    session, client
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    claim = _seed_claim(session, laa_reference, claim_type=ClaimType.FINAL_BILL)
+    _seed_pay_in_full_decision(
+        session,
+        claim.claim_id,
+        profit_cost_net=Decimal("1000.00"),
+        profit_cost_gross=Decimal("1200.00"),
+        disbursement_net=Decimal("100.00"),
+        disbursement_gross=Decimal("120.00"),
+    )
+
+    response = client.get(
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}",
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["claimDecision"]["decisionAmount"] == {
+        "profitCostNet": "1000.00",
+        "profitCostGross": "1200.00",
+        "profitCostVatZero": None,
+        "disbursementNet": "100.00",
+        "disbursementGross": "120.00",
+        "disbursementVatZero": None,
+    }
+
+
+def test_200_get_claim_by_id_decision_amount_passes_through_zero_vat_amounts(
+    session, client
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    claim = _seed_claim(session, laa_reference, claim_type=ClaimType.FINAL_BILL)
+    _seed_pay_in_full_decision(
+        session,
+        claim.claim_id,
+        profit_cost_vat_zero=Decimal("800.00"),
+        disbursement_vat_zero=Decimal("50.00"),
+    )
+
+    response = client.get(
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}",
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
+    )
+
+    decision_amount = response.json()["claimDecision"]["decisionAmount"]
+    assert decision_amount["profitCostVatZero"] == "800.00"
+    assert decision_amount["profitCostNet"] is None
+    assert decision_amount["disbursementVatZero"] == "50.00"
+
+
+def test_200_get_claim_by_id_decision_amount_is_null_for_a_rejected_claim(
+    session, client
+):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+    claim = _seed_claim(session, laa_reference)
+    _seed_decision(session, claim.claim_id)
+
+    response = client.get(
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}",
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["claimDecision"]["decisionAmount"] is None
 
 
 def test_200_get_claim_by_id_claim_decision_is_null_when_none_exists(session, client):

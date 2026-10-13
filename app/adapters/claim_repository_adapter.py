@@ -51,6 +51,9 @@ from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
 from app.ports.claim.create_payment_extract_port import CreatePaymentExtractPort
 from app.ports.claim.delete_claim_evidence_port import DeleteClaimEvidencePort
 from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
+from app.ports.claim.get_claim_decision_amount_port import (
+    GetClaimDecisionAmountPort,
+)
 from app.ports.claim.get_claim_decision_port import GetClaimDecisionPort
 from app.ports.claim.get_claim_evidence_port import GetClaimEvidencePort
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
@@ -81,6 +84,7 @@ class ClaimRepositoryAdapter(
     GetClaimsForApplicationPort,
     GetClaimByIdPort,
     GetClaimDecisionPort,
+    GetClaimDecisionAmountPort,
     CreateClaimDecisionPort,
     CreateClaimDecisionAmountPort,
     CreateDecisionReasonPort,
@@ -410,6 +414,14 @@ class ClaimRepositoryAdapter(
             select(ClaimDecision)
             .where(ClaimDecision.claim_id == claim_id)
             .order_by(ClaimDecision.claim_decision_id.desc())
+        )
+        return self.session.exec(statement).first()
+
+    def get_claim_decision_amount_by_decision_id(
+        self, claim_decision_id: int
+    ) -> ClaimDecisionAmount | None:
+        statement = select(ClaimDecisionAmount).where(
+            ClaimDecisionAmount.claim_decision_id == claim_decision_id
         )
         return self.session.exec(statement).first()
 
