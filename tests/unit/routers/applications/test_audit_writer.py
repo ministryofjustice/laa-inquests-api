@@ -1,6 +1,7 @@
 from app.routers.dependencies.audit_writer import AuditWriter
 from unittest.mock import MagicMock
 from app.models.audit.enums import ReportType
+import asyncio
 
 
 def test_audit_writer_initialization():
@@ -11,8 +12,12 @@ def test_audit_writer_initialization():
 def test_audit_writer_gets_user_email_address():
     entra_auth_port = MagicMock()
     audit_writer = AuditWriter(report_type=ReportType.CLAIMS_BACKLOG)
-    audit_writer(
-        credentials=MagicMock(), entra_auth_port=entra_auth_port, audit_port=MagicMock()
+    asyncio.run(
+        audit_writer(
+            credentials=MagicMock(),
+            entra_auth_port=entra_auth_port,
+            audit_port=MagicMock(),
+        )
     )
     entra_auth_port.get_email_address.assert_called_once()
 
@@ -20,7 +25,9 @@ def test_audit_writer_gets_user_email_address():
 def test_audit_writer_calls_audit_port():
     audit_port = MagicMock()
     audit_writer = AuditWriter(report_type=ReportType.CLAIMS_BACKLOG)
-    audit_writer(
-        credentials=MagicMock(), entra_auth_port=MagicMock(), audit_port=audit_port
+    asyncio.run(
+        audit_writer(
+            credentials=MagicMock(), entra_auth_port=MagicMock(), audit_port=audit_port
+        )
     )
     audit_port.audit_report_download.assert_called_once()
