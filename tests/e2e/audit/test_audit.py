@@ -1,0 +1,49 @@
+from app.auth.rbac import Role
+from app.models.audit.index import ReportDownloadAudit
+from app.models.audit.enums import ReportType
+
+
+class TestAuditReports:
+    """E2e tests for audit functionality on report downloads"""
+
+    def test_claims_backlog_download_creates_an_audit_entry(self, client, session):
+        response = client.get(
+            "/reports/claims/backlog",
+            headers={"Authorization": f"Bearer {Role.CLAIM_WORKFLOW_REPORTING.value}"},
+        )
+
+        assert response.status_code == 200
+
+        audit_entry = (
+            session.query(ReportDownloadAudit)
+            .order_by(ReportDownloadAudit.timestamp.desc())
+            .first()
+        )
+        assert audit_entry is not None
+        assert audit_entry.report_type == ReportType.CLAIMS_BACKLOG
+        assert audit_entry.timestamp is not None
+        assert audit_entry.user_email_address == "test@example.com"
+        assert audit_entry.parameters is None
+
+    def test_applications_backlog_download_creates_an_audit_entry(
+        self, client, session
+    ):
+        response = client.get(
+            "/reports/applications/backlog",
+            headers={
+                "Authorization": f"Bearer {Role.APPLICATION_WORKFLOW_REPORTING.value}"
+            },
+        )
+
+        assert response.status_code == 200
+
+        audit_entry = (
+            session.query(ReportDownloadAudit)
+            .order_by(ReportDownloadAudit.timestamp.desc())
+            .first()
+        )
+        assert audit_entry is not None
+        assert audit_entry.report_type == ReportType.APPLICATIONS_BACKLOG
+        assert audit_entry.timestamp is not None
+        assert audit_entry.user_email_address == "test@example.com"
+        assert audit_entry.parameters is None

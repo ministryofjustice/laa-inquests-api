@@ -41,7 +41,12 @@ router = APIRouter(
 
 logger = logging.getLogger(__name__)
 
-audit_report_download_writer = AuditWriter(report_type=ReportType.CLAIMS_BACKLOG)
+audit_claims_backlog_report_download_writer = AuditWriter(
+    report_type=ReportType.CLAIMS_BACKLOG
+)
+audit_applications_backlog_report_download_writer = AuditWriter(
+    report_type=ReportType.APPLICATIONS_BACKLOG
+)
 
 
 def _route(request: Request | None) -> str | None:
@@ -107,7 +112,8 @@ def get_generate_payment_extract_report_use_case(
 @router.get(
     "/applications/backlog",
     dependencies=[
-        Depends(require_permission_from(Permission.REPORTS_APPLICATION_WORKFLOW_READ))
+        Depends(audit_applications_backlog_report_download_writer),
+        Depends(require_permission_from(Permission.REPORTS_APPLICATION_WORKFLOW_READ)),
     ],
 )
 def get_application_backlog_report(
@@ -147,7 +153,7 @@ def get_application_backlog_report(
 @router.get(
     "/claims/backlog",
     dependencies=[
-        Depends(audit_report_download_writer),
+        Depends(audit_claims_backlog_report_download_writer),
         Depends(require_permission_from(Permission.REPORTS_CLAIM_WORKFLOW_READ)),
     ],
 )
