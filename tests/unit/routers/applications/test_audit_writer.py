@@ -17,6 +17,7 @@ def test_audit_writer_gets_user_email_address():
             credentials=MagicMock(),
             entra_auth_port=entra_auth_port,
             audit_port=MagicMock(),
+            request=MagicMock(),
         )
     )
     entra_auth_port.get_email_address.assert_called_once()
@@ -27,7 +28,10 @@ def test_audit_writer_calls_audit_port():
     audit_writer = AuditWriter(report_type=ReportType.CLAIMS_BACKLOG)
     asyncio.run(
         audit_writer(
-            credentials=MagicMock(), entra_auth_port=MagicMock(), audit_port=audit_port
+            credentials=MagicMock(),
+            entra_auth_port=MagicMock(),
+            audit_port=audit_port,
+            request=MagicMock(),
         )
     )
     audit_port.audit_report_download.assert_called_once()
