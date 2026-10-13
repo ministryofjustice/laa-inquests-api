@@ -3,7 +3,7 @@ from app.db import get_session
 from fastapi.concurrency import run_in_threadpool
 from app.models.audit.enums import ReportType
 from sqlmodel import Session
-from fastapi import Depends
+from fastapi import Depends, Request
 
 from app.adapters.audit_repository_adapter import AuditRepositoryAdapter
 from app.routers.dependencies.entra_auth import (
@@ -38,6 +38,7 @@ class AuditWriter:
         audit_port: Annotated[
             AuditRepositoryAdapter, Depends(get_audit_repository_adapter)
         ],
+        request: Request,
     ):
         user_email_address = await run_in_threadpool(
             entra_auth_port.get_email_address, credentials.credentials
@@ -46,4 +47,7 @@ class AuditWriter:
         audit_port.audit_report_download(
             user_email_address=user_email_address,
             report_type=self.report_type,
+            parameters=dict(request.query_params)
+            if self.report_type == ReportType.PAYMENT_EXTRACT
+            else None,
         )

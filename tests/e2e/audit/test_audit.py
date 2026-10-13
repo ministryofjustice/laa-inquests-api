@@ -47,3 +47,22 @@ class TestAuditReports:
         assert audit_entry.timestamp is not None
         assert audit_entry.user_email_address == "test@example.com"
         assert audit_entry.parameters is None
+
+    def test_payment_extract_download_creates_an_audit_entry(self, client, session):
+        response = client.get(
+            "/reports/payment-extract?from=2024-01-01&to=2024-01-31",
+            headers={"Authorization": f"Bearer {Role.FINANCE.value}"},
+        )
+
+        assert response.status_code == 200
+
+        audit_entry = (
+            session.query(ReportDownloadAudit)
+            .order_by(ReportDownloadAudit.timestamp.desc())
+            .first()
+        )
+        assert audit_entry is not None
+        assert audit_entry.report_type == ReportType.PAYMENT_EXTRACT
+        assert audit_entry.timestamp is not None
+        assert audit_entry.user_email_address == "test@example.com"
+        assert audit_entry.parameters == {"from": "2024-01-01", "to": "2024-01-31"}

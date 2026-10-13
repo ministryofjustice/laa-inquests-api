@@ -47,6 +47,9 @@ audit_claims_backlog_report_download_writer = AuditWriter(
 audit_applications_backlog_report_download_writer = AuditWriter(
     report_type=ReportType.APPLICATIONS_BACKLOG
 )
+audit_payment_extract_report_download_writer = AuditWriter(
+    report_type=ReportType.PAYMENT_EXTRACT
+)
 
 
 def _route(request: Request | None) -> str | None:
@@ -193,7 +196,10 @@ def get_claim_backlog_report(
 
 @router.get(
     "/payment-extract",
-    dependencies=[Depends(require_permission_from(Permission.REPORTS_PAYMENT_READ))],
+    dependencies=[
+        Depends(audit_payment_extract_report_download_writer),
+        Depends(require_permission_from(Permission.REPORTS_PAYMENT_READ)),
+    ],
 )
 def get_payment_extract_report(
     from_date: Annotated[date, Query(alias="from")],
