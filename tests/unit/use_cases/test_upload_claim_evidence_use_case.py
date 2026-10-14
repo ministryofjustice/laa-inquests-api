@@ -65,6 +65,23 @@ def test_execute_stores_claim_evidence_in_database():
     assert saved_claim_evidence.file_name == request_body["file_name"]
 
 
+def test_execute_stores_file_size_in_bytes():
+    sds_port = MagicMock(spec=SdsPort)
+    sds_port.virus_check_claim_evidence.return_value = True
+    sds_port.save_claim_evidence.return_value = sds_response_body
+    upload_port = MagicMock(spec=UploadClaimEvidencePort)
+
+    use_case = UploadClaimEvidenceUseCase(
+        sds_port=sds_port,
+        upload_claim_evidence_port=upload_port,
+    )
+
+    use_case.execute(request_body["claim_evidence"], request_body["file_name"])
+
+    saved_claim_evidence = upload_port.save_uploaded_claim_evidence.call_args[0][0]
+    assert saved_claim_evidence.file_size == len(request_body["claim_evidence"])
+
+
 def test_execute_raises_an_error_when_virus_check_fails():
     sds_port = MagicMock(spec=SdsPort)
     sds_port.virus_check_claim_evidence.return_value = False

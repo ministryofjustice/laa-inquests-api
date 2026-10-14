@@ -51,6 +51,9 @@ from app.ports.claim.create_decision_reason_port import CreateDecisionReasonPort
 from app.ports.claim.create_payment_extract_port import CreatePaymentExtractPort
 from app.ports.claim.delete_claim_evidence_port import DeleteClaimEvidencePort
 from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
+from app.ports.claim.get_claim_decision_amount_port import (
+    GetClaimDecisionAmountPort,
+)
 from app.ports.claim.get_claim_decision_port import GetClaimDecisionPort
 from app.ports.claim.get_claim_evidence_port import GetClaimEvidencePort
 from app.ports.claim.get_claims_for_application_port import GetClaimsForApplicationPort
@@ -81,6 +84,7 @@ class ClaimRepositoryAdapter(
     GetClaimsForApplicationPort,
     GetClaimByIdPort,
     GetClaimDecisionPort,
+    GetClaimDecisionAmountPort,
     CreateClaimDecisionPort,
     CreateClaimDecisionAmountPort,
     CreateDecisionReasonPort,
@@ -413,6 +417,14 @@ class ClaimRepositoryAdapter(
         )
         return self.session.exec(statement).first()
 
+    def get_claim_decision_amount_by_decision_id(
+        self, claim_decision_id: int
+    ) -> ClaimDecisionAmount | None:
+        statement = select(ClaimDecisionAmount).where(
+            ClaimDecisionAmount.claim_decision_id == claim_decision_id
+        )
+        return self.session.exec(statement).first()
+
     def get_open_claims(self) -> list[Claim]:
         statement = (
             select(Claim)
@@ -556,6 +568,7 @@ class ClaimRepositoryAdapter(
         claim_evidence_model = ClaimEvidenceModel(
             sds_file_name=claim_evidence.sds_file_name,
             file_name=claim_evidence.file_name,
+            file_size=claim_evidence.file_size,
         )
         self.session.add(claim_evidence_model)
         self.session.flush()
@@ -580,6 +593,7 @@ class ClaimRepositoryAdapter(
         return DomainClaimEvidence(
             sds_file_name=claim_evidence_model.sds_file_name,
             file_name=claim_evidence_model.file_name,
+            file_size=claim_evidence_model.file_size,
         )
 
     def delete_claim_evidence_by_id(
