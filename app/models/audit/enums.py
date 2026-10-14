@@ -1,7 +1,9 @@
 from enum import StrEnum
 
 
-class ReportType(StrEnum):
-    CLAIMS_BACKLOG = "Claims Backlog"
-    APPLICATIONS_BACKLOG = "Applications Backlog"
-    PAYMENT_EXTRACT = "Payment Extract"
+class AuditType(StrEnum):
+    NOT_AUDITABLE = "Not Auditable"
+
+    REPORTS_CLAIMS_BACKLOG = "Claims Backlog"
+    REPORTS_APPLICATIONS_BACKLOG = "Applications Backlog"
+    REPORTS_PAYMENT_EXTRACT = "Payment Extract"

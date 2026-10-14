@@ -1,11 +1,13 @@
 import logging
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session
 
 from app.logging_utils import build_log_extra
-from app.models.audit.enums import ReportType
+from app.models.audit.enums import AuditType
 from app.models.audit.index import ReportDownloadAudit
 from app.ports.create_audit_event_port import AuditPort
+from app.use_cases.exceptions import AuditError
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +23,7 @@ class AuditRepositoryAdapter(AuditPort):
         adapter = AuditRepositoryAdapter(session)
         event = adapter.audit_report_download(
             user_email_address="user@example.com",
-            report_type=ReportType.CLAIMS_BACKLOG,
+            report_type=AuditType.REPORTS_CLAIMS_BACKLOG,
         )
         adapter.commit()
     """
@@ -32,7 +34,7 @@ class AuditRepositoryAdapter(AuditPort):
     def audit_report_download(
         self,
         user_email_address: str,
-        report_type: ReportType,
+        report_type: AuditType,
         parameters: dict | None = None,
     ) -> ReportDownloadAudit:
         """
@@ -57,9 +59,12 @@ class AuditRepositoryAdapter(AuditPort):
             report_type=report_type,
             parameters=parameters,
         )
-        self.session.add(new_event)
-        self.session.flush()
-        self.session.refresh(new_event)
+        try:
+            self.session.add(new_event)
+            self.session.flush()
+            self.session.refresh(new_event)
+        except SQLAlchemyError as exc:
+            raise AuditError("Failed to write report download audit") from exc
         logger.info(
             "Report download audit created",
             extra=build_log_extra(
@@ -70,7 +75,13 @@ class AuditRepositoryAdapter(AuditPort):
         return new_event
 
     def commit(self) -> None:
-        self.session.commit()
+        try:
+            self.session.commit()
+        except SQLAlchemyError as exc:
+            raise AuditError("Failed to commit report download audit") from exc
 
     def rollback(self) -> None:
-        self.session.rollback()
+        try:
+            self.session.rollback()
+        except SQLAlchemyError as exc:
+            raise AuditError("Failed to roll back report download audit") from exc

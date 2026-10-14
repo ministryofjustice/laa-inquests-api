@@ -3,7 +3,7 @@ from datetime import UTC, date, datetime
 from typing import Annotated
 
 from app.routers.dependencies.audit_writer import AuditWriter
-from app.models.audit.enums import ReportType
+from app.models.audit.enums import AuditType
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.exc import SQLAlchemyError
@@ -42,13 +42,13 @@ router = APIRouter(
 logger = logging.getLogger(__name__)
 
 audit_claims_backlog_report_download_writer = AuditWriter(
-    report_type=ReportType.CLAIMS_BACKLOG
+    report_type=AuditType.REPORTS_CLAIMS_BACKLOG
 )
 audit_applications_backlog_report_download_writer = AuditWriter(
-    report_type=ReportType.APPLICATIONS_BACKLOG
+    report_type=AuditType.REPORTS_APPLICATIONS_BACKLOG
 )
 audit_payment_extract_report_download_writer = AuditWriter(
-    report_type=ReportType.PAYMENT_EXTRACT
+    report_type=AuditType.REPORTS_PAYMENT_EXTRACT
 )
 
 

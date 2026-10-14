@@ -1,6 +1,6 @@
 from app.auth.rbac import Role
 from app.models.audit.index import ReportDownloadAudit
-from app.models.audit.enums import ReportType
+from app.models.audit.enums import AuditType
 
 
 class TestAuditReports:
@@ -20,7 +20,7 @@ class TestAuditReports:
             .first()
         )
         assert audit_entry is not None
-        assert audit_entry.report_type == ReportType.CLAIMS_BACKLOG
+        assert audit_entry.report_type == AuditType.REPORTS_CLAIMS_BACKLOG
         assert audit_entry.timestamp is not None
         assert audit_entry.user_email_address == "test@example.com"
         assert audit_entry.parameters is None
@@ -43,7 +43,7 @@ class TestAuditReports:
             .first()
         )
         assert audit_entry is not None
-        assert audit_entry.report_type == ReportType.APPLICATIONS_BACKLOG
+        assert audit_entry.report_type == AuditType.REPORTS_APPLICATIONS_BACKLOG
         assert audit_entry.timestamp is not None
         assert audit_entry.user_email_address == "test@example.com"
         assert audit_entry.parameters is None
@@ -62,7 +62,7 @@ class TestAuditReports:
             .first()
         )
         assert audit_entry is not None
-        assert audit_entry.report_type == ReportType.PAYMENT_EXTRACT
+        assert audit_entry.report_type == AuditType.REPORTS_PAYMENT_EXTRACT
         assert audit_entry.timestamp is not None
         assert audit_entry.user_email_address == "test@example.com"
         assert audit_entry.parameters == {"from": "2024-01-01", "to": "2024-01-31"}

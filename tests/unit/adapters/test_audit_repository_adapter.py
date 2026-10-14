@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 
 from app.adapters.audit_repository_adapter import AuditRepositoryAdapter
-from app.models.audit.enums import ReportType
+from app.models.audit.enums import AuditType
 from app.models.audit.index import ReportDownloadAudit
 
 
@@ -11,7 +11,7 @@ def test_audit_report_download_persists_event_with_expected_values(session):
 
     created = adapter.audit_report_download(
         user_email_address="test_user@example.com",
-        report_type=ReportType.CLAIMS_BACKLOG,
+        report_type=AuditType.REPORTS_CLAIMS_BACKLOG,
     )
 
     stored = session.get(ReportDownloadAudit, created.id)
@@ -19,7 +19,7 @@ def test_audit_report_download_persists_event_with_expected_values(session):
     assert created.id is not None
     assert stored is not None
     assert stored.user_email_address == "test_user@example.com"
-    assert stored.report_type == ReportType.CLAIMS_BACKLOG
+    assert stored.report_type == AuditType.REPORTS_CLAIMS_BACKLOG
     assert stored.parameters is None
 
 
@@ -29,7 +29,7 @@ def test_audit_report_download_sets_timestamp_automatically(session):
     before_creation = datetime.now(UTC)
     created = adapter.audit_report_download(
         user_email_address="test_user@example.com",
-        report_type=ReportType.CLAIMS_BACKLOG,
+        report_type=AuditType.REPORTS_CLAIMS_BACKLOG,
     )
     after_creation = datetime.now(UTC)
 
@@ -48,7 +48,7 @@ def test_audit_report_download_requires_user_email_address(session):
     try:
         adapter.audit_report_download(
             user_email_address="",
-            report_type=ReportType.CLAIMS_BACKLOG,
+            report_type=AuditType.REPORTS_CLAIMS_BACKLOG,
         )
     except ValueError as e:
         assert (
@@ -64,7 +64,7 @@ def test_commit_commits_transaction(session):
 
     created = adapter.audit_report_download(
         user_email_address="test_user@example.com",
-        report_type=ReportType.CLAIMS_BACKLOG,
+        report_type=AuditType.REPORTS_CLAIMS_BACKLOG,
     )
     assert session.get_transaction() is not None
     adapter.commit()
@@ -79,7 +79,7 @@ def test_rollback_rolls_back_transaction(session):
 
     created = adapter.audit_report_download(
         user_email_address="test_user@example.com",
-        report_type=ReportType.CLAIMS_BACKLOG,
+        report_type=AuditType.REPORTS_CLAIMS_BACKLOG,
     )
     assert session.get_transaction() is not None
     adapter.rollback()

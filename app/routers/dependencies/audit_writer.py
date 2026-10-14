@@ -1,17 +1,20 @@
 from typing import Annotated
-from app.db import get_session
+
+from fastapi import Depends, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
-from app.models.audit.enums import ReportType
 from sqlmodel import Session
-from fastapi import Depends, Request
 
 from app.adapters.audit_repository_adapter import AuditRepositoryAdapter
+from app.db import get_session
+from app.models.audit.enums import AuditType
+from app.ports.create_audit_event_port import AuditPort
 from app.routers.dependencies.entra_auth import (
+    EntraAuthPort,
     HTTPAuthorizationCredentials,
     HTTPBearer,
-    EntraAuthPort,
     get_entra_auth_port,
 )
+from app.use_cases.audit_report_download import AuditReportDownloadUseCase
 
 _http_bearer = HTTPBearer(auto_error=False)
 
@@ -22,11 +25,17 @@ def get_audit_repository_adapter(
     return AuditRepositoryAdapter(session=session)
 
 
+def get_audit_report_download_use_case(
+    audit_port: Annotated[AuditPort, Depends(get_audit_repository_adapter)],
+) -> AuditReportDownloadUseCase:
+    return AuditReportDownloadUseCase(audit_port=audit_port)
+
+
 class AuditWriter:
     def __init__(
         self,
-        report_type: ReportType,
-    ):
+        report_type: AuditType,
+    ) -> None:
         self.report_type = report_type
 
     async def __call__(
@@ -35,19 +44,26 @@ class AuditWriter:
             HTTPAuthorizationCredentials | None, Depends(_http_bearer)
         ],
         entra_auth_port: Annotated[EntraAuthPort, Depends(get_entra_auth_port)],
-        audit_port: Annotated[
-            AuditRepositoryAdapter, Depends(get_audit_repository_adapter)
+        use_case: Annotated[
+            AuditReportDownloadUseCase, Depends(get_audit_report_download_use_case)
         ],
         request: Request,
-    ):
+    ) -> None:
+        if credentials is None:
+            raise HTTPException(
+                status_code=401,
+                detail="Not authenticated",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
         user_email_address = await run_in_threadpool(
             entra_auth_port.get_email_address, credentials.credentials
         )
-
-        audit_port.audit_report_download(
+        await run_in_threadpool(
+            use_case.execute,
             user_email_address=user_email_address,
             report_type=self.report_type,
             parameters=dict(request.query_params)
-            if self.report_type == ReportType.PAYMENT_EXTRACT
+            if self.report_type == AuditType.REPORTS_PAYMENT_EXTRACT
             else None,
         )

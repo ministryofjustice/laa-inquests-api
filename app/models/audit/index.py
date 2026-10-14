@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from app.models.audit.enums import ReportType
+from app.models.audit.enums import AuditType
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
 
@@ -16,5 +16,5 @@ class BaseAuditEvent(SQLModel):
 class ReportDownloadAudit(BaseAuditEvent, table=True):
     __tablename__ = "audit_report_download_event"
 
-    report_type: ReportType = Field(nullable=False)
+    report_type: AuditType = Field(nullable=False)
     parameters: dict | None = Field(default=None, sa_column=Column(JSON, nullable=True))
