@@ -1,8 +1,9 @@
 from datetime import UTC, datetime
 
-from app.models.audit.enums import AuditType
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
+
+from app.models.audit.enums import AuditType
 
 
 class BaseAuditEvent(SQLModel):

@@ -41,6 +41,45 @@ matches one of the categories of law defined in the [/app/models/categories.py](
 
 To learn more about models please read [/app/models/README.md](../models/README.md)
 
+## Audited report permissions
+
+Every report endpoint uses
+[`require_audited_report_permission`](./dependencies/audited_report_permission.py)
+with its required permission and audit type:
+
+```python
+dependencies = [
+    Depends(
+        require_audited_report_permission(
+            possible_permissions=Permission.REPORTS_CLAIM_WORKFLOW_READ,
+            report_type=AuditType.REPORTS_CLAIMS_BACKLOG,
+        )
+    )
+]
+```
+
+Authentication runs first. For authenticated requests, audit preparation captures
+audit-specific construction failures as a typed result. The dependency then
+executes the audit inside its failure handler before enforcing permission:
+
+| Permission | Audit outcome | Response |
+| --- | --- | --- |
+| Granted | Success | Report download |
+| Denied | Success | 403; audit persisted |
+| Granted | Setup, write, or commit failure | 500; no report download |
+| Denied | Setup, write, or commit failure | 403; no report download |
+
+Missing or invalid authentication retains the existing authentication response.
+The failure handler logs audit errors without including user details or tokens.
+Report generation runs only after the dependency succeeds and is outside the
+audit failure handler.
+
+Audit construction uses the overridable `get_audit_report_download_factory`
+dependency in [audit_writer.py](./dependencies/audit_writer.py). Tests can supply
+a factory that raises during construction, rather than raising while FastAPI
+resolves the factory dependency itself. Shared database session acquisition
+remains managed by the existing session dependency.
+
 ## Reading and writing to the database
 Database connections are managed with SQLModel sessions, these are inherited from SQLAlchemy sessions.
 

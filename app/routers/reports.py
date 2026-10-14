@@ -2,8 +2,6 @@ import logging
 from datetime import UTC, date, datetime
 from typing import Annotated
 
-from app.routers.dependencies.audit_writer import AuditWriter
-from app.models.audit.enums import AuditType
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.exc import SQLAlchemyError
@@ -11,14 +9,18 @@ from sqlmodel import Session
 
 from app.adapters.application_repository_adapter import ApplicationRepositoryAdapter
 from app.adapters.claim_repository_adapter import ClaimRepositoryAdapter
-from app.auth.rbac import Permission, require_permission_from
+from app.auth.rbac import Permission
 from app.db import get_session
 from app.logging_utils import build_log_extra
+from app.models.audit.enums import AuditType
 from app.ports.application_backlog_port import ApplicationBacklogPort
 from app.ports.claim.payment_extract_report_port import PaymentExtractReportPort
 from app.ports.claim_backlog_port import ClaimBacklogPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.routers.applications import get_provider_details_port
+from app.routers.dependencies.audited_report_permission import (
+    require_audited_report_permission,
+)
 from app.use_cases.exceptions import (
     InvalidDateRangeError,
     ProviderDetailsRetrievalError,
@@ -40,16 +42,6 @@ router = APIRouter(
 )
 
 logger = logging.getLogger(__name__)
-
-audit_claims_backlog_report_download_writer = AuditWriter(
-    report_type=AuditType.REPORTS_CLAIMS_BACKLOG
-)
-audit_applications_backlog_report_download_writer = AuditWriter(
-    report_type=AuditType.REPORTS_APPLICATIONS_BACKLOG
-)
-audit_payment_extract_report_download_writer = AuditWriter(
-    report_type=AuditType.REPORTS_PAYMENT_EXTRACT
-)
 
 
 def _route(request: Request | None) -> str | None:
@@ -115,8 +107,12 @@ def get_generate_payment_extract_report_use_case(
 @router.get(
     "/applications/backlog",
     dependencies=[
-        Depends(audit_applications_backlog_report_download_writer),
-        Depends(require_permission_from(Permission.REPORTS_APPLICATION_WORKFLOW_READ)),
+        Depends(
+            require_audited_report_permission(
+                possible_permissions=Permission.REPORTS_APPLICATION_WORKFLOW_READ,
+                report_type=AuditType.REPORTS_APPLICATIONS_BACKLOG,
+            )
+        ),
     ],
 )
 def get_application_backlog_report(
@@ -156,8 +152,12 @@ def get_application_backlog_report(
 @router.get(
     "/claims/backlog",
     dependencies=[
-        Depends(audit_claims_backlog_report_download_writer),
-        Depends(require_permission_from(Permission.REPORTS_CLAIM_WORKFLOW_READ)),
+        Depends(
+            require_audited_report_permission(
+                possible_permissions=Permission.REPORTS_CLAIM_WORKFLOW_READ,
+                report_type=AuditType.REPORTS_CLAIMS_BACKLOG,
+            )
+        ),
     ],
 )
 def get_claim_backlog_report(
@@ -197,8 +197,12 @@ def get_claim_backlog_report(
 @router.get(
     "/payment-extract",
     dependencies=[
-        Depends(audit_payment_extract_report_download_writer),
-        Depends(require_permission_from(Permission.REPORTS_PAYMENT_READ)),
+        Depends(
+            require_audited_report_permission(
+                possible_permissions=Permission.REPORTS_PAYMENT_READ,
+                report_type=AuditType.REPORTS_PAYMENT_EXTRACT,
+            )
+        ),
     ],
 )
 def get_payment_extract_report(

@@ -1,19 +1,21 @@
-import io
+from unittest.mock import MagicMock
 
 import pytest
+from sqlmodel import select
 
 from app import api
-# from app.adapters.entra_auth_adapter import get_email_address
+from app.adapters.audit_repository_adapter import AuditRepositoryAdapter
 from app.auth.rbac import Role
-from app.routers.dependencies.audit_writer import get_audit_repository_adapter
-from tests.e2e.application.test_create_application import (
-    _make_request_body as make_application_request_body,
+from app.models.audit.enums import AuditType
+from app.models.audit.index import ReportDownloadAudit
+from app.routers.dependencies.audit_writer import get_audit_report_download_factory
+from app.routers.reports import (
+    get_generate_application_backlog_report_use_case,
+    get_generate_claim_backlog_report_use_case,
+    get_generate_payment_extract_report_use_case,
 )
-from tests.helpers.application_payloads import create_application_payload
-from tests.helpers.provider_details import (
-    override_provider_details_port_with_provider_offices,
-)
-
+from app.use_cases.audit_report_download import AuditReportDownloadUseCase
+from app.use_cases.exceptions import AuditError
 
 # This file contains end-to-end tests for audit and permissions truth table scenarios.
 # Audit log X, Permission Y => 500
@@ -47,12 +49,14 @@ def test_403_audit_log_y_permission_x_returns_403(client):
 
 
 def _raise_audit_log_exception():
-    raise Exception("Audit log X")
+    raise RuntimeError("Audit log X")
 
 
 def test_403_audit_log_x_permission_x_returns_403(client):
 
-    api.dependency_overrides[get_audit_repository_adapter] = _raise_audit_log_exception
+    api.dependency_overrides[get_audit_report_download_factory] = lambda: (
+        _raise_audit_log_exception
+    )
     response = client.get(
         "/reports/claims/backlog",
         headers={
@@ -64,165 +68,104 @@ def test_403_audit_log_x_permission_x_returns_403(client):
     assert response.status_code == 403
 
 
-# def test_403_permission_dependency_rejects_request_without_required_permission(
-#     client,
-# ):
-#     api.dependency_overrides[get_current_user_permissions] = lambda: set()
+@pytest.mark.parametrize(
+    "endpoint,role,audit_type,report_dependency,parameters",
+    [
+        (
+            "/reports/applications/backlog",
+            Role.APPLICATION_WORKFLOW_REPORTING,
+            AuditType.REPORTS_APPLICATIONS_BACKLOG,
+            get_generate_application_backlog_report_use_case,
+            None,
+        ),
+        (
+            "/reports/claims/backlog",
+            Role.CLAIM_WORKFLOW_REPORTING,
+            AuditType.REPORTS_CLAIMS_BACKLOG,
+            get_generate_claim_backlog_report_use_case,
+            None,
+        ),
+        (
+            "/reports/payment-extract",
+            Role.FINANCE,
+            AuditType.REPORTS_PAYMENT_EXTRACT,
+            get_generate_payment_extract_report_use_case,
+            {"from": "2024-01-01", "to": "2024-01-31"},
+        ),
+    ],
+)
+@pytest.mark.parametrize("has_permission", [True, False])
+@pytest.mark.parametrize("audit_failure", [None, "setup", "write", "commit"])
+def test_report_download_requires_permission_and_successful_audit(
+    client,
+    session,
+    endpoint,
+    role,
+    audit_type,
+    report_dependency,
+    parameters,
+    has_permission,
+    audit_failure,
+):
+    audit_repository = MagicMock(wraps=AuditRepositoryAdapter(session=session))
+    audit_factory = MagicMock(return_value=audit_repository)
+    if audit_failure == "setup":
+        audit_factory.side_effect = RuntimeError("Audit setup failed")
+    elif audit_failure == "write":
+        audit_repository.audit_report_download.side_effect = AuditError(
+            "Audit write failed"
+        )
+    elif audit_failure == "commit":
+        audit_repository.commit.side_effect = AuditError("Audit commit failed")
 
-#     response = client.post(
-#         "/applications",
-#         json=make_application_request_body(),
-#         headers={
-#             "Content-Type": "application/json",
-#             "Authorization": "Bearer valid-token",
-#         },
-#     )
+    report_use_case = MagicMock()
+    report_use_case.execute.return_value = (
+        iter([b"report data"]) if parameters else b"report data"
+    )
 
-#     assert response.status_code == 403
-#     assert response.json() == {"detail": ("Forbidden: Missing required permission")}
+    def create_audit_use_case():
+        return AuditReportDownloadUseCase(audit_port=audit_factory())
 
+    api.dependency_overrides[get_audit_report_download_factory] = lambda: (
+        create_audit_use_case
+    )
+    api.dependency_overrides[report_dependency] = lambda: report_use_case
+    user_role = role if has_permission else Role.PROVIDER_APPLICATION_USER
 
-# # This is our representative test that exercises the FastAPI verify_entra_token dependency
-# # It verifies that an unauthorized request to a protected endpoint is rejected with a 401 status code.
-# def test_401_verify_entra_token_dependency_rejects_unauthorized_request(
-#     client,
-# ):
-#     response = client.post(
-#         "/applications",
-#         json=make_application_request_body(),
-#         headers={
-#             "Content-Type": "application/json",
-#         },
-#     )
+    response = client.get(
+        endpoint,
+        params=parameters,
+        headers={"Authorization": f"Bearer {user_role.value}"},
+    )
 
-#     assert response.status_code == 401
-#     assert response.json() == {"detail": ("Not authenticated")}
+    expected_status = 403 if not has_permission else 500 if audit_failure else 200
+    assert response.status_code == expected_status
+    audit_factory.assert_called_once()
+    if audit_failure != "setup":
+        audit_repository.audit_report_download.assert_called_once_with(
+            user_email_address="test@example.com",
+            report_type=audit_type,
+            parameters=parameters,
+        )
 
+    if expected_status == 200:
+        report_use_case.execute.assert_called_once()
+        assert response.content == b"report data"
+        assert response.headers["content-type"].startswith("text/csv")
+        assert "attachment" in response.headers["content-disposition"]
+    else:
+        report_use_case.execute.assert_not_called()
+        assert "content-disposition" not in response.headers
+        if expected_status == 403:
+            assert response.json() == {
+                "detail": "Forbidden: Missing required permission"
+            }
 
-# def test_201_create_application_returns_201_when_provider_application_user_token(
-#     client,
-# ):
-#     response = client.post(
-#         "/applications",
-#         json=create_application_payload(),
-#         headers={
-#             "Content-Type": "application/json",
-#             "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
-#         },
-#     )
-
-#     assert response.status_code == 201
-
-
-# def test_201_upload_coroners_letter_returns_201_when_provider_application_user_token(
-#     client,
-# ):
-#     response = client.post(
-#         "/applications/upload-coroners-letter",
-#         files={
-#             "file": (
-#                 "coroners_letter.pdf",
-#                 io.BytesIO(b"test content"),
-#                 "application/pdf",
-#             )
-#         },
-#         headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
-#     )
-
-#     assert response.status_code == 201
-
-
-# class TestSearchApplicationAuth:
-#     def test_200_search_application_returns_200_when_provider_claims_user_token(
-#         self,
-#         client,
-#     ):
-#         response = client.get(
-#             "/applications/search",
-#             params={"laa_reference": "1"},
-#             headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
-#         )
-
-#         assert response.status_code == 200
-
-
-# class TestUploadClaimEvidenceAuth:
-#     def test_201_upload_claim_evidence_when_provider_claims_user_token(
-#         self,
-#         client,
-#     ):
-#         response = client.post(
-#             "/claims/evidence",
-#             files={
-#                 "file": (
-#                     "claim_evidence.pdf",
-#                     io.BytesIO(b"test content"),
-#                     "application/pdf",
-#                 )
-#             },
-#             headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
-#         )
-
-#         assert response.status_code == 201
-
-
-# class TestDeleteClaimEvidenceAuth:
-#     def test_204_delete_claim_evidence_when_provider_claims_user_token(
-#         self,
-#         session,
-#         client,
-#     ):
-#         claim_evidence = ClaimEvidence(
-#             sds_file_name="stored-claim-evidence_abc123.pdf",
-#             file_name="claim_evidence.pdf",
-#         )
-#         session.add(claim_evidence)
-#         session.commit()
-#         session.refresh(claim_evidence)
-
-#         response = client.delete(
-#             f"/claims/{claim_evidence.claim_evidence_id}",
-#             headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
-#         )
-
-#         assert response.status_code == 204
-
-
-# class TestListProviderOfficesAuth:
-#     @pytest.mark.parametrize(
-#         "provider_token",
-#         [Role.PROVIDER_APPLICATION_USER.value, Role.PROVIDER_CLAIMS_USER.value],
-#     )
-#     def test_200_list_provider_offices_returns_200_when_provider_token(
-#         self, client, provider_token
-#     ):
-#         override_provider_details_port_with_provider_offices()
-
-#         response = client.get(
-#             "/applications/provider-offices/123",
-#             headers={"Authorization": f"Bearer {provider_token}"},
-#         )
-
-#         assert response.status_code == 200
-
-
-# class TestDeleteCoronersLetterAuth:
-#     def test_204_delete_coroners_letter_when_provider_application_user_token(
-#         self,
-#         session,
-#         client,
-#     ):
-#         coroners_letter = CoronersLetter(
-#             sds_file_name="stored-file_abc123.pdf",
-#             file_name="coroners_letter.pdf",
-#         )
-#         session.add(coroners_letter)
-#         session.commit()
-#         session.refresh(coroners_letter)
-
-#         response = client.delete(
-#             f"/applications/coroners-letter/{coroners_letter.coroners_letter_id}",
-#             headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
-#         )
-
-#         assert response.status_code == 204
+    audit_entries = session.exec(select(ReportDownloadAudit)).all()
+    if audit_failure is None:
+        assert len(audit_entries) == 1
+        assert audit_entries[0].report_type == audit_type
+        assert audit_entries[0].user_email_address == "test@example.com"
+        assert audit_entries[0].parameters == parameters
+    else:
+        assert audit_entries == []

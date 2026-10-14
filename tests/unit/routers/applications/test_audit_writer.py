@@ -1,8 +1,9 @@
+import asyncio
 from unittest.mock import MagicMock
+
 from app.models.audit.enums import AuditType
 from app.routers.dependencies.audit_writer import AuditWriter
 from app.use_cases.audit_report_download import AuditReportDownloadUseCase
-import asyncio
 
 
 def test_audit_writer_initialization():

@@ -1,3 +1,5 @@
+from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request
@@ -29,6 +31,35 @@ def get_audit_report_download_use_case(
     audit_port: Annotated[AuditPort, Depends(get_audit_repository_adapter)],
 ) -> AuditReportDownloadUseCase:
     return AuditReportDownloadUseCase(audit_port=audit_port)
+
+
+def get_audit_report_download_factory(
+    session: Annotated[Session, Depends(get_session)],
+) -> Callable[[], AuditReportDownloadUseCase]:
+    def create_audit_use_case() -> AuditReportDownloadUseCase:
+        return get_audit_report_download_use_case(
+            audit_port=get_audit_repository_adapter(session=session)
+        )
+
+    return create_audit_use_case
+
+
+@dataclass(frozen=True)
+class ReportAuditPreparationFailure:
+    error: Exception
+
+
+def prepare_report_audit(
+    factory: Annotated[
+        Callable[[], AuditReportDownloadUseCase],
+        Depends(get_audit_report_download_factory),
+    ],
+) -> AuditReportDownloadUseCase | ReportAuditPreparationFailure:
+    try:
+        return factory()
+    except Exception as exc:  # noqa: BLE001 - Re-raised and logged by the permission guard.
+        # Defer the error so the endpoint's permission policy determines 403 or 500.
+        return ReportAuditPreparationFailure(error=exc)
 
 
 class AuditWriter:

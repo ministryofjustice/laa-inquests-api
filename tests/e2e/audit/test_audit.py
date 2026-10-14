@@ -1,6 +1,6 @@
 from app.auth.rbac import Role
-from app.models.audit.index import ReportDownloadAudit
 from app.models.audit.enums import AuditType
+from app.models.audit.index import ReportDownloadAudit
 
 
 class TestAuditReports:
