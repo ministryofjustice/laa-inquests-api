@@ -1,6 +1,7 @@
-from app.routers.dependencies.audit_writer import AuditWriter
 from unittest.mock import MagicMock
 from app.models.audit.enums import AuditType
+from app.routers.dependencies.audit_writer import AuditWriter
+from app.use_cases.audit_report_download import AuditReportDownloadUseCase
 import asyncio
 
 
@@ -16,7 +17,7 @@ def test_audit_writer_gets_user_email_address():
         audit_writer(
             credentials=MagicMock(),
             entra_auth_port=entra_auth_port,
-            audit_port=MagicMock(),
+            use_case=AuditReportDownloadUseCase(audit_port=MagicMock()),
             request=MagicMock(),
         )
     )
@@ -30,7 +31,7 @@ def test_audit_writer_calls_audit_port():
         audit_writer(
             credentials=MagicMock(),
             entra_auth_port=MagicMock(),
-            audit_port=audit_port,
+            use_case=AuditReportDownloadUseCase(audit_port=audit_port),
             request=MagicMock(),
         )
     )
