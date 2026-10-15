@@ -2,7 +2,9 @@ import pytest
 from fastapi import HTTPException, Request
 
 from app.auth.rbac import Permission, PermissionChecker
-from app.routers.dependencies.audited_report_permission import ReportAuditFailureHandler
+from app.routers.dependencies.report_auditer_permission_checker import (
+    ReportAuditFailureHandler,
+)
 from app.use_cases.exceptions import AuditError
 
 
@@ -31,7 +33,7 @@ def test_audit_failure_returns_403_when_user_lacks_permission(caplog):
     failure_log = next(
         record.extra
         for record in caplog.records
-        if getattr(record, "extra", {}).get("event") == "report_download_audit_failed"
+        if getattr(record, "extra", {}).get("event") == "report_audit_failed"
     )
     assert failure_log["status_code"] == 403
     assert failure_log["error_type"] == "AuditError"
@@ -64,6 +66,6 @@ def test_audit_failure_returns_500_when_user_has_permission(caplog):
     failure_log = next(
         record.extra
         for record in caplog.records
-        if getattr(record, "extra", {}).get("event") == "report_download_audit_failed"
+        if getattr(record, "extra", {}).get("event") == "report_audit_failed"
     )
     assert failure_log["status_code"] == 500

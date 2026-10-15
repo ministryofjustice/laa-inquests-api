@@ -130,7 +130,7 @@ class EntraAuthAdapter:
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-    def get_email_address(self, token: str) -> str | None:
+    def get_user_email_address(self, token: str) -> str | None:
         try:
             signing_key = self._jwks_client.get_signing_key_from_jwt(token)
             payload = jwt.decode(

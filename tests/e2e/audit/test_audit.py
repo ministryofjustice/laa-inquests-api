@@ -1,6 +1,6 @@
 from app.auth.rbac import Role
-from app.models.audit.enums import AuditType
-from app.models.audit.index import ReportDownloadAudit
+from app.models.audit.enums import ReportType
+from app.models.audit.index import ReportAudit
 
 
 class TestAuditReports:
@@ -15,12 +15,10 @@ class TestAuditReports:
         assert response.status_code == 200
 
         audit_entry = (
-            session.query(ReportDownloadAudit)
-            .order_by(ReportDownloadAudit.timestamp.desc())
-            .first()
+            session.query(ReportAudit).order_by(ReportAudit.timestamp.desc()).first()
         )
         assert audit_entry is not None
-        assert audit_entry.report_type == AuditType.REPORTS_CLAIMS_BACKLOG
+        assert audit_entry.report_type == ReportType.CLAIMS_BACKLOG
         assert audit_entry.timestamp is not None
         assert audit_entry.user_email_address == "test@example.com"
         assert audit_entry.parameters is None
@@ -38,12 +36,10 @@ class TestAuditReports:
         assert response.status_code == 200
 
         audit_entry = (
-            session.query(ReportDownloadAudit)
-            .order_by(ReportDownloadAudit.timestamp.desc())
-            .first()
+            session.query(ReportAudit).order_by(ReportAudit.timestamp.desc()).first()
         )
         assert audit_entry is not None
-        assert audit_entry.report_type == AuditType.REPORTS_APPLICATIONS_BACKLOG
+        assert audit_entry.report_type == ReportType.APPLICATIONS_BACKLOG
         assert audit_entry.timestamp is not None
         assert audit_entry.user_email_address == "test@example.com"
         assert audit_entry.parameters is None
@@ -57,12 +53,10 @@ class TestAuditReports:
         assert response.status_code == 200
 
         audit_entry = (
-            session.query(ReportDownloadAudit)
-            .order_by(ReportDownloadAudit.timestamp.desc())
-            .first()
+            session.query(ReportAudit).order_by(ReportAudit.timestamp.desc()).first()
         )
         assert audit_entry is not None
-        assert audit_entry.report_type == AuditType.REPORTS_PAYMENT_EXTRACT
+        assert audit_entry.report_type == ReportType.PAYMENT_EXTRACT
         assert audit_entry.timestamp is not None
         assert audit_entry.user_email_address == "test@example.com"
         assert audit_entry.parameters == {"from": "2024-01-01", "to": "2024-01-31"}

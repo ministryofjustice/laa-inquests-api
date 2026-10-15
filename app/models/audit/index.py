@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
 
-from app.models.audit.enums import AuditType
+from app.models.audit.enums import ReportType
 
 
 class BaseAuditEvent(SQLModel):
@@ -14,8 +14,8 @@ class BaseAuditEvent(SQLModel):
     user_email_address: str = Field(nullable=False)
 
 
-class ReportDownloadAudit(BaseAuditEvent, table=True):
-    __tablename__ = "audit_report_download_event"
+class ReportAudit(BaseAuditEvent, table=True):
+    __tablename__ = "audit_report_event"
 
-    report_type: AuditType = Field(nullable=False)
+    report_type: ReportType = Field(nullable=False)
     parameters: dict | None = Field(default=None, sa_column=Column(JSON, nullable=True))

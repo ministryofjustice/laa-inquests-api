@@ -6,15 +6,15 @@ from sqlmodel import select
 from app import api
 from app.adapters.audit_repository_adapter import AuditRepositoryAdapter
 from app.auth.rbac import Role
-from app.models.audit.enums import AuditType
-from app.models.audit.index import ReportDownloadAudit
-from app.routers.dependencies.audit_writer import get_audit_report_download_factory
+from app.models.audit.enums import ReportType
+from app.models.audit.index import ReportAudit
+from app.routers.dependencies.report_audit_writer import report_audit_use_case_factory
 from app.routers.reports import (
     get_generate_application_backlog_report_use_case,
     get_generate_claim_backlog_report_use_case,
     get_generate_payment_extract_report_use_case,
 )
-from app.use_cases.audit_report_download import AuditReportDownloadUseCase
+from app.use_cases.report_audit import ReportAuditUseCase
 from app.use_cases.exceptions import AuditError
 
 # This file contains end-to-end tests for audit and permissions truth table scenarios.
@@ -53,8 +53,7 @@ def _raise_audit_log_exception():
 
 
 def test_403_audit_log_x_permission_x_returns_403(client):
-
-    api.dependency_overrides[get_audit_report_download_factory] = lambda: (
+    api.dependency_overrides[report_audit_use_case_factory] = lambda: (
         _raise_audit_log_exception
     )
     response = client.get(
@@ -74,21 +73,21 @@ def test_403_audit_log_x_permission_x_returns_403(client):
         (
             "/reports/applications/backlog",
             Role.APPLICATION_WORKFLOW_REPORTING,
-            AuditType.REPORTS_APPLICATIONS_BACKLOG,
+            ReportType.APPLICATIONS_BACKLOG,
             get_generate_application_backlog_report_use_case,
             None,
         ),
         (
             "/reports/claims/backlog",
             Role.CLAIM_WORKFLOW_REPORTING,
-            AuditType.REPORTS_CLAIMS_BACKLOG,
+            ReportType.CLAIMS_BACKLOG,
             get_generate_claim_backlog_report_use_case,
             None,
         ),
         (
             "/reports/payment-extract",
             Role.FINANCE,
-            AuditType.REPORTS_PAYMENT_EXTRACT,
+            ReportType.PAYMENT_EXTRACT,
             get_generate_payment_extract_report_use_case,
             {"from": "2024-01-01", "to": "2024-01-31"},
         ),
@@ -112,9 +111,7 @@ def test_report_download_requires_permission_and_successful_audit(
     if audit_failure == "setup":
         audit_factory.side_effect = RuntimeError("Audit setup failed")
     elif audit_failure == "write":
-        audit_repository.audit_report_download.side_effect = AuditError(
-            "Audit write failed"
-        )
+        audit_repository.audit_report.side_effect = AuditError("Audit write failed")
     elif audit_failure == "commit":
         audit_repository.commit.side_effect = AuditError("Audit commit failed")
 
@@ -124,9 +121,9 @@ def test_report_download_requires_permission_and_successful_audit(
     )
 
     def create_audit_use_case():
-        return AuditReportDownloadUseCase(audit_port=audit_factory())
+        return ReportAuditUseCase(audit_port=audit_factory())
 
-    api.dependency_overrides[get_audit_report_download_factory] = lambda: (
+    api.dependency_overrides[report_audit_use_case_factory] = lambda: (
         create_audit_use_case
     )
     api.dependency_overrides[report_dependency] = lambda: report_use_case
@@ -142,7 +139,7 @@ def test_report_download_requires_permission_and_successful_audit(
     assert response.status_code == expected_status
     audit_factory.assert_called_once()
     if audit_failure != "setup":
-        audit_repository.audit_report_download.assert_called_once_with(
+        audit_repository.audit_report.assert_called_once_with(
             user_email_address="test@example.com",
             report_type=audit_type,
             parameters=parameters,
@@ -161,7 +158,7 @@ def test_report_download_requires_permission_and_successful_audit(
                 "detail": "Forbidden: Missing required permission"
             }
 
-    audit_entries = session.exec(select(ReportDownloadAudit)).all()
+    audit_entries = session.exec(select(ReportAudit)).all()
     if audit_failure is None:
         assert len(audit_entries) == 1
         assert audit_entries[0].report_type == audit_type

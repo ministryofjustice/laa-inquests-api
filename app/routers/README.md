@@ -52,7 +52,7 @@ dependencies = [
     Depends(
         require_audited_report_permission(
             possible_permissions=Permission.REPORTS_CLAIM_WORKFLOW_READ,
-            report_type=AuditType.REPORTS_CLAIMS_BACKLOG,
+            report_type=ReportType.CLAIMS_BACKLOG,
         )
     )
 ]
@@ -74,7 +74,7 @@ The failure handler logs audit errors without including user details or tokens.
 Report generation runs only after the dependency succeeds and is outside the
 audit failure handler.
 
-Audit construction uses the overridable `get_audit_report_download_factory`
+Audit construction uses the overridable `get_audit_report_factory`
 dependency in [audit_writer.py](./dependencies/audit_writer.py). It returns a
 callable that is invoked inside the failure handler, so construction failures
 are handled like write and commit failures. Shared database session acquisition

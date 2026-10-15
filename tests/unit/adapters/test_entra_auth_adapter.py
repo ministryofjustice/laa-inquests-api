@@ -183,7 +183,7 @@ def test_verify_token_raises_401_for_invalid_token(adapter, side_effect):
     assert exc_info.value.status_code == 401
 
 
-def test_get_email_address_returns_preferred_username(adapter):
+def test_get_user_email_address_returns_preferred_username(adapter):
     with patch(
         "app.adapters.entra_auth_adapter.jwt.decode",
         return_value={
@@ -197,11 +197,11 @@ def test_get_email_address_returns_preferred_username(adapter):
             "preferred_username": "test@example.com",
         },
     ):
-        email = adapter.get_email_address("valid.jwt.token")
+        email = adapter.get_user_email_address("valid.jwt.token")
     assert email == "test@example.com"
 
 
-def test_get_email_address_returns_None_when_preferred_username_missing(adapter):
+def test_get_user_email_address_returns_None_when_preferred_username_missing(adapter):
     with patch(
         "app.adapters.entra_auth_adapter.jwt.decode",
         return_value={
@@ -214,16 +214,16 @@ def test_get_email_address_returns_None_when_preferred_username_missing(adapter)
             "ACCOUNTS": ["A001B", "A002B"],
         },
     ):
-        email = adapter.get_email_address("valid.jwt.token")
+        email = adapter.get_user_email_address("valid.jwt.token")
     assert email is None
 
 
-def test_get_email_address_returns_None_when_jwt_decode_fails(adapter):
+def test_get_user_email_address_returns_None_when_jwt_decode_fails(adapter):
     with patch(
         "app.adapters.entra_auth_adapter.jwt.decode",
         side_effect=jwt.PyJWTError("JWT decode failed"),
     ):
-        email = adapter.get_email_address("valid.jwt.token")
+        email = adapter.get_user_email_address("valid.jwt.token")
     assert email is None
 
 

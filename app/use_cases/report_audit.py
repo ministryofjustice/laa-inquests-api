@@ -1,20 +1,20 @@
-from app.models.audit.enums import AuditType
-from app.ports.create_audit_event_port import AuditPort
+from app.models.audit.enums import ReportType
+from app.ports.audit_port import AuditPort
 from app.use_cases.exceptions import AuditError
 
 
-class AuditReportDownloadUseCase:
+class ReportAuditUseCase:
     def __init__(self, audit_port: AuditPort) -> None:
         self.audit_port = audit_port
 
     def execute(
         self,
         user_email_address: str,
-        report_type: AuditType,
+        report_type: ReportType,
         parameters: dict[str, str] | None = None,
     ) -> None:
         try:
-            self.audit_port.audit_report_download(
+            self.audit_port.audit_report(
                 user_email_address=user_email_address,
                 report_type=report_type,
                 parameters=parameters,
