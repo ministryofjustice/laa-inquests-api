@@ -1,5 +1,5 @@
 import logging
-from collections.abc import Generator, Iterable
+from collections.abc import Callable, Generator, Iterable
 from contextlib import contextmanager
 from typing import Annotated
 
@@ -13,8 +13,7 @@ from app.models.audit.enums import AuditType
 from app.ports.entra_auth_port import EntraAuthPort
 from app.routers.dependencies.audit_writer import (
     AuditWriter,
-    ReportAuditPreparationFailure,
-    prepare_report_audit,
+    get_audit_report_download_factory,
 )
 from app.routers.dependencies.entra_auth import get_entra_auth_port
 from app.use_cases.audit_report_download import AuditReportDownloadUseCase
@@ -76,17 +75,14 @@ class AuditedReportPermission:
             HTTPAuthorizationCredentials | None, Depends(_http_bearer)
         ],
         entra_auth_port: Annotated[EntraAuthPort, Depends(get_entra_auth_port)],
-        prepared_audit: Annotated[
-            AuditReportDownloadUseCase | ReportAuditPreparationFailure,
-            Depends(prepare_report_audit),
+        create_audit_use_case: Annotated[
+            Callable[[], AuditReportDownloadUseCase],
+            Depends(get_audit_report_download_factory),
         ],
         request: Request,
     ) -> None:
         # Attempt to write an audit event, otherwise handle_failure will manage any exceptions
         with self.failure_handler.handle_failure(permissions, request):
-            # Create the audit writer dependencies, check if any dependency creation failed
-            if isinstance(prepared_audit, ReportAuditPreparationFailure):
-                raise prepared_audit.error
             if credentials is None:
                 raise HTTPException(
                     status_code=401,
@@ -98,7 +94,7 @@ class AuditedReportPermission:
             )
             await self.audit_writer(
                 user_email_address=user_email_address,
-                use_case=prepared_audit,
+                use_case=create_audit_use_case(),
                 request=request,
             )
         self.permission_checker(permissions)

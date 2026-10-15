@@ -58,9 +58,9 @@ dependencies = [
 ]
 ```
 
-Authentication runs first. For authenticated requests, audit preparation captures
-audit-specific construction failures as a typed result. The dependency then
-executes the audit inside its failure handler before enforcing permission:
+Authentication runs first. For authenticated requests, the dependency builds the
+audit use case and executes the audit inside its failure handler before
+enforcing permission:
 
 | Permission | Audit outcome | Response |
 | --- | --- | --- |
@@ -75,9 +75,9 @@ Report generation runs only after the dependency succeeds and is outside the
 audit failure handler.
 
 Audit construction uses the overridable `get_audit_report_download_factory`
-dependency in [audit_writer.py](./dependencies/audit_writer.py). Tests can supply
-a factory that raises during construction, rather than raising while FastAPI
-resolves the factory dependency itself. Shared database session acquisition
+dependency in [audit_writer.py](./dependencies/audit_writer.py). It returns a
+callable that is invoked inside the failure handler, so construction failures
+are handled like write and commit failures. Shared database session acquisition
 remains managed by the existing session dependency.
 
 ## Reading and writing to the database

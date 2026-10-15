@@ -1,5 +1,4 @@
 from collections.abc import Callable
-from dataclasses import dataclass
 from typing import Annotated
 
 from fastapi import Depends, Request
@@ -34,24 +33,6 @@ def get_audit_report_download_factory(
         )
 
     return create_audit_use_case
-
-
-@dataclass(frozen=True)
-class ReportAuditPreparationFailure:
-    error: Exception
-
-
-def prepare_report_audit(
-    factory: Annotated[
-        Callable[[], AuditReportDownloadUseCase],
-        Depends(get_audit_report_download_factory),
-    ],
-) -> AuditReportDownloadUseCase | ReportAuditPreparationFailure:
-    try:
-        return factory()
-    except Exception as exc:  # noqa: BLE001 - Re-raised and logged by the permission guard.
-        # Defer the error so the endpoint's permission policy determines 403 or 500.
-        return ReportAuditPreparationFailure(error=exc)
 
 
 class AuditWriter:
