@@ -44,13 +44,13 @@ To learn more about models please read [/app/models/README.md](../models/README.
 ## Audited report permissions
 
 Every report endpoint uses
-[`require_audited_report_permission`](./dependencies/audited_report_permission.py)
+[`audit_report_and_require_permission`](./dependencies/report_audit_permission_checker.py)
 with its required permission and audit type:
 
 ```python
 dependencies = [
     Depends(
-        require_audited_report_permission(
+        audit_report_and_require_permission(
             possible_permissions=Permission.REPORTS_CLAIM_WORKFLOW_READ,
             report_type=ReportType.CLAIMS_BACKLOG,
         )
@@ -73,12 +73,6 @@ Missing or invalid authentication retains the existing authentication response.
 The failure handler logs audit errors without including user details or tokens.
 Report generation runs only after the dependency succeeds and is outside the
 audit failure handler.
-
-Audit construction uses the overridable `get_audit_report_factory`
-dependency in [audit_writer.py](./dependencies/audit_writer.py). It returns a
-callable that is invoked inside the failure handler, so construction failures
-are handled like write and commit failures. Shared database session acquisition
-remains managed by the existing session dependency.
 
 ## Reading and writing to the database
 Database connections are managed with SQLModel sessions, these are inherited from SQLAlchemy sessions.

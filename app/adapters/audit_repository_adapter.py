@@ -41,7 +41,7 @@ class AuditRepositoryAdapter(AuditPort):
         Create a new report audit record.
 
         Args:
-            user_email_address: User or system that triggered the report download
+            user_email_address: Email address of the user that triggered the report download
             report_type: Type of the report being downloaded
             parameters: Optional JSON data associated with the report
                 (e.g., {"from_date": "2024-01-01", "to_date": "2024-01-31"})

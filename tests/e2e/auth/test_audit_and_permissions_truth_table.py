@@ -14,88 +14,82 @@ from app.routers.reports import (
     get_generate_claim_backlog_report_use_case,
     get_generate_payment_extract_report_use_case,
 )
-from app.use_cases.report_audit import ReportAuditUseCase
 from app.use_cases.exceptions import AuditError
+from app.use_cases.report_audit import ReportAuditUseCase
 
-# This file contains end-to-end tests for audit and permissions truth table scenarios.
-# Audit log X, Permission Y => 500
-# Audit log X, Permission X => 403
-# Audit log Y, Permission Y => 200
-# Audit log Y, Permission X => 403
+# Report downloads are audited before permission is enforced:
+#
+# | Permission | Audit                          | Outcome                |
+# | ---------- | ------------------------------ | ---------------------- |
+# | Granted    | Succeeds                       | 200, report downloaded |
+# | Denied     | Succeeds                       | 403, audit persisted   |
+# | Granted    | Fails (setup, write or commit) | 500, no report         |
+# | Denied     | Fails (setup, write or commit) | 403, no report         |
 
-
-def test_200_audit_log_y_permission_y_returns_200(client):
-    response = client.get(
+REPORT_ENDPOINTS = [
+    (
+        "/reports/applications/backlog",
+        Role.APPLICATION_WORKFLOW_REPORTING,
+        ReportType.APPLICATIONS_BACKLOG,
+        get_generate_application_backlog_report_use_case,
+        None,
+    ),
+    (
         "/reports/claims/backlog",
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {Role.CLAIM_WORKFLOW_REPORTING.value}",
-        },
-    )
+        Role.CLAIM_WORKFLOW_REPORTING,
+        ReportType.CLAIMS_BACKLOG,
+        get_generate_claim_backlog_report_use_case,
+        None,
+    ),
+    (
+        "/reports/payment-extract",
+        Role.FINANCE,
+        ReportType.PAYMENT_EXTRACT,
+        get_generate_payment_extract_report_use_case,
+        {"from": "2024-01-01", "to": "2024-01-31"},
+    ),
+]
 
-    assert response.status_code == 200
+# (has_permission, audit_failure, expected_status)
+AUDIT_OUTCOMES = [
+    pytest.param(True, None, 200, id="permitted-audit_succeeds"),
+    pytest.param(False, None, 403, id="denied-audit_succeeds"),
+    pytest.param(True, "setup", 500, id="permitted-setup_fails"),
+    pytest.param(False, "setup", 403, id="denied-setup_fails"),
+    pytest.param(True, "write", 500, id="permitted-write_fails"),
+    pytest.param(False, "write", 403, id="denied-write_fails"),
+    pytest.param(True, "commit", 500, id="permitted-commit_fails"),
+    pytest.param(False, "commit", 403, id="denied-commit_fails"),
+]
 
 
-def test_403_audit_log_y_permission_x_returns_403(client):
-    response = client.get(
-        "/reports/claims/backlog",
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
-        },
-    )
-
-    assert response.status_code == 403
+def _assert_report_downloaded(response, report_use_case):
+    report_use_case.execute.assert_called_once()
+    assert response.content == b"report data"
+    assert response.headers["content-type"].startswith("text/csv")
+    assert "attachment" in response.headers["content-disposition"]
 
 
-def _raise_audit_log_exception():
-    raise RuntimeError("Audit log X")
+def _assert_report_blocked(response, report_use_case, expected_status):
+    report_use_case.execute.assert_not_called()
+    assert "content-disposition" not in response.headers
+    if expected_status == 403:
+        assert response.json() == {"detail": "Forbidden: Missing required permission"}
 
 
-def test_403_audit_log_x_permission_x_returns_403(client):
-    api.dependency_overrides[report_audit_use_case_factory] = lambda: (
-        _raise_audit_log_exception
-    )
-    response = client.get(
-        "/reports/claims/backlog",
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
-        },
-    )
-
-    assert response.status_code == 403
+def _assert_audit_persisted(session, audit_type, parameters):
+    audit_entries = session.exec(select(ReportAudit)).all()
+    assert len(audit_entries) == 1
+    assert audit_entries[0].report_type == audit_type
+    assert audit_entries[0].user_email_address == "test@example.com"
+    assert audit_entries[0].parameters == parameters
 
 
 @pytest.mark.parametrize(
-    "endpoint,role,audit_type,report_dependency,parameters",
-    [
-        (
-            "/reports/applications/backlog",
-            Role.APPLICATION_WORKFLOW_REPORTING,
-            ReportType.APPLICATIONS_BACKLOG,
-            get_generate_application_backlog_report_use_case,
-            None,
-        ),
-        (
-            "/reports/claims/backlog",
-            Role.CLAIM_WORKFLOW_REPORTING,
-            ReportType.CLAIMS_BACKLOG,
-            get_generate_claim_backlog_report_use_case,
-            None,
-        ),
-        (
-            "/reports/payment-extract",
-            Role.FINANCE,
-            ReportType.PAYMENT_EXTRACT,
-            get_generate_payment_extract_report_use_case,
-            {"from": "2024-01-01", "to": "2024-01-31"},
-        ),
-    ],
+    "endpoint,role,audit_type,report_dependency,parameters", REPORT_ENDPOINTS
 )
-@pytest.mark.parametrize("has_permission", [True, False])
-@pytest.mark.parametrize("audit_failure", [None, "setup", "write", "commit"])
-def test_report_download_requires_permission_and_successful_audit(
+@pytest.mark.parametrize("has_permission,audit_failure,expected_status", AUDIT_OUTCOMES)
+def test_report_download_outcome_depends_on_permission_and_audit(
     client,
     session,
     endpoint,
@@ -105,6 +99,7 @@ def test_report_download_requires_permission_and_successful_audit(
     parameters,
     has_permission,
     audit_failure,
+    expected_status,
 ):
     audit_repository = MagicMock(wraps=AuditRepositoryAdapter(session=session))
     audit_factory = MagicMock(return_value=audit_repository)
@@ -135,7 +130,6 @@ def test_report_download_requires_permission_and_successful_audit(
         headers={"Authorization": f"Bearer {user_role.value}"},
     )
 
-    expected_status = 403 if not has_permission else 500 if audit_failure else 200
     assert response.status_code == expected_status
     audit_factory.assert_called_once()
     if audit_failure != "setup":
@@ -146,23 +140,11 @@ def test_report_download_requires_permission_and_successful_audit(
         )
 
     if expected_status == 200:
-        report_use_case.execute.assert_called_once()
-        assert response.content == b"report data"
-        assert response.headers["content-type"].startswith("text/csv")
-        assert "attachment" in response.headers["content-disposition"]
+        _assert_report_downloaded(response, report_use_case)
     else:
-        report_use_case.execute.assert_not_called()
-        assert "content-disposition" not in response.headers
-        if expected_status == 403:
-            assert response.json() == {
-                "detail": "Forbidden: Missing required permission"
-            }
+        _assert_report_blocked(response, report_use_case, expected_status)
 
-    audit_entries = session.exec(select(ReportAudit)).all()
     if audit_failure is None:
-        assert len(audit_entries) == 1
-        assert audit_entries[0].report_type == audit_type
-        assert audit_entries[0].user_email_address == "test@example.com"
-        assert audit_entries[0].parameters == parameters
+        _assert_audit_persisted(session, audit_type, parameters)
     else:
-        assert audit_entries == []
+        assert session.exec(select(ReportAudit)).all() == []
