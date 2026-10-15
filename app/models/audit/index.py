@@ -15,7 +15,7 @@ class BaseAuditEvent(SQLModel):
 
 
 class ReportAudit(BaseAuditEvent, table=True):
-    __tablename__ = "audit_report_event"
+    __tablename__ = "report_audit_event"
 
     report_type: ReportType = Field(nullable=False)
     parameters: dict | None = Field(default=None, sa_column=Column(JSON, nullable=True))
