@@ -87,7 +87,7 @@ if [ -z "$branch_name" ]; then
   branch_name="$GITHUB_REF_NAME" # Branch name if this is a push event
 fi
 
-if [[ ("$ENVIRONMENT" == 'dev') && "$branch_name" == "main" ]] || \
+if [[ ("$ENVIRONMENT" == 'dev' || "$ENVIRONMENT" == 'suppliertest') && "$branch_name" == "main" ]] || \
    [[ (("$ENVIRONMENT" == 'staging' || "$ENVIRONMENT" == 'prod') && "$branch_name" =~ $releaseTag) ]]
 then
   deploy_main
