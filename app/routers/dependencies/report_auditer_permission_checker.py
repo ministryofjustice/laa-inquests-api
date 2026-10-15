@@ -11,11 +11,11 @@ from app.auth.rbac import Permission, PermissionChecker, get_current_user_permis
 from app.logging_utils import build_log_extra
 from app.models.audit.enums import ReportType
 from app.ports.entra_auth_port import EntraAuthPort
+from app.routers.dependencies.entra_auth import get_entra_auth_port
 from app.routers.dependencies.report_audit_writer import (
     ReportAuditWriter,
     report_audit_use_case_factory,
 )
-from app.routers.dependencies.entra_auth import get_entra_auth_port
 from app.use_cases.report_audit import ReportAuditUseCase
 
 logger = logging.getLogger(__name__)
