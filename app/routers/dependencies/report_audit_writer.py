@@ -41,7 +41,7 @@ def report_audit_use_case_factory(
 
 
 class ReportAuditWriter:
-    """Records a report download audit event for a specific report type."""
+    """Records a report audit event for a specific report type."""
 
     def __init__(
         self,

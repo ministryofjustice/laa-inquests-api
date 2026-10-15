@@ -38,7 +38,7 @@ class AuditRepositoryAdapter(AuditPort):
         parameters: dict | None = None,
     ) -> ReportAudit:
         """
-        Create a new report download audit record.
+        Create a new report audit record.
 
         Args:
             user_email_address: User or system that triggered the report download
@@ -51,7 +51,7 @@ class AuditRepositoryAdapter(AuditPort):
         """
         if user_email_address is None or user_email_address.strip() == "":
             raise ValueError(
-                "User email address must be provided for report download audit creation."
+                "User email address must be provided for report audit creation."
             )
 
         new_event = ReportAudit(
@@ -64,7 +64,7 @@ class AuditRepositoryAdapter(AuditPort):
             self.session.flush()
             self.session.refresh(new_event)
         except SQLAlchemyError as exc:
-            raise AuditError("Failed to write report download audit") from exc
+            raise AuditError("Failed to write report audit") from exc
         logger.info(
             "Report download audit created",
             extra=build_log_extra(
@@ -78,10 +78,10 @@ class AuditRepositoryAdapter(AuditPort):
         try:
             self.session.commit()
         except SQLAlchemyError as exc:
-            raise AuditError("Failed to commit report download audit") from exc
+            raise AuditError("Failed to commit report audit") from exc
 
     def rollback(self) -> None:
         try:
             self.session.rollback()
         except SQLAlchemyError as exc:
-            raise AuditError("Failed to roll back report download audit") from exc
+            raise AuditError("Failed to roll back report audit") from exc

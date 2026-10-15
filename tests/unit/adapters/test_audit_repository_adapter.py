@@ -51,8 +51,7 @@ def test_audit_report_requires_user_email_address(session):
         )
     except ValueError as e:
         assert (
-            str(e)
-            == "User email address must be provided for report download audit creation."
+            str(e) == "User email address must be provided for report audit creation."
         )
     else:
         assert False, "Expected ValueError for missing user email address"
