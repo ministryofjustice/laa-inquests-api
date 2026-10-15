@@ -11,29 +11,18 @@ def test_audit_writer_initialization():
     assert audit_writer.report_type == AuditType.REPORTS_CLAIMS_BACKLOG
 
 
-def test_audit_writer_gets_user_email_address():
-    entra_auth_port = MagicMock()
-    audit_writer = AuditWriter(report_type=AuditType.REPORTS_CLAIMS_BACKLOG)
-    asyncio.run(
-        audit_writer(
-            credentials=MagicMock(),
-            entra_auth_port=entra_auth_port,
-            use_case=AuditReportDownloadUseCase(audit_port=MagicMock()),
-            request=MagicMock(),
-        )
-    )
-    entra_auth_port.get_email_address.assert_called_once()
-
-
-def test_audit_writer_calls_audit_port():
+def test_audit_writer_calls_audit_port_with_user_email_address():
     audit_port = MagicMock()
     audit_writer = AuditWriter(report_type=AuditType.REPORTS_CLAIMS_BACKLOG)
     asyncio.run(
         audit_writer(
-            credentials=MagicMock(),
-            entra_auth_port=MagicMock(),
+            user_email_address="user@example.com",
             use_case=AuditReportDownloadUseCase(audit_port=audit_port),
             request=MagicMock(),
         )
     )
-    audit_port.audit_report_download.assert_called_once()
+    audit_port.audit_report_download.assert_called_once_with(
+        user_email_address="user@example.com",
+        report_type=AuditType.REPORTS_CLAIMS_BACKLOG,
+        parameters=None,
+    )

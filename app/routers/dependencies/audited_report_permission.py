@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.auth.rbac import Permission, PermissionChecker, get_current_user_permissions
@@ -81,12 +82,22 @@ class AuditedReportPermission:
         ],
         request: Request,
     ) -> None:
+        # Attempt to write an audit event, otherwise handle_failure will manage any exceptions
         with self.failure_handler.handle_failure(permissions, request):
+            # Create the audit writer dependencies, check if any dependency creation failed
             if isinstance(prepared_audit, ReportAuditPreparationFailure):
                 raise prepared_audit.error
+            if credentials is None:
+                raise HTTPException(
+                    status_code=401,
+                    detail="Not authenticated",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            user_email_address = await run_in_threadpool(
+                entra_auth_port.get_email_address, credentials.credentials
+            )
             await self.audit_writer(
-                credentials=credentials,
-                entra_auth_port=entra_auth_port,
+                user_email_address=user_email_address,
                 use_case=prepared_audit,
                 request=request,
             )
