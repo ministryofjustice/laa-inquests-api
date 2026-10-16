@@ -43,40 +43,10 @@ To learn more about models please read [/app/models/README.md](../models/README.
 
 ## Audited permissions
 
-Routes that must be audited use
-[`audit_and_require_permission`](./dependencies/audited_permission_checker.py)
-with the required permission and an audit event factory. The factory maps the
-user and request onto the audit event for that route; one generic use case
-(`RecordAuditEventUseCase`) writes and commits it. To audit a new kind of route,
-add a factory that returns the appropriate event:
-
-```python
-dependencies = [
-    Depends(
-        audit_and_require_permission(
-            possible_permissions=Permission.REPORTS_CLAIM_WORKFLOW_READ,
-            audit_event_factory=ReportAuditEventFactory(
-                report_type=ReportType.CLAIMS_BACKLOG
-            ),
-        )
-    )
-]
-```
-
-Authentication runs first. For authenticated requests, the dependency builds the
-audit event, records it inside its failure handler, then enforces permission:
-
-| Permission | Audit outcome | Response |
-| --- | --- | --- |
-| Granted | Success | Report download |
-| Denied | Success | 403; audit persisted |
-| Granted | Setup, write, or commit failure | 500; no report download |
-| Denied | Setup, write, or commit failure | 403; no report download |
-
-Missing or invalid authentication retains the existing authentication response.
-The failure handler logs audit errors without including user details or tokens.
-Report generation runs only after the dependency succeeds and is outside the
-audit failure handler.
+Endpoints that must record an audit event before enforcing permission use
+`audit_and_require_permission`. See
+[dependencies/README.md](./dependencies/README.md) for the execution order,
+outcomes and how to add it to a new endpoint.
 
 ## Reading and writing to the database
 Database connections are managed with SQLModel sessions, these are inherited from SQLAlchemy sessions.
