@@ -1,12 +1,12 @@
 from fastapi import Request
-
+from app.models.audit.enums import ApplicationPageType
 from app.models.audit.index import BaseAuditEvent, ViewApplicationAudit
 
 
 class ViewApplicationAuditEventFactory:
     """Builds the audit event for viewing a specific page of an application."""
 
-    def __init__(self, page: str) -> None:
+    def __init__(self, page: ApplicationPageType) -> None:
         self.page = page
 
     def __call__(self, user_email_address: str, request: Request) -> BaseAuditEvent:

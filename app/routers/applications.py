@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from mimetypes import guess_type
 from typing import Annotated
 
+from app.models.audit.enums import ApplicationPageType
 from fastapi import (
     APIRouter,
     Depends,
@@ -800,7 +801,9 @@ async def list_provider_offices(
         Depends(
             audit_and_require_permission(
                 possible_permissions=Permission.APPLICATION_READ,
-                audit_event_factory=ViewApplicationAuditEventFactory(page="overview"),
+                audit_event_factory=ViewApplicationAuditEventFactory(
+                    page=ApplicationPageType.OVERVIEW
+                ),
             )
         )
     ],
@@ -825,7 +828,7 @@ async def read_application(
             audit_and_require_permission(
                 possible_permissions=Permission.CERTIFICATE_READ,
                 audit_event_factory=ViewApplicationAuditEventFactory(
-                    page="certificate"
+                    page=ApplicationPageType.CERTIFICATE
                 ),
             )
         )

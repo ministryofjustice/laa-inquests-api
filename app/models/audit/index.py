@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
 
-from app.models.audit.enums import ReportType
+from app.models.audit.enums import ReportType, ApplicationPageType
 
 
 class BaseAuditEvent(SQLModel):
@@ -25,6 +25,4 @@ class ViewApplicationAudit(BaseAuditEvent, table=True):
     __tablename__ = "view_application_audit_event"
 
     laa_reference: str = Field(nullable=False)
-    page: str = Field(
-        nullable=False
-    )  # TODO currently hardcode for getapplication, consider certificates, create a new enum for age type
+    page: ApplicationPageType = Field(nullable=False)

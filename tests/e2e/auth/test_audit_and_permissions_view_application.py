@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock
 
+from app.models.audit.enums import ApplicationPageType
 import pytest
 from sqlmodel import select
 
@@ -22,8 +23,8 @@ LAA_REFERENCE = "INQ-123-456"
 
 # (path_suffix, page)
 APPLICATION_PAGES = [
-    pytest.param("", "overview", id="overview"),
-    pytest.param("/certificate", "certificate", id="certificate"),
+    pytest.param("", ApplicationPageType.OVERVIEW, id="overview"),
+    pytest.param("/certificate", ApplicationPageType.CERTIFICATE, id="certificate"),
 ]
 
 # (has_permission, audit_failure, expected_status)
