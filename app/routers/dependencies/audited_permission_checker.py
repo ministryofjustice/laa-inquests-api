@@ -101,7 +101,6 @@ class AuditedPermissionChecker:
                 entra_auth_port.get_user_email_address, credentials.credentials
             )
             audit_event = self.audit_event_factory(user_email_address, request)
-            # Built here, not as a dependency, so setup errors go through handle_failure.
             use_case = RecordAuditEventUseCase(
                 audit_port=AuditRepositoryAdapter(session=session)
             )

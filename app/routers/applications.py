@@ -820,7 +820,16 @@ async def read_application(
 @router.get(
     "/{laa_reference}/certificate",
     response_model=ApplicationCertificateResponse,
-    dependencies=[Depends(require_permission_from(Permission.CERTIFICATE_READ))],
+    dependencies=[
+        Depends(
+            audit_and_require_permission(
+                possible_permissions=Permission.CERTIFICATE_READ,
+                audit_event_factory=ViewApplicationAuditEventFactory(
+                    page="certificate"
+                ),
+            )
+        )
+    ],
 )
 def read_certificate(
     laa_reference: str,

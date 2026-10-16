@@ -9,16 +9,22 @@ from app.models.audit.index import ViewApplicationAudit
 from app.routers.dependencies import audited_permission_checker
 from app.use_cases.exceptions import AuditError
 
-# Get application is audited before permission is enforced:
+# Viewing an application page is audited before permission is enforced:
 #
-# | Permission | Audit                          | Outcome                           |
-# | ---------- | ------------------------------ | --------------------------------- |
-# | Granted    | Succeeds                       | 200, ApplicationResponse returned |
-# | Denied     | Succeeds                       | 403, audit persisted              |
-# | Granted    | Fails (setup, write or commit) | 500, no application response      |
-# | Denied     | Fails (setup, write or commit) | 403, no application response      |
+# | Permission | Audit                          | Outcome                      |
+# | ---------- | ------------------------------ | ---------------------------- |
+# | Granted    | Succeeds                       | 200, page returned           |
+# | Denied     | Succeeds                       | 403, audit persisted         |
+# | Granted    | Fails (setup, write or commit) | 500, no application response |
+# | Denied     | Fails (setup, write or commit) | 403, no application response |
 
 LAA_REFERENCE = "INQ-123-456"
+
+# (path_suffix, page)
+APPLICATION_PAGES = [
+    pytest.param("", "overview", id="overview"),
+    pytest.param("/certificate", "certificate", id="certificate"),
+]
 
 # (has_permission, audit_failure, expected_status)
 AUDIT_OUTCOMES = [
@@ -43,18 +49,22 @@ def _assert_application_blocked(response, expected_status):
         assert response.json() == {"detail": "Forbidden: Missing required permission"}
 
 
-def _assert_audit_persisted(session):
+def _assert_audit_persisted(session, page):
     audit_entries = session.exec(select(ViewApplicationAudit)).all()
     assert len(audit_entries) == 1
     assert audit_entries[0].user_email_address == "test@example.com"
     assert audit_entries[0].laa_reference == LAA_REFERENCE
+    assert audit_entries[0].page == page
 
 
+@pytest.mark.parametrize("path_suffix,page", APPLICATION_PAGES)
 @pytest.mark.parametrize("has_permission,audit_failure,expected_status", AUDIT_OUTCOMES)
-def test_get_application_outcome_depends_on_permission_and_audit(
+def test_view_application_page_outcome_depends_on_permission_and_audit(
     client,
     session,
     monkeypatch,
+    path_suffix,
+    page,
     has_permission,
     audit_failure,
     expected_status,
@@ -78,7 +88,7 @@ def test_get_application_outcome_depends_on_permission_and_audit(
     )
 
     response = client.get(
-        f"/applications/{LAA_REFERENCE}",
+        f"/applications/{LAA_REFERENCE}{path_suffix}",
         headers={"Authorization": f"Bearer {user_role.value}"},
     )
 
@@ -89,6 +99,6 @@ def test_get_application_outcome_depends_on_permission_and_audit(
         _assert_application_blocked(response, expected_status)
 
     if audit_failure is None:
-        _assert_audit_persisted(session)
+        _assert_audit_persisted(session, page)
     else:
         assert session.exec(select(ViewApplicationAudit)).all() == []
