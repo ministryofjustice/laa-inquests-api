@@ -90,6 +90,10 @@ class ReportGenerationError(Exception):
     pass
 
 
+class AuditError(Exception):
+    pass
+
+
 class GrantDecisionError(Exception):
     pass
 

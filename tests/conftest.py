@@ -255,7 +255,11 @@ def client_fixture(session: Session):
                 office_codes=frozenset(["0U651L"]),
             )
 
+        def get_user_email_address(token: str) -> str:
+            return "test@example.com"
+
         mock_auth.verify_token.side_effect = verify_token
+        mock_auth.get_user_email_address.side_effect = get_user_email_address
         return mock_auth
 
     api.dependency_overrides[get_session] = get_session_override
@@ -276,6 +280,12 @@ def client_fixture(session: Session):
 def mock_gov_notify(client):
     """Return the shared mock Gov Notify port for E2E tests."""
     return api.dependency_overrides[get_gov_notify_port]()
+
+
+@pytest.fixture
+def mock_entra_auth_port(client):
+    """Return the shared mock entra auth port for E2E tests."""
+    return api.dependency_overrides[get_entra_auth_port]()
 
 
 @pytest.fixture
