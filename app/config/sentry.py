@@ -2,13 +2,17 @@ from app.config import Config
 
 sentry_config = {
     "dsn": Config.SENTRY_DSN,
+    "send_default_pii": True,
+    # Enable sending logs to Sentry
+    "enable_logs": True,
     # Set traces_sample_rate to 1.0 to capture 100%
     # of transactions for tracing.
-    "traces_sample_rate": 0.01,
+    "traces_sample_rate": 0.02,
     # Set profiles_sample_rate to 1.0 to profile 100%
     # of sampled transactions.
     # We recommend adjusting this value in production.
-    "profiles_sample_rate": 0.2,
+    "profile_session_sample_rate": 0.2,
+    "profile_lifecycle": "trace",
     # This can either be dev, staging, or production.
     # It is set by CLA_ENVIRONMENT in the helm charts.
     "environment": Config.ENVIRONMENT,
