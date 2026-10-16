@@ -19,8 +19,8 @@ def test_audit_writer_calls_audit_port_with_user_email_address():
     asyncio.run(
         audit_writer(
             user_email_address="user@example.com",
-            laa_reference="LAA123",
             use_case=ViewApplicationAuditUseCase(audit_port=audit_port),
+            request=MagicMock(path_params={"laa_reference": "LAA123"}),
         )
     )
     audit_port.audit_event.assert_called_once_with(

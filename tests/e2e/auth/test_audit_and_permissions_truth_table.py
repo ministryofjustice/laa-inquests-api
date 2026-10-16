@@ -8,14 +8,13 @@ from app import api
 from app.adapters.audit_repository_adapter import AuditRepositoryAdapter
 from app.auth.rbac import Role
 from app.models.audit.enums import ReportType
-from app.routers.dependencies.report_audit_writer import report_audit_use_case_factory
+from app.routers.dependencies import report_auditer_permission_checker
 from app.routers.reports import (
     get_generate_application_backlog_report_use_case,
     get_generate_claim_backlog_report_use_case,
     get_generate_payment_extract_report_use_case,
 )
 from app.use_cases.exceptions import AuditError
-from app.use_cases.audit.report_audit import ReportAuditUseCase
 
 # Report downloads are audited before permission is enforced:
 #
@@ -92,6 +91,7 @@ def _assert_audit_persisted(session, audit_type, parameters):
 def test_report_download_outcome_depends_on_permission_and_audit(
     client,
     session,
+    monkeypatch,
     endpoint,
     role,
     audit_type,
@@ -116,11 +116,8 @@ def test_report_download_outcome_depends_on_permission_and_audit(
         iter([b"report data"]) if parameters else b"report data"
     )
 
-    def create_audit_use_case():
-        return ReportAuditUseCase(audit_port=audit_factory())
-
-    api.dependency_overrides[report_audit_use_case_factory] = lambda: (
-        create_audit_use_case
+    monkeypatch.setattr(
+        report_auditer_permission_checker, "AuditRepositoryAdapter", audit_factory
     )
     api.dependency_overrides[report_dependency] = lambda: report_use_case
     user_role = role if has_permission else Role.PROVIDER_APPLICATION_USER

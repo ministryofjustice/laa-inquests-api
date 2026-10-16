@@ -44,15 +44,18 @@ To learn more about models please read [/app/models/README.md](../models/README.
 ## Audited report permissions
 
 Every report endpoint uses
-[`audit_report_and_require_permission`](./dependencies/report_audit_permission_checker.py)
-with its required permission and audit type:
+[`audit_report_and_require_permission`](./dependencies/report_auditer_permission_checker.py)
+with its required permission, the audit use case type and a writer that maps the
+request onto that use case. Other routes can pass a different use case and writer
+to record a different audit event type:
 
 ```python
 dependencies = [
     Depends(
         audit_report_and_require_permission(
             possible_permissions=Permission.REPORTS_CLAIM_WORKFLOW_READ,
-            report_type=ReportType.CLAIMS_BACKLOG,
+            audit_use_case_type=ReportAuditUseCase,
+            audit_writer=ReportAuditWriter(report_type=ReportType.CLAIMS_BACKLOG),
         )
     )
 ]

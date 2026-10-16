@@ -1,42 +1,7 @@
-from collections.abc import Callable
-from typing import Annotated
-
-from fastapi import Depends
+from fastapi import Request
 from fastapi.concurrency import run_in_threadpool
-from sqlmodel import Session
 
-from app.adapters.audit_repository_adapter import AuditRepositoryAdapter
 from app.use_cases.audit.view_application_audit import ViewApplicationAuditUseCase
-from app.db import get_session
-from app.ports.audit_port import AuditPort
-
-
-def get_audit_repository_adapter(
-    session: Session = Depends(get_session),
-) -> AuditRepositoryAdapter:
-    return AuditRepositoryAdapter(session=session)
-
-
-def get_view_application_audit_use_case(
-    audit_port: Annotated[AuditPort, Depends(get_audit_repository_adapter)],
-) -> ViewApplicationAuditUseCase:
-    return ViewApplicationAuditUseCase(audit_port=audit_port)
-
-
-def view_application_audit_use_case_factory(
-    session: Annotated[Session, Depends(get_session)],
-) -> Callable[[], ViewApplicationAuditUseCase]:
-    """Return a callable that builds the audit use case on the request's session.
-
-    Tests override this dependency to inject audit setup failures.
-    """
-
-    def create_audit_use_case() -> ViewApplicationAuditUseCase:
-        return get_view_application_audit_use_case(
-            audit_port=get_audit_repository_adapter(session=session)
-        )
-
-    return create_audit_use_case
 
 
 class ViewApplicationAuditWriter:
@@ -51,13 +16,13 @@ class ViewApplicationAuditWriter:
     async def __call__(
         self,
         user_email_address: str,
-        laa_reference: str,
         use_case: ViewApplicationAuditUseCase,
+        request: Request,
     ) -> None:
         # The use case performs blocking database I/O, so keep it off the event loop.
         await run_in_threadpool(
             use_case.execute,
             user_email_address=user_email_address,
-            laa_reference=laa_reference,
+            laa_reference=request.path_params["laa_reference"],
             page=self.page,
         )
