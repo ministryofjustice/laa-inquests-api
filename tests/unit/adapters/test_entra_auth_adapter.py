@@ -2,6 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
+import jwt
 import pytest
 from fastapi import HTTPException
 from jwt.exceptions import (
@@ -180,6 +181,50 @@ def test_verify_token_raises_401_for_invalid_token(adapter, side_effect):
         adapter.verify_token("bad.jwt.token")
 
     assert exc_info.value.status_code == 401
+
+
+def test_get_user_email_address_returns_preferred_username(adapter):
+    with patch(
+        "app.adapters.entra_auth_adapter.jwt.decode",
+        return_value={
+            "sub": "user",
+            "scp": "User.Provider",
+            "FIRM_CODE": "0A123B",
+            "name": "Test Name",
+            "oid": "some-entra-object-id",
+            "LAA_APP_ROLES": Role.PROVIDER_APPLICATION_USER.value,
+            "ACCOUNTS": ["A001B", "A002B"],
+            "preferred_username": "test@example.com",
+        },
+    ):
+        email = adapter.get_user_email_address("valid.jwt.token")
+    assert email == "test@example.com"
+
+
+def test_get_user_email_address_returns_None_when_preferred_username_missing(adapter):
+    with patch(
+        "app.adapters.entra_auth_adapter.jwt.decode",
+        return_value={
+            "sub": "user",
+            "scp": "User.Provider",
+            "FIRM_CODE": "0A123B",
+            "name": "Test Name",
+            "oid": "some-entra-object-id",
+            "LAA_APP_ROLES": Role.PROVIDER_APPLICATION_USER.value,
+            "ACCOUNTS": ["A001B", "A002B"],
+        },
+    ):
+        email = adapter.get_user_email_address("valid.jwt.token")
+    assert email is None
+
+
+def test_get_user_email_address_returns_None_when_jwt_decode_fails(adapter):
+    with patch(
+        "app.adapters.entra_auth_adapter.jwt.decode",
+        side_effect=jwt.PyJWTError("JWT decode failed"),
+    ):
+        email = adapter.get_user_email_address("valid.jwt.token")
+    assert email is None
 
 
 class TestFormatName:
