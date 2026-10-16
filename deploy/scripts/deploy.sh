@@ -2,6 +2,12 @@
 
 ENVIRONMENT=$1
 
+if [[ "$ENVIRONMENT" == "suppliertest" ]]; then
+  VALUES_FILE="./deploy/infrastructure/helm/values/dev.yaml"
+else
+  VALUES_FILE="./deploy/infrastructure/helm/values/$ENVIRONMENT.yaml"
+fi
+
 deploy_branch() {
   echo "SKIPPING Turning off the PR branches for dev. Semi-temporary workaround for database migrations"
   return 0
@@ -49,6 +55,7 @@ deploy_branch() {
 
 deploy_main() {
   RELEASE_HOST="laa-inquests-api-$ENVIRONMENT.apps.live.cloud-platform.service.justice.gov.uk"
+    IDENTIFIER="laa-inquests-internal-ui-$K8S_NAMESPACE-green"
   helm upgrade laa-inquests-api ./deploy/infrastructure/helm/. \
                 --install --wait --timeout 10m \
                 --namespace="${K8S_NAMESPACE}" \
@@ -56,6 +63,8 @@ deploy_main() {
                 --set-string ingress.allowlist="${ALLOW_LIST//,/\\,}" \
                 --set image.repository="$REGISTRY/$REPOSITORY" \
                 --set image.tag="$IMAGE_TAG" \
+                --set ingress.annotations."external-dns\.alpha\.kubernetes\.io/set-identifier"="$IDENTIFIER" \
+                --set ingress.hosts[0].host="$RELEASE_HOST" \
                 --set env.DB_HOST="$DB_HOST" \
                 --set env.DB_NAME="$DB_NAME" \
                 --set env.DB_PASSWORD="$DB_PASSWORD" \
@@ -87,11 +96,8 @@ if [ -z "$branch_name" ]; then
   branch_name="$GITHUB_REF_NAME" # Branch name if this is a push event
 fi
 
-if [[ ("$ENVIRONMENT" == 'dev' || "$ENVIRONMENT" == 'suppliertest') && "$branch_name" == "main" ]] || \
-   [[ (("$ENVIRONMENT" == 'staging' || "$ENVIRONMENT" == 'prod') && "$branch_name" =~ $releaseTag) ]]
+if  [[ ("$ENVIRONMENT" == 'dev') && "$branch_name" != "main" ]] 
 then
-  deploy_main
-else
   if deploy_branch; then
     echo "Deploy succeeded"
   else
@@ -104,4 +110,6 @@ else
       exit 1
     fi
   fi
+else
+  deploy_main
 fi

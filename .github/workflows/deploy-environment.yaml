@@ -1,4 +1,4 @@
-name: Deploy to suppliertest
+name: Deploy environment
 
 on:
   workflow_dispatch:
@@ -20,13 +20,13 @@ jobs:
     if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/build-ghcr.yaml
 
-  deploy-suppliertest:
+  deploy-environment:
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read # This is required for actions/checkout
     if: ${{ !contains(github.actor, '[bot]') }}
     runs-on: ubuntu-latest
-    environment: suppliertest
+    environment: ${{ inputs.environment }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -34,7 +34,7 @@ jobs:
         uses: ./.github/actions/deploy
         with:
           allow-list: ${{ secrets.ALLOW_LIST }}
-          app-environment: suppliertest
+          app-environment: ${{ inputs.environment }}
           db-host: ${{ secrets.DB_HOST}}
           db-name: ${{ secrets.DB_NAME }}
           db-password: ${{ secrets.DB_PASSWORD }}
@@ -61,8 +61,8 @@ jobs:
   notify-slack:
     permissions:
       contents: read
-    environment: suppliertest
-    needs: deploy-suppliertest
+    environment: ${{ inputs.environment }}
+    needs: deploy-environment
     runs-on: ubuntu-latest
     if: always() && github.ref_name == 'main'
     steps:
@@ -71,6 +71,6 @@ jobs:
       - name: Send Slack Notification
         uses: ./.github/actions/notify
         with:
-          app-environment: suppliertest
+          app-environment: ${{ inputs.environment }}
           slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL_UAT }}
           pipeline_status: "${{ job.status }} ${{ join(needs.*.result, ' ') }}"
