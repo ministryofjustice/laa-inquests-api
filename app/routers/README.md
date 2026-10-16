@@ -41,29 +41,30 @@ matches one of the categories of law defined in the [/app/models/categories.py](
 
 To learn more about models please read [/app/models/README.md](../models/README.md)
 
-## Audited report permissions
+## Audited permissions
 
-Every report endpoint uses
-[`audit_report_and_require_permission`](./dependencies/report_auditer_permission_checker.py)
-with its required permission, the audit use case type and a writer that maps the
-request onto that use case. Other routes can pass a different use case and writer
-to record a different audit event type:
+Routes that must be audited use
+[`audit_and_require_permission`](./dependencies/audited_permission_checker.py)
+with the required permission and an audit event factory. The factory maps the
+user and request onto the audit event for that route; one generic use case
+(`RecordAuditEventUseCase`) writes and commits it. To audit a new kind of route,
+add a factory that returns the appropriate event:
 
 ```python
 dependencies = [
     Depends(
-        audit_report_and_require_permission(
+        audit_and_require_permission(
             possible_permissions=Permission.REPORTS_CLAIM_WORKFLOW_READ,
-            audit_use_case_type=ReportAuditUseCase,
-            audit_writer=ReportAuditWriter(report_type=ReportType.CLAIMS_BACKLOG),
+            audit_event_factory=ReportAuditEventFactory(
+                report_type=ReportType.CLAIMS_BACKLOG
+            ),
         )
     )
 ]
 ```
 
 Authentication runs first. For authenticated requests, the dependency builds the
-audit use case and executes the audit inside its failure handler before
-enforcing permission:
+audit event, records it inside its failure handler, then enforces permission:
 
 | Permission | Audit outcome | Response |
 | --- | --- | --- |

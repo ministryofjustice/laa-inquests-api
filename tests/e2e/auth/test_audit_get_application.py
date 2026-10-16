@@ -6,7 +6,7 @@ from sqlmodel import select
 from app.adapters.audit_repository_adapter import AuditRepositoryAdapter
 from app.auth.rbac import Role
 from app.models.audit.index import ViewApplicationAudit
-from app.routers.dependencies import report_auditer_permission_checker
+from app.routers.dependencies import audited_permission_checker
 from app.use_cases.exceptions import AuditError
 
 # Get application is audited before permission is enforced:
@@ -69,7 +69,7 @@ def test_get_application_outcome_depends_on_permission_and_audit(
         audit_repository.commit.side_effect = AuditError("Audit commit failed")
 
     monkeypatch.setattr(
-        report_auditer_permission_checker, "AuditRepositoryAdapter", audit_factory
+        audited_permission_checker, "AuditRepositoryAdapter", audit_factory
     )
     user_role = (
         Role.APPLICATIONS_CASEWORKER

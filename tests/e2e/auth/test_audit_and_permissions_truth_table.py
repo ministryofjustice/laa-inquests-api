@@ -1,14 +1,14 @@
 from unittest.mock import ANY, MagicMock
 
 import pytest
-from app.models.audit.index import ReportAudit
 from sqlmodel import select
 
 from app import api
 from app.adapters.audit_repository_adapter import AuditRepositoryAdapter
 from app.auth.rbac import Role
 from app.models.audit.enums import ReportType
-from app.routers.dependencies import report_auditer_permission_checker
+from app.models.audit.index import ReportAudit
+from app.routers.dependencies import audited_permission_checker
 from app.routers.reports import (
     get_generate_application_backlog_report_use_case,
     get_generate_claim_backlog_report_use_case,
@@ -117,7 +117,7 @@ def test_report_download_outcome_depends_on_permission_and_audit(
     )
 
     monkeypatch.setattr(
-        report_auditer_permission_checker, "AuditRepositoryAdapter", audit_factory
+        audited_permission_checker, "AuditRepositoryAdapter", audit_factory
     )
     api.dependency_overrides[report_dependency] = lambda: report_use_case
     user_role = role if has_permission else Role.PROVIDER_APPLICATION_USER

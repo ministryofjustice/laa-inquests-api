@@ -1,7 +1,7 @@
 import logging
-from collections.abc import Generator, Iterable
+from collections.abc import Callable, Generator, Iterable
 from contextlib import contextmanager
-from typing import Annotated, Any, Protocol
+from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
@@ -12,27 +12,19 @@ from app.adapters.audit_repository_adapter import AuditRepositoryAdapter
 from app.auth.rbac import Permission, PermissionChecker, get_current_user_permissions
 from app.db import get_session
 from app.logging_utils import build_log_extra
-from app.ports.audit_port import AuditPort
+from app.models.audit.index import BaseAuditEvent
 from app.ports.entra_auth_port import EntraAuthPort
 from app.routers.dependencies.entra_auth import get_entra_auth_port
+from app.use_cases.audit.record_audit_event import RecordAuditEventUseCase
 
 logger = logging.getLogger(__name__)
 _http_bearer = HTTPBearer(auto_error=False)
 
-
-class AuditUseCase(Protocol):
-    def __init__(self, audit_port: AuditPort) -> None: ...
-
-
-class AuditWriter(Protocol):
-    """Maps the request onto the arguments of one kind of audit use case."""
-
-    async def __call__(
-        self, user_email_address: str, use_case: Any, request: Request
-    ) -> None: ...
+# Maps the authenticated user and request onto one kind of audit event.
+AuditEventFactory = Callable[[str, Request], BaseAuditEvent]
 
 
-class ReportAuditFailureHandler:
+class AuditFailureHandler:
     """Translates any audit failure into the HTTP error the caller should see."""
 
     def __init__(self, permission_checker: PermissionChecker) -> None:
@@ -67,28 +59,26 @@ class ReportAuditFailureHandler:
             raise failure from exc
 
 
-class ReportAuditerPermissionChecker:
+class AuditedPermissionChecker:
     """Route dependency that audits a request, then enforces permission.
 
     The audit is written for every authenticated request, including those that
     are denied. A failed audit blocks the request in all cases. The audit event
-    type is decided by the use case and writer the route passes in.
+    type is decided by the event factory the route passes in.
     """
 
     def __init__(
         self,
         possible_permissions: Iterable[Permission] | Permission,
-        audit_use_case_type: type[AuditUseCase],
-        audit_writer: AuditWriter,
+        audit_event_factory: AuditEventFactory,
     ) -> None:
         self.permission_checker = PermissionChecker(
             possible_permissions
             if isinstance(possible_permissions, Permission)
             else tuple(possible_permissions)
         )
-        self.failure_handler = ReportAuditFailureHandler(self.permission_checker)
-        self.audit_use_case_type = audit_use_case_type
-        self.audit_writer = audit_writer
+        self.failure_handler = AuditFailureHandler(self.permission_checker)
+        self.audit_event_factory = audit_event_factory
 
     async def __call__(
         self,
@@ -110,27 +100,23 @@ class ReportAuditerPermissionChecker:
             user_email_address = await run_in_threadpool(
                 entra_auth_port.get_user_email_address, credentials.credentials
             )
+            audit_event = self.audit_event_factory(user_email_address, request)
             # Built here, not as a dependency, so setup errors go through handle_failure.
-            use_case = self.audit_use_case_type(
+            use_case = RecordAuditEventUseCase(
                 audit_port=AuditRepositoryAdapter(session=session)
             )
-            await self.audit_writer(
-                user_email_address=user_email_address,
-                use_case=use_case,
-                request=request,
-            )
+            # The use case performs blocking database I/O, so keep it off the event loop.
+            await run_in_threadpool(use_case.execute, audit_event)
         # Runs after the audit so a denied request is still recorded before the 403.
         self.permission_checker(permissions)
 
 
-def audit_report_and_require_permission(
+def audit_and_require_permission(
     possible_permissions: Iterable[Permission] | Permission,
-    audit_use_case_type: type[AuditUseCase],
-    audit_writer: AuditWriter,
-) -> ReportAuditerPermissionChecker:
+    audit_event_factory: AuditEventFactory,
+) -> AuditedPermissionChecker:
     """Audit every authenticated attempt, with permission denial taking precedence."""
-    return ReportAuditerPermissionChecker(
+    return AuditedPermissionChecker(
         possible_permissions=possible_permissions,
-        audit_use_case_type=audit_use_case_type,
-        audit_writer=audit_writer,
+        audit_event_factory=audit_event_factory,
     )
