@@ -54,25 +54,25 @@ class AuditRepositoryAdapter(AuditPort):
                 "User email address must be provided for report audit creation."
             )
 
-        new_event = ReportAudit(
+        audit_event = ReportAudit(
             user_email_address=user_email_address,
             report_type=report_type,
             parameters=parameters,
         )
         try:
-            self.session.add(new_event)
+            self.session.add(audit_event)
             self.session.flush()
-            self.session.refresh(new_event)
+            self.session.refresh(audit_event)
         except SQLAlchemyError as exc:
             raise AuditError("Failed to write report audit") from exc
         logger.info(
             "Report download audit created",
             extra=build_log_extra(
                 event="report_audit_created",
-                report_audit_id=new_event.id,
+                report_audit_id=audit_event.id,
             ),
         )
-        return new_event
+        return audit_event
 
     def commit(self) -> None:
         try:
