@@ -6,7 +6,7 @@ import pytest
 from app.models.audit.enums import ReportType
 from app.ports.audit_port import AuditPort
 from app.use_cases.exceptions import AuditError
-from app.use_cases.report_audit import ReportAuditUseCase
+from app.use_cases.audit.report_audit import ReportAuditUseCase
 
 
 def test_audit_report_writes_and_commits_the_entry():

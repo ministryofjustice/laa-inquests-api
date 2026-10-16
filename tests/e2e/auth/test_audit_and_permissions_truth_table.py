@@ -15,7 +15,7 @@ from app.routers.reports import (
     get_generate_payment_extract_report_use_case,
 )
 from app.use_cases.exceptions import AuditError
-from app.use_cases.report_audit import ReportAuditUseCase
+from app.use_cases.audit.report_audit import ReportAuditUseCase
 
 # Report downloads are audited before permission is enforced:
 #

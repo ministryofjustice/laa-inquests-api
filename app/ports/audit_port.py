@@ -4,14 +4,6 @@ from app.models.audit.index import BaseAuditEvent
 
 
 class AuditPort(ABC):
-    # @abstractmethod
-    # def audit_report(
-    #     self,
-    #     user_email_address: str,
-    #     report_type: ReportType,
-    #     parameters: dict | None = None,
-    # ) -> ReportAudit: ...
-
     @abstractmethod
     def audit_event(self, audit_event: BaseAuditEvent) -> BaseAuditEvent: ...
 

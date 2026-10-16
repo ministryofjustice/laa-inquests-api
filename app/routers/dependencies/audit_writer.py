@@ -9,7 +9,7 @@ from app.adapters.audit_repository_adapter import AuditRepositoryAdapter
 from app.db import get_session
 from app.models.audit.enums import ReportType
 from app.ports.audit_port import AuditPort
-from app.use_cases.report_audit import ReportAuditUseCase
+from app.use_cases.audit.report_audit import ReportAuditUseCase
 
 
 def get_audit_repository_adapter(

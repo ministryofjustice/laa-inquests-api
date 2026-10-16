@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, ANY
 from app.models.audit.enums import ReportType
 from app.models.audit.index import ReportAudit
 from app.routers.dependencies.report_audit_writer import ReportAuditWriter
-from app.use_cases.report_audit import ReportAuditUseCase
+from app.use_cases.audit.report_audit import ReportAuditUseCase
 
 
 def test_audit_writer_initialization():

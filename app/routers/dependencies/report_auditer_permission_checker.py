@@ -16,7 +16,7 @@ from app.routers.dependencies.report_audit_writer import (
     ReportAuditWriter,
     report_audit_use_case_factory,
 )
-from app.use_cases.report_audit import ReportAuditUseCase
+from app.use_cases.audit.report_audit import ReportAuditUseCase
 
 logger = logging.getLogger(__name__)
 _http_bearer = HTTPBearer(auto_error=False)
