@@ -1,7 +1,8 @@
 import asyncio
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, ANY
 
 from app.models.audit.enums import ReportType
+from app.models.audit.index import ReportAudit
 from app.routers.dependencies.report_audit_writer import ReportAuditWriter
 from app.use_cases.report_audit import ReportAuditUseCase
 
@@ -21,8 +22,11 @@ def test_audit_writer_calls_audit_port_with_user_email_address():
             request=MagicMock(),
         )
     )
-    audit_port.audit_report.assert_called_once_with(
-        user_email_address="user@example.com",
-        report_type=ReportType.CLAIMS_BACKLOG,
-        parameters=None,
+    audit_port.audit_event.assert_called_once_with(
+        ReportAudit(
+            timestamp=ANY,
+            user_email_address="user@example.com",
+            report_type=ReportType.CLAIMS_BACKLOG,
+            parameters=None,
+        )
     )
