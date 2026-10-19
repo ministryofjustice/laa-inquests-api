@@ -14,8 +14,8 @@ except ImportError:
 
 from app.auth.rbac import Permission, PermissionChecker
 from app.main import create_app
-from app.routers.dependencies.report_auditer_permission_checker import (
-    ReportAuditerPermissionChecker,
+from app.routers.dependencies.auditer_permission_checker import (
+    AuditerPermissionChecker,
 )
 
 PUBLIC = None
@@ -123,7 +123,7 @@ def _configured_permissions(
     permissions: list[Permission] = []
     for dependency in _walk_dependencies(route.dependant):
         checker = dependency.call
-        if isinstance(checker, ReportAuditerPermissionChecker):
+        if isinstance(checker, AuditerPermissionChecker):
             checker = checker.permission_checker
         if isinstance(checker, PermissionChecker):
             permissions.extend(checker.possible_permissions)

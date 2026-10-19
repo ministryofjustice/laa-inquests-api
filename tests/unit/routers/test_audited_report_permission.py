@@ -2,14 +2,12 @@ import pytest
 from fastapi import HTTPException, Request
 
 from app.auth.rbac import Permission, PermissionChecker
-from app.routers.dependencies.report_auditer_permission_checker import (
-    ReportAuditFailureHandler,
-)
+from app.routers.dependencies.auditer_permission_checker import AuditFailureHandler
 from app.use_cases.exceptions import AuditError
 
 
 def test_audit_failure_returns_403_when_user_lacks_permission(caplog):
-    handler = ReportAuditFailureHandler(
+    handler = AuditFailureHandler(
         PermissionChecker(Permission.REPORTS_CLAIM_WORKFLOW_READ)
     )
     request = Request(
@@ -40,7 +38,7 @@ def test_audit_failure_returns_403_when_user_lacks_permission(caplog):
 
 
 def test_audit_failure_returns_500_when_user_has_permission(caplog):
-    handler = ReportAuditFailureHandler(
+    handler = AuditFailureHandler(
         PermissionChecker(Permission.REPORTS_CLAIM_WORKFLOW_READ)
     )
     request = Request(
