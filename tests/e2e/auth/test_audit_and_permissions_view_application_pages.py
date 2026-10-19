@@ -1,11 +1,11 @@
 from unittest.mock import ANY, MagicMock
 
-from app.models.audit.enums import ApplicationPageType
 import pytest
 from sqlmodel import select
 
 from app.adapters.audit_repository_adapter import AuditRepositoryAdapter
 from app.auth.rbac import Role
+from app.models.audit.enums import ApplicationPageType
 from app.models.audit.index import ViewApplicationPagesAudit
 from app.routers.dependencies import auditer_permission_checker
 from app.use_cases.exceptions import AuditError

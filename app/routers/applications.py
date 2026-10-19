@@ -4,7 +4,6 @@ from collections.abc import Sequence
 from mimetypes import guess_type
 from typing import Annotated
 
-from app.models.audit.enums import ApplicationPageType
 from fastapi import (
     APIRouter,
     Depends,
@@ -44,6 +43,7 @@ from app.models.application.index import (
     UpdateApplicationPublicBodiesRequest,
     UploadCoronersLetterResponse,
 )
+from app.models.audit.enums import ApplicationPageType
 from app.models.claim.index import (
     ClaimByIdResponse,
     ClaimCreate,

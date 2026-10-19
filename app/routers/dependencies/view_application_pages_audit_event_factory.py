@@ -1,4 +1,5 @@
 from fastapi import Request
+
 from app.models.audit.enums import ApplicationPageType
 from app.models.audit.index import BaseAuditEvent, ViewApplicationPagesAudit
 

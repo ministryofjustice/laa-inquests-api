@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
 
-from app.models.audit.enums import ReportType, ApplicationPageType
+from app.models.audit.enums import ApplicationPageType, ReportType
 
 
 class BaseAuditEvent(SQLModel):
