@@ -23,7 +23,7 @@ deploy_branch() {
   helm upgrade "$BRANCH_RELEASE_NAME" ./deploy/infrastructure/helm/. \
                 --install --wait --timeout 10m \
                 --namespace="${K8S_NAMESPACE}" \
-                --values ./deploy/infrastructure/helm/values/"$ENVIRONMENT".yaml \
+                --values "$VALUES_FILE" \
                 --set-string ingress.allowlist="${ALLOW_LIST//,/\\,}" \
                 --set image.repository="$REGISTRY/$REPOSITORY" \
                 --set image.tag="$IMAGE_TAG" \
@@ -58,7 +58,7 @@ deploy_main() {
   helm upgrade laa-inquests-api ./deploy/infrastructure/helm/. \
                 --install --wait --timeout 10m \
                 --namespace="${K8S_NAMESPACE}" \
-                --values ./deploy/infrastructure/helm/values/"$ENVIRONMENT".yaml \
+                --values "$VALUES_FILE" \
                 --set-string ingress.allowlist="${ALLOW_LIST//,/\\,}" \
                 --set image.repository="$REGISTRY/$REPOSITORY" \
                 --set image.tag="$IMAGE_TAG" \
