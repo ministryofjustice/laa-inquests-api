@@ -699,3 +699,47 @@ class TestSaveFileSanitizesFileName:
             unique_file_name
             == "Coroner_s_Letter_12345678-1234-1234-1234-123456789abc.png"
         )
+
+
+STREAM_ERROR_TEXT = (
+    "failed: https://s3/bucket/Jane_Doe_passport.pdf?X-Amz-Signature=secret"
+)
+
+
+def _logged_text(caplog) -> str:
+    return " ".join(
+        f"{record.getMessage()} {getattr(record, 'extra', {})}"
+        for record in caplog.records
+    )
+
+
+def test_retrieve_coroners_letter_stream_failure_log_does_not_include_url(caplog):
+    adapter = _make_adapter()
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.get", return_value=_mock_retrieve_metadata_response()),
+        patch("httpx.stream", side_effect=HTTPError(STREAM_ERROR_TEXT)),
+        pytest.raises(SDSLetterRetrievalError),
+    ):
+        list(adapter.retrieve_coroners_letter("letter.pdf"))
+
+    assert "Failed to stream coroners letter" in caplog.text
+    assert "Jane" not in _logged_text(caplog)
+    assert "secret" not in _logged_text(caplog)
+
+
+def test_retrieve_claim_evidence_stream_failure_log_does_not_include_url(caplog):
+    adapter = _make_adapter()
+
+    with (
+        patch("httpx.post", return_value=_mock_token_response()),
+        patch("httpx.get", return_value=_mock_retrieve_metadata_response()),
+        patch("httpx.stream", side_effect=HTTPError(STREAM_ERROR_TEXT)),
+        pytest.raises(SDSClaimEvidenceRetrievalError),
+    ):
+        list(adapter.retrieve_claim_evidence("evidence.pdf"))
+
+    assert "Failed to stream claim evidence" in caplog.text
+    assert "Jane" not in _logged_text(caplog)
+    assert "secret" not in _logged_text(caplog)
