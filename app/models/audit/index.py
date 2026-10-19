@@ -21,8 +21,8 @@ class ReportAudit(BaseAuditEvent, table=True):
     parameters: dict | None = Field(default=None, sa_column=Column(JSON, nullable=True))
 
 
-class ViewApplicationAudit(BaseAuditEvent, table=True):
-    __tablename__ = "view_application_audit_event"
+class ViewApplicationPagesAudit(BaseAuditEvent, table=True):
+    __tablename__ = "view_application_pages_audit_event"
 
     laa_reference: str = Field(nullable=False)
     page: ApplicationPageType = Field(nullable=False)

@@ -1,13 +1,12 @@
 from unittest.mock import MagicMock
 
-from app.models.audit.enums import ApplicationPageType
 import pytest
 from sqlmodel import select
 
 from app.adapters.audit_repository_adapter import AuditRepositoryAdapter
 from app.auth.rbac import Role
-from app.models.audit.index import ViewApplicationAudit
-from app.routers.dependencies import audited_permission_checker
+from app.models.audit.index import ViewApplicationPagesAudit
+from app.routers.dependencies import auditer_permission_checker
 from app.use_cases.exceptions import AuditError
 
 # Viewing an application page is audited before permission is enforced:
@@ -23,8 +22,8 @@ LAA_REFERENCE = "INQ-123-456"
 
 # (path_suffix, page)
 APPLICATION_PAGES = [
-    pytest.param("", ApplicationPageType.OVERVIEW, id="overview"),
-    pytest.param("/certificate", ApplicationPageType.CERTIFICATE, id="certificate"),
+    pytest.param("", "overview", id="overview"),
+    pytest.param("/certificate", "certificate", id="certificate"),
 ]
 
 # (has_permission, audit_failure, expected_status)
@@ -51,7 +50,7 @@ def _assert_application_blocked(response, expected_status):
 
 
 def _assert_audit_persisted(session, page):
-    audit_entries = session.exec(select(ViewApplicationAudit)).all()
+    audit_entries = session.exec(select(ViewApplicationPagesAudit)).all()
     assert len(audit_entries) == 1
     assert audit_entries[0].user_email_address == "test@example.com"
     assert audit_entries[0].laa_reference == LAA_REFERENCE
@@ -80,7 +79,7 @@ def test_view_application_page_outcome_depends_on_permission_and_audit(
         audit_repository.commit.side_effect = AuditError("Audit commit failed")
 
     monkeypatch.setattr(
-        audited_permission_checker, "AuditRepositoryAdapter", audit_factory
+        auditer_permission_checker, "AuditRepositoryAdapter", audit_factory
     )
     user_role = (
         Role.APPLICATIONS_CASEWORKER
@@ -102,4 +101,4 @@ def test_view_application_page_outcome_depends_on_permission_and_audit(
     if audit_failure is None:
         _assert_audit_persisted(session, page)
     else:
-        assert session.exec(select(ViewApplicationAudit)).all() == []
+        assert session.exec(select(ViewApplicationPagesAudit)).all() == []

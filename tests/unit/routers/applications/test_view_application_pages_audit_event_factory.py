@@ -1,18 +1,18 @@
 from unittest.mock import ANY, MagicMock
 
-from app.models.audit.index import ViewApplicationAudit
-from app.routers.dependencies.view_application_audit_event_factory import (
-    ViewApplicationAuditEventFactory,
+from app.models.audit.index import ViewApplicationPagesAudit
+from app.routers.dependencies.view_application_pages_audit_event_factory import (
+    ViewApplicationPagesAuditEventFactory,
 )
 
 
 def test_builds_view_application_audit_event_for_the_requested_application():
-    audit_event = ViewApplicationAuditEventFactory(page="overview")(
+    audit_event = ViewApplicationPagesAuditEventFactory(page="overview")(
         user_email_address="user@example.com",
         request=MagicMock(path_params={"laa_reference": "LAA123"}),
     )
 
-    assert audit_event == ViewApplicationAudit(
+    assert audit_event == ViewApplicationPagesAudit(
         timestamp=ANY,
         user_email_address="user@example.com",
         laa_reference="LAA123",

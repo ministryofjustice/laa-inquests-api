@@ -96,11 +96,11 @@ from app.routers.dependencies import (
     get_current_provider_office_codes,
     get_sds_port,
 )
-from app.routers.dependencies.audited_permission_checker import (
+from app.routers.dependencies.auditer_permission_checker import (
     audit_and_require_permission,
 )
-from app.routers.dependencies.view_application_audit_event_factory import (
-    ViewApplicationAuditEventFactory,
+from app.routers.dependencies.view_application_pages_audit_event_factory import (
+    ViewApplicationPagesAuditEventFactory,
 )
 from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
@@ -801,7 +801,7 @@ async def list_provider_offices(
         Depends(
             audit_and_require_permission(
                 possible_permissions=Permission.APPLICATION_READ,
-                audit_event_factory=ViewApplicationAuditEventFactory(
+                audit_event_factory=ViewApplicationPagesAuditEventFactory(
                     page=ApplicationPageType.OVERVIEW
                 ),
             )
@@ -827,7 +827,7 @@ async def read_application(
         Depends(
             audit_and_require_permission(
                 possible_permissions=Permission.CERTIFICATE_READ,
-                audit_event_factory=ViewApplicationAuditEventFactory(
+                audit_event_factory=ViewApplicationPagesAuditEventFactory(
                     page=ApplicationPageType.CERTIFICATE
                 ),
             )

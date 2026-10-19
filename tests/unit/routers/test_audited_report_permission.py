@@ -2,7 +2,7 @@ import pytest
 from fastapi import HTTPException, Request
 
 from app.auth.rbac import Permission, PermissionChecker
-from app.routers.dependencies.audited_permission_checker import AuditFailureHandler
+from app.routers.dependencies.auditer_permission_checker import AuditFailureHandler
 from app.use_cases.exceptions import AuditError
 
 

@@ -18,7 +18,7 @@ from app.ports.claim.payment_extract_report_port import PaymentExtractReportPort
 from app.ports.claim_backlog_port import ClaimBacklogPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.routers.applications import get_provider_details_port
-from app.routers.dependencies.audited_permission_checker import (
+from app.routers.dependencies.auditer_permission_checker import (
     audit_and_require_permission,
 )
 from app.routers.dependencies.report_audit_event_factory import (

@@ -59,7 +59,7 @@ class AuditFailureHandler:
             raise failure from exc
 
 
-class AuditedPermissionChecker:
+class AuditerPermissionChecker:
     """Route dependency that audits a request, then enforces permission.
 
     The audit is written for every authenticated request, including those that
@@ -113,9 +113,9 @@ class AuditedPermissionChecker:
 def audit_and_require_permission(
     possible_permissions: Iterable[Permission] | Permission,
     audit_event_factory: AuditEventFactory,
-) -> AuditedPermissionChecker:
+) -> AuditerPermissionChecker:
     """Audit every authenticated attempt, with permission denial taking precedence."""
-    return AuditedPermissionChecker(
+    return AuditerPermissionChecker(
         possible_permissions=possible_permissions,
         audit_event_factory=audit_event_factory,
     )
