@@ -50,6 +50,8 @@ inputs:
   kube-namespace:
     description: "Kubernetes cluster namespace"
     required: true
+  sentry-dsn:
+    description: "Sentry DSN"
   service_name:
     description: "Service name"
   session_name:
@@ -124,13 +126,14 @@ runs:
         DB_PASSWORD: ${{ inputs.db-password }}
         DB_PORT: ${{ inputs.db-port }}
         DB_USER: ${{ inputs.db-user }}
-        PROVIDER_API_BASE_URL: ${{ inputs.provider-api-base-url }}
-        PROVIDER_API_KEY: ${{ inputs.provider-api-key }}
         GITHUB_SHA: ${{ github.sha }}
         GITHUB_REF_NAME: ${{ github.ref_name }}
         GITHUB_HEAD_REF: ${{ github.head_ref }}
         IMAGE_TAG: ${{ inputs.image-tag }}
         K8S_NAMESPACE: ${{ inputs.kube-namespace }}
+        PROVIDER_API_BASE_URL: ${{ inputs.provider-api-base-url }}
+        PROVIDER_API_KEY: ${{ inputs.provider-api-key }}
         REGISTRY: ${{ inputs.ecr-registry_url }}
         REPOSITORY: ${{ inputs.ecr-repository }}
+        SENTRY_DSN: ${{ inputs.sentry-dsn }}
       run: ./deploy/scripts/deploy.sh "$APP_ENVIRONMENT"
