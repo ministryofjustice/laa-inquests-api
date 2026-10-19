@@ -27,8 +27,6 @@ deploy_branch() {
                 --set-string ingress.allowlist="${ALLOW_LIST//,/\\,}" \
                 --set image.repository="$REGISTRY/$REPOSITORY" \
                 --set image.tag="$IMAGE_TAG" \
-                --set ingress.annotations."external-dns\.alpha\.kubernetes\.io/set-identifier"="$IDENTIFIER" \
-                --set ingress.hosts[0].host="$RELEASE_HOST" \
                 --set env.AWS_SECRETS_GOV_NOTIFY_API_KEY="gov-notify-api-key-$ENVIRONMENT" \
                 --set env.AWS_SECRETS_GOV_NOTIFY_CALLBACK_BEARER_TOKEN="gov-notify-callback-bearer-token-$ENVIRONMENT" \
                 --set env.AWS_SECRETS_GOV_NOTIFY_TEMPLATE_IDS="gov-notify-template-ids-$ENVIRONMENT" \
@@ -54,6 +52,7 @@ deploy_branch() {
 }
 
 deploy_main() {
+  IDENTIFIER="laa-inquests-api-$K8S_NAMESPACE-green"
   RELEASE_HOST="laa-inquests-api-$ENVIRONMENT.apps.live.cloud-platform.service.justice.gov.uk"
     IDENTIFIER="laa-inquests-internal-ui-$K8S_NAMESPACE-green"
   helm upgrade laa-inquests-api ./deploy/infrastructure/helm/. \
