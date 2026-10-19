@@ -54,7 +54,6 @@ deploy_branch() {
 deploy_main() {
   IDENTIFIER="laa-inquests-api-$K8S_NAMESPACE-green"
   RELEASE_HOST="laa-inquests-api-$ENVIRONMENT.apps.live.cloud-platform.service.justice.gov.uk"
-    IDENTIFIER="laa-inquests-internal-ui-$K8S_NAMESPACE-green"
   helm upgrade laa-inquests-api ./deploy/infrastructure/helm/. \
                 --install --wait --timeout 10m \
                 --namespace="${K8S_NAMESPACE}" \
