@@ -43,6 +43,7 @@ from app.models.application.index import (
     UpdateApplicationPublicBodiesRequest,
     UploadCoronersLetterResponse,
 )
+from app.models.audit.enums import ApplicationPageType
 from app.models.claim.index import (
     ClaimByIdResponse,
     ClaimCreate,
@@ -94,6 +95,12 @@ from app.routers.dependencies import (
     get_current_provider_firm_code,
     get_current_provider_office_codes,
     get_sds_port,
+)
+from app.routers.dependencies.auditer_permission_checker import (
+    audit_and_require_permission,
+)
+from app.routers.dependencies.view_application_pages_audit_event_factory import (
+    ViewApplicationPagesAuditEventFactory,
 )
 from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
@@ -790,7 +797,16 @@ async def list_provider_offices(
 @router.get(
     "/{laa_reference}",
     response_model=ApplicationResponse,
-    dependencies=[Depends(require_permission_from(Permission.APPLICATION_READ))],
+    dependencies=[
+        Depends(
+            audit_and_require_permission(
+                possible_permissions=Permission.APPLICATION_READ,
+                audit_event_factory=ViewApplicationPagesAuditEventFactory(
+                    page=ApplicationPageType.OVERVIEW
+                ),
+            )
+        )
+    ],
 )
 async def read_application(
     laa_reference: str,
@@ -807,7 +823,16 @@ async def read_application(
 @router.get(
     "/{laa_reference}/certificate",
     response_model=ApplicationCertificateResponse,
-    dependencies=[Depends(require_permission_from(Permission.CERTIFICATE_READ))],
+    dependencies=[
+        Depends(
+            audit_and_require_permission(
+                possible_permissions=Permission.CERTIFICATE_READ,
+                audit_event_factory=ViewApplicationPagesAuditEventFactory(
+                    page=ApplicationPageType.CERTIFICATE
+                ),
+            )
+        )
+    ],
 )
 def read_certificate(
     laa_reference: str,

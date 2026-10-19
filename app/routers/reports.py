@@ -18,8 +18,11 @@ from app.ports.claim.payment_extract_report_port import PaymentExtractReportPort
 from app.ports.claim_backlog_port import ClaimBacklogPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.routers.applications import get_provider_details_port
-from app.routers.dependencies.report_auditer_permission_checker import (
-    audit_report_and_require_permission,
+from app.routers.dependencies.auditer_permission_checker import (
+    audit_and_require_permission,
+)
+from app.routers.dependencies.report_audit_event_factory import (
+    ReportAuditEventFactory,
 )
 from app.use_cases.exceptions import (
     InvalidDateRangeError,
@@ -108,9 +111,11 @@ def get_generate_payment_extract_report_use_case(
     "/applications/backlog",
     dependencies=[
         Depends(
-            audit_report_and_require_permission(
+            audit_and_require_permission(
                 possible_permissions=Permission.REPORTS_APPLICATION_WORKFLOW_READ,
-                report_type=ReportType.APPLICATIONS_BACKLOG,
+                audit_event_factory=ReportAuditEventFactory(
+                    report_type=ReportType.APPLICATIONS_BACKLOG
+                ),
             )
         ),
     ],
@@ -153,9 +158,11 @@ def get_application_backlog_report(
     "/claims/backlog",
     dependencies=[
         Depends(
-            audit_report_and_require_permission(
+            audit_and_require_permission(
                 possible_permissions=Permission.REPORTS_CLAIM_WORKFLOW_READ,
-                report_type=ReportType.CLAIMS_BACKLOG,
+                audit_event_factory=ReportAuditEventFactory(
+                    report_type=ReportType.CLAIMS_BACKLOG
+                ),
             )
         ),
     ],
@@ -198,9 +205,11 @@ def get_claim_backlog_report(
     "/payment-extract",
     dependencies=[
         Depends(
-            audit_report_and_require_permission(
+            audit_and_require_permission(
                 possible_permissions=Permission.REPORTS_PAYMENT_READ,
-                report_type=ReportType.PAYMENT_EXTRACT,
+                audit_event_factory=ReportAuditEventFactory(
+                    report_type=ReportType.PAYMENT_EXTRACT
+                ),
             )
         ),
     ],

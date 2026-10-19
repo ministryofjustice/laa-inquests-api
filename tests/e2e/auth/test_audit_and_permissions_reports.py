@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import ANY, MagicMock
 
 import pytest
 from sqlmodel import select
@@ -8,14 +8,13 @@ from app.adapters.audit_repository_adapter import AuditRepositoryAdapter
 from app.auth.rbac import Role
 from app.models.audit.enums import ReportType
 from app.models.audit.index import ReportAudit
-from app.routers.dependencies.report_audit_writer import report_audit_use_case_factory
+from app.routers.dependencies import auditer_permission_checker
 from app.routers.reports import (
     get_generate_application_backlog_report_use_case,
     get_generate_claim_backlog_report_use_case,
     get_generate_payment_extract_report_use_case,
 )
 from app.use_cases.exceptions import AuditError
-from app.use_cases.report_audit import ReportAuditUseCase
 
 # Report downloads are audited before permission is enforced:
 #
@@ -92,6 +91,7 @@ def _assert_audit_persisted(session, audit_type, parameters):
 def test_report_download_outcome_depends_on_permission_and_audit(
     client,
     session,
+    monkeypatch,
     endpoint,
     role,
     audit_type,
@@ -101,12 +101,13 @@ def test_report_download_outcome_depends_on_permission_and_audit(
     audit_failure,
     expected_status,
 ):
+    session.expire_on_commit = False
     audit_repository = MagicMock(wraps=AuditRepositoryAdapter(session=session))
     audit_factory = MagicMock(return_value=audit_repository)
     if audit_failure == "setup":
         audit_factory.side_effect = RuntimeError("Audit setup failed")
     elif audit_failure == "write":
-        audit_repository.audit_report.side_effect = AuditError("Audit write failed")
+        audit_repository.audit_event.side_effect = AuditError("Audit write failed")
     elif audit_failure == "commit":
         audit_repository.commit.side_effect = AuditError("Audit commit failed")
 
@@ -115,11 +116,8 @@ def test_report_download_outcome_depends_on_permission_and_audit(
         iter([b"report data"]) if parameters else b"report data"
     )
 
-    def create_audit_use_case():
-        return ReportAuditUseCase(audit_port=audit_factory())
-
-    api.dependency_overrides[report_audit_use_case_factory] = lambda: (
-        create_audit_use_case
+    monkeypatch.setattr(
+        auditer_permission_checker, "AuditRepositoryAdapter", audit_factory
     )
     api.dependency_overrides[report_dependency] = lambda: report_use_case
     user_role = role if has_permission else Role.PROVIDER_APPLICATION_USER
@@ -133,10 +131,14 @@ def test_report_download_outcome_depends_on_permission_and_audit(
     assert response.status_code == expected_status
     audit_factory.assert_called_once()
     if audit_failure != "setup":
-        audit_repository.audit_report.assert_called_once_with(
-            user_email_address="test@example.com",
-            report_type=audit_type,
-            parameters=parameters,
+        audit_repository.audit_event.assert_called_once_with(
+            ReportAudit(
+                id=ANY,
+                timestamp=ANY,
+                user_email_address="test@example.com",
+                report_type=audit_type,
+                parameters=parameters,
+            )
         )
 
     if expected_status == 200:

@@ -41,38 +41,12 @@ matches one of the categories of law defined in the [/app/models/categories.py](
 
 To learn more about models please read [/app/models/README.md](../models/README.md)
 
-## Audited report permissions
+## Audited permissions
 
-Every report endpoint uses
-[`audit_report_and_require_permission`](./dependencies/report_audit_permission_checker.py)
-with its required permission and audit type:
-
-```python
-dependencies = [
-    Depends(
-        audit_report_and_require_permission(
-            possible_permissions=Permission.REPORTS_CLAIM_WORKFLOW_READ,
-            report_type=ReportType.CLAIMS_BACKLOG,
-        )
-    )
-]
-```
-
-Authentication runs first. For authenticated requests, the dependency builds the
-audit use case and executes the audit inside its failure handler before
-enforcing permission:
-
-| Permission | Audit outcome | Response |
-| --- | --- | --- |
-| Granted | Success | Report download |
-| Denied | Success | 403; audit persisted |
-| Granted | Setup, write, or commit failure | 500; no report download |
-| Denied | Setup, write, or commit failure | 403; no report download |
-
-Missing or invalid authentication retains the existing authentication response.
-The failure handler logs audit errors without including user details or tokens.
-Report generation runs only after the dependency succeeds and is outside the
-audit failure handler.
+Endpoints that must record an audit event before enforcing permission use
+`audit_and_require_permission`. See
+[dependencies/README.md](./dependencies/README.md) for the execution order,
+outcomes and how to add it to a new endpoint.
 
 ## Reading and writing to the database
 Database connections are managed with SQLModel sessions, these are inherited from SQLAlchemy sessions.
