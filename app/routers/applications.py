@@ -592,7 +592,10 @@ async def upload_coroners_letter(
                 file_name=file_name,
             ),
         )
-        raise HTTPException(status_code=500, detail="Failed to upload coroners letter")
+        # `from None` keeps the upload error, which contains the file name, out of Sentry.
+        raise HTTPException(
+            status_code=500, detail="Failed to upload coroners letter"
+        ) from None
 
     return UploadCoronersLetterResponse(
         coroners_letter_id=coroners_letter_id, coroners_letter_file_name=file_name

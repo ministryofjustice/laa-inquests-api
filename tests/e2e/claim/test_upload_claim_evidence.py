@@ -1,4 +1,5 @@
 import io
+import json
 import uuid
 from unittest.mock import MagicMock
 
@@ -6,6 +7,7 @@ from app import api
 from app.auth.rbac import Permission, Role, get_current_user_permissions
 from app.models.claim.index import ClaimEvidence
 from app.routers.claims import get_sds_port
+from app.use_cases.exceptions import ClaimEvidenceUploadError
 
 
 def is_valid_uuid(val):
@@ -207,3 +209,49 @@ class TestUploadClaimEvidenceRbac:
         )
 
         assert response.status_code == 201
+
+
+PII_FILE_NAME = "Jane Doe passport.pdf"
+
+
+class TestUploadClaimEvidenceSentryPii:
+    def _upload(self, client):
+        return client.post(
+            "/claims/evidence",
+            files={
+                "file": (PII_FILE_NAME, io.BytesIO(b"test content"), "application/pdf")
+            },
+            headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
+        )
+
+    def test_500_virus_check_failure_does_not_send_file_name_to_sentry(
+        self, client, captured_sentry_events
+    ):
+        mock_sds = MagicMock()
+        mock_sds.virus_check_claim_evidence.side_effect = ClaimEvidenceUploadError(
+            "Failed to perform virus check due to a network error: "
+            "https://sds/virus_check_file?file_key=Jane+Doe+passport.pdf"
+        )
+        api.dependency_overrides[get_sds_port] = lambda: mock_sds
+
+        response = self._upload(client)
+
+        assert response.status_code == 500
+        assert len(captured_sentry_events) == 1
+        assert "Jane" not in json.dumps(captured_sentry_events)
+        assert "passport" not in json.dumps(captured_sentry_events)
+
+    def test_500_upload_not_successful_does_not_send_file_name_to_sentry(
+        self, client, captured_sentry_events
+    ):
+        mock_sds = MagicMock()
+        mock_sds.virus_check_claim_evidence.return_value = True
+        mock_sds.save_claim_evidence.return_value.status = "FAILED"
+        api.dependency_overrides[get_sds_port] = lambda: mock_sds
+
+        response = self._upload(client)
+
+        assert response.status_code == 500
+        assert len(captured_sentry_events) == 1
+        assert "Jane" not in json.dumps(captured_sentry_events)
+        assert "passport" not in json.dumps(captured_sentry_events)
