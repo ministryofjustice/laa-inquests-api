@@ -2,7 +2,7 @@ import os
 
 
 class Config:
-    ENVIRONMENT = os.environ.get("ENV", "unknown")
+    ENVIRONMENT = os.environ.get("ENVIRONMENT")
     SERVICE_NAME = os.environ.get("SERVICE_NAME", "laa-inquests-api")
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "")
     RATE_LIMIT_MAX = int(os.environ.get("RATE_LIMIT_MAX", "900"))

@@ -14,6 +14,6 @@ sentry_config = {
     "profile_session_sample_rate": 0.2,
     "profile_lifecycle": "trace",
     # This can either be dev, staging, or production.
-    # It is set by ENV in the helm values.
+    # It is set from the ENVIRONMENT env var, passed in by deploy.sh.
     "environment": Config.ENVIRONMENT,
 }
