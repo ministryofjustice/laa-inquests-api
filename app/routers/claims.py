@@ -144,7 +144,10 @@ async def upload_claim_evidence(
                 file_name=file_name,
             ),
         )
-        raise HTTPException(status_code=500, detail="Failed to upload claim evidence")
+        # `from None` keeps the upload error, which contains the file name, out of Sentry.
+        raise HTTPException(
+            status_code=500, detail="Failed to upload claim evidence"
+        ) from None
 
     return UploadClaimEvidenceResponse(
         claim_evidence_id=claim_evidence_id,

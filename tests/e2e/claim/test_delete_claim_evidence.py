@@ -1,10 +1,12 @@
 import io
+import json
 from unittest.mock import MagicMock
 
 from app import api
 from app.auth.rbac import Role
 from app.models.claim.index import ClaimEvidence
 from app.routers.claims import get_sds_port
+from app.use_cases.exceptions import ClaimEvidenceDeleteError
 
 
 def _upload_evidence_and_get_id(client, auth_token):
@@ -83,3 +85,26 @@ class TestDeleteClaimEvidenceRbac:
         )
 
         assert response.status_code == 204
+
+
+def test_500_delete_claim_evidence_failure_does_not_send_sds_file_key_to_sentry(
+    client, captured_sentry_events
+):
+    claim_evidence_id = _upload_evidence_and_get_id(
+        client, Role.PROVIDER_CLAIMS_USER.value
+    )
+    mock_sds = MagicMock()
+    mock_sds.delete_claim_evidence.side_effect = ClaimEvidenceDeleteError(
+        "SDS returned 500 while deleting claim evidence for file key Jane_Doe_passport_3f2b8c1e.pdf"
+    )
+    api.dependency_overrides[get_sds_port] = lambda: mock_sds
+
+    response = client.delete(
+        f"/claims/{claim_evidence_id}",
+        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
+    )
+
+    assert response.status_code == 500
+    assert len(captured_sentry_events) >= 1
+    assert "Jane" not in json.dumps(captured_sentry_events)
+    assert "passport" not in json.dumps(captured_sentry_events)

@@ -1,9 +1,11 @@
 import io
+import json
 from unittest.mock import MagicMock
 
 from app import api
 from app.auth.rbac import Role
 from app.routers.applications import get_sds_port
+from app.use_cases.exceptions import CoronersLetterDeleteError
 
 
 def _upload_coroners_letter_and_get_id(client, auth_token):
@@ -62,3 +64,26 @@ def test_500_delete_coroners_letter_when_sds_fails(client):
     )
 
     assert delete_response.status_code == 500
+
+
+def test_500_delete_coroners_letter_failure_does_not_send_sds_file_key_to_sentry(
+    client, captured_sentry_events
+):
+    coroners_letter_id = _upload_coroners_letter_and_get_id(
+        client, Role.PROVIDER_APPLICATION_USER.value
+    )
+    mock_sds = MagicMock()
+    mock_sds.delete_coroners_letter.side_effect = CoronersLetterDeleteError(
+        "SDS returned 500 while deleting coroners letter for file key Jane_Doe_passport_3f2b8c1e.pdf"
+    )
+    api.dependency_overrides[get_sds_port] = lambda: mock_sds
+
+    response = client.delete(
+        f"/applications/coroners-letter/{coroners_letter_id}",
+        headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
+    )
+
+    assert response.status_code == 500
+    assert len(captured_sentry_events) >= 1
+    assert "Jane" not in json.dumps(captured_sentry_events)
+    assert "passport" not in json.dumps(captured_sentry_events)

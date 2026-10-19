@@ -341,7 +341,10 @@ class SdsAdapter(SdsPort):
             with httpx.stream("GET", file_url) as stream:
                 yield from stream.iter_bytes()
         except (httpx.HTTPError, httpx.StreamError) as exc:
-            _raise_sds_retrieval_error(f"Failed to stream coroners letter: \n {exc}")
+            _raise_sds_retrieval_error(
+                f"Failed to stream coroners letter: \n {exc}",
+                log_message="Failed to stream coroners letter",
+            )
 
     def retrieve_claim_evidence(self, file_name: str) -> Iterator[bytes]:
         started_at = time.perf_counter()
@@ -385,7 +388,8 @@ class SdsAdapter(SdsPort):
                 yield from stream.iter_bytes()
         except (httpx.HTTPError, httpx.StreamError) as exc:
             _raise_sds_claim_evidence_retrieval_error(
-                f"Failed to stream claim evidence: \n {exc}"
+                f"Failed to stream claim evidence: \n {exc}",
+                log_message="Failed to stream claim evidence",
             )
 
     def delete_claim_evidence(self, file_name: str) -> None:

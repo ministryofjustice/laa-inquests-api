@@ -1,14 +1,17 @@
 from unittest.mock import MagicMock
 
 import pytest
+import sentry_sdk
 from fastapi import HTTPException, status
 from fastapi.testclient import TestClient
 from passlib.hash import argon2
+from sentry_sdk.transport import Transport
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session, SQLModel, StaticPool, create_engine
 
 from app import api
 from app.auth.rbac import ROLE_PERMISSIONS_MAP
+from app.config.sentry import sentry_config
 from app.db import get_session
 from app.db.session import CustomSession
 from app.models import User
@@ -292,3 +295,36 @@ def mock_entra_auth_port(client):
 def mock_pdf_generation_port(client):
     """Return the shared mock PDF generation port for E2E tests."""
     return api.dependency_overrides[get_pdf_generation_port]()
+
+
+@pytest.fixture
+def captured_sentry_events(client):
+    """Run the app with the real Sentry config and capture the events it would send."""
+    events: list[dict] = []
+
+    class CapturingTransport(Transport):
+        def capture_envelope(self, envelope):
+            events.extend(
+                item.payload.json for item in envelope.items if item.type == "event"
+            )
+
+    # Sentry wraps the middleware stack when it is built, so rebuild it after init.
+    api.middleware_stack = None
+    sentry_sdk.init(
+        **{
+            **sentry_config,
+            "dsn": "https://key@o0.ingest.sentry.io/1",
+            "transport": CapturingTransport,
+            "traces_sample_rate": 0,
+        }
+    )
+    yield events
+    sentry_sdk.flush()
+    sentry_sdk.get_global_scope().set_client(None)
+    for scope in (
+        sentry_sdk.get_global_scope(),
+        sentry_sdk.get_isolation_scope(),
+        sentry_sdk.get_current_scope(),
+    ):
+        scope.clear()
+    api.middleware_stack = None
