@@ -20,4 +20,6 @@ urllib3>=2.7.0
 notifications-python-client
 cryptography>=50.0.0
 weasyprint
+# Transitive dependency of weasyprint; pinned directly to pick up a Snyk-flagged CVE fix.
+pillow>=13.0.0
 jinja2
