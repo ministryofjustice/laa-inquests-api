@@ -86,13 +86,12 @@ class GenerateClaimBacklogReportUseCase:
             )
             return output.getvalue()
         except Exception:
-            logger.error(
+            logger.exception(
                 "Claim backlog report generation failed",
                 extra=build_log_extra(
                     event="claim_backlog_report_generation_failed",
                     claim_count=len(claims),
                 ),
-                exc_info=True,
             )
             raise
 

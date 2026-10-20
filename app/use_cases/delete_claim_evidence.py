@@ -62,12 +62,11 @@ class DeleteClaimEvidenceUseCase:
         except ClaimEvidenceNotFoundError:
             raise
         except Exception as exc:
-            logger.error(
+            logger.exception(
                 "Claim evidence delete failed",
                 extra=build_log_extra(
                     event="claim_evidence_delete_failed",
                     claim_evidence_id=str(claim_evidence_id),
                 ),
-                exc_info=True,
             )
             raise ClaimEvidenceDeleteError("Failed to delete claim evidence") from exc

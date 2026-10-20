@@ -47,10 +47,9 @@ class SendAutoApprovedPoaClaimEmailsUseCase:
             try:
                 self._process_claim(claim)
             except Exception:
-                logger.error(
+                logger.exception(
                     "Failed to send auto-approved POA grant email for claim %s",
                     claim.claim_id,
-                    exc_info=True,
                 )
 
     def _process_claim(self, claim: Claim) -> None:
