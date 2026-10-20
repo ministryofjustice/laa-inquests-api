@@ -87,6 +87,10 @@ class CreateApplicationUseCase:
                     firm_code=firm_code,
                 ),
             )
+        except ProviderOfficeMismatchError:
+            # Already logged with the precise office id above; avoid a duplicate Sentry event.
+            self.create_application_port.rollback()
+            raise
         except Exception:
             # This rolls back both the application and the history event in case of any failure
             self.create_application_port.rollback()

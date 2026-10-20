@@ -570,7 +570,7 @@ async def upload_coroners_letter(
             file_name,
         )
     except CoronersLetterVirusDetectedError:
-        logger.error(
+        logger.warning(
             "Coroners letter upload failed virus check",
             extra=build_log_extra(
                 event="coroners_letter_uploaded_failed",
@@ -582,7 +582,7 @@ async def upload_coroners_letter(
         )
         raise HTTPException(status_code=422, detail="Uploaded file failed virus check")
     except CoronersLetterUploadError:
-        logger.error(
+        logger.warning(
             "Coroners letter upload failed",
             extra=build_log_extra(
                 event="coroners_letter_uploaded_failed",
@@ -750,7 +750,7 @@ async def search_application(
         )
         return results
     except ProviderDetailsRetrievalError:
-        logger.error(
+        logger.warning(
             "Application search failed",
             extra=build_log_extra(
                 event="application_search_failed",
@@ -781,7 +781,7 @@ async def list_provider_offices(
         provider_offices = use_case.execute(firm_id)
         return provider_offices
     except ProviderDetailsRetrievalError:
-        logger.error(
+        logger.warning(
             "Provider office lookup failed",
             extra=build_log_extra(
                 event="provider_office_lookup_failed",
@@ -1113,7 +1113,7 @@ def delete_coroners_letter(
     try:
         use_case.execute(coroners_letter_id)
     except CoronersLetterNotFoundError:
-        logger.error(
+        logger.warning(
             "Coroners letter delete failed: not found",
             extra=build_log_extra(
                 event="coroners_letter_deleted_failed",
@@ -1125,7 +1125,7 @@ def delete_coroners_letter(
         )
         raise HTTPException(status_code=404, detail="Coroners letter not found")
     except CoronersLetterDeleteError:
-        logger.error(
+        logger.warning(
             "Coroners letter delete failed",
             extra=build_log_extra(
                 event="coroners_letter_deleted_failed",

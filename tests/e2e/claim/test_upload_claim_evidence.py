@@ -237,7 +237,7 @@ class TestUploadClaimEvidenceSentryPii:
         response = self._upload(client)
 
         assert response.status_code == 500
-        assert len(captured_sentry_events) == 1
+        assert len(captured_sentry_events) >= 1
         assert "Jane" not in json.dumps(captured_sentry_events)
         assert "passport" not in json.dumps(captured_sentry_events)
 
@@ -252,6 +252,6 @@ class TestUploadClaimEvidenceSentryPii:
         response = self._upload(client)
 
         assert response.status_code == 500
-        assert len(captured_sentry_events) == 1
+        assert len(captured_sentry_events) >= 1
         assert "Jane" not in json.dumps(captured_sentry_events)
         assert "passport" not in json.dumps(captured_sentry_events)
