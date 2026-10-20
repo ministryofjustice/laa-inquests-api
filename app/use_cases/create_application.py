@@ -94,13 +94,12 @@ class CreateApplicationUseCase:
         except Exception:
             # This rolls back both the application and the history event in case of any failure
             self.create_application_port.rollback()
-            logger.error(
+            logger.exception(
                 "Application creation failed and rolled back",
                 extra=build_log_extra(
                     event="application_created_failed",
                     firm_code=firm_code,
                 ),
-                exc_info=True,
             )
             raise
 

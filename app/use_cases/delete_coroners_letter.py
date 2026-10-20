@@ -62,12 +62,11 @@ class DeleteCoronersLetterUseCase:
         except CoronersLetterNotFoundError:
             raise
         except Exception as exc:
-            logger.error(
+            logger.exception(
                 "Coroners letter delete failed",
                 extra=build_log_extra(
                     event="coroners_letter_delete_failed",
                     coroners_letter_id=str(coroners_letter_id),
                 ),
-                exc_info=True,
             )
             raise CoronersLetterDeleteError("Failed to delete coroners letter") from exc

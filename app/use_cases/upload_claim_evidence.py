@@ -33,13 +33,12 @@ class UploadClaimEvidenceUseCase:
                 claim_evidence, file_name
             )
         except ClaimEvidenceUploadError as e:
-            logger.error(
+            logger.exception(
                 "Claim evidence upload failed during virus check",
                 extra=build_log_extra(
                     event="claim_evidence_upload_failed",
                     file_name=file_name,
                 ),
-                exc_info=True,
             )
             raise ClaimEvidenceVirusCheckError(
                 f"{file_name} upload failed due to server error during virus check: {e!s}"

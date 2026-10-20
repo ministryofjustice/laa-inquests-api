@@ -114,13 +114,12 @@ class GrantDecisionUseCase:
             self.application_decision_port.commit()
             self.create_history_event_port.commit()
         except Exception as exception:
-            logger.error(
+            logger.exception(
                 "Failed to grant application",
                 extra=build_log_extra(
                     event="grant_decision_failed",
                     laa_reference=application.laa_reference,
                 ),
-                exc_info=True,
             )
             self.application_decision_port.rollback()
             self.create_history_event_port.rollback()

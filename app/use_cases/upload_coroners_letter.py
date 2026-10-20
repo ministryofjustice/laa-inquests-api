@@ -34,13 +34,12 @@ class UploadCoronersLetterUseCase:
                 coroners_letter, file_name
             )
         except CoronersLetterUploadError as e:
-            logger.error(
+            logger.exception(
                 "Coroners letter upload failed during virus check",
                 extra=build_log_extra(
                     event="coroners_letter_upload_failed",
                     file_name=file_name,
                 ),
-                exc_info=True,
             )
             raise CoronersLetterVirusCheckError(
                 f"{file_name} upload failed due to server error during virus check: {e!s}"

@@ -41,13 +41,12 @@ class RetrieveClaimEvidenceUseCase:
                 claim_evidence.sds_file_name
             )
         except Exception as exception:
-            logger.error(
+            logger.exception(
                 "Claim evidence retrieval failed",
                 extra=build_log_extra(
                     event="claim_evidence_retrieval_failed",
                     claim_evidence_id=str(claim_evidence_id),
                 ),
-                exc_info=True,
             )
             raise ClaimEvidenceRetrievalError(
                 "Failed to retrieve claim evidence"
