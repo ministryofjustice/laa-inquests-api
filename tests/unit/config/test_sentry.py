@@ -209,7 +209,21 @@ def test_error_log_extra_keeps_only_allowlisted_keys(captured_items):
         "request_id": "req-1",
         "correlation_id": "corr-1",
         "status_code": 500,
+        "laa_reference": "LAA-1234567",
+        "firm_code": "1A234B",
+        "route": "/applications/LAA-1234567",
     }
+
+
+def test_error_log_extra_still_drops_file_name(captured_items):
+    logging.getLogger("test.sentry").error(
+        "upload failed",
+        extra={"extra": {"event": "x", "file_name": "Jane Doe passport.pdf"}},
+    )
+    sentry_sdk.flush()
+
+    (event,) = _events(captured_items)
+    assert "file_name" not in event["extra"]
 
 
 def test_error_log_extra_is_dropped_when_log_has_no_structured_extra(captured_items):
