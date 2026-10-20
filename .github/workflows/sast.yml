@@ -67,7 +67,7 @@ jobs:
           pip install semgrep
       - name: Run Semgrep on Python
         run: |
-          semgrep --config p/python --config p/fastapi --config p/github-actions --sarif --sarif-output semgrep-results.sarif --max-memory 4000 --strict -j 2 \
+          semgrep --config p/python --config p/fastapi --config p/github-actions --sarif --sarif-output semgrep-results.sarif --strict -j 2 \
           --exclude deploy/infrastructure/helm/templates \
           --exclude app/db/migrations/versions \
           --exclude '**/__pycache__' \
