@@ -149,9 +149,8 @@ class SdsAdapter(SdsPort):
                     duration_ms=duration_ms(started_at),
                 ),
             )
-            raise CoronersLetterUploadError(
-                f"Failed to perform virus check. API status code: {response.status_code}",
-                safe_message=f"Failed to perform virus check. API status code: {response.status_code}",
+            raise CoronersLetterUploadError.safe(
+                f"Failed to perform virus check. API status code: {response.status_code}"
             )
 
     def save_coroners_letter(
@@ -234,9 +233,8 @@ class SdsAdapter(SdsPort):
                     duration_ms=duration_ms(started_at),
                 ),
             )
-            raise ClaimEvidenceUploadError(
-                f"Failed to perform virus check. API status code: {response.status_code}",
-                safe_message=f"Failed to perform virus check. API status code: {response.status_code}",
+            raise ClaimEvidenceUploadError.safe(
+                f"Failed to perform virus check. API status code: {response.status_code}"
             )
 
     def save_claim_evidence(
@@ -309,9 +307,8 @@ class SdsAdapter(SdsPort):
     def retrieve_coroners_letter(self, file_name: str) -> Iterator[bytes]:
         started_at = time.perf_counter()
         if not file_name or not file_name.strip():
-            raise InvalidCoronersLetterDocumentIdError(
-                "file_name must be a non-empty string",
-                safe_message="file_name must be a non-empty string",
+            raise InvalidCoronersLetterDocumentIdError.safe(
+                "file_name must be a non-empty string"
             )
         token = self._get_token()
         response = httpx.get(
@@ -354,9 +351,8 @@ class SdsAdapter(SdsPort):
     def retrieve_claim_evidence(self, file_name: str) -> Iterator[bytes]:
         started_at = time.perf_counter()
         if not file_name or not file_name.strip():
-            raise InvalidClaimEvidenceDocumentIdError(
-                "file_name must be a non-empty string",
-                safe_message="file_name must be a non-empty string",
+            raise InvalidClaimEvidenceDocumentIdError.safe(
+                "file_name must be a non-empty string"
             )
         token = self._get_token()
         response = httpx.get(
@@ -401,9 +397,8 @@ class SdsAdapter(SdsPort):
     def delete_claim_evidence(self, file_name: str) -> None:
         started_at = time.perf_counter()
         if not file_name or not file_name.strip():
-            raise InvalidClaimEvidenceDocumentIdError(
-                "file_name must be a non-empty string",
-                safe_message="file_name must be a non-empty string",
+            raise InvalidClaimEvidenceDocumentIdError.safe(
+                "file_name must be a non-empty string"
             )
         token = self._get_token()
         response = httpx.delete(
@@ -437,9 +432,8 @@ class SdsAdapter(SdsPort):
     def delete_coroners_letter(self, file_name: str) -> None:
         started_at = time.perf_counter()
         if not file_name or not file_name.strip():
-            raise InvalidCoronersLetterDocumentIdError(
-                "file_name must be a non-empty string",
-                safe_message="file_name must be a non-empty string",
+            raise InvalidCoronersLetterDocumentIdError.safe(
+                "file_name must be a non-empty string"
             )
         token = self._get_token()
         response = httpx.delete(

@@ -15,6 +15,12 @@ class SentryRedactableError(Exception):
         super().__init__(message)
         self.safe_message = safe_message
 
+    @classmethod
+    def safe(cls, message: str) -> "SentryRedactableError":
+        """Use when `message` has no sensitive content and can be reported to
+        Sentry verbatim."""
+        return cls(message, safe_message=message)
+
 
 class CoronersLetterUploadError(SentryRedactableError):
     pass
