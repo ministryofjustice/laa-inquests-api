@@ -16,6 +16,7 @@ from app.use_cases.exceptions import (
     ApplicationNotFoundError,
     ClaimEvidenceUploadError,
     CoronersLetterDeleteError,
+    CoronersLetterRetrievalError,
     SDSClaimEvidenceRetrievalError,
     SDSLetterRetrievalError,
 )
@@ -266,6 +267,52 @@ def test_file_error_values_are_filtered(captured_items, error_class):
     (event,) = _events(captured_items)
     assert "Jane" not in json.dumps(event["exception"])
     assert event["exception"]["values"][0]["type"] == error_class.__name__
+
+
+@pytest.mark.parametrize(
+    "error_class",
+    [
+        CoronersLetterDeleteError,
+        SDSLetterRetrievalError,
+        ClaimEvidenceUploadError,
+        SDSClaimEvidenceRetrievalError,
+    ],
+)
+def test_file_error_uses_safe_message_when_provided(captured_items, error_class):
+    try:
+        raise error_class(
+            "while handling file key Jane_Doe_passport.pdf",
+            safe_message="while handling the file",
+        )
+    except error_class:
+        sentry_sdk.capture_exception()
+    sentry_sdk.flush()
+
+    (event,) = _events(captured_items)
+    assert event["exception"]["values"][0]["value"] == "while handling the file"
+    assert "Jane" not in json.dumps(event["exception"])
+
+
+def test_file_error_safe_message_is_kept_through_an_exception_chain(captured_items):
+    try:
+        try:
+            raise SDSLetterRetrievalError(
+                "SDS returned 500 for file key Jane_Doe_passport.pdf",
+                safe_message="SDS returned 500",
+            )
+        except SDSLetterRetrievalError as inner:
+            raise CoronersLetterRetrievalError(
+                "Failed to retrieve coroners letter",
+                safe_message="Failed to retrieve coroners letter",
+            ) from inner
+    except CoronersLetterRetrievalError:
+        sentry_sdk.capture_exception()
+    sentry_sdk.flush()
+
+    (event,) = _events(captured_items)
+    values = [v["value"] for v in event["exception"]["values"]]
+    assert values == ["SDS returned 500", "Failed to retrieve coroners letter"]
+    assert "Jane" not in json.dumps(event["exception"])
 
 
 def test_non_file_use_case_error_values_are_kept(captured_items):

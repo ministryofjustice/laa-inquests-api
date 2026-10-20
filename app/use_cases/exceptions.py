@@ -6,7 +6,17 @@ class ApplicationNotGrantedError(Exception):
     pass
 
 
-class CoronersLetterUploadError(Exception):
+class SentryRedactableError(Exception):
+    """Message may embed a file name/SDS key; pass `safe_message` without it so
+    Sentry can show useful context instead of fully redacting the message.
+    Without `safe_message`, the message is treated as unsafe and fully redacted."""
+
+    def __init__(self, message: str = "", safe_message: str | None = None) -> None:
+        super().__init__(message)
+        self.safe_message = safe_message
+
+
+class CoronersLetterUploadError(SentryRedactableError):
     pass
 
 
@@ -14,11 +24,11 @@ class CoronersLetterVirusCheckError(CoronersLetterUploadError):
     pass
 
 
-class CoronersLetterVirusDetectedError(Exception):
+class CoronersLetterVirusDetectedError(SentryRedactableError):
     pass
 
 
-class ClaimEvidenceUploadError(Exception):
+class ClaimEvidenceUploadError(SentryRedactableError):
     pass
 
 
@@ -26,31 +36,31 @@ class ClaimEvidenceVirusCheckError(ClaimEvidenceUploadError):
     pass
 
 
-class ClaimEvidenceVirusDetectedError(Exception):
+class ClaimEvidenceVirusDetectedError(SentryRedactableError):
     pass
 
 
-class CoronersLetterNotFoundError(Exception):
+class CoronersLetterNotFoundError(SentryRedactableError):
     pass
 
 
-class CoronersLetterRetrievalError(Exception):
+class CoronersLetterRetrievalError(SentryRedactableError):
     pass
 
 
-class InvalidCoronersLetterDocumentIdError(Exception):
+class InvalidCoronersLetterDocumentIdError(SentryRedactableError):
     pass
 
 
-class CoronersLetterDeleteError(Exception):
+class CoronersLetterDeleteError(SentryRedactableError):
     pass
 
 
-class SDSLetterRetrievalError(Exception):
+class SDSLetterRetrievalError(SentryRedactableError):
     pass
 
 
-class ClaimEvidenceNotFoundError(Exception):
+class ClaimEvidenceNotFoundError(SentryRedactableError):
     pass
 
 
@@ -58,15 +68,15 @@ class ClaimNotFoundError(Exception):
     pass
 
 
-class ClaimEvidenceRetrievalError(Exception):
+class ClaimEvidenceRetrievalError(SentryRedactableError):
     pass
 
 
-class ClaimEvidenceDeleteError(Exception):
+class ClaimEvidenceDeleteError(SentryRedactableError):
     pass
 
 
-class InvalidClaimEvidenceDocumentIdError(Exception):
+class InvalidClaimEvidenceDocumentIdError(SentryRedactableError):
     pass
 
 
@@ -74,7 +84,7 @@ class InvalidDateRangeError(Exception):
     pass
 
 
-class SDSClaimEvidenceRetrievalError(Exception):
+class SDSClaimEvidenceRetrievalError(SentryRedactableError):
     pass
 
 

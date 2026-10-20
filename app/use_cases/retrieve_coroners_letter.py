@@ -31,7 +31,10 @@ class RetrieveCoronersLetterUseCase:
                     laa_reference=laa_reference,
                 ),
             )
-            raise CoronersLetterNotFoundError("Could not retrieve coroners letter")
+            raise CoronersLetterNotFoundError(
+                "Could not retrieve coroners letter",
+                safe_message="Could not retrieve coroners letter",
+            )
         sds_file_name = application.coroners_letter.sds_file_name
 
         try:
@@ -45,7 +48,8 @@ class RetrieveCoronersLetterUseCase:
                 ),
             )
             raise CoronersLetterRetrievalError(
-                "Failed to retrieve coroners letter"
+                "Failed to retrieve coroners letter",
+                safe_message="Failed to retrieve coroners letter",
             ) from exception
 
         logger.info(
