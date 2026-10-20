@@ -36,9 +36,7 @@ class DeleteClaimEvidenceUseCase:
                     claim_evidence_id=str(claim_evidence_id),
                 ),
             )
-            raise ClaimEvidenceNotFoundError(
-                "Claim evidence not found", safe_message="Claim evidence not found"
-            )
+            raise ClaimEvidenceNotFoundError.safe("Claim evidence not found")
 
         try:
             self.sds_port.delete_claim_evidence(claim_evidence.sds_file_name)
@@ -53,9 +51,7 @@ class DeleteClaimEvidenceUseCase:
                         claim_evidence_id=str(claim_evidence_id),
                     ),
                 )
-                raise ClaimEvidenceNotFoundError(
-                    "Claim evidence not found", safe_message="Claim evidence not found"
-                )
+                raise ClaimEvidenceNotFoundError.safe("Claim evidence not found")
             logger.info(
                 "Claim evidence deleted",
                 extra=build_log_extra(
@@ -73,7 +69,6 @@ class DeleteClaimEvidenceUseCase:
                     claim_evidence_id=str(claim_evidence_id),
                 ),
             )
-            raise ClaimEvidenceDeleteError(
-                "Failed to delete claim evidence",
-                safe_message="Failed to delete claim evidence",
+            raise ClaimEvidenceDeleteError.safe(
+                "Failed to delete claim evidence"
             ) from exc

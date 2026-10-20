@@ -36,9 +36,7 @@ class DeleteCoronersLetterUseCase:
                     coroners_letter_id=str(coroners_letter_id),
                 ),
             )
-            raise CoronersLetterNotFoundError(
-                "Coroners letter not found", safe_message="Coroners letter not found"
-            )
+            raise CoronersLetterNotFoundError.safe("Coroners letter not found")
 
         try:
             self.sds_port.delete_coroners_letter(coroners_letter.sds_file_name)
@@ -53,10 +51,7 @@ class DeleteCoronersLetterUseCase:
                         coroners_letter_id=str(coroners_letter_id),
                     ),
                 )
-                raise CoronersLetterNotFoundError(
-                    "Coroners letter not found",
-                    safe_message="Coroners letter not found",
-                )
+                raise CoronersLetterNotFoundError.safe("Coroners letter not found")
             logger.info(
                 "Coroners letter deleted",
                 extra=build_log_extra(
@@ -74,7 +69,6 @@ class DeleteCoronersLetterUseCase:
                     coroners_letter_id=str(coroners_letter_id),
                 ),
             )
-            raise CoronersLetterDeleteError(
-                "Failed to delete coroners letter",
-                safe_message="Failed to delete coroners letter",
+            raise CoronersLetterDeleteError.safe(
+                "Failed to delete coroners letter"
             ) from exc
