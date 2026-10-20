@@ -29,7 +29,7 @@ class DeleteCoronersLetterUseCase:
             coroners_letter_id
         )
         if coroners_letter is None:
-            logger.warning(
+            logger.error(
                 "Coroners letter delete failed",
                 extra=build_log_extra(
                     event="coroners_letter_delete_failed",
@@ -44,7 +44,7 @@ class DeleteCoronersLetterUseCase:
                 coroners_letter_id
             )
             if not deleted:
-                logger.warning(
+                logger.error(
                     "Coroners letter delete failed",
                     extra=build_log_extra(
                         event="coroners_letter_delete_failed",
@@ -62,7 +62,7 @@ class DeleteCoronersLetterUseCase:
         except CoronersLetterNotFoundError:
             raise
         except Exception as exc:
-            logger.warning(
+            logger.error(
                 "Coroners letter delete failed",
                 extra=build_log_extra(
                     event="coroners_letter_delete_failed",

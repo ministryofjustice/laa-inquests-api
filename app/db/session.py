@@ -42,7 +42,7 @@ class CustomSession(Session):
                         if hasattr(instance, "id") and isinstance(
                             instance.id, uuid.UUID
                         ):
-                            logger.warning(
+                            logger.error(
                                 "UUID4 collision detected",
                                 extra=build_log_extra(
                                     event="db_uuid_collision_retry",

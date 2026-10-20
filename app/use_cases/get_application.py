@@ -23,7 +23,7 @@ class GetApplicationUseCase:
             laa_reference
         )
         if application is None:
-            logger.warning(
+            logger.error(
                 "Application retrieval failed",
                 extra=build_log_extra(
                     event="application_retrieved_failed",

@@ -33,7 +33,7 @@ class UploadClaimEvidenceUseCase:
                 claim_evidence, file_name
             )
         except ClaimEvidenceUploadError as e:
-            logger.warning(
+            logger.error(
                 "Claim evidence upload failed during virus check",
                 extra=build_log_extra(
                     event="claim_evidence_upload_failed",
@@ -46,7 +46,7 @@ class UploadClaimEvidenceUseCase:
             ) from e
 
         if not is_safe:
-            logger.warning(
+            logger.error(
                 "Claim evidence upload failed due to virus",
                 extra=build_log_extra(
                     event="claim_evidence_upload_failed",
@@ -59,7 +59,7 @@ class UploadClaimEvidenceUseCase:
 
         response_body = self.sds_port.save_claim_evidence(claim_evidence, file_name)
         if response_body.status != "SUCCESS":
-            logger.warning(
+            logger.error(
                 "Claim evidence upload failed",
                 extra=build_log_extra(
                     event="claim_evidence_upload_failed",

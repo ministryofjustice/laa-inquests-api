@@ -37,7 +37,7 @@ class SendGrantLetterUseCase:
                 ),
             )
         except Exception:
-            logger.warning(
+            logger.error(
                 "Grant letter send failed",
                 extra=build_log_extra(
                     event="grant_letter_send_failed",

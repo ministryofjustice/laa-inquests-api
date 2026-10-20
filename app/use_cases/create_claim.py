@@ -139,7 +139,7 @@ class CreateClaimUseCase:
             raise ApplicationNotFoundError(command.laa_reference)
 
         if application.provider.office_id not in command.office_codes:
-            logger.warning(
+            logger.error(
                 "Claim creation blocked by provider office mismatch",
                 extra=build_log_extra(
                     event="claim_created_failed_office_mismatch",
@@ -267,7 +267,7 @@ class CreateClaimUseCase:
 
         except Exception:
             self.create_claim_port.rollback()
-            logger.warning(
+            logger.error(
                 "Claim creation failed and rolled back",
                 extra=build_log_extra(
                     event="application_created_failed",
@@ -303,7 +303,7 @@ class CreateClaimUseCase:
                 )
                 self.create_history_event_port.commit()
             except Exception:
-                logger.warning(
+                logger.error(
                     "Failed to send claim submission email",
                     extra=build_log_extra(
                         event="notification_requested_failed",
@@ -365,7 +365,7 @@ class CreateClaimUseCase:
                     self.create_claim_port.rollback()
                     claim.status_id = ClaimStatus.SUBMITTED
                     rejection_reasons = None
-                    logger.warning(
+                    logger.error(
                         "Failed to persist claim auto-rejection",
                         extra=build_log_extra(
                             event="claim_auto_rejection_persist_failed",
@@ -425,7 +425,7 @@ class CreateClaimUseCase:
                 except Exception:
                     self.create_claim_port.rollback()
                     claim.status_id = ClaimStatus.SUBMITTED
-                    logger.warning(
+                    logger.error(
                         "Failed to persist claim auto-approval",
                         extra=build_log_extra(
                             event="claim_auto_approval_persist_failed",

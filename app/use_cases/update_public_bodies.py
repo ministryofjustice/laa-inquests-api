@@ -39,7 +39,7 @@ class UpdatePublicBodiesUseCase:
             )
 
         if not public_body_ids:
-            logger.warning(
+            logger.error(
                 "No public bodies provided for updating",
                 extra=build_log_extra(
                     event="application_repository_update_public_bodies_failed",

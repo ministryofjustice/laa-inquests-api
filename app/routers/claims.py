@@ -122,7 +122,7 @@ async def upload_claim_evidence(
             file_name,
         )
     except ClaimEvidenceVirusDetectedError:
-        logger.warning(
+        logger.error(
             "Claim evidence upload failed virus check",
             extra=build_log_extra(
                 event="claim_evidence_uploaded_failed",
@@ -134,7 +134,7 @@ async def upload_claim_evidence(
         )
         raise HTTPException(status_code=422, detail="Uploaded file failed virus check")
     except ClaimEvidenceUploadError:
-        logger.warning(
+        logger.error(
             "Claim evidence upload failed",
             extra=build_log_extra(
                 event="claim_evidence_uploaded_failed",
@@ -175,7 +175,7 @@ def retrieve_claim_evidence(
     try:
         result = use_case.execute(claim_evidence_id)
     except ClaimEvidenceNotFoundError:
-        logger.warning(
+        logger.error(
             "Claim evidence retrieval failed: not found",
             extra=build_log_extra(
                 event="claim_evidence_retrieved_failed",
@@ -187,7 +187,7 @@ def retrieve_claim_evidence(
         )
         raise HTTPException(status_code=404, detail="Claim evidence not found")
     except ClaimEvidenceRetrievalError:
-        logger.warning(
+        logger.error(
             "Claim evidence retrieval failed",
             extra=build_log_extra(
                 event="claim_evidence_retrieved_failed",
@@ -254,7 +254,7 @@ def delete_claim_evidence(
     try:
         use_case.execute(claim_evidence_id)
     except ClaimEvidenceNotFoundError:
-        logger.warning(
+        logger.error(
             "Claim evidence delete failed: not found",
             extra=build_log_extra(
                 event="claim_evidence_deleted_failed",
@@ -266,7 +266,7 @@ def delete_claim_evidence(
         )
         raise HTTPException(status_code=404, detail="Claim evidence not found")
     except ClaimEvidenceDeleteError:
-        logger.warning(
+        logger.error(
             "Claim evidence delete failed",
             extra=build_log_extra(
                 event="claim_evidence_deleted_failed",

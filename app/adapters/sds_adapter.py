@@ -126,7 +126,7 @@ class SdsAdapter(SdsPort):
             )
             return True
         elif response.status_code == 400:
-            logger.warning(
+            logger.error(
                 "SDS coroners letter virus check failed",
                 extra=build_log_extra(
                     event="sds_coroners_letter_virus_check_failed",
@@ -209,7 +209,7 @@ class SdsAdapter(SdsPort):
             )
             return True
         elif response.status_code == 400:
-            logger.warning(
+            logger.error(
                 "SDS claim evidence virus check failed",
                 extra=build_log_extra(
                     event="sds_claim_evidence_virus_check_failed",

@@ -73,7 +73,7 @@ class RefuseDecisionUseCase:
             self.application_decision_port.commit()
             self.create_history_event_port.commit()
         except Exception as exception:
-            logger.warning(
+            logger.error(
                 "Failed to refuse application",
                 extra=build_log_extra(
                     event="refuse_decision_failed",
