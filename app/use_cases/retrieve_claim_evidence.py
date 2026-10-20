@@ -34,7 +34,10 @@ class RetrieveClaimEvidenceUseCase:
                     claim_evidence_id=str(claim_evidence_id),
                 ),
             )
-            raise ClaimEvidenceNotFoundError("Could not retrieve claim evidence")
+            raise ClaimEvidenceNotFoundError(
+                "Could not retrieve claim evidence",
+                safe_message="Could not retrieve claim evidence",
+            )
 
         try:
             content = self.sds_port.retrieve_claim_evidence(
@@ -49,7 +52,8 @@ class RetrieveClaimEvidenceUseCase:
                 ),
             )
             raise ClaimEvidenceRetrievalError(
-                "Failed to retrieve claim evidence"
+                "Failed to retrieve claim evidence",
+                safe_message="Failed to retrieve claim evidence",
             ) from exception
 
         result = ClaimEvidenceResult(

@@ -42,7 +42,8 @@ class UploadCoronersLetterUseCase:
                 ),
             )
             raise CoronersLetterVirusCheckError(
-                f"{file_name} upload failed due to server error during virus check: {e!s}"
+                f"{file_name} upload failed due to server error during virus check: {e!s}",
+                safe_message="Upload failed due to server error during virus check",
             ) from e
 
         if not is_safe:
@@ -54,7 +55,8 @@ class UploadCoronersLetterUseCase:
                 ),
             )
             raise CoronersLetterVirusDetectedError(
-                f"{file_name} upload failed due to identified virus"
+                f"{file_name} upload failed due to identified virus",
+                safe_message="Upload failed due to identified virus",
             )
 
         response_body = self.sds_port.save_coroners_letter(
@@ -90,5 +92,6 @@ class UploadCoronersLetterUseCase:
                 ),
             )
             raise CoronersLetterUploadError(
-                f"Coroners letter {file_name} was not uploaded successfully"
+                f"Coroners letter {file_name} was not uploaded successfully",
+                safe_message="Coroners letter was not uploaded successfully",
             )

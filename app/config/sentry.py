@@ -15,8 +15,10 @@ for noisy_logger in ("uvicorn.access", "httpx"):
 # request URLs (httpx), which include SDS file keys and pre-signed file URLs.
 _SENSITIVE_EXCEPTION_MODULES = ("sqlalchemy", "psycopg2", "pydantic", "httpx")
 
-# File-handling errors; their messages contain the uploaded file name or SDS file key,
-# which are derived from the name the user gave the file.
+# File-handling errors; their messages may contain the uploaded file name or SDS file
+# key. They can carry a `safe_message` (see SentryRedactableError) with that removed;
+# `_is_sensitive_exception` still exists as a fallback, redacting the whole message
+# when no `safe_message` was provided.
 _FILE_EXCEPTION_MODULE = "app.use_cases.exceptions"
 _FILE_EXCEPTION_PREFIXES = (
     "CoronersLetter",
@@ -99,12 +101,27 @@ def scrub_transaction(event: dict[str, Any], hint: dict[str, Any]) -> dict[str, 
     return event
 
 
+def _exception_chain(value: BaseException | None) -> list[BaseException]:
+    chain: list[BaseException] = []
+    while value is not None:
+        chain.append(value)
+        value = value.__cause__ or (
+            None if value.__suppress_context__ else value.__context__
+        )
+    chain.reverse()
+    return chain
+
+
 def scrub_event(event: dict[str, Any], hint: dict[str, Any]) -> dict[str, Any]:
     if "extra" in event:
         event["extra"] = _scrub_extra(event["extra"])
-    for exception in event.get("exception", {}).get("values", []):
-        if _is_sensitive_exception(exception):
-            exception["value"] = "[Filtered]"
+    exc_info = hint.get("exc_info")
+    real_chain = _exception_chain(exc_info[1]) if exc_info else []
+    for index, exception in enumerate(event.get("exception", {}).get("values", [])):
+        if not _is_sensitive_exception(exception):
+            continue
+        source = real_chain[index] if index < len(real_chain) else None
+        exception["value"] = getattr(source, "safe_message", None) or "[Filtered]"
     return event
 
 
