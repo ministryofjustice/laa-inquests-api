@@ -34,6 +34,7 @@ jobs:
           kube-cluster: ${{ secrets.KUBE_CLUSTER }}
           kube-namespace: ${{ secrets.KUBE_NAMESPACE }}
           image-tag: ${{ github.sha }}
+          sentry-dsn: ${{ secrets.SENTRY_DSN }}
           service_name: ${{ vars.SERVICE_NAME }}
           session_name: ${{ vars.SESSION_NAME}}
           session_secret: ${{ secrets.SESSION_SECRET }}
@@ -85,6 +86,7 @@ jobs:
           kube-cluster: ${{ secrets.KUBE_CLUSTER }}
           kube-namespace: ${{ secrets.KUBE_NAMESPACE }}
           image-tag: ${{ github.sha }}
+          sentry-dsn: ${{ secrets.SENTRY_DSN }}
           service_name: ${{ vars.SERVICE_NAME }}
           session_name: ${{ vars.SESSION_NAME}}
           session_secret: ${{ secrets.SESSION_SECRET }}
