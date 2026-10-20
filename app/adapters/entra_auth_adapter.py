@@ -110,7 +110,7 @@ class EntraAuthAdapter:
                 app_roles=app_roles,
             )
         except HTTPException:
-            logger.warning(
+            logger.error(
                 "Entra token validation failed",
                 extra=build_log_extra(
                     event="entra_token_validation_failed",
@@ -118,7 +118,7 @@ class EntraAuthAdapter:
             )
             raise
         except (jwt.PyJWTError, jwt.PyJWKClientError):
-            logger.warning(
+            logger.error(
                 "Entra token validation failed",
                 extra=build_log_extra(
                     event="entra_token_validation_failed",

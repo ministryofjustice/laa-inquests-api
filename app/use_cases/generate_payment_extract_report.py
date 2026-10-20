@@ -79,7 +79,7 @@ class GeneratePaymentExtractReportUseCase:
 
         for firm_code in firm_codes:
             if firm_names.get(firm_code) is None:
-                logger.warning(
+                logger.error(
                     "Payment extract report generation failed: firm name missing",
                     extra=build_log_extra(
                         event="payment_extract_report_generation_failed",
@@ -102,7 +102,7 @@ class GeneratePaymentExtractReportUseCase:
             try:
                 classifications[line_type] = classify_payment_line(line_type)
             except UnclassifiablePaymentLineError as exc:
-                logger.warning(
+                logger.error(
                     "Payment extract report generation failed: unclassifiable line",
                     extra=build_log_extra(
                         event="payment_extract_report_generation_failed",

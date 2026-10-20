@@ -110,7 +110,8 @@ class SdsAdapter(SdsPort):
                 ),
             )
             raise CoronersLetterUploadError(
-                f"Failed to perform virus check due to a network error: {exc}"
+                f"Failed to perform virus check due to a network error: {exc}",
+                safe_message="Failed to perform virus check due to a network error",
             ) from exc
 
         if response.status_code == 200:
@@ -126,7 +127,7 @@ class SdsAdapter(SdsPort):
             )
             return True
         elif response.status_code == 400:
-            logger.warning(
+            logger.error(
                 "SDS coroners letter virus check failed",
                 extra=build_log_extra(
                     event="sds_coroners_letter_virus_check_failed",
@@ -148,7 +149,7 @@ class SdsAdapter(SdsPort):
                     duration_ms=duration_ms(started_at),
                 ),
             )
-            raise CoronersLetterUploadError(
+            raise CoronersLetterUploadError.safe(
                 f"Failed to perform virus check. API status code: {response.status_code}"
             )
 
@@ -193,7 +194,8 @@ class SdsAdapter(SdsPort):
                 ),
             )
             raise ClaimEvidenceUploadError(
-                f"Failed to perform virus check due to a network error: {exc}"
+                f"Failed to perform virus check due to a network error: {exc}",
+                safe_message="Failed to perform virus check due to a network error",
             ) from exc
 
         if response.status_code == 200:
@@ -209,7 +211,7 @@ class SdsAdapter(SdsPort):
             )
             return True
         elif response.status_code == 400:
-            logger.warning(
+            logger.error(
                 "SDS claim evidence virus check failed",
                 extra=build_log_extra(
                     event="sds_claim_evidence_virus_check_failed",
@@ -231,7 +233,7 @@ class SdsAdapter(SdsPort):
                     duration_ms=duration_ms(started_at),
                 ),
             )
-            raise ClaimEvidenceUploadError(
+            raise ClaimEvidenceUploadError.safe(
                 f"Failed to perform virus check. API status code: {response.status_code}"
             )
 
@@ -305,7 +307,7 @@ class SdsAdapter(SdsPort):
     def retrieve_coroners_letter(self, file_name: str) -> Iterator[bytes]:
         started_at = time.perf_counter()
         if not file_name or not file_name.strip():
-            raise InvalidCoronersLetterDocumentIdError(
+            raise InvalidCoronersLetterDocumentIdError.safe(
                 "file_name must be a non-empty string"
             )
         token = self._get_token()
@@ -315,11 +317,11 @@ class SdsAdapter(SdsPort):
             headers={"Authorization": f"Bearer {token}"},
         )
         if response.status_code != 200:
-            message = f"SDS returned {response.status_code} while retrieving coroner's letter for file key {file_name}"
-            _raise_sds_retrieval_error(
-                message,
-                log_message=f"SDS returned {response.status_code} while retrieving coroner's letter",
+            safe_message = (
+                f"SDS returned {response.status_code} while retrieving coroner's letter"
             )
+            message = f"{safe_message} for file key {file_name}"
+            _raise_sds_retrieval_error(message, log_message=safe_message)
 
         try:
             file_url = response.json()["fileURL"]
@@ -341,15 +343,15 @@ class SdsAdapter(SdsPort):
             with httpx.stream("GET", file_url) as stream:
                 yield from stream.iter_bytes()
         except (httpx.HTTPError, httpx.StreamError) as exc:
+            safe_message = "Failed to stream coroners letter"
             _raise_sds_retrieval_error(
-                f"Failed to stream coroners letter: \n {exc}",
-                log_message="Failed to stream coroners letter",
+                f"{safe_message}: \n {exc}", log_message=safe_message
             )
 
     def retrieve_claim_evidence(self, file_name: str) -> Iterator[bytes]:
         started_at = time.perf_counter()
         if not file_name or not file_name.strip():
-            raise InvalidClaimEvidenceDocumentIdError(
+            raise InvalidClaimEvidenceDocumentIdError.safe(
                 "file_name must be a non-empty string"
             )
         token = self._get_token()
@@ -359,11 +361,11 @@ class SdsAdapter(SdsPort):
             headers={"Authorization": f"Bearer {token}"},
         )
         if response.status_code != 200:
-            message = f"SDS returned {response.status_code} while retrieving claim evidence for file key {file_name}"
-            _raise_sds_claim_evidence_retrieval_error(
-                message,
-                log_message=f"SDS returned {response.status_code} while retrieving claim evidence",
+            safe_message = (
+                f"SDS returned {response.status_code} while retrieving claim evidence"
             )
+            message = f"{safe_message} for file key {file_name}"
+            _raise_sds_claim_evidence_retrieval_error(message, log_message=safe_message)
 
         try:
             file_url = response.json()["fileURL"]
@@ -387,15 +389,15 @@ class SdsAdapter(SdsPort):
             with httpx.stream("GET", file_url) as stream:
                 yield from stream.iter_bytes()
         except (httpx.HTTPError, httpx.StreamError) as exc:
+            safe_message = "Failed to stream claim evidence"
             _raise_sds_claim_evidence_retrieval_error(
-                f"Failed to stream claim evidence: \n {exc}",
-                log_message="Failed to stream claim evidence",
+                f"{safe_message}: \n {exc}", log_message=safe_message
             )
 
     def delete_claim_evidence(self, file_name: str) -> None:
         started_at = time.perf_counter()
         if not file_name or not file_name.strip():
-            raise InvalidClaimEvidenceDocumentIdError(
+            raise InvalidClaimEvidenceDocumentIdError.safe(
                 "file_name must be a non-empty string"
             )
         token = self._get_token()
@@ -406,13 +408,15 @@ class SdsAdapter(SdsPort):
         )
         if response.status_code != 200:
             raise ClaimEvidenceDeleteError(
-                f"SDS returned {response.status_code} while deleting claim evidence for file key {file_name}"
+                f"SDS returned {response.status_code} while deleting claim evidence for file key {file_name}",
+                safe_message=f"SDS returned {response.status_code} while deleting claim evidence",
             )
 
         delete_status_code = _extract_delete_status_code(response.json(), file_name)
         if delete_status_code != 204:
             raise ClaimEvidenceDeleteError(
-                f"SDS returned {delete_status_code} while deleting claim evidence for file key {file_name}"
+                f"SDS returned {delete_status_code} while deleting claim evidence for file key {file_name}",
+                safe_message=f"SDS returned {delete_status_code} while deleting claim evidence",
             )
         logger.info(
             "SDS claim evidence deleted",
@@ -428,7 +432,7 @@ class SdsAdapter(SdsPort):
     def delete_coroners_letter(self, file_name: str) -> None:
         started_at = time.perf_counter()
         if not file_name or not file_name.strip():
-            raise InvalidCoronersLetterDocumentIdError(
+            raise InvalidCoronersLetterDocumentIdError.safe(
                 "file_name must be a non-empty string"
             )
         token = self._get_token()
@@ -439,13 +443,15 @@ class SdsAdapter(SdsPort):
         )
         if response.status_code != 200:
             raise CoronersLetterDeleteError(
-                f"SDS returned {response.status_code} while deleting coroners letter for file key {file_name}"
+                f"SDS returned {response.status_code} while deleting coroners letter for file key {file_name}",
+                safe_message=f"SDS returned {response.status_code} while deleting coroners letter",
             )
 
         delete_status_code = _extract_delete_status_code(response.json(), file_name)
         if delete_status_code != 204:
             raise CoronersLetterDeleteError(
-                f"SDS returned {delete_status_code} while deleting coroners letter for file key {file_name}"
+                f"SDS returned {delete_status_code} while deleting coroners letter for file key {file_name}",
+                safe_message=f"SDS returned {delete_status_code} while deleting coroners letter",
             )
         logger.info(
             "SDS coroners letter deleted",
@@ -477,7 +483,7 @@ def _raise_sds_retrieval_error(
             error_message=safe_message,
         ),
     )
-    raise SDSLetterRetrievalError(message_str)
+    raise SDSLetterRetrievalError(message_str, safe_message=safe_message)
 
 
 def _raise_sds_claim_evidence_retrieval_error(
@@ -494,7 +500,7 @@ def _raise_sds_claim_evidence_retrieval_error(
             error_message=safe_message,
         ),
     )
-    raise SDSClaimEvidenceRetrievalError(message_str)
+    raise SDSClaimEvidenceRetrievalError(message_str, safe_message=safe_message)
 
 
 def _extract_delete_status_code(payload, file_name: str) -> int:
@@ -523,5 +529,6 @@ def _extract_delete_status_code(payload, file_name: str) -> int:
                 return status_code
 
     raise ClaimEvidenceDeleteError(
-        f"Unexpected SDS delete response while deleting claim evidence for file key {file_name}"
+        f"Unexpected SDS delete response while deleting claim evidence for file key {file_name}",
+        safe_message="Unexpected SDS delete response while deleting claim evidence",
     )

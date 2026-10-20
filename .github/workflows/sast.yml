@@ -11,7 +11,8 @@ on:
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
-    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
+    runs-on:
+      ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
     permissions:
       # required for all workflows
       security-events: write
@@ -66,7 +67,11 @@ jobs:
           pip install semgrep
       - name: Run Semgrep on Python
         run: |
-          semgrep --config p/python --config p/fastapi --config p/github-actions --sarif --sarif-output semgrep-results.sarif --strict --exclude deploy/infrastructure/helm/templates .
+          semgrep --config p/python --config p/fastapi --config p/github-actions --sarif --sarif-output semgrep-results.sarif --strict -j 2 \
+          --exclude deploy/infrastructure/helm/templates \
+          --exclude app/db/migrations/versions \
+          --exclude '**/__pycache__' \
+          .
       - name: Upload Semgrep SARIF as artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()

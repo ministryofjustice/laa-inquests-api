@@ -34,20 +34,20 @@ class UploadCoronersLetterUseCase:
                 coroners_letter, file_name
             )
         except CoronersLetterUploadError as e:
-            logger.warning(
+            logger.exception(
                 "Coroners letter upload failed during virus check",
                 extra=build_log_extra(
                     event="coroners_letter_upload_failed",
                     file_name=file_name,
                 ),
-                exc_info=True,
             )
             raise CoronersLetterVirusCheckError(
-                f"{file_name} upload failed due to server error during virus check: {e!s}"
+                f"{file_name} upload failed due to server error during virus check: {e!s}",
+                safe_message="Upload failed due to server error during virus check",
             ) from e
 
         if not is_safe:
-            logger.warning(
+            logger.error(
                 "Coroners letter upload failed due to virus",
                 extra=build_log_extra(
                     event="coroners_letter_upload_failed",
@@ -55,7 +55,8 @@ class UploadCoronersLetterUseCase:
                 ),
             )
             raise CoronersLetterVirusDetectedError(
-                f"{file_name} upload failed due to identified virus"
+                f"{file_name} upload failed due to identified virus",
+                safe_message="Upload failed due to identified virus",
             )
 
         response_body = self.sds_port.save_coroners_letter(
@@ -83,7 +84,7 @@ class UploadCoronersLetterUseCase:
             )
             return coroners_letter_id
         else:
-            logger.warning(
+            logger.error(
                 "Coroners letter upload failed",
                 extra=build_log_extra(
                     event="coroners_letter_upload_failed",
@@ -91,5 +92,6 @@ class UploadCoronersLetterUseCase:
                 ),
             )
             raise CoronersLetterUploadError(
-                f"Coroners letter {file_name} was not uploaded successfully"
+                f"Coroners letter {file_name} was not uploaded successfully",
+                safe_message="Coroners letter was not uploaded successfully",
             )

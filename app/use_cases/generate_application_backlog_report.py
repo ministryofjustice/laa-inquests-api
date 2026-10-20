@@ -77,13 +77,12 @@ class GenerateApplicationBacklogReportUseCase:
             )
             return output.getvalue()
         except Exception:
-            logger.warning(
+            logger.exception(
                 "Application backlog report generation failed",
                 extra=build_log_extra(
                     event="application_backlog_report_generation_failed",
                     application_count=len(applications),
                 ),
-                exc_info=True,
             )
             raise
 

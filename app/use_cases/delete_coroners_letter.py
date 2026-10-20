@@ -29,14 +29,14 @@ class DeleteCoronersLetterUseCase:
             coroners_letter_id
         )
         if coroners_letter is None:
-            logger.warning(
+            logger.error(
                 "Coroners letter delete failed",
                 extra=build_log_extra(
                     event="coroners_letter_delete_failed",
                     coroners_letter_id=str(coroners_letter_id),
                 ),
             )
-            raise CoronersLetterNotFoundError("Coroners letter not found")
+            raise CoronersLetterNotFoundError.safe("Coroners letter not found")
 
         try:
             self.sds_port.delete_coroners_letter(coroners_letter.sds_file_name)
@@ -44,14 +44,14 @@ class DeleteCoronersLetterUseCase:
                 coroners_letter_id
             )
             if not deleted:
-                logger.warning(
+                logger.error(
                     "Coroners letter delete failed",
                     extra=build_log_extra(
                         event="coroners_letter_delete_failed",
                         coroners_letter_id=str(coroners_letter_id),
                     ),
                 )
-                raise CoronersLetterNotFoundError("Coroners letter not found")
+                raise CoronersLetterNotFoundError.safe("Coroners letter not found")
             logger.info(
                 "Coroners letter deleted",
                 extra=build_log_extra(
@@ -62,12 +62,13 @@ class DeleteCoronersLetterUseCase:
         except CoronersLetterNotFoundError:
             raise
         except Exception as exc:
-            logger.warning(
+            logger.exception(
                 "Coroners letter delete failed",
                 extra=build_log_extra(
                     event="coroners_letter_delete_failed",
                     coroners_letter_id=str(coroners_letter_id),
                 ),
-                exc_info=True,
             )
-            raise CoronersLetterDeleteError("Failed to delete coroners letter") from exc
+            raise CoronersLetterDeleteError.safe(
+                "Failed to delete coroners letter"
+            ) from exc

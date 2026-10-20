@@ -29,14 +29,14 @@ class DeleteClaimEvidenceUseCase:
             claim_evidence_id
         )
         if claim_evidence is None:
-            logger.warning(
+            logger.error(
                 "Claim evidence delete failed",
                 extra=build_log_extra(
                     event="claim_evidence_delete_failed",
                     claim_evidence_id=str(claim_evidence_id),
                 ),
             )
-            raise ClaimEvidenceNotFoundError("Claim evidence not found")
+            raise ClaimEvidenceNotFoundError.safe("Claim evidence not found")
 
         try:
             self.sds_port.delete_claim_evidence(claim_evidence.sds_file_name)
@@ -44,14 +44,14 @@ class DeleteClaimEvidenceUseCase:
                 claim_evidence_id
             )
             if not deleted:
-                logger.warning(
+                logger.error(
                     "Claim evidence delete failed",
                     extra=build_log_extra(
                         event="claim_evidence_delete_failed",
                         claim_evidence_id=str(claim_evidence_id),
                     ),
                 )
-                raise ClaimEvidenceNotFoundError("Claim evidence not found")
+                raise ClaimEvidenceNotFoundError.safe("Claim evidence not found")
             logger.info(
                 "Claim evidence deleted",
                 extra=build_log_extra(
@@ -62,12 +62,13 @@ class DeleteClaimEvidenceUseCase:
         except ClaimEvidenceNotFoundError:
             raise
         except Exception as exc:
-            logger.warning(
+            logger.exception(
                 "Claim evidence delete failed",
                 extra=build_log_extra(
                     event="claim_evidence_delete_failed",
                     claim_evidence_id=str(claim_evidence_id),
                 ),
-                exc_info=True,
             )
-            raise ClaimEvidenceDeleteError("Failed to delete claim evidence") from exc
+            raise ClaimEvidenceDeleteError.safe(
+                "Failed to delete claim evidence"
+            ) from exc

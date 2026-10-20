@@ -24,14 +24,14 @@ class RetrieveCoronersLetterUseCase:
             laa_reference
         )
         if application is None or application.coroners_letter is None:
-            logger.warning(
+            logger.error(
                 "Coroners letter retrieval failed: letter not found",
                 extra=build_log_extra(
                     event="coroners_letter_retrieval_failed",
                     laa_reference=laa_reference,
                 ),
             )
-            raise CoronersLetterNotFoundError("Could not retrieve coroners letter")
+            raise CoronersLetterNotFoundError.safe("Could not retrieve coroners letter")
         sds_file_name = application.coroners_letter.sds_file_name
 
         try:
@@ -44,7 +44,7 @@ class RetrieveCoronersLetterUseCase:
                     laa_reference=laa_reference,
                 ),
             )
-            raise CoronersLetterRetrievalError(
+            raise CoronersLetterRetrievalError.safe(
                 "Failed to retrieve coroners letter"
             ) from exception
 

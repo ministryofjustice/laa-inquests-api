@@ -38,7 +38,7 @@ class GenerateClaimBacklogReportUseCase:
                 firm_name = firm_name_lookup.get(firm_code)
 
                 if firm_name is None:
-                    logger.warning(
+                    logger.error(
                         "Claim backlog report generation failed: firm name missing",
                         extra=build_log_extra(
                             event="claim_backlog_report_generation_failed",
@@ -86,13 +86,12 @@ class GenerateClaimBacklogReportUseCase:
             )
             return output.getvalue()
         except Exception:
-            logger.warning(
+            logger.exception(
                 "Claim backlog report generation failed",
                 extra=build_log_extra(
                     event="claim_backlog_report_generation_failed",
                     claim_count=len(claims),
                 ),
-                exc_info=True,
             )
             raise
 

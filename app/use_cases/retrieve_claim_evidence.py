@@ -27,29 +27,28 @@ class RetrieveClaimEvidenceUseCase:
             claim_evidence_id
         )
         if claim_evidence is None:
-            logger.warning(
+            logger.error(
                 "Claim evidence retrieval failed",
                 extra=build_log_extra(
                     event="claim_evidence_retrieval_failed",
                     claim_evidence_id=str(claim_evidence_id),
                 ),
             )
-            raise ClaimEvidenceNotFoundError("Could not retrieve claim evidence")
+            raise ClaimEvidenceNotFoundError.safe("Could not retrieve claim evidence")
 
         try:
             content = self.sds_port.retrieve_claim_evidence(
                 claim_evidence.sds_file_name
             )
         except Exception as exception:
-            logger.warning(
+            logger.exception(
                 "Claim evidence retrieval failed",
                 extra=build_log_extra(
                     event="claim_evidence_retrieval_failed",
                     claim_evidence_id=str(claim_evidence_id),
                 ),
-                exc_info=True,
             )
-            raise ClaimEvidenceRetrievalError(
+            raise ClaimEvidenceRetrievalError.safe(
                 "Failed to retrieve claim evidence"
             ) from exception
 

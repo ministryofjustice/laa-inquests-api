@@ -63,7 +63,14 @@ def create_app():
                         status_code=429,
                         content={"detail": "Rate limit exceeded"},
                     )
-                    logger.warning("Rate limit exceeded for client %s", client_ip)
+                    # client_ip stays out of the message text so it can't leak to Sentry if this is ever bumped to .error.
+                    logger.warning(
+                        "Rate limit exceeded",
+                        extra=build_log_extra(
+                            event="rate_limit_exceeded",
+                            client_ip=client_ip,
+                        ),
+                    )
             response.headers["x-request-id"] = request.state.request_id
             response.headers["x-correlation-id"] = request.state.correlation_id
             logger.info(

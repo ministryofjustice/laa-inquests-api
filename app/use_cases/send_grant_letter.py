@@ -37,12 +37,11 @@ class SendGrantLetterUseCase:
                 ),
             )
         except Exception:
-            logger.warning(
+            logger.exception(
                 "Grant letter send failed",
                 extra=build_log_extra(
                     event="grant_letter_send_failed",
                     laa_reference=certificate_context.laa_reference,
                 ),
-                exc_info=True,
             )
             raise

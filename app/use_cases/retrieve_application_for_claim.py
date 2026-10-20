@@ -14,7 +14,7 @@ class RetrieveApplicationForClaimUseCase:
     def execute(self, claim_reference: str) -> str:
         claim = self.get_claim_by_id_port.get_claim_by_reference(claim_reference)
         if claim is None or claim.application is None:
-            logger.warning(
+            logger.error(
                 "Application lookup for claim failed",
                 extra=build_log_extra(
                     event="application_for_claim_retrieval_failed",
