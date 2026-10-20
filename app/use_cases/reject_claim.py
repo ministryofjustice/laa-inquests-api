@@ -118,7 +118,7 @@ class RejectClaimUseCase:
                     firm_name=firm_name,
                 )
             except Exception:
-                logger.warning(
+                logger.error(
                     "Failed to send claim rejection email for claim %s",
                     command.claim_reference,
                     exc_info=True,

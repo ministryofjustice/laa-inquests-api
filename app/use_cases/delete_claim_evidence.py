@@ -29,7 +29,7 @@ class DeleteClaimEvidenceUseCase:
             claim_evidence_id
         )
         if claim_evidence is None:
-            logger.warning(
+            logger.error(
                 "Claim evidence delete failed",
                 extra=build_log_extra(
                     event="claim_evidence_delete_failed",
@@ -44,7 +44,7 @@ class DeleteClaimEvidenceUseCase:
                 claim_evidence_id
             )
             if not deleted:
-                logger.warning(
+                logger.error(
                     "Claim evidence delete failed",
                     extra=build_log_extra(
                         event="claim_evidence_delete_failed",
@@ -62,7 +62,7 @@ class DeleteClaimEvidenceUseCase:
         except ClaimEvidenceNotFoundError:
             raise
         except Exception as exc:
-            logger.warning(
+            logger.error(
                 "Claim evidence delete failed",
                 extra=build_log_extra(
                     event="claim_evidence_delete_failed",

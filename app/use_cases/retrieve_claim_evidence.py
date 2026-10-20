@@ -27,7 +27,7 @@ class RetrieveClaimEvidenceUseCase:
             claim_evidence_id
         )
         if claim_evidence is None:
-            logger.warning(
+            logger.error(
                 "Claim evidence retrieval failed",
                 extra=build_log_extra(
                     event="claim_evidence_retrieval_failed",
@@ -41,7 +41,7 @@ class RetrieveClaimEvidenceUseCase:
                 claim_evidence.sds_file_name
             )
         except Exception as exception:
-            logger.warning(
+            logger.error(
                 "Claim evidence retrieval failed",
                 extra=build_log_extra(
                     event="claim_evidence_retrieval_failed",

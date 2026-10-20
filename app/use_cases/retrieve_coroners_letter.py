@@ -24,7 +24,7 @@ class RetrieveCoronersLetterUseCase:
             laa_reference
         )
         if application is None or application.coroners_letter is None:
-            logger.warning(
+            logger.error(
                 "Coroners letter retrieval failed: letter not found",
                 extra=build_log_extra(
                     event="coroners_letter_retrieval_failed",

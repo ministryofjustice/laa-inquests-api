@@ -27,7 +27,7 @@ class RetrieveCertificateUseCase:
             laa_reference
         )
         if application is None:
-            logger.warning(
+            logger.error(
                 "Retrieve certificate failed: application not found",
                 extra=build_log_extra(
                     event="certificate_retrieval_failed",
@@ -37,7 +37,7 @@ class RetrieveCertificateUseCase:
             raise ApplicationNotFoundError(f"Application {laa_reference} not found")
 
         if application.overall_decision != MeritsDecision.GRANTED:
-            logger.warning(
+            logger.error(
                 "Retrieve certificate failed: application not granted",
                 extra=build_log_extra(
                     event="certificate_retrieval_failed",

@@ -34,7 +34,7 @@ class UploadCoronersLetterUseCase:
                 coroners_letter, file_name
             )
         except CoronersLetterUploadError as e:
-            logger.warning(
+            logger.error(
                 "Coroners letter upload failed during virus check",
                 extra=build_log_extra(
                     event="coroners_letter_upload_failed",
@@ -47,7 +47,7 @@ class UploadCoronersLetterUseCase:
             ) from e
 
         if not is_safe:
-            logger.warning(
+            logger.error(
                 "Coroners letter upload failed due to virus",
                 extra=build_log_extra(
                     event="coroners_letter_upload_failed",
@@ -83,7 +83,7 @@ class UploadCoronersLetterUseCase:
             )
             return coroners_letter_id
         else:
-            logger.warning(
+            logger.error(
                 "Coroners letter upload failed",
                 extra=build_log_extra(
                     event="coroners_letter_upload_failed",
