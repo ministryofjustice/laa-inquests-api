@@ -38,7 +38,8 @@ def _is_sensitive_exception(exception: dict[str, Any]) -> bool:
 
 
 # ERROR logs send their `extra` (built by build_log_extra) with the event. Only
-# non-identifying keys are kept; `route` is excluded as paths contain LAA references.
+# non-identifying keys are kept; case/claim references and record IDs are not
+# personally identifying, so they are allowed through.
 _SAFE_LOG_EXTRA_KEYS = frozenset(
     {
         "event",
@@ -49,6 +50,15 @@ _SAFE_LOG_EXTRA_KEYS = frozenset(
         "duration_ms",
         "error_type",
         "exception_type",
+        "route",
+        "laa_reference",
+        "claim_reference",
+        "firm_code",
+        "application_id",
+        "claim_evidence_id",
+        "coroners_letter_id",
+        "public_body_id",
+        "provider_id",
     }
 )
 
