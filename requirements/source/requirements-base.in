@@ -1,4 +1,5 @@
 fastapi[standard]>=0.136.0
+certifi>=2026.10.18
 typing-extensions>=4.16.0
 sqlalchemy[asyncio]
 sqlmodel
