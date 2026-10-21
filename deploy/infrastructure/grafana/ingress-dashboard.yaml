@@ -6,7 +6,7 @@ metadata:
   labels:
     grafana_dashboard: ""
 data:
-  laa-inquests-api-ingress-dashboard.json: |
+  laa-inquests-api-__APP_ENVIRONMENT__-ingress-dashboard.json: |
     {
       "annotations": {
         "list": [
@@ -189,7 +189,7 @@ data:
                 "type": "prometheus",
                 "uid": "prometheus"
               },
-              "expr": "avg(increase(nginx_ingress_controller_request_duration_seconds_sum{exported_namespace = \"$namespace\", path !~\"/socket.io/.*\", ingress = \"$ingress\"}[1m]) / increase(nginx_ingress_controller_request_duration_seconds_count{exported_namespace = \"$namespace\", path !~\"/socket.io/.*\", ingress = \"$ingress\"}[1m]) > 0)/2",
+              "expr": "sum(increase(nginx_ingress_controller_request_duration_seconds_sum{exported_namespace = \"$namespace\", path !~\"/socket.io/.*\", ingress = \"$ingress\"}[1m])) / sum(increase(nginx_ingress_controller_request_duration_seconds_count{exported_namespace = \"$namespace\", path !~\"/socket.io/.*\", ingress = \"$ingress\"}[1m])) / 2",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 2,
@@ -385,7 +385,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "sum by(status) (increase(nginx_ingress_controller_requests{exported_namespace=\"$namespace\", path!~\"/socket.io/.*\", ingress=\"$ingress\", status=~\"4..|5..\"}[1m])) /2",
+              "expr": "sum by(status) (increase(nginx_ingress_controller_requests{exported_namespace=\"$namespace\", path!~\"/socket.io/.*\", ingress=\"$ingress\", status=~\"4..|5..\"}[1m])) /2 or on() vector(0)",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 2,
@@ -750,7 +750,7 @@ data:
       },
       "timezone": "browser",
       "title": "laa-inquests-api Ingress",
-      "uid": "efhkw0dhkj9q8c",
+      "uid": "inquestsapiingress__APP_ENVIRONMENT__",
       "version": 3,
       "weekStart": ""
     }
