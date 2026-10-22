@@ -255,3 +255,17 @@ class TestUploadClaimEvidenceSentryPii:
         assert len(captured_sentry_events) >= 1
         assert "Jane" not in json.dumps(captured_sentry_events)
         assert "passport" not in json.dumps(captured_sentry_events)
+
+    def test_422_virus_detected_sends_event_without_file_name_to_sentry(
+        self, client, captured_sentry_events
+    ):
+        mock_sds = MagicMock()
+        mock_sds.virus_check_claim_evidence.return_value = False
+        api.dependency_overrides[get_sds_port] = lambda: mock_sds
+
+        response = self._upload(client)
+
+        assert response.status_code == 422
+        assert len(captured_sentry_events) >= 1
+        assert "Jane" not in json.dumps(captured_sentry_events)
+        assert "passport" not in json.dumps(captured_sentry_events)
