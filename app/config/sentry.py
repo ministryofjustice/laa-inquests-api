@@ -2,9 +2,16 @@ import logging
 from typing import Any
 from urllib.parse import urlsplit
 
+from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration, ignore_logger
 
 from app.config import Config
+
+# The SDK's default only treats 500-599 as failed requests, so an explicit
+# `HTTPException(422, ...)` (e.g. virus detected on upload) is never sent.
+# FastAPI's own request validation errors have no `status_code` attribute, so
+# widening this does not also start reporting routine payload validation 422s.
+_FAILED_REQUEST_STATUS_CODES = {*range(400, 600)}
 
 # Their messages contain client IPs, full request URLs and query strings.
 for noisy_logger in ("uvicorn.access", "httpx"):
@@ -130,7 +137,10 @@ sentry_config = {
     # Logs are already written to stdout as JSON; do not duplicate them in Sentry.
     "enable_logs": False,
     # No log breadcrumbs (they carry the log's extra fields); ERROR logs still raise events.
-    "integrations": [LoggingIntegration(level=None, event_level=logging.ERROR)],
+    "integrations": [
+        LoggingIntegration(level=None, event_level=logging.ERROR),
+        FastApiIntegration(failed_request_status_codes=_FAILED_REQUEST_STATUS_CODES),
+    ],
     "before_send": scrub_event,
     "before_send_transaction": scrub_transaction,
     "before_breadcrumb": scrub_breadcrumb,

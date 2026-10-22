@@ -6,7 +6,7 @@ metadata:
   labels:
     grafana_dashboard: ""
 data:
-  laa-inquests-api-pods-dashboard.json: |
+  laa-inquests-api-__APP_ENVIRONMENT__-pods-dashboard.json: |
     {
       "__inputs": [
         {
@@ -117,7 +117,7 @@ data:
           "steppedLine": false,
           "targets": [
             {
-              "expr": "container_memory_usage_bytes{namespace='$namespace',container='api'}",
+              "expr": "container_memory_usage_bytes{namespace='$namespace',container='laa-inquests-api'}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{pod}}",
@@ -224,7 +224,7 @@ data:
           "steppedLine": false,
           "targets": [
             {
-              "expr": "increase(container_cpu_usage_seconds_total{namespace='$namespace',container='api'}[1m])/2",
+              "expr": "increase(container_cpu_usage_seconds_total{namespace='$namespace',container='laa-inquests-api'}[1m])/2",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{pod}}",
@@ -330,7 +330,7 @@ data:
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg by(pod_name) (increase(container_network_receive_bytes_total{namespace='$namespace'}[1m))/2",
+              "expr": "avg by(pod_name) (increase(container_network_receive_bytes_total{namespace='$namespace'}[1m]))/2",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "Avg Bytes Recv/sec",
@@ -451,5 +451,6 @@ data:
       },
       "timezone": "browser",
       "title": "laa-inquests-api Pods",
+      "uid": "inquestsapipods__APP_ENVIRONMENT__",
       "version": 1
     }

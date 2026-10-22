@@ -85,16 +85,17 @@ runs:
     - uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076
       id: login-ecr
 
-    - name: Deploy infrastructure to dev
+    - name: Deploy monitoring dashboards
       shell: bash
       env:
         APP_ENVIRONMENT: ${{ inputs.app-environment }}
+        K8S_NAMESPACE: ${{ inputs.kube-namespace }}
       run: |
-        if [ "$APP_ENVIRONMENT" == 'dev' ]
-        then
-          echo "DEPLOYING"
-          kubectl apply --record=false -f ./deploy/infrastructure/grafana/
-        fi
+        for f in ./deploy/infrastructure/grafana/*.yaml; do
+          sed -e "s/laa-inquests-api-dev/${K8S_NAMESPACE}/g" \
+              -e "s/__APP_ENVIRONMENT__/${APP_ENVIRONMENT}/g" \
+              "$f" | kubectl apply --record=false -f -
+        done
     - run: |
         docker build -t "$REGISTRY/$REPOSITORY:$IMAGE_TAG" .
         docker push "$REGISTRY/$REPOSITORY:$IMAGE_TAG"
@@ -109,7 +110,8 @@ runs:
       env:
         SERVICE_NAME_INPUT: ${{ inputs.service_name || 'Inquests' }}
         SESSION_NAME_INPUT: ${{ inputs.session_name || 'sessionId' }}
-        SESSION_SECRET_INPUT: ${{ inputs.session_secret || 'default-session-secret' }}
+        SESSION_SECRET_INPUT:
+          ${{ inputs.session_secret || 'default-session-secret' }}
       run: |
         echo "NODE_ENV=production" >> "$GITHUB_ENV"
         echo "SERVICE_NAME=$SERVICE_NAME_INPUT" >> "$GITHUB_ENV"

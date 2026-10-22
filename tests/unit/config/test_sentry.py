@@ -8,6 +8,7 @@ import pytest
 import sentry_sdk
 from psycopg2.errors import UniqueViolation
 from pydantic import BaseModel, ValidationError
+from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.transport import Transport
 from sqlalchemy.exc import IntegrityError
 
@@ -76,6 +77,35 @@ def test_data_collection_disables_gen_ai_and_graphql():
 
     assert data_collection["gen_ai"] == {"inputs": False, "outputs": False}
     assert data_collection["graphql"] == {"document": False, "variables": False}
+
+
+def test_failed_request_status_codes_include_422():
+    client = sentry_sdk.Client(**{**sentry_config, "dsn": None})
+    integration = client.get_integration(FastApiIntegration)
+
+    assert 422 in integration.failed_request_status_codes
+
+
+def test_failed_request_status_codes_still_include_5xx():
+    client = sentry_sdk.Client(**{**sentry_config, "dsn": None})
+    integration = client.get_integration(FastApiIntegration)
+
+    assert 500 in integration.failed_request_status_codes
+    assert 599 in integration.failed_request_status_codes
+
+
+def test_failed_request_status_codes_include_404():
+    client = sentry_sdk.Client(**{**sentry_config, "dsn": None})
+    integration = client.get_integration(FastApiIntegration)
+
+    assert 404 in integration.failed_request_status_codes
+
+
+def test_failed_request_status_codes_exclude_3xx_and_below():
+    client = sentry_sdk.Client(**{**sentry_config, "dsn": None})
+    integration = client.get_integration(FastApiIntegration)
+
+    assert 399 not in integration.failed_request_status_codes
 
 
 @pytest.fixture
