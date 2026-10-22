@@ -74,6 +74,10 @@ class ClaimNotFoundError(Exception):
     pass
 
 
+class ClaimAssessmentConflictError(Exception):
+    pass
+
+
 class ClaimEvidenceRetrievalError(SentryRedactableError):
     pass
 

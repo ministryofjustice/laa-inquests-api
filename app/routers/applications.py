@@ -110,6 +110,7 @@ from app.use_cases.delete_coroners_letter import DeleteCoronersLetterUseCase
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
     ApplicationNotGrantedError,
+    ClaimAssessmentConflictError,
     ClaimNotFoundError,
     CoronersLetterDeleteError,
     CoronersLetterNotFoundError,
@@ -997,6 +998,8 @@ def pay_in_full_claim(
         raise HTTPException(status_code=404, detail="Application not found")
     except ClaimNotFoundError:
         raise HTTPException(status_code=404, detail="Claim not found")
+    except ClaimAssessmentConflictError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except InvalidClaimError as e:
         raise HTTPException(
             status_code=422, detail={"errorCode": e.code, "message": e.message}
@@ -1029,6 +1032,8 @@ def reject_claim(
         raise HTTPException(status_code=404, detail="Application not found")
     except ClaimNotFoundError:
         raise HTTPException(status_code=404, detail="Claim not found")
+    except ClaimAssessmentConflictError as e:
+        raise HTTPException(status_code=409, detail=str(e))
 
     return Response(status_code=204)
 

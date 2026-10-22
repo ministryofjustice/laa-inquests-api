@@ -4,7 +4,8 @@ from decimal import Decimal
 from unittest.mock import MagicMock
 
 import pytest
-from sqlmodel import select
+from sqlalchemy.dialects import postgresql
+from sqlmodel import Session, select
 
 from app.adapters.claim_repository_adapter import ClaimRepositoryAdapter
 from app.domain.claim import Claim as DomainClaim
@@ -221,6 +222,30 @@ def test_get_claims_by_application_id_returns_empty_list_when_no_claims(session)
     results = adapter.get_claims_by_application_id(application_id)
 
     assert results == []
+
+
+def test_get_claim_by_reference_for_assessment_locks_and_refreshes_claim():
+    session = MagicMock(spec=Session)
+    claim = Claim(
+        claim_id=1,
+        claim_reference="INQC-0000-0001",
+        status_id=ClaimStatus.SUBMITTED,
+    )
+    session.exec.return_value.first.return_value = claim
+    adapter = ClaimRepositoryAdapter(session)
+
+    result = adapter.get_claim_by_reference(claim.claim_reference, for_assessment=True)
+
+    assert result is claim
+    session.exec.assert_called_once()
+    statement = session.exec.call_args.args[0]
+    compiled = statement.compile(dialect=postgresql.dialect())
+    assert "WHERE claim.claim_reference =" in str(compiled)
+    assert str(compiled).endswith(" FOR UPDATE")
+    assert compiled.params == {"claim_reference_1": claim.claim_reference}
+    assert statement.get_execution_options()["populate_existing"] is True
+    session.commit.assert_not_called()
+    session.rollback.assert_not_called()
 
 
 def test_get_payment_extracts_by_claim_id_returns_lines_in_sequence_order(session):

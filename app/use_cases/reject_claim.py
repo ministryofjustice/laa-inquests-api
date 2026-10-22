@@ -2,6 +2,7 @@ import logging
 from dataclasses import dataclass
 
 from app.contexts.user import get_entra_user_name
+from app.domain.claim import is_claim_awaiting_assessment
 from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ReasonCode
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.notifications.enums import NotificationType
@@ -13,7 +14,11 @@ from app.ports.claim.update_claim_status_port import UpdateClaimStatusPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.provider_details_port import ProviderDetailsPort
-from app.use_cases.exceptions import ApplicationNotFoundError, ClaimNotFoundError
+from app.use_cases.exceptions import (
+    ApplicationNotFoundError,
+    ClaimAssessmentConflictError,
+    ClaimNotFoundError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,13 +58,16 @@ class RejectClaimUseCase:
         if application is None:
             raise ApplicationNotFoundError(command.laa_reference)
 
-        claim = self.get_claim_by_id_port.get_claim_by_reference(
-            command.claim_reference
-        )
-        if claim is None or claim.application_id != application.application_id:
-            raise ClaimNotFoundError(command.claim_reference)
-
         try:
+            claim = self.get_claim_by_id_port.get_claim_by_reference(
+                command.claim_reference, for_assessment=True
+            )
+            if claim is None or claim.application_id != application.application_id:
+                raise ClaimNotFoundError(command.claim_reference)
+
+            if not is_claim_awaiting_assessment(claim.status_id):
+                raise ClaimAssessmentConflictError("Claim is not awaiting assessment")
+
             claim_decision = self.create_claim_decision_port.create_claim_decision(
                 claim_id=claim.claim_id,
                 decision_status=ClaimDecisionStatus.REJECT,
