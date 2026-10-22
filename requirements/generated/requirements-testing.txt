@@ -55,7 +55,7 @@ pydantic-settings==2.15.0
 pydyf==0.12.1
 pygments==2.21.0
 pyjwt==2.15.0
-pypdf==6.19.0
+pypdf==6.21.1
 pyphen==0.18.1
 pyrate-limiter==4.5.0
 pytest==9.0.3
