@@ -56,6 +56,10 @@ FINAL_BILL_CLAIM_TYPES = frozenset({ClaimType.FINAL_BILL, ClaimType.NIL_BILL})
 ACTIVE_FINAL_BILL_STATUSES = frozenset({ClaimStatus.SUBMITTED, ClaimStatus.PAY_IN_FULL})
 
 
+def is_claim_awaiting_assessment(status: ClaimStatus) -> bool:
+    return status == ClaimStatus.SUBMITTED
+
+
 def _as_utc(dt: datetime) -> datetime:
     """Treat timezone-naive datetimes as UTC for safe comparison."""
     return dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)

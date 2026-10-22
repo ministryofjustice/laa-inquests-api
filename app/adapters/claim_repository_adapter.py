@@ -229,10 +229,15 @@ class ClaimRepositoryAdapter(
     def get_claim_by_id(self, claim_id: int) -> Claim | None:
         return self.session.get(Claim, claim_id)
 
-    def get_claim_by_reference(self, claim_reference: str) -> Claim | None:
-        return self.session.exec(
-            select(Claim).where(Claim.claim_reference == claim_reference)
-        ).first()
+    def get_claim_by_reference(
+        self, claim_reference: str, *, for_assessment: bool = False
+    ) -> Claim | None:
+        statement = select(Claim).where(Claim.claim_reference == claim_reference)
+        if for_assessment:
+            statement = statement.with_for_update().execution_options(
+                populate_existing=True
+            )
+        return self.session.exec(statement).first()
 
     def _get_claim_reference(self, attempt: int = 0) -> str:
         if attempt >= self.GENERATE_CLAIM_REFERENCE_ATTEMPTS:

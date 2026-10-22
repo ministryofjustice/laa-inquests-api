@@ -4,6 +4,7 @@ from datetime import date
 from decimal import Decimal
 
 from app.contexts.user import get_entra_user_name
+from app.domain.claim import is_claim_awaiting_assessment
 from app.domain.claim_error import ClaimValidationError
 from app.domain.pay_in_full import (
     PayInFullClaim,
@@ -40,6 +41,7 @@ from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
+    ClaimAssessmentConflictError,
     ClaimNotFoundError,
     InvalidClaimError,
 )
@@ -111,13 +113,16 @@ class PayInFullClaimUseCase:
         if application is None:
             raise ApplicationNotFoundError(command.laa_reference)
 
-        claim = self.get_claim_by_id_port.get_claim_by_reference(
-            command.claim_reference
-        )
-        if claim is None or claim.application_id != application.application_id:
-            raise ClaimNotFoundError(command.claim_reference)
-
         try:
+            claim = self.get_claim_by_id_port.get_claim_by_reference(
+                command.claim_reference, for_assessment=True
+            )
+            if claim is None or claim.application_id != application.application_id:
+                raise ClaimNotFoundError(command.claim_reference)
+
+            if not is_claim_awaiting_assessment(claim.status_id):
+                raise ClaimAssessmentConflictError("Claim is not awaiting assessment")
+
             if (
                 claim.claim_type_id == ClaimType.PAYMENT_ON_ACCOUNT
                 and command.has_no_amounts()
@@ -135,10 +140,7 @@ class PayInFullClaimUseCase:
                     disbursement_vat_zero=command.disbursement_vat_zero,
                 )
             decision_amounts.validate()
-        except ClaimValidationError as e:
-            raise InvalidClaimError(code=e.code, message=e.message) from e
 
-        try:
             claim_decision = self.create_claim_decision_port.create_claim_decision(
                 claim_id=claim.claim_id,
                 decision_status=ClaimDecisionStatus.PAY_IN_FULL,
@@ -205,6 +207,9 @@ class PayInFullClaimUseCase:
             )
 
             self.update_claim_status_port.commit()
+        except ClaimValidationError as e:
+            self.update_claim_status_port.rollback()
+            raise InvalidClaimError(code=e.code, message=e.message) from e
         except Exception:
             self.update_claim_status_port.rollback()
             raise

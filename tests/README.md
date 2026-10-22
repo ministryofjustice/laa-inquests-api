@@ -67,3 +67,12 @@ def test_database(session: Session):
 ```
 This session is a `sqlmodel.Session` object, it inherits from the SQLAlchemy session class.
 View the SQLModel documentation [here](https://sqlmodel.tiangolo.com/).
+
+## Claim assessment regression checks
+
+Pay-in-full and rejection accept only `SUBMITTED` claims; repeated decisions return
+HTTP 409. The existing E2E files cover both repeat-decision cases, and the claim
+repository unit tests check the assessment locking query. SQLite does not exercise
+row locking: concurrency verification requires independent PostgreSQL sessions,
+with one assessment held before commit and a competing assessment returning a
+conflict after that commit. Use a disposable database, not existing application data.
