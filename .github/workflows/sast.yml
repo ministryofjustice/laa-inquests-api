@@ -54,7 +54,6 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    # Pinned image avoids the host Python's setup-python step entirely (semgrep/semgrep#11979 crashes semgrep-core on Python 3.15).
     container:
       image: semgrep/semgrep@sha256:dffc9caeecc924370d30f9187b6edf10949600d3ef5f69ef5c359074d8fc7d2d
     steps:
