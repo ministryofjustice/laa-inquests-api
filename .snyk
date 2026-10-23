@@ -67,3 +67,7 @@ ignore:
     "SNYK-DEBIAN13-EXPAT-20514789":
         - "*":
               reason: "There is no fixed version for Debian:13 expat"
+    "SNYK-PYTHON-DNSPYTHON-21433565":
+        - "*":
+              reason: "IDDS-000: Temporary exception pending upgrade to dnspython 2.9.0"
+              expires: "2026-10-30T00:00:00.000Z"
