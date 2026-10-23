@@ -183,7 +183,7 @@ def test_204_pay_in_full_claim_persists_partial_amounts_as_null(session, client)
     assert amount.disbursement_vat_zero == Decimal("50.00")
 
 
-def test_204_pay_in_full_claim_creates_single_decision_and_amount(session, client):
+def test_409_pay_in_full_claim_cannot_be_assessed_twice(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference)
 
@@ -196,6 +196,14 @@ def test_204_pay_in_full_claim_creates_single_decision_and_amount(session, clien
         },
     )
     assert response.status_code == 204
+
+    response = client.patch(
+        f"/applications/{laa_reference}/claims/{claim.claim_reference}/pay-in-full",
+        json=_pay_in_full_payload(),
+        headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Claim is not awaiting assessment"
 
     decisions = session.exec(
         select(ClaimDecision).where(ClaimDecision.claim_id == claim.claim_id)

@@ -136,25 +136,32 @@ def test_204_reject_final_bill_claim_sends_rejection_email(
     )
 
 
-def test_204_reject_claim_allows_re_rejecting_and_creates_new_decision(session, client):
-    laa_reference = session.exec(select(Application)).first().laa_reference
-    claim = _seed_claim(session, laa_reference)
+def test_409_reject_claim_cannot_be_assessed_twice(session, client, mock_gov_notify):
+    application = session.exec(select(Application)).first()
+    claim = _seed_claim(session, application.laa_reference)
+    url = f"/applications/{application.laa_reference}/claims/{claim.claim_reference}"
+    headers = {"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"}
 
-    for _ in range(2):
-        response = client.patch(
-            f"/applications/{laa_reference}/claims/{claim.claim_reference}/reject",
-            json=_reject_payload(),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}",
-            },
-        )
-        assert response.status_code == 204
+    response = client.patch(f"{url}/reject", json=_reject_payload(), headers=headers)
+    assert response.status_code == 204
 
-    decisions = session.exec(
+    response = client.patch(f"{url}/reject", json=_reject_payload(), headers=headers)
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Claim is not awaiting assessment"
+    session.refresh(claim)
+    assert claim.status_id == ClaimStatus.REJECTED
+    decision = session.exec(
         select(ClaimDecision).where(ClaimDecision.claim_id == claim.claim_id)
-    ).all()
-    assert len(decisions) == 2
+    ).one()
+    assert decision.decision == "REJECT"
+    reason = session.exec(
+        select(DecisionReason).where(
+            DecisionReason.claim_decision_id == decision.claim_decision_id
+        )
+    ).one()
+    assert reason.justification == _reject_payload()["justification"]
+    mock_gov_notify.send_claim_rejected_decision_email.assert_called_once()
 
 
 def test_404_reject_claim_when_application_does_not_exist(client):
