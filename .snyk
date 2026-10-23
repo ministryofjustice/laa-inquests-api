@@ -1,6 +1,5 @@
 version: v1.5.0
 ignore:
-
     "SNYK-DEBIAN13-ATTR-17678182":
         - "*":
               reason: "There is no fixed version for Debian:13 attr"
@@ -11,8 +10,9 @@ ignore:
         - "*":
               reason:
                   "There is no fixed version for Debian:13 expat; Expat through
-                  2.8.3 contains a denial of service vulnerability caused by quadratic
-                  algorithmic complexity in the storeAtts() function in xmlparse.c"
+                  2.8.3 contains a denial of service vulnerability caused by
+                  quadratic algorithmic complexity in the storeAtts() function
+                  in xmlparse.c"
     "snyk:lic:pip:pyphen:(GPL-2.0_OR_LGPL-2.0_OR_MPL-1.1)":
         - "*":
               reason: "Triple-licensed; project complies with LGPL-2.0 terms"
@@ -40,7 +40,12 @@ ignore:
     "SNYK-DEBIAN13-EXPAT-20514789":
         - "*":
               reason: "There is no fixed version for Debian:13 expat"
+    "SNYK-DEBIAN13-EXPAT-21479164":
+        - "*":
+              reason: "There is no fixed version for Debian:13 expat"
     "SNYK-PYTHON-DNSPYTHON-21433565":
         - "*":
-              reason: "IDDS-000: Temporary exception pending upgrade to dnspython 2.9.0"
+              reason:
+                  "IDDS-000: Temporary exception pending upgrade to dnspython
+                  2.9.0"
               expires: "2026-10-30T00:00:00.000Z"
