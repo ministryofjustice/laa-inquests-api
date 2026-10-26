@@ -20,7 +20,7 @@ click==8.5.0
 cryptography==50.0.1
 cssselect2==0.10.1
 detect-installer==0.2.1
-dnspython==2.8.0
+dnspython==2.9.0
 docopt==0.6.2
 email-validator==2.3.0
 fastapi[standard]==0.141.1
@@ -55,7 +55,7 @@ pydantic-settings==2.15.0
 pydyf==0.12.1
 pygments==2.21.0
 pyjwt==2.15.0
-pypdf==6.21.1
+pypdf==6.21.2
 pyphen==0.18.1
 pyrate-limiter==4.5.0
 pytest==9.0.3
