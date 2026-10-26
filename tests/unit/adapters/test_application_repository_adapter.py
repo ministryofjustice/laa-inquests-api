@@ -501,3 +501,64 @@ class TestUpdateApplicationPublicBodies:
         assert {pb.public_body_id for pb in updated_app.public_bodies} == set(
             new_public_bodies
         )
+
+
+class TestIdentifyDuplicateApplications:
+    def test_identify_duplicates_returns_list_of_applications(self, session):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+        result = adapter.identify_duplicates(application.application_id)
+        assert isinstance(result, list)
+        for app in result:
+            assert isinstance(app, Application)
+
+    def test_identify_duplicates_excludes_itself(self, session):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+        result = adapter.identify_duplicates(application.application_id)
+        assert application not in result
+
+    def test_identify_duplicates_raises_exception_for_nonexistent_application(
+        self, session
+    ):
+        adapter = ApplicationRepositoryAdapter(session)
+        with pytest.raises(Exception):
+            adapter.identify_duplicates(-1)
+
+    def test_identify_duplicates_returns_duplicate_when_all_fields_match(self, session):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        # Create a duplicate application with the same fields
+        duplicate_application = create_application_in_db(
+            session,
+            deceased_overrides={
+                "deceased_date_of_birth": application.deceased.deceased_date_of_birth,
+                "deceased_date_of_death": application.deceased.deceased_date_of_death,
+                "deceased_first_name": application.deceased.deceased_first_name,
+                "deceased_last_name": application.deceased.deceased_last_name,
+                "coroners_reference": application.deceased.coroners_reference,
+            },
+        )
+        result = adapter.identify_duplicates(application.application_id)
+        assert duplicate_application in result
+
+    def test_identify_duplicates_returns_duplicate_when_some_fields_match(
+        self, session
+    ):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        # Create a duplicate application with the same fields
+        duplicate_application = create_application_in_db(
+            session,
+            deceased_overrides={
+                "deceased_date_of_birth": application.deceased.deceased_date_of_birth,
+                "deceased_date_of_death": application.deceased.deceased_date_of_death,
+                "deceased_first_name": application.deceased.deceased_first_name,
+                "deceased_last_name": application.deceased.deceased_last_name,
+                "coroners_reference": "DIFFERENT_REFERENCE",
+            },
+        )
+        result = adapter.identify_duplicates(application.application_id)
+        assert duplicate_application in result

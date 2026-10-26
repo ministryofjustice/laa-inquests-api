@@ -1,7 +1,6 @@
 import logging
 import random
 import uuid
-
 from sqlmodel import Session, exists, select
 
 from app.config import Config
@@ -29,6 +28,7 @@ from app.models.application.index import (
 from app.ports.application_backlog_port import ApplicationBacklogPort
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.delete_coroners_letter_port import DeleteCoronersLetterPort
+from app.ports.duplicate_applications_port import DuplicateApplicationsPort
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.get_coroners_letter_port import GetCoronersLetterPort
 from app.ports.list_applications_port import ListApplicationsPort
@@ -53,6 +53,7 @@ class ApplicationRepositoryAdapter(
     GetCoronersLetterPort,
     DeleteCoronersLetterPort,
     ApplicationBacklogPort,
+    DuplicateApplicationsPort,
 ):
     GENERATE_LAA_REFERENCE_ATTEMPTS = 10
 
@@ -363,4 +364,45 @@ class ApplicationRepositoryAdapter(
             .where(ApplicationProceeding.merits_decision == "SUBMITTED")
             .order_by(Application.created_at.asc())
         )
+        return list(self.session.exec(statement).unique().all())
+
+    def identify_duplicates(self, application_id: int) -> list[Application]:
+        application = self.session.exec(
+            select(Application).where(Application.application_id == application_id)
+        ).first()
+        if not application:
+            raise Exception(f"Application with id {application_id} does not exist")
+
+        statement = (
+            select(Application)
+            # select(Application,
+            #        sum(
+            #            (Deceased.deceased_date_of_birth == application.deceased.deceased_date_of_birth).cast(Integer) +
+            #            (Deceased.deceased_date_of_death == application.deceased.deceased_date_of_death).cast(Integer) +
+            #            (Deceased.deceased_first_name == application.deceased.deceased_first_name).cast(Integer) +
+            #            (Deceased.deceased_last_name == application.deceased.deceased_last_name).cast(Integer) +
+            #            (Deceased.coroners_reference == application.deceased.coroners_reference).cast(Integer)
+            #        ) as match_count)
+            # .where(match_count > 0)
+            .where(Application.application_id != application_id)
+            .join(Deceased, Application.deceased_id == Deceased.deceased_id)
+            .where(
+                Deceased.deceased_date_of_birth
+                == application.deceased.deceased_date_of_birth
+            )
+            .where(
+                Deceased.deceased_date_of_death
+                == application.deceased.deceased_date_of_death
+            )
+            .where(
+                Deceased.deceased_first_name == application.deceased.deceased_first_name
+            )
+            .where(
+                Deceased.deceased_last_name == application.deceased.deceased_last_name
+            )
+            .where(
+                Deceased.coroners_reference == application.deceased.coroners_reference
+            )
+        )
+
         return list(self.session.exec(statement).unique().all())
