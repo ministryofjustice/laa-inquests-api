@@ -1,6 +1,7 @@
 import logging
 import random
 import uuid
+from sqlalchemy import case, false, func, and_
 from sqlmodel import Session, exists, select
 
 from app.config import Config
@@ -56,6 +57,7 @@ class ApplicationRepositoryAdapter(
     DuplicateApplicationsPort,
 ):
     GENERATE_LAA_REFERENCE_ATTEMPTS = 10
+    DUPLICATE_MATCH_THRESHOLD = 2
 
     def __init__(
         self,
@@ -366,43 +368,42 @@ class ApplicationRepositoryAdapter(
         )
         return list(self.session.exec(statement).unique().all())
 
-    def identify_duplicates(self, application_id: int) -> list[Application]:
-        application = self.session.exec(
-            select(Application).where(Application.application_id == application_id)
-        ).first()
+    def identify_duplicates(self, application_id: int) -> list[int]:
+        application = self.session.get(Application, application_id)
         if not application:
-            raise Exception(f"Application with id {application_id} does not exist")
+            raise LookupError(f"Application with id {application_id} does not exist")
 
-        statement = (
-            select(Application)
-            # select(Application,
-            #        sum(
-            #            (Deceased.deceased_date_of_birth == application.deceased.deceased_date_of_birth).cast(Integer) +
-            #            (Deceased.deceased_date_of_death == application.deceased.deceased_date_of_death).cast(Integer) +
-            #            (Deceased.deceased_first_name == application.deceased.deceased_first_name).cast(Integer) +
-            #            (Deceased.deceased_last_name == application.deceased.deceased_last_name).cast(Integer) +
-            #            (Deceased.coroners_reference == application.deceased.coroners_reference).cast(Integer)
-            #        ) as match_count)
-            # .where(match_count > 0)
-            .where(Application.application_id != application_id)
-            .join(Deceased, Application.deceased_id == Deceased.deceased_id)
-            .where(
-                Deceased.deceased_date_of_birth
-                == application.deceased.deceased_date_of_birth
-            )
-            .where(
-                Deceased.deceased_date_of_death
-                == application.deceased.deceased_date_of_death
-            )
-            .where(
-                Deceased.deceased_first_name == application.deceased.deceased_first_name
-            )
-            .where(
-                Deceased.deceased_last_name == application.deceased.deceased_last_name
-            )
-            .where(
-                Deceased.coroners_reference == application.deceased.coroners_reference
-            )
+        new_deceased = application.deceased
+
+        same_date_of_birth = (
+            Deceased.deceased_date_of_birth == new_deceased.deceased_date_of_birth
+        )
+        same_date_of_death = (
+            Deceased.deceased_date_of_death == new_deceased.deceased_date_of_death
+        )
+        same_coroners_reference = (
+            Deceased.coroners_reference == new_deceased.coroners_reference
+            if new_deceased.coroners_reference == ""
+            else false()
+        )
+        same_name = and_(
+            func.lower(func.trim(Deceased.deceased_first_name))
+            == new_deceased.deceased_first_name.strip().lower(),
+            func.lower(func.trim(Deceased.deceased_last_name))
+            == new_deceased.deceased_last_name.strip().lower(),
         )
 
-        return list(self.session.exec(statement).unique().all())
+        match_count = (
+            case((same_date_of_birth, 1), else_=0)
+            + case((same_date_of_death, 1), else_=0)
+            + case((same_coroners_reference, 1), else_=0)
+            + case((same_name, 1), else_=0)
+        )
+
+        duplicate_ids = self.session.exec(
+            select(Application.application_id)
+            .join(Deceased, Application.deceased_id == Deceased.deceased_id)
+            .where(Application.application_id != application_id)
+            .where(match_count >= self.DUPLICATE_MATCH_THRESHOLD)
+        ).all()
+        return list(duplicate_ids)

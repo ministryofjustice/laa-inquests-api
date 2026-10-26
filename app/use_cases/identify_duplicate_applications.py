@@ -10,8 +10,10 @@ class IdentifyDuplicateApplicationsUseCase:
     def __init__(self, duplicate_applications_port: DuplicateApplicationsPort) -> None:
         self.duplicate_applications_port = duplicate_applications_port
 
-    def execute(self) -> None:
-        applications = self.duplicate_applications_port.identify_duplicates()
+    def execute(self, application_id: int) -> None:
+        applications = self.duplicate_applications_port.identify_duplicates(
+            application_id
+        )
         logger.info(
             "Searched for duplicate applications",
             extra=build_log_extra(
@@ -19,4 +21,3 @@ class IdentifyDuplicateApplicationsUseCase:
                 result_count=len(applications),
             ),
         )
-        return None
