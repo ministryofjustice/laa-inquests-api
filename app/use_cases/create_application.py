@@ -8,12 +8,12 @@ from app.ports.create_application_port import CreateApplicationPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.provider_details_port import ProviderDetailsPort
-from app.use_cases.identify_duplicate_applications import (
-    IdentifyDuplicateApplicationsUseCase,
-)
 from app.use_cases.exceptions import (
     ProviderDetailsRetrievalError,
     ProviderOfficeMismatchError,
+)
+from app.use_cases.identify_duplicate_applications import (
+    IdentifyDuplicateApplicationsUseCase,
 )
 
 logger = logging.getLogger(__name__)
