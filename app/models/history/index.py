@@ -21,6 +21,7 @@ class HistoryEvent(SQLModel, table=True):
     actor: str = Field(nullable=False)
     actor_type: ActorType = Field(nullable=False)
     entra_user_object_id: str | None = Field(default=None, nullable=True)
+    actor_email_address: str | None = Field(default=None, nullable=True)
     event_data: dict | None = Field(default=None, sa_column=Column(JSON, nullable=True))
     application_id: int = Field(
         foreign_key="application.application_id", nullable=False

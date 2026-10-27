@@ -48,6 +48,34 @@ def test_verify_token_returns_user_with_required_data_when_token_is_valid(adapte
     assert user.office_codes == frozenset(["A001B", "A002B"])
 
 
+def test_verify_token_returns_email_address_from_preferred_username(adapter):
+    adapter._jwks_client.get_signing_key_from_jwt.return_value = MagicMock()
+
+    with patch(
+        "app.adapters.entra_auth_adapter.jwt.decode",
+        return_value={
+            "scp": "User.Caseworker",
+            "name": "Test Name",
+            "preferred_username": "caseworker@example.com",
+        },
+    ):
+        user = adapter.verify_token("valid.jwt.token")
+
+    assert user.email_address == "caseworker@example.com"
+
+
+def test_verify_token_returns_none_email_address_when_claim_absent(adapter):
+    adapter._jwks_client.get_signing_key_from_jwt.return_value = MagicMock()
+
+    with patch(
+        "app.adapters.entra_auth_adapter.jwt.decode",
+        return_value={"scp": "User.Caseworker", "name": "Test Name"},
+    ):
+        user = adapter.verify_token("valid.jwt.token")
+
+    assert user.email_address is None
+
+
 def test_verify_token_returns_user_with_required_data_when_accounts_is_single_value(
     adapter,
 ):

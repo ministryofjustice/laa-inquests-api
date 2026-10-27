@@ -25,7 +25,7 @@ from datetime import datetime
 from typing import Sequence, Union
 
 from alembic import op
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer
 
 from app.models.claim.index import Claim, ClaimDecision
 from app.models.history.enums import HistoryEventReference
@@ -112,6 +112,8 @@ def backfill_history_claim_references(session: Session) -> int:
 
     events = (
         session.query(HistoryEvent)
+        # Columns added to the model after this revision do not exist yet when it runs.
+        .options(defer(HistoryEvent.actor_email_address))
         .filter(
             HistoryEvent.event_reference.in_(
                 (
