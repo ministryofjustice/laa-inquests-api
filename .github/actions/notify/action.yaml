@@ -6,7 +6,7 @@ inputs:
     required: true
     description: "Slack webhook url"
   app-environment:
-    description: "environment to which the app is being deployed [staging, production, etc]"
+    description: "environment to which the app is being deployed [staging, prod, etc]"
     required: true
   pipeline_status:
     description: Collated string of previous status' for this pipeline run
