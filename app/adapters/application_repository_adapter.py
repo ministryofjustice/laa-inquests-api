@@ -401,7 +401,7 @@ class ApplicationRepositoryAdapter(
             + case((same_name, 1), else_=0)
         )
 
-        duplicate_ids = self.session.exec(
+        duplicate_application_id = self.session.exec(
             select(Application.application_id)
             .join(Deceased, Application.deceased_id == Deceased.deceased_id)
             .join(
@@ -420,25 +420,38 @@ class ApplicationRepositoryAdapter(
             )
             .where(match_count >= self.DUPLICATE_MATCH_THRESHOLD)
         ).all()
-        return list(duplicate_ids)
+        return list(duplicate_application_id)
 
     def create_duplicate_records(
-        self, application_id: int, duplicate_ids: list[int]
+        self, application_id: int, duplicate_application_ids: list[int]
     ) -> None:
+        if not duplicate_application_ids:
+            return
+
         logger.info(
             "Creating duplicate records in db",
             extra=build_log_extra(
                 event="create_duplicate_records_started",
                 application_id=application_id,
-                duplicate_ids=duplicate_ids,
+                duplicate_count=len(duplicate_application_ids),
             ),
         )
-        for duplicate_id in duplicate_ids:
-            duplicate_record = DuplicateApplicationRecord(
+        duplicate_records = [
+            DuplicateApplicationRecord(
                 application_id=application_id,
-                duplicate_id=duplicate_id,
+                duplicate_application_id=duplicate_application_id,
             )
-            self.session.add(duplicate_record)
+            for duplicate_application_id in duplicate_application_ids
+        ]
 
+        self.session.add_all(duplicate_records)
         self.session.flush()
+
+        logger.info(
+            "Added duplicate records in db",
+            extra=build_log_extra(
+                event="added_duplicate_records_started",
+                duplicate_count=len(duplicate_records),
+            ),
+        )
         # TODO: Consider when this gets commited. Should be done as part of the create application transaction. I.e. it is in the same commit that is dependent on application being created and govNotify being successful.

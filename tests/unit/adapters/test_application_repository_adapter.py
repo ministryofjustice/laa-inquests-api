@@ -772,7 +772,7 @@ class TestCreateDuplicateRecords:
         session.rollback()
         session.connection().exec_driver_sql("PRAGMA foreign_keys=OFF")
 
-    def test_creates_duplicate_records(self, session):
+    def test_create_duplicate_records_saves_records(self, session):
         application = session.exec(select(Application)).first()
         adapter = ApplicationRepositoryAdapter(session)
 
@@ -780,21 +780,26 @@ class TestCreateDuplicateRecords:
         create_application_in_db(session)
         create_application_in_db(session)
 
-        duplicate_ids = [2, 3, 4]
-        adapter.create_duplicate_records(application.application_id, duplicate_ids)
+        duplicate_application_ids = [2, 3, 4]
+        adapter.create_duplicate_records(
+            application.application_id, duplicate_application_ids
+        )
 
         records = session.exec(select(DuplicateApplicationRecord)).all()
-        assert len(records) == len(duplicate_ids)
-        for record, duplicate_id in zip(records, duplicate_ids):
-            assert record.application_id == application.application_id
-            assert record.duplicate_id == duplicate_id
 
-    def test_creates_no_records_when_duplicate_ids_empty(self, session):
+        assert len(records) == len(duplicate_application_ids)
+        for record, duplicate_application_id in zip(records, duplicate_application_ids):
+            assert record.application_id == application.application_id
+            assert record.duplicate_application_id == duplicate_application_id
+
+    def test_creates_no_records_when_duplicate_application_id_empty(self, session):
         application = session.exec(select(Application)).first()
         adapter = ApplicationRepositoryAdapter(session)
 
-        duplicate_ids = []
-        adapter.create_duplicate_records(application.application_id, duplicate_ids)
+        duplicate_application_id = []
+        adapter.create_duplicate_records(
+            application.application_id, duplicate_application_id
+        )
 
         records = session.exec(select(DuplicateApplicationRecord)).all()
         assert len(records) == 0
@@ -803,15 +808,17 @@ class TestCreateDuplicateRecords:
     def test_raises_error_when_application_id_does_not_exist(self, session):
         adapter = ApplicationRepositoryAdapter(session)
 
-        duplicate_ids = [2, 3, 4]
+        duplicate_application_id = [2, 3, 4]
         with pytest.raises(IntegrityError):
-            adapter.create_duplicate_records(9999, duplicate_ids)
+            adapter.create_duplicate_records(9999, duplicate_application_id)
 
     @pytest.mark.usefixtures("enforce_foreign_keys")
-    def test_raises_error_when_duplicate_ids_do_not_exist(self, session):
+    def test_raises_error_when_duplicate_application_id_do_not_exist(self, session):
         application = session.exec(select(Application)).first()
         adapter = ApplicationRepositoryAdapter(session)
 
-        duplicate_ids = [9999, 10000]
+        duplicate_application_id = [9999, 10000]
         with pytest.raises(IntegrityError):
-            adapter.create_duplicate_records(application.application_id, duplicate_ids)
+            adapter.create_duplicate_records(
+                application.application_id, duplicate_application_id
+            )
