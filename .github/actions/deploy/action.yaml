@@ -6,7 +6,7 @@ inputs:
     required: true
   app-environment:
     description:
-      "Environment to which the app is being deployed [staging, production, etc]"
+      "Environment to which the app is being deployed [staging, prod, etc]"
     required: true
   db-user:
     description: "Username needed to connect to Inquests database"
