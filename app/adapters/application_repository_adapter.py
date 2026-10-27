@@ -383,7 +383,7 @@ class ApplicationRepositoryAdapter(
         )
         same_coroners_reference = (
             Deceased.coroners_reference == new_deceased.coroners_reference
-            if new_deceased.coroners_reference == ""
+            if new_deceased.coroners_reference != ""
             else false()
         )
         same_name = and_(
@@ -403,7 +403,20 @@ class ApplicationRepositoryAdapter(
         duplicate_ids = self.session.exec(
             select(Application.application_id)
             .join(Deceased, Application.deceased_id == Deceased.deceased_id)
+            .join(
+                ApplicationProceeding,
+                Application.application_id == ApplicationProceeding.application_id,
+            )
             .where(Application.application_id != application_id)
+            .where(
+                ApplicationProceeding.merits_decision.in_(
+                    [
+                        MeritsDecision.SUBMITTED,
+                        MeritsDecision.GRANTED,
+                        MeritsDecision.REFUSED,
+                    ]
+                )
+            )
             .where(match_count >= self.DUPLICATE_MATCH_THRESHOLD)
         ).all()
         return list(duplicate_ids)
