@@ -655,3 +655,14 @@ class SDSUploadClaimEvidenceResponse(BaseModel):
     )
     sds_file_name: str
     status: str
+
+
+class DuplicateApplicationRecord(SQLModel, table=True):
+    __tablename__ = "duplicate_application_records"
+    id: int | None = Field(default=None, primary_key=True)
+    application_id: int | None = Field(
+        default=None, foreign_key="application.application_id"
+    )
+    duplicate_id: int | None = Field(
+        default=None, foreign_key="application.application_id"
+    )

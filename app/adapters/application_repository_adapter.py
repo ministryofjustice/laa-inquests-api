@@ -18,6 +18,7 @@ from app.models.application.index import (
     ApplicationPublicBody,
     Client,
     Deceased,
+    DuplicateApplicationRecord,
     ProceedingId,
     Provider,
     PublicBody,
@@ -420,3 +421,24 @@ class ApplicationRepositoryAdapter(
             .where(match_count >= self.DUPLICATE_MATCH_THRESHOLD)
         ).all()
         return list(duplicate_ids)
+
+    def create_duplicate_records(
+        self, application_id: int, duplicate_ids: list[int]
+    ) -> None:
+        logger.info(
+            "Creating duplicate records in db",
+            extra=build_log_extra(
+                event="create_duplicate_records_started",
+                application_id=application_id,
+                duplicate_ids=duplicate_ids,
+            ),
+        )
+        for duplicate_id in duplicate_ids:
+            duplicate_record = DuplicateApplicationRecord(
+                application_id=application_id,
+                duplicate_id=duplicate_id,
+            )
+            self.session.add(duplicate_record)
+
+        self.session.flush()
+        # TODO: Consider when this gets commited. Should be done as part of the create application transaction. I.e. it is in the same commit that is dependent on application being created and govNotify being successful.
