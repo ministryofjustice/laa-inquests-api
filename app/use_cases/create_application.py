@@ -8,6 +8,9 @@ from app.ports.create_application_port import CreateApplicationPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.provider_details_port import ProviderDetailsPort
+from app.use_cases.identify_duplicate_applications import (
+    IdentifyDuplicateApplicationsUseCase,
+)
 from app.use_cases.exceptions import (
     ProviderDetailsRetrievalError,
     ProviderOfficeMismatchError,
@@ -23,11 +26,15 @@ class CreateApplicationUseCase:
         create_history_event_port: CreateHistoryEventPort,
         gov_notify_port: GovNotifyPort,
         provider_details_port: ProviderDetailsPort,
+        identify_duplicate_applications_use_case: IdentifyDuplicateApplicationsUseCase,
     ) -> None:
         self.create_application_port = create_application_port
         self.create_history_event_port = create_history_event_port
         self.gov_notify_port = gov_notify_port
         self.provider_details_port = provider_details_port
+        self.identify_duplicate_applications_use_case = (
+            identify_duplicate_applications_use_case
+        )
 
     def execute(
         self,
@@ -54,6 +61,10 @@ class CreateApplicationUseCase:
                 raise ProviderDetailsRetrievalError(
                     f"Office id {application.provider.office_id} does not exist in provider details API"
                 )
+
+            self.identify_duplicate_applications_use_case.execute(
+                application_id=application.application_id
+            )
 
             self.create_history_event_port.create_history_event(
                 event_reference=HistoryEventReference.APPLICATION_SUBMITTED,

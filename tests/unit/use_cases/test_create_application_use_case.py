@@ -11,6 +11,9 @@ from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.create_application import CreateApplicationUseCase
+from app.use_cases.identify_duplicate_applications import (
+    IdentifyDuplicateApplicationsUseCase,
+)
 from app.use_cases.exceptions import (
     ProviderDetailsRetrievalError,
     ProviderOfficeMismatchError,
@@ -65,12 +68,16 @@ def test_execute_creates_application_sends_confirmation_email_and_commits():
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
     gov_notify_port = MagicMock(spec=GovNotifyPort)
     provider_details_port = MagicMock(spec=ProviderDetailsPort)
+    identify_duplicate_applications_use_case = MagicMock(
+        spec=IdentifyDuplicateApplicationsUseCase
+    )
 
     use_case = CreateApplicationUseCase(
         create_application_port=create_application_port,
         create_history_event_port=create_history_event_port,
         gov_notify_port=gov_notify_port,
         provider_details_port=provider_details_port,
+        identify_duplicate_applications_use_case=identify_duplicate_applications_use_case,
     )
 
     result = use_case.execute(request, "0A123B", frozenset(["0U651L"]))
@@ -121,12 +128,16 @@ def test_execute_passes_authenticated_firm_code_to_create_application_port():
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
     gov_notify_port = MagicMock(spec=GovNotifyPort)
     provider_details_port = MagicMock(spec=ProviderDetailsPort)
+    identify_duplicate_applications_use_case = MagicMock(
+        spec=IdentifyDuplicateApplicationsUseCase
+    )
 
     use_case = CreateApplicationUseCase(
         create_application_port=create_application_port,
         create_history_event_port=create_history_event_port,
         gov_notify_port=gov_notify_port,
         provider_details_port=provider_details_port,
+        identify_duplicate_applications_use_case=identify_duplicate_applications_use_case,
     )
 
     use_case.execute(request, "1473", frozenset(["0U651L"]))
@@ -144,12 +155,16 @@ def test_execute_rolls_back_and_reraises_when_notify_fails():
         RuntimeError("notify failed")
     )
     provider_details_port = MagicMock(spec=ProviderDetailsPort)
+    identify_duplicate_applications_use_case = MagicMock(
+        spec=IdentifyDuplicateApplicationsUseCase
+    )
 
     use_case = CreateApplicationUseCase(
         create_application_port=create_application_port,
         create_history_event_port=create_history_event_port,
         gov_notify_port=gov_notify_port,
         provider_details_port=provider_details_port,
+        identify_duplicate_applications_use_case=identify_duplicate_applications_use_case,
     )
 
     with pytest.raises(RuntimeError, match="notify failed"):
@@ -168,12 +183,16 @@ def test_execute_rolls_back_and_reraises_when_commit_fails():
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
     gov_notify_port = MagicMock(spec=GovNotifyPort)
     provider_details_port = MagicMock(spec=ProviderDetailsPort)
+    identify_duplicate_applications_use_case = MagicMock(
+        spec=IdentifyDuplicateApplicationsUseCase
+    )
 
     use_case = CreateApplicationUseCase(
         create_application_port=create_application_port,
         create_history_event_port=create_history_event_port,
         gov_notify_port=gov_notify_port,
         provider_details_port=provider_details_port,
+        identify_duplicate_applications_use_case=identify_duplicate_applications_use_case,
     )
 
     with pytest.raises(RuntimeError, match="commit failed"):
@@ -195,12 +214,16 @@ def test_execute_rolls_back_and_reraises_when_provider_office_mismatch():
     gov_notify_port = MagicMock(spec=GovNotifyPort)
     provider_details_port = MagicMock(spec=ProviderDetailsPort)
     provider_details_port.does_office_exist.return_value = False
+    identify_duplicate_applications_use_case = MagicMock(
+        spec=IdentifyDuplicateApplicationsUseCase
+    )
 
     use_case = CreateApplicationUseCase(
         create_application_port=create_application_port,
         create_history_event_port=create_history_event_port,
         gov_notify_port=gov_notify_port,
         provider_details_port=provider_details_port,
+        identify_duplicate_applications_use_case=identify_duplicate_applications_use_case,
     )
 
     with (
@@ -227,12 +250,16 @@ def test_execute_rolls_back_and_reraises_when_does_office_exist_fails():
     gov_notify_port = MagicMock(spec=GovNotifyPort)
     provider_details_port = MagicMock(spec=ProviderDetailsPort)
     provider_details_port.does_office_exist.return_value = False
+    identify_duplicate_applications_use_case = MagicMock(
+        spec=IdentifyDuplicateApplicationsUseCase
+    )
 
     use_case = CreateApplicationUseCase(
         create_application_port=create_application_port,
         create_history_event_port=create_history_event_port,
         gov_notify_port=gov_notify_port,
         provider_details_port=provider_details_port,
+        identify_duplicate_applications_use_case=identify_duplicate_applications_use_case,
     )
 
     with pytest.raises(ProviderDetailsRetrievalError):
