@@ -272,3 +272,65 @@ def test_execute_rolls_back_and_reraises_when_does_office_exist_fails():
     gov_notify_port.send_application_submit_confirmation_email.assert_not_called()
     create_application_port.commit.assert_not_called()
     create_application_port.rollback.assert_called_once_with()
+
+
+def test_execute_identifies_duplicates_for_new_application():
+    request = _make_request()
+    application = create_base_application()
+    create_application_port = MagicMock(spec=CreateApplicationPort)
+    create_application_port.create_application.return_value = application
+    create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
+    gov_notify_port = MagicMock(spec=GovNotifyPort)
+    provider_details_port = MagicMock(spec=ProviderDetailsPort)
+    identify_duplicate_applications_use_case = MagicMock(
+        spec=IdentifyDuplicateApplicationsUseCase
+    )
+
+    use_case = CreateApplicationUseCase(
+        create_application_port=create_application_port,
+        create_history_event_port=create_history_event_port,
+        gov_notify_port=gov_notify_port,
+        provider_details_port=provider_details_port,
+        identify_duplicate_applications_use_case=identify_duplicate_applications_use_case,
+    )
+
+    use_case.execute(request, "0A123B", frozenset(["0U651L"]))
+
+    identify_duplicate_applications_use_case.execute.assert_called_once_with(
+        application_id=application.application_id
+    )
+    create_application_port.commit.assert_called_once()
+
+
+def test_execute_rolls_back_if_identifies_duplicates_fails():
+    request = _make_request()
+    application = create_base_application()
+    create_application_port = MagicMock(spec=CreateApplicationPort)
+    create_application_port.create_application.return_value = application
+    create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
+    gov_notify_port = MagicMock(spec=GovNotifyPort)
+    provider_details_port = MagicMock(spec=ProviderDetailsPort)
+    identify_duplicate_applications_use_case = MagicMock(
+        spec=IdentifyDuplicateApplicationsUseCase
+    )
+
+    identify_duplicate_applications_use_case.execute.side_effect = RuntimeError(
+        "duplicate application check failed"
+    )
+
+    use_case = CreateApplicationUseCase(
+        create_application_port=create_application_port,
+        create_history_event_port=create_history_event_port,
+        gov_notify_port=gov_notify_port,
+        provider_details_port=provider_details_port,
+        identify_duplicate_applications_use_case=identify_duplicate_applications_use_case,
+    )
+
+    with pytest.raises(RuntimeError, match="duplicate application check failed"):
+        use_case.execute(request, "0A123B", frozenset(["0U651L"]))
+
+    identify_duplicate_applications_use_case.execute.assert_called_once_with(
+        application_id=application.application_id
+    )
+    create_application_port.commit.assert_not_called()
+    create_application_port.rollback.assert_called_once()
