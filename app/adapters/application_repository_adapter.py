@@ -455,4 +455,3 @@ class ApplicationRepositoryAdapter(
                 duplicate_count=len(duplicate_records),
             ),
         )
-        # TODO: Consider when this gets commited. Should be done as part of the create application transaction. I.e. it is in the same commit that is dependent on application being created and govNotify being successful.
