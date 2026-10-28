@@ -103,5 +103,5 @@ async def _verify_entra_token_with_scopes(
     user = await run_in_threadpool(
         entra_auth.verify_token, credentials.credentials, required_scopes
     )
-    set_entra_user_context(user.entra_object_id, user.name)
+    set_entra_user_context(user.entra_object_id, user.name, user.email_address)
     return user

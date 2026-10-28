@@ -42,3 +42,23 @@ def test_backlog_audit_events_ignore_query_parameters(report_type):
     )
 
     assert audit_event.parameters is None
+
+
+def test_audit_trail_audit_event_records_query_parameters():
+    query_params = {"from": "2024-01-01", "to": "2024-01-30"}
+
+    audit_event = ReportAuditEventFactory(report_type=ReportType.AUDIT_TRAIL)(
+        user_email_address="user@example.com",
+        request=MagicMock(query_params=query_params),
+    )
+
+    assert audit_event == ReportAudit(
+        timestamp=ANY,
+        user_email_address="user@example.com",
+        report_type=ReportType.AUDIT_TRAIL,
+        parameters=query_params,
+    )
+
+
+def test_audit_trail_report_type_reads_as_a_report_name():
+    assert ReportType.AUDIT_TRAIL.value == "User Audit Trail"

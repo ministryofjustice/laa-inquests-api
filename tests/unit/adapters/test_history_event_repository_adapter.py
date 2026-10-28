@@ -310,3 +310,67 @@ def test_create_history_event_stores_entra_object_id_for_non_system_actor(sessio
     stored = session.get(HistoryEvent, created.id)
     assert stored is not None
     assert stored.entra_user_object_id == "entra-object-id-123"
+
+
+def test_create_history_event_stores_actor_email_address_for_caseworker_actor(session):
+    application = session.exec(select(Application)).first()
+    adapter = HistoryEventRepositoryAdapter(session)
+
+    set_entra_user_context(
+        "entra-object-id-123", "Caseworker", "caseworker@example.com"
+    )
+    try:
+        created = adapter.create_history_event(
+            event_reference=HistoryEventReference.APPLICATION_ASSESSMENT_COMPLETED,
+            actor="Caseworker",
+            actor_type=ActorType.CASEWORKER,
+            application_id=application.application_id,
+        )
+    finally:
+        clear_entra_user_context()
+
+    stored = session.get(HistoryEvent, created.id)
+    assert stored is not None
+    assert stored.actor_email_address == "caseworker@example.com"
+
+
+def test_create_history_event_does_not_store_actor_email_address_for_system_actor(
+    session,
+):
+    application = session.exec(select(Application)).first()
+    adapter = HistoryEventRepositoryAdapter(session)
+
+    set_entra_user_context(
+        "entra-object-id-123", "Caseworker", "caseworker@example.com"
+    )
+    try:
+        created = adapter.create_history_event(
+            event_reference=HistoryEventReference.APPLICATION_SUBMISSION_CONFIRMATION,
+            actor=ActorType.SYSTEM,
+            actor_type=ActorType.SYSTEM,
+            application_id=application.application_id,
+        )
+    finally:
+        clear_entra_user_context()
+
+    stored = session.get(HistoryEvent, created.id)
+    assert stored is not None
+    assert stored.actor_email_address is None
+
+
+def test_create_history_event_leaves_actor_email_address_empty_without_user_context(
+    session,
+):
+    application = session.exec(select(Application)).first()
+    adapter = HistoryEventRepositoryAdapter(session)
+
+    created = adapter.create_history_event(
+        event_reference=HistoryEventReference.APPLICATION_ASSESSMENT_COMPLETED,
+        actor="Caseworker",
+        actor_type=ActorType.CASEWORKER,
+        application_id=application.application_id,
+    )
+
+    stored = session.get(HistoryEvent, created.id)
+    assert stored is not None
+    assert stored.actor_email_address is None

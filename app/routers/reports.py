@@ -3,17 +3,19 @@ from datetime import UTC, date, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session
 
 from app.adapters.application_repository_adapter import ApplicationRepositoryAdapter
+from app.adapters.audit_trail_repository_adapter import AuditTrailRepositoryAdapter
 from app.adapters.claim_repository_adapter import ClaimRepositoryAdapter
 from app.auth.rbac import Permission
 from app.db import get_session
 from app.logging_utils import build_log_extra
 from app.models.audit.enums import ReportType
 from app.ports.application_backlog_port import ApplicationBacklogPort
+from app.ports.audit_trail_report_port import AuditTrailReportPort
 from app.ports.claim.payment_extract_report_port import PaymentExtractReportPort
 from app.ports.claim_backlog_port import ClaimBacklogPort
 from app.ports.provider_details_port import ProviderDetailsPort
@@ -31,6 +33,9 @@ from app.use_cases.exceptions import (
 )
 from app.use_cases.generate_application_backlog_report import (
     GenerateApplicationBacklogReportUseCase,
+)
+from app.use_cases.generate_audit_trail_report import (
+    GenerateAuditTrailReportUseCase,
 )
 from app.use_cases.generate_claim_backlog_report import (
     GenerateClaimBacklogReportUseCase,
@@ -103,6 +108,24 @@ def get_generate_payment_extract_report_use_case(
 ) -> GeneratePaymentExtractReportUseCase:
     return GeneratePaymentExtractReportUseCase(
         payment_extract_report_port=payment_extract_report_port,
+        provider_details_port=provider_details_port,
+    )
+
+
+def get_audit_trail_report_port(
+    session: Session = Depends(get_session),
+) -> AuditTrailReportPort:
+    return AuditTrailRepositoryAdapter(session=session)
+
+
+def get_generate_audit_trail_report_use_case(
+    audit_trail_report_port: AuditTrailReportPort = Depends(
+        get_audit_trail_report_port
+    ),
+    provider_details_port: ProviderDetailsPort = Depends(get_provider_details_port),
+) -> GenerateAuditTrailReportUseCase:
+    return GenerateAuditTrailReportUseCase(
+        audit_trail_report_port=audit_trail_report_port,
         provider_details_port=provider_details_port,
     )
 
@@ -253,6 +276,63 @@ def get_payment_extract_report(
     filename = f"{datetime.now(UTC).strftime('%Y-%m-%d-%H%M%S')} - Report - IDDS Financial Payments - OFFICIAL-SENSITIVE - LAA Use Only.csv"
     return StreamingResponse(
         chunks,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@router.get(
+    "/audit-trail",
+    dependencies=[
+        Depends(
+            audit_and_require_permission(
+                possible_permissions=Permission.REPORTS_MI_READ,
+                audit_event_factory=ReportAuditEventFactory(
+                    report_type=ReportType.AUDIT_TRAIL
+                ),
+            )
+        ),
+    ],
+)
+def get_audit_trail_report(
+    from_date: Annotated[date, Query(alias="from")],
+    to_date: Annotated[date, Query(alias="to")],
+    use_case: GenerateAuditTrailReportUseCase = Depends(
+        get_generate_audit_trail_report_use_case
+    ),
+    request: Request = None,
+) -> Response:
+    """Generate a CSV of auditable user and system activity between two dates (inclusive)."""
+
+    try:
+        csv_content = use_case.execute(from_date, to_date)
+    except InvalidDateRangeError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid date range: {exc}",
+        )
+    except (
+        ReportGenerationError,
+        ProviderDetailsRetrievalError,
+        SQLAlchemyError,
+    ) as exc:
+        logger.error(
+            "Audit trail report generation failed",
+            extra=build_log_extra(
+                event="audit_trail_report_failed",
+                route=_route(request),
+                method=_method(request),
+                status_code=500,
+                error_type=type(exc).__name__,
+            ),
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate audit trail report",
+        )
+    filename = f"{datetime.now(UTC).strftime('%Y-%m-%d-%H%M%S')} - Report - IDDS User Audit Trail - OFFICIAL-SENSITIVE - LAA Use Only.csv"
+    return Response(
+        content=csv_content,
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )

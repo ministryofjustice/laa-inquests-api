@@ -107,6 +107,7 @@ class EntraAuthAdapter:
                 scopes=token_scopes | token_roles,
                 name=self._format_name(payload.get("name")),
                 entra_object_id=payload.get("oid"),
+                email_address=payload.get("preferred_username"),
                 app_roles=app_roles,
             )
         except HTTPException:

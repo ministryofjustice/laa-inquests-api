@@ -3,6 +3,8 @@ from fastapi import Request
 from app.models.audit.enums import ReportType
 from app.models.audit.index import BaseAuditEvent, ReportAudit
 
+_REPORT_TYPES_WITH_PARAMETERS = {ReportType.PAYMENT_EXTRACT, ReportType.AUDIT_TRAIL}
+
 
 class ReportAuditEventFactory:
     """Builds the audit event for a report download of a specific report type."""
@@ -14,8 +16,8 @@ class ReportAuditEventFactory:
         return ReportAudit(
             user_email_address=user_email_address,
             report_type=self.report_type,
-            # Only the payment extract is filtered by user-supplied query parameters.
+            # Only date-range reports are filtered by user-supplied query parameters.
             parameters=dict(request.query_params)
-            if self.report_type == ReportType.PAYMENT_EXTRACT
+            if self.report_type in _REPORT_TYPES_WITH_PARAMETERS
             else None,
         )
