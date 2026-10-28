@@ -13,8 +13,7 @@ from alembic import op
 # revision identifiers, used by Alembic.
 revision: str = "idds_708_decisions_report"
 down_revision: str | Sequence[str] | None = (
-    "idds_731_audit_trail_extract",
-    "98afb9a716c2",
+    "idds_731_audit_trail_extract"
 )
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
