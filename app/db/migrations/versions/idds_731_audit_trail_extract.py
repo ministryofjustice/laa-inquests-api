@@ -4,7 +4,7 @@ Adds the AUDIT_TRAIL report type, the history_event.actor_email_address column
 and the timestamp indexes the cross-case audit trail query filters on.
 
 Revision ID: idds_731_audit_trail_extract
-Revises: f768f18eae97
+Revises: 98afb9a716c2
 Create Date: 2026-10-26 16:20:00.000000
 
 """
@@ -17,7 +17,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "idds_731_audit_trail_extract"
-down_revision: str | None = "f768f18eae97"
+down_revision: str | None = "98afb9a716c2"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
