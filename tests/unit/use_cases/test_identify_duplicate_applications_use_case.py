@@ -1,5 +1,5 @@
 from unittest.mock import MagicMock
-
+import pytest
 from sqlalchemy.exc import IntegrityError
 
 from app.ports.duplicate_applications_port import DuplicateApplicationsPort
@@ -33,12 +33,9 @@ def test_identify_duplicate_applications_reraises_exception_from_port_when_ident
         duplicate_applications_port=duplicate_applications_port
     )
 
-    try:
+    with pytest.raises(LookupError) as e:
         identify_duplicate_applications_use_case.execute(application_id=application_id)
-    except LookupError as e:
-        assert e == exception
-    else:
-        assert False, "Exception was not raised"
+    assert e.value == exception
 
 
 def test_identify_duplicate_applications_creates_duplicate_records():
@@ -89,9 +86,6 @@ def test_identify_duplicate_applications_reraises_exception_from_port_when_creat
         duplicate_applications_port=duplicate_applications_port
     )
 
-    try:
+    with pytest.raises(IntegrityError) as e:
         identify_duplicate_applications_use_case.execute(application_id=application_id)
-    except IntegrityError as e:
-        assert e == exception
-    else:
-        assert False, "Exception was not raised"
+    assert e.value == exception
