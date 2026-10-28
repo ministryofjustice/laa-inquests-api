@@ -402,7 +402,7 @@ class TestGetAuditTrailReport:
                 HistoryEventReference.CLAIM_REJECTED_EMAIL,
                 None,
                 "Claim Rejected",
-                "Claim rejected email sent",
+                "Claim rejection email sent",
             ),
         ],
     )

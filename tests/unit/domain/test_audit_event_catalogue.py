@@ -34,7 +34,7 @@ from app.domain.audit_event_catalogue import (
             "Claim submission confirmation sent",
         ),
         ("EVT-COM-CLM-002", "Claim approved", "Claim approved email sent"),
-        ("EVT-COM-CLM-003", "Claim Rejected", "Claim rejected email sent"),
+        ("EVT-COM-CLM-003", "Claim Rejected", "Claim rejection email sent"),
     ],
 )
 def test_describes_static_history_events(event_reference, title, description):

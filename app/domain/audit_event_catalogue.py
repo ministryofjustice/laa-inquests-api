@@ -123,7 +123,7 @@ _STATIC_EVENTS: dict[str, EventDescription] = {
         "Claim submission confirmation", "Claim submission confirmation sent"
     ),
     "EVT-COM-CLM-002": EventDescription("Claim approved", "Claim approved email sent"),
-    "EVT-COM-CLM-003": EventDescription("Claim Rejected", "Claim rejected email sent"),
+    "EVT-COM-CLM-003": EventDescription("Claim Rejected", "Claim rejection email sent"),
     AuditEventReference.APPLICATION_VIEWED: EventDescription(
         "Application viewed", "Application viewed"
     ),
