@@ -3,7 +3,11 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.models.application.enums import AddressSource
-from app.models.application.index import Address, AddressResponse
+from app.models.application.index import (
+    Address,
+    AddressResponse,
+    PotentialDuplicateApplicationResponse,
+)
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.get_potential_duplicates_port import GetPotentialDuplicatesPort
 from app.ports.provider_details_port import ProviderDetailsPort
@@ -228,3 +232,103 @@ def test_execute_raises_exception_when_provider_details_port_get_office_address_
         use_case.execute("1")
 
     assert str(exc_info.value) == "Provider details service error"
+
+
+def test_execute_returns_empty_potential_duplicates_list_when_get_potential_duplicates_returns_empty():
+    get_application_port = MagicMock(spec=GetApplicationPort)
+    client = create_base_client()
+    get_application_port.get_application_by_laa_reference.return_value = (
+        create_base_application(client=client)
+    )
+
+    port = MagicMock(spec=ProviderDetailsPort)
+    port.get_firm_name.return_value = "Test Firm"
+    port.get_office_address.return_value = Address(
+        address_line_1="123 Main St",
+        address_line_2="Suite 100",
+        town_or_city="Anytown",
+        county="Anycounty",
+        postcode="AB12 3CD",
+    )
+
+    use_case, application_repository_adapter = _make_use_case(
+        get_application_port, port, []
+    )
+
+    result = use_case.execute("1")
+
+    application_repository_adapter.get_duplicate_applications_by_ids.assert_not_called()
+    assert result.potential_duplicate_applications == []
+
+
+def test_execute_returns_potential_duplicates_when_get_potential_duplicates_returns_non_empty():
+    get_application_port = MagicMock(spec=GetApplicationPort)
+    client = create_base_client()
+    application = create_base_application(client=client)
+    get_application_port.get_application_by_laa_reference.return_value = application
+
+    port = MagicMock(spec=ProviderDetailsPort)
+    port.get_firm_name.return_value = "Test Firm"
+    port.get_office_address.return_value = Address(
+        address_line_1="123 Main St",
+        address_line_2="Suite 100",
+        town_or_city="Anytown",
+        county="Anycounty",
+        postcode="AB12 3CD",
+    )
+
+    use_case, application_repository_adapter = _make_use_case(
+        get_application_port, port, [1], [application]
+    )
+
+    result = use_case.execute("1")
+
+    application_repository_adapter.get_duplicate_applications_by_ids.assert_called_once_with(
+        [1]
+    )
+    assert result.potential_duplicate_applications == [
+        PotentialDuplicateApplicationResponse(
+            laa_reference=application.laa_reference,
+            status=application.overall_decision,
+        )
+    ]
+
+
+def test_execute_returns_multiple_potential_duplicates_when_get_potential_duplicates_returns_non_empty():
+    get_application_port = MagicMock(spec=GetApplicationPort)
+    client = create_base_client()
+    first_application = create_base_application(client=client)
+    second_application = create_base_application(client=client)
+    get_application_port.get_application_by_laa_reference.return_value = (
+        first_application
+    )
+
+    port = MagicMock(spec=ProviderDetailsPort)
+    port.get_firm_name.return_value = "Test Firm"
+    port.get_office_address.return_value = Address(
+        address_line_1="123 Main St",
+        address_line_2="Suite 100",
+        town_or_city="Anytown",
+        county="Anycounty",
+        postcode="AB12 3CD",
+    )
+
+    use_case, application_repository_adapter = _make_use_case(
+        get_application_port, port, [1, 2], [first_application, second_application]
+    )
+
+    result = use_case.execute("1")
+
+    application_repository_adapter.get_duplicate_applications_by_ids.assert_called_once_with(
+        [1, 2]
+    )
+    assert result.potential_duplicate_applications == [
+        PotentialDuplicateApplicationResponse(
+            laa_reference=first_application.laa_reference,
+            status=first_application.overall_decision,
+        ),
+        PotentialDuplicateApplicationResponse(
+            laa_reference=second_application.laa_reference,
+            status=second_application.overall_decision,
+        ),
+    ]

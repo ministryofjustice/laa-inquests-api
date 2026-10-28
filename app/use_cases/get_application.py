@@ -72,6 +72,8 @@ class GetApplicationUseCase:
             response.potential_duplicate_applications = (
                 self.prepare_duplicate_applications_response(duplicate_applications)
             )
+        else:
+            response.potential_duplicate_applications = []
 
         logger.info(
             "Application retrieved",

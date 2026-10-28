@@ -479,6 +479,8 @@ class ApplicationRepositoryAdapter(
         if not application_ids:
             return []
 
+        # TODO: Put in checks that each ID can be looked up successfully
+
         result = self.session.exec(
             select(Application)
             .where(Application.application_id.in_(application_ids))
