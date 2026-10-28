@@ -201,6 +201,16 @@ def get_get_application_use_case(
     )
 
 
+def get_identify_duplicate_applications_use_case(
+    duplicate_applications_port: DuplicateApplicationsPort = Depends(
+        get_application_db_adapter
+    ),
+) -> IdentifyDuplicateApplicationsUseCase:
+    return IdentifyDuplicateApplicationsUseCase(
+        duplicate_applications_port=duplicate_applications_port
+    )
+
+
 def get_create_application_use_case(
     create_application_port: CreateApplicationPort = Depends(
         get_application_db_adapter
@@ -210,8 +220,8 @@ def get_create_application_use_case(
     ),
     gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
     provider_details_port: ProviderDetailsPort = Depends(get_provider_details_port),
-    duplicate_applications_port: DuplicateApplicationsPort = Depends(
-        get_application_db_adapter
+    identify_duplicate_applications_use_case: IdentifyDuplicateApplicationsUseCase = Depends(
+        get_identify_duplicate_applications_use_case
     ),
 ) -> CreateApplicationUseCase:
     return CreateApplicationUseCase(
@@ -219,9 +229,7 @@ def get_create_application_use_case(
         create_history_event_port=create_history_event_port,
         gov_notify_port=gov_notify_port,
         provider_details_port=provider_details_port,
-        identify_duplicate_applications_use_case=IdentifyDuplicateApplicationsUseCase(
-            duplicate_applications_port=duplicate_applications_port
-        ),
+        identify_duplicate_applications_use_case=identify_duplicate_applications_use_case,
     )
 
 

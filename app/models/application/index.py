@@ -612,6 +612,7 @@ class ApplicationResponse(BaseModel):
     deceased: DeceasedResponse
     provider: ProviderResponse
     coroners_letter: CoronersLetterResponse | None = None
+    # potential_duplicate_applications: [{laa_reference: int, status: str}]
 
 
 # Use case models
