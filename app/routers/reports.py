@@ -10,6 +10,7 @@ from sqlmodel import Session
 from app.adapters.application_repository_adapter import ApplicationRepositoryAdapter
 from app.adapters.audit_trail_repository_adapter import AuditTrailRepositoryAdapter
 from app.adapters.claim_repository_adapter import ClaimRepositoryAdapter
+from app.adapters.history_event_repository_adapter import HistoryEventRepositoryAdapter
 from app.auth.rbac import Permission
 from app.db import get_session
 from app.logging_utils import build_log_extra
@@ -18,6 +19,7 @@ from app.ports.application_backlog_port import ApplicationBacklogPort
 from app.ports.audit_trail_report_port import AuditTrailReportPort
 from app.ports.claim.payment_extract_report_port import PaymentExtractReportPort
 from app.ports.claim_backlog_port import ClaimBacklogPort
+from app.ports.decisions_report_port import DecisionsReportPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.routers.applications import get_provider_details_port
 from app.routers.dependencies.auditer_permission_checker import (
@@ -40,6 +42,7 @@ from app.use_cases.generate_audit_trail_report import (
 from app.use_cases.generate_claim_backlog_report import (
     GenerateClaimBacklogReportUseCase,
 )
+from app.use_cases.generate_decisions_report import GenerateDecisionsReportUseCase
 from app.use_cases.generate_payment_extract_report import (
     GeneratePaymentExtractReportUseCase,
 )
@@ -128,6 +131,18 @@ def get_generate_audit_trail_report_use_case(
         audit_trail_report_port=audit_trail_report_port,
         provider_details_port=provider_details_port,
     )
+
+
+def get_decisions_report_port(
+    session: Session = Depends(get_session),
+) -> DecisionsReportPort:
+    return HistoryEventRepositoryAdapter(session=session)
+
+
+def get_generate_decisions_report_use_case(
+    decisions_report_port: DecisionsReportPort = Depends(get_decisions_report_port),
+) -> GenerateDecisionsReportUseCase:
+    return GenerateDecisionsReportUseCase(decisions_report_port=decisions_report_port)
 
 
 @router.get(
@@ -331,6 +346,61 @@ def get_audit_trail_report(
             detail="Failed to generate audit trail report",
         )
     filename = f"{datetime.now(UTC).strftime('%Y-%m-%d-%H%M%S')} - Report - IDDS User Audit Trail - OFFICIAL-SENSITIVE - LAA Use Only.csv"
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@router.get(
+    "/decisions",
+    dependencies=[
+        Depends(
+            audit_and_require_permission(
+                possible_permissions=[
+                    Permission.REPORTS_APPLICATION_WORKFLOW_READ,
+                    Permission.REPORTS_CLAIM_WORKFLOW_READ,
+                ],
+                audit_event_factory=ReportAuditEventFactory(
+                    report_type=ReportType.DECISIONS
+                ),
+            )
+        ),
+    ],
+)
+def get_decisions_report(
+    from_date: Annotated[date, Query(alias="from")],
+    to_date: Annotated[date, Query(alias="to")],
+    use_case: GenerateDecisionsReportUseCase = Depends(
+        get_generate_decisions_report_use_case
+    ),
+    request: Request = None,
+) -> Response:
+    """Return a CSV of all application and claim decisions made between two dates (inclusive, UTC)."""
+    try:
+        csv_content = use_case.execute(from_date, to_date)
+    except InvalidDateRangeError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid date range: {exc}",
+        )
+    except (ReportGenerationError, SQLAlchemyError) as exc:
+        logger.error(
+            "Decisions report generation failed",
+            extra=build_log_extra(
+                event="decisions_report_failed",
+                route=_route(request),
+                method=_method(request),
+                status_code=500,
+                error_type=type(exc).__name__,
+            ),
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate decisions report",
+        )
+    filename = f"{datetime.now(UTC).strftime('%Y-%m-%d')} - Report - IDDS Claim and Applications Processing - OFFICIAL-SENSITIVE - LAA Use Only.csv"
     return Response(
         content=csv_content,
         media_type="text/csv",

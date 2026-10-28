@@ -3,7 +3,11 @@ from fastapi import Request
 from app.models.audit.enums import ReportType
 from app.models.audit.index import BaseAuditEvent, ReportAudit
 
-_REPORT_TYPES_WITH_PARAMETERS = {ReportType.PAYMENT_EXTRACT, ReportType.AUDIT_TRAIL}
+_REPORT_TYPES_WITH_PARAMETERS = {
+    ReportType.PAYMENT_EXTRACT,
+    ReportType.AUDIT_TRAIL,
+    ReportType.DECISIONS,
+}
 
 
 class ReportAuditEventFactory:

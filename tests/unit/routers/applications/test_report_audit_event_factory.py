@@ -32,6 +32,18 @@ def test_payment_extract_audit_event_records_query_parameters():
     assert audit_event.parameters == query_params
 
 
+def test_decisions_audit_event_records_query_parameters():
+    query_params = {"from": "2024-01-01", "to": "2024-01-31"}
+
+    audit_event = ReportAuditEventFactory(report_type=ReportType.DECISIONS)(
+        user_email_address="user@example.com",
+        request=MagicMock(query_params=query_params),
+    )
+
+    assert audit_event.report_type == ReportType.DECISIONS
+    assert audit_event.parameters == query_params
+
+
 @pytest.mark.parametrize(
     "report_type", [ReportType.APPLICATIONS_BACKLOG, ReportType.CLAIMS_BACKLOG]
 )

@@ -12,6 +12,7 @@ from app.routers.dependencies import auditer_permission_checker
 from app.routers.reports import (
     get_generate_application_backlog_report_use_case,
     get_generate_claim_backlog_report_use_case,
+    get_generate_decisions_report_use_case,
     get_generate_payment_extract_report_use_case,
 )
 from app.use_cases.exceptions import AuditError
@@ -47,7 +48,17 @@ REPORT_ENDPOINTS = [
         get_generate_payment_extract_report_use_case,
         {"from": "2024-01-01", "to": "2024-01-31"},
     ),
+    (
+        "/reports/decisions",
+        Role.APPLICATION_WORKFLOW_REPORTING,
+        ReportType.DECISIONS,
+        get_generate_decisions_report_use_case,
+        {"from": "2024-01-01", "to": "2024-01-31"},
+    ),
 ]
+
+# Payment extract streams chunks; every other report returns the whole body.
+STREAMING_ENDPOINTS = {"/reports/payment-extract"}
 
 # (has_permission, audit_failure, expected_status)
 AUDIT_OUTCOMES = [
@@ -113,7 +124,7 @@ def test_report_download_outcome_depends_on_permission_and_audit(
 
     report_use_case = MagicMock()
     report_use_case.execute.return_value = (
-        iter([b"report data"]) if parameters else b"report data"
+        iter([b"report data"]) if endpoint in STREAMING_ENDPOINTS else b"report data"
     )
 
     monkeypatch.setattr(

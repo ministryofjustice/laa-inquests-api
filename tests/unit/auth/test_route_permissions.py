@@ -102,6 +102,10 @@ EXPECTED_ROUTE_PERMISSIONS: dict[
     ("GET", "/reports/claims/backlog"): Permission.REPORTS_CLAIM_WORKFLOW_READ,
     ("GET", "/reports/payment-extract"): Permission.REPORTS_PAYMENT_READ,
     ("GET", "/reports/audit-trail"): Permission.REPORTS_MI_READ,
+    ("GET", "/reports/decisions"): [
+        Permission.REPORTS_APPLICATION_WORKFLOW_READ,
+        Permission.REPORTS_CLAIM_WORKFLOW_READ,
+    ],
     # Monitoring
     ("GET", "/health"): PUBLIC,
     ("GET", "/status"): PUBLIC,

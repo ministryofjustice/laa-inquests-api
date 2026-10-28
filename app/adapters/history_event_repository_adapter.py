@@ -1,18 +1,30 @@
 import logging
+from datetime import datetime
 
 from sqlmodel import Session, select
 
 from app.contexts.user import get_entra_user_email_address, get_entra_user_object_id
+from app.domain.decisions_report import (
+    DECISION_EVENT_REFERENCES,
+    DecisionsReportSourceRecord,
+)
 from app.logging_utils import build_log_extra
+from app.models.application.index import Application
+from app.models.claim.index import Claim
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.ports.create_history_event_port import CreateHistoryEventPort
+from app.ports.decisions_report_port import DecisionsReportPort
 from app.ports.get_application_history_port import GetApplicationHistoryPort
 
 logger = logging.getLogger(__name__)
 
+CLAIM_LOOKUP_BATCH_SIZE = 500
 
-class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistoryPort):
+
+class HistoryEventRepositoryAdapter(
+    CreateHistoryEventPort, GetApplicationHistoryPort, DecisionsReportPort
+):
     """
     Adapter for creating and persisting history events to the database.
 
@@ -120,3 +132,63 @@ class HistoryEventRepositoryAdapter(CreateHistoryEventPort, GetApplicationHistor
             .where(HistoryEvent.application_id == application_id)
             .order_by(HistoryEvent.timestamp.desc())
         ).all()
+
+    def get_decisions_report_records(
+        self, decided_from: datetime, decided_before: datetime
+    ) -> list[DecisionsReportSourceRecord]:
+        statement = (
+            select(HistoryEvent, Application.laa_reference, Application.created_at)
+            .join(
+                Application, HistoryEvent.application_id == Application.application_id
+            )
+            .where(
+                HistoryEvent.event_reference.in_(DECISION_EVENT_REFERENCES),
+                HistoryEvent.timestamp >= decided_from,
+                HistoryEvent.timestamp < decided_before,
+            )
+            .order_by(HistoryEvent.timestamp, HistoryEvent.id)
+        )
+        rows = self.session.exec(statement).all()
+        claim_submission_dates = self._get_claim_submission_dates(
+            {
+                claim_reference
+                for event, _, _ in rows
+                if (claim_reference := _claim_reference_of(event))
+            }
+        )
+
+        return [
+            DecisionsReportSourceRecord(
+                event_reference=event.event_reference,
+                decided_at=event.timestamp,
+                actor=event.actor,
+                actor_type=event.actor_type,
+                actor_email_address=event.actor_email_address,
+                event_data=event.event_data,
+                laa_reference=laa_reference,
+                application_submitted_at=application_created_at,
+                claim_submitted_at=claim_submission_dates.get(
+                    _claim_reference_of(event)
+                ),
+            )
+            for event, laa_reference, application_created_at in rows
+        ]
+
+    def _get_claim_submission_dates(
+        self, claim_references: set[str]
+    ) -> dict[str, datetime]:
+        references = sorted(claim_references)
+        submission_dates: dict[str, datetime] = {}
+        for start in range(0, len(references), CLAIM_LOOKUP_BATCH_SIZE):
+            batch = references[start : start + CLAIM_LOOKUP_BATCH_SIZE]
+            statement = select(Claim.claim_reference, Claim.submission_date).where(
+                Claim.claim_reference.in_(batch)
+            )
+            submission_dates.update(self.session.exec(statement).all())
+        return submission_dates
+
+
+def _claim_reference_of(event: HistoryEvent) -> str | None:
+    if not isinstance(event.event_data, dict):
+        return None
+    return event.event_data.get("claim_reference")
