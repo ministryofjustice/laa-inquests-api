@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock, call
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from app.adapters.application_repository_adapter import ApplicationRepositoryAdapter
@@ -18,6 +19,7 @@ from app.models.application.index import (
     Application,
     ApplicationCreate,
     ApplicationProceeding,
+    DuplicateApplicationRecord,
 )
 from app.models.application.index import (
     CoronersLetter as CoronersLetterModel,
@@ -501,3 +503,322 @@ class TestUpdateApplicationPublicBodies:
         assert {pb.public_body_id for pb in updated_app.public_bodies} == set(
             new_public_bodies
         )
+
+
+class TestIdentifyDuplicateApplications:
+    def test_identify_duplicates_returns_list_of_application_ids(self, session):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+        result = adapter.identify_duplicates(application.application_id)
+        assert isinstance(result, list)
+        for app_id in result:
+            assert isinstance(app_id, int)
+
+    def test_identify_duplicates_excludes_itself(self, session):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+        result = adapter.identify_duplicates(application.application_id)
+        assert application.application_id not in result
+
+    def test_identify_duplicates_raises_exception_for_nonexistent_application(
+        self, session
+    ):
+        adapter = ApplicationRepositoryAdapter(session)
+        with pytest.raises(LookupError):
+            adapter.identify_duplicates(-1)
+
+    def test_identify_duplicates_returns_duplicate_when_all_fields_match(self, session):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        # Create a duplicate application with the same fields
+        duplicate_application = create_application_in_db(
+            session,
+            deceased_overrides={
+                "deceased_date_of_birth": application.deceased.deceased_date_of_birth,
+                "deceased_date_of_death": application.deceased.deceased_date_of_death,
+                "deceased_first_name": application.deceased.deceased_first_name,
+                "deceased_last_name": application.deceased.deceased_last_name,
+                "coroners_reference": application.deceased.coroners_reference,
+            },
+        )
+        result = adapter.identify_duplicates(application.application_id)
+        assert duplicate_application.application_id in result
+
+    def test_identify_duplicates_returns_duplicate_when_more_than_threshold_fields_match(
+        self, session
+    ):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        # Create a duplicate application with the same fields
+        duplicate_application = create_application_in_db(
+            session,
+            deceased_overrides={
+                "deceased_date_of_birth": application.deceased.deceased_date_of_birth,
+                "deceased_date_of_death": application.deceased.deceased_date_of_death,
+                "deceased_first_name": application.deceased.deceased_first_name,
+                "deceased_last_name": application.deceased.deceased_last_name,
+                "coroners_reference": "DIFFERENT_REFERENCE",
+            },
+        )
+        result = adapter.identify_duplicates(application.application_id)
+        assert duplicate_application.application_id in result
+
+    def test_identify_duplicates_returns_duplicate_when_exactly_threshold_fields_match(
+        self, session
+    ):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        # Create a duplicate application with the same fields
+        duplicate_application = create_application_in_db(
+            session,
+            deceased_overrides={
+                "deceased_date_of_birth": "DIFFERENT_DATE_OF_BIRTH",
+                "deceased_date_of_death": application.deceased.deceased_date_of_death,
+                "deceased_first_name": application.deceased.deceased_first_name,
+                "deceased_last_name": application.deceased.deceased_last_name,
+                "coroners_reference": "DIFFERENT_REFERENCE",
+            },
+        )
+        result = adapter.identify_duplicates(application.application_id)
+        assert duplicate_application.application_id in result
+
+    def test_does_not_return_applications_that_match_on_less_than_threshold(
+        self, session
+    ):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        create_application_in_db(
+            session,
+            deceased_overrides={
+                "deceased_date_of_birth": application.deceased.deceased_date_of_birth,
+                "deceased_date_of_death": "DIFFERENT_DATE_OF_DEATH",
+                "deceased_first_name": "DIFFERENT_FIRST_NAME",
+                "deceased_last_name": application.deceased.deceased_last_name,
+                "coroners_reference": "DIFFERENT_CORONERS_REFERENCE",
+            },
+        )
+
+        result = adapter.identify_duplicates(application.application_id)
+        assert result == []
+
+    def test_when_no_coroners_reference_returns_duplicate_if_there_is_match(
+        self, session
+    ):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        duplicate_application = create_application_in_db(
+            session,
+            deceased_overrides={
+                "deceased_date_of_birth": application.deceased.deceased_date_of_birth,
+                "deceased_date_of_death": application.deceased.deceased_date_of_death,
+                "deceased_first_name": application.deceased.deceased_first_name,
+                "deceased_last_name": application.deceased.deceased_last_name,
+                "coroners_reference": "",
+            },
+        )
+        result = adapter.identify_duplicates(application.application_id)
+        assert duplicate_application.application_id in result
+
+    def test_empty_coroners_reference_does_not_count_towards_duplicate_threshold(
+        self, session
+    ):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        duplicate_application = create_application_in_db(
+            session,
+            deceased_overrides={
+                "deceased_date_of_birth": "DIFFERENT_DATE_OF_BIRTH",
+                "deceased_date_of_death": "DIFFERENT_DATE_OF_DEATH",
+                "deceased_first_name": application.deceased.deceased_first_name,
+                "deceased_last_name": application.deceased.deceased_last_name,
+                "coroners_reference": "",
+            },
+        )
+        result = adapter.identify_duplicates(application.application_id)
+        assert duplicate_application.application_id not in result
+
+    def test_checks_against_both_first_and_last_name_when_identifying_duplicates(
+        self, session
+    ):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        duplicate_application = create_application_in_db(
+            session,
+            deceased_overrides={
+                "deceased_date_of_birth": "DIFFERENT_DATE_OF_BIRTH",
+                "deceased_date_of_death": "DIFFERENT_DATE_OF_DEATH",
+                "deceased_first_name": application.deceased.deceased_first_name,
+                "deceased_last_name": "DIFFERENT_LAST_NAME",
+                "coroners_reference": application.deceased.coroners_reference,
+            },
+        )
+        result = adapter.identify_duplicates(application.application_id)
+        assert duplicate_application.application_id not in result
+
+    def test_identifies_duplicates_when_not_case_sensitive_on_name(self, session):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        duplicate_application = create_application_in_db(
+            session,
+            deceased_overrides={
+                "deceased_date_of_birth": "DIFFERENT_DATE_OF_BIRTH",
+                "deceased_date_of_death": "DIFFERENT_DATE_OF_DEATH",
+                "deceased_first_name": application.deceased.deceased_first_name.capitalize(),
+                "deceased_last_name": application.deceased.deceased_last_name.upper(),
+                "coroners_reference": application.deceased.coroners_reference,
+            },
+        )
+        result = adapter.identify_duplicates(application.application_id)
+        assert duplicate_application.application_id in result
+
+    def test_identifies_multiple_duplicate_applications_when_there_is_a_match(
+        self, session
+    ):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        duplicate_application_one = create_application_in_db(
+            session,
+            deceased_overrides={
+                "deceased_date_of_birth": application.deceased.deceased_date_of_birth,
+                "deceased_date_of_death": application.deceased.deceased_date_of_death,
+                "deceased_first_name": application.deceased.deceased_first_name,
+                "deceased_last_name": application.deceased.deceased_last_name,
+                "coroners_reference": "",
+            },
+        )
+
+        duplicate_application_two = create_application_in_db(
+            session,
+            deceased_overrides={
+                "deceased_date_of_birth": application.deceased.deceased_date_of_birth,
+                "deceased_date_of_death": application.deceased.deceased_date_of_death,
+                "deceased_first_name": "DIFFERENT_FIRST_NAME",
+                "deceased_last_name": "DIFFERENT_LAST_NAME",
+                "coroners_reference": "",
+            },
+        )
+
+        result = adapter.identify_duplicates(application.application_id)
+        assert len(result) == 2
+        assert result == [
+            duplicate_application_one.application_id,
+            duplicate_application_two.application_id,
+        ]
+
+    @pytest.mark.parametrize(
+        "status",
+        [MeritsDecision.SUBMITTED, MeritsDecision.GRANTED, MeritsDecision.REFUSED],
+    )
+    def test_identify_duplicates_includes_only_eligible_statuses(self, session, status):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        duplicate_application = create_application_in_db(
+            session,
+            deceased_overrides={
+                "deceased_date_of_birth": application.deceased.deceased_date_of_birth,
+                "deceased_date_of_death": application.deceased.deceased_date_of_death,
+                "deceased_first_name": "DIFFERENT_FIRST_NAME",
+                "deceased_last_name": application.deceased.deceased_last_name,
+                "coroners_reference": "DIFFERENT_CORONERS_REFERENCE",
+            },
+            proceeding_overrides={"merits_decision": status},
+        )
+
+        result = adapter.identify_duplicates(application.application_id)
+        assert duplicate_application.application_id in result
+
+    def test_identify_duplicates_excludes_ineligible_statuses(self, session):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        create_application_in_db(
+            session,
+            deceased_overrides={
+                "deceased_date_of_birth": application.deceased.deceased_date_of_birth,
+                "deceased_date_of_death": application.deceased.deceased_date_of_death,
+                "deceased_first_name": "DIFFERENT_FIRST_NAME",
+                "deceased_last_name": application.deceased.deceased_last_name,
+                "coroners_reference": "DIFFERENT_CORONERS_REFERENCE",
+            },
+            proceeding_overrides={"merits_decision": "WITHDRAWN"},
+        )
+
+        result = adapter.identify_duplicates(application.application_id)
+        assert result == []
+
+    def test_returns_empty_list_when_no_other_applications_exist(self, session):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        result = adapter.identify_duplicates(application.application_id)
+        assert result == []
+
+
+class TestCreateDuplicateRecords:
+    @pytest.fixture
+    def enforce_foreign_keys(self, session):
+        session.connection().exec_driver_sql("PRAGMA foreign_keys=ON")
+        yield
+        session.rollback()
+        session.connection().exec_driver_sql("PRAGMA foreign_keys=OFF")
+
+    def test_create_duplicate_records_saves_records(self, session):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        create_application_in_db(session)
+        create_application_in_db(session)
+        create_application_in_db(session)
+
+        duplicate_application_ids = [2, 3, 4]
+        adapter.create_duplicate_records(
+            application.application_id, duplicate_application_ids
+        )
+
+        records = session.exec(select(DuplicateApplicationRecord)).all()
+
+        assert len(records) == len(duplicate_application_ids)
+        for record, duplicate_application_id in zip(records, duplicate_application_ids):
+            assert record.application_id == application.application_id
+            assert record.duplicate_application_id == duplicate_application_id
+
+    def test_creates_no_records_when_duplicate_application_id_empty(self, session):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        duplicate_application_id = []
+        adapter.create_duplicate_records(
+            application.application_id, duplicate_application_id
+        )
+
+        records = session.exec(select(DuplicateApplicationRecord)).all()
+        assert len(records) == 0
+
+    @pytest.mark.usefixtures("enforce_foreign_keys")
+    def test_raises_error_when_application_id_does_not_exist(self, session):
+        adapter = ApplicationRepositoryAdapter(session)
+
+        duplicate_application_id = [2, 3, 4]
+        with pytest.raises(IntegrityError):
+            adapter.create_duplicate_records(9999, duplicate_application_id)
+
+    @pytest.mark.usefixtures("enforce_foreign_keys")
+    def test_raises_error_when_duplicate_application_id_do_not_exist(self, session):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        duplicate_application_id = [9999, 10000]
+        with pytest.raises(IntegrityError):
+            adapter.create_duplicate_records(
+                application.application_id, duplicate_application_id
+            )

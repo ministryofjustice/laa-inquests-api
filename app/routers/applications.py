@@ -77,6 +77,7 @@ from app.ports.claim.update_claim_status_port import (
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.delete_coroners_letter_port import DeleteCoronersLetterPort
+from app.ports.duplicate_applications_port import DuplicateApplicationsPort
 from app.ports.get_application_history_port import GetApplicationHistoryPort
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.get_coroners_letter_port import GetCoronersLetterPort
@@ -126,6 +127,9 @@ from app.use_cases.get_application import GetApplicationUseCase
 from app.use_cases.get_application_history import GetApplicationHistoryUseCase
 from app.use_cases.get_claim import GetClaimUseCase
 from app.use_cases.grant_decision import GrantDecisionUseCase
+from app.use_cases.identify_duplicate_applications import (
+    IdentifyDuplicateApplicationsUseCase,
+)
 from app.use_cases.list_application_claims import ListApplicationClaimsUseCase
 from app.use_cases.list_applications import ListApplicationsUseCase
 from app.use_cases.list_provider_offices import ListProviderOfficesUseCase
@@ -197,6 +201,16 @@ def get_get_application_use_case(
     )
 
 
+def get_identify_duplicate_applications_use_case(
+    duplicate_applications_port: DuplicateApplicationsPort = Depends(
+        get_application_db_adapter
+    ),
+) -> IdentifyDuplicateApplicationsUseCase:
+    return IdentifyDuplicateApplicationsUseCase(
+        duplicate_applications_port=duplicate_applications_port
+    )
+
+
 def get_create_application_use_case(
     create_application_port: CreateApplicationPort = Depends(
         get_application_db_adapter
@@ -206,12 +220,16 @@ def get_create_application_use_case(
     ),
     gov_notify_port: GovNotifyPort = Depends(get_gov_notify_port),
     provider_details_port: ProviderDetailsPort = Depends(get_provider_details_port),
+    identify_duplicate_applications_use_case: IdentifyDuplicateApplicationsUseCase = Depends(
+        get_identify_duplicate_applications_use_case
+    ),
 ) -> CreateApplicationUseCase:
     return CreateApplicationUseCase(
         create_application_port=create_application_port,
         create_history_event_port=create_history_event_port,
         gov_notify_port=gov_notify_port,
         provider_details_port=provider_details_port,
+        identify_duplicate_applications_use_case=identify_duplicate_applications_use_case,
     )
 
 

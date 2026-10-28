@@ -5,7 +5,7 @@ from sqlmodel import select
 
 from app import api
 from app.auth.rbac import Permission, Role, get_current_user_permissions
-from app.models.application.index import Application
+from app.models.application.index import Application, DuplicateApplicationRecord
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.routers.dependencies.entra_auth import get_current_provider_office_codes
@@ -193,6 +193,44 @@ class TestCreateApplication:
         assert history_event.actor_type == ActorType.PROVIDER
         assert history_event.event_data is None
         assert history_event.application_id == application.application_id
+
+    def test_201_create_application_creates_duplicate_records(self, client, session):
+        first_application_id = (
+            session.exec(select(Application).order_by(Application.created_at.desc()))
+            .first()
+            .application_id
+        )
+
+        response = client.post(
+            "/applications",
+            json=_make_request_body(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 201
+        laa_reference = response.json()["laaReference"]
+
+        application_id = (
+            session.exec(
+                select(Application).where(Application.laa_reference == laa_reference)
+            )
+            .one()
+            .application_id
+        )
+
+        duplicate_records = session.exec(
+            select(DuplicateApplicationRecord)
+            .where(DuplicateApplicationRecord.application_id == application_id)
+            .where(
+                DuplicateApplicationRecord.duplicate_application_id
+                == first_application_id
+            )
+        ).all()
+
+        assert len(duplicate_records) == 1
 
     def test_201_create_application_can_omit_correspondence_address(self, client):
         request_body = _make_request_body(

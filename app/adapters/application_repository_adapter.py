@@ -2,6 +2,7 @@ import logging
 import random
 import uuid
 
+from sqlalchemy import and_, case, false, func
 from sqlmodel import Session, exists, select
 
 from app.config import Config
@@ -18,6 +19,7 @@ from app.models.application.index import (
     ApplicationPublicBody,
     Client,
     Deceased,
+    DuplicateApplicationRecord,
     ProceedingId,
     Provider,
     PublicBody,
@@ -29,6 +31,7 @@ from app.models.application.index import (
 from app.ports.application_backlog_port import ApplicationBacklogPort
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.delete_coroners_letter_port import DeleteCoronersLetterPort
+from app.ports.duplicate_applications_port import DuplicateApplicationsPort
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.get_coroners_letter_port import GetCoronersLetterPort
 from app.ports.list_applications_port import ListApplicationsPort
@@ -53,8 +56,10 @@ class ApplicationRepositoryAdapter(
     GetCoronersLetterPort,
     DeleteCoronersLetterPort,
     ApplicationBacklogPort,
+    DuplicateApplicationsPort,
 ):
     GENERATE_LAA_REFERENCE_ATTEMPTS = 10
+    DUPLICATE_MATCH_THRESHOLD = 2
 
     def __init__(
         self,
@@ -364,3 +369,89 @@ class ApplicationRepositoryAdapter(
             .order_by(Application.created_at.asc())
         )
         return list(self.session.exec(statement).unique().all())
+
+    def identify_duplicates(self, application_id: int) -> list[int]:
+        application = self.session.get(Application, application_id)
+        if not application:
+            raise LookupError(f"Application with id {application_id} does not exist")
+
+        new_deceased = application.deceased
+
+        same_date_of_birth = (
+            Deceased.deceased_date_of_birth == new_deceased.deceased_date_of_birth
+        )
+        same_date_of_death = (
+            Deceased.deceased_date_of_death == new_deceased.deceased_date_of_death
+        )
+        same_coroners_reference = (
+            Deceased.coroners_reference == new_deceased.coroners_reference
+            if new_deceased.coroners_reference != ""
+            else false()
+        )
+        same_name = and_(
+            func.lower(func.trim(Deceased.deceased_first_name))
+            == new_deceased.deceased_first_name.strip().lower(),
+            func.lower(func.trim(Deceased.deceased_last_name))
+            == new_deceased.deceased_last_name.strip().lower(),
+        )
+
+        match_count = (
+            case((same_date_of_birth, 1), else_=0)
+            + case((same_date_of_death, 1), else_=0)
+            + case((same_coroners_reference, 1), else_=0)
+            + case((same_name, 1), else_=0)
+        )
+
+        duplicate_application_id = self.session.exec(
+            select(Application.application_id)
+            .join(Deceased, Application.deceased_id == Deceased.deceased_id)
+            .join(
+                ApplicationProceeding,
+                Application.application_id == ApplicationProceeding.application_id,
+            )
+            .where(Application.application_id != application_id)
+            .where(
+                ApplicationProceeding.merits_decision.in_(
+                    [
+                        MeritsDecision.SUBMITTED,
+                        MeritsDecision.GRANTED,
+                        MeritsDecision.REFUSED,
+                    ]
+                )
+            )
+            .where(match_count >= self.DUPLICATE_MATCH_THRESHOLD)
+        ).all()
+        return list(duplicate_application_id)
+
+    def create_duplicate_records(
+        self, application_id: int, duplicate_application_ids: list[int]
+    ) -> None:
+        if not duplicate_application_ids:
+            return
+
+        logger.info(
+            "Creating duplicate records in db",
+            extra=build_log_extra(
+                event="create_duplicate_records_started",
+                application_id=application_id,
+                duplicate_count=len(duplicate_application_ids),
+            ),
+        )
+        duplicate_records = [
+            DuplicateApplicationRecord(
+                application_id=application_id,
+                duplicate_application_id=duplicate_application_id,
+            )
+            for duplicate_application_id in duplicate_application_ids
+        ]
+
+        self.session.add_all(duplicate_records)
+        self.session.flush()
+
+        logger.info(
+            "Added duplicate records in db",
+            extra=build_log_extra(
+                event="added_duplicate_records_started",
+                duplicate_count=len(duplicate_records),
+            ),
+        )
