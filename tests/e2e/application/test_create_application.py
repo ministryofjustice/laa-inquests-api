@@ -231,6 +231,7 @@ class TestCreateApplication:
         ).all()
 
         assert len(duplicate_records) == 1
+        assert response.json()["potentialDuplicateApplications"] is None
 
     def test_201_create_application_can_omit_correspondence_address(self, client):
         request_body = _make_request_body(
@@ -425,6 +426,21 @@ class TestCreateApplication:
             "recipientType": "ORGANISATION",
             "recipientName": "Inquests Support Org",
         }
+
+    def test_201_create_application_response_none_potential_duplicate_applications(
+        self, client
+    ):
+        response = client.post(
+            "/applications",
+            json=_make_request_body(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 201
+        assert response.json()["potentialDuplicateApplications"] is None
 
     def test_201_create_application_response_includes_provider_email(self, client):
         response = client.post(

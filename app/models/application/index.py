@@ -622,9 +622,9 @@ class ApplicationResponse(BaseModel):
     deceased: DeceasedResponse
     provider: ProviderResponse
     coroners_letter: CoronersLetterResponse | None = None
-    potential_duplicate_applications: list[
-        PotentialDuplicateApplicationResponse
-    ]  # = [] #TODO: Shoulld be None on the create_application response
+    potential_duplicate_applications: (
+        list[PotentialDuplicateApplicationResponse] | None
+    ) = None
 
 
 # Use case models

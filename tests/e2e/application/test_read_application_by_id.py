@@ -264,3 +264,20 @@ def test_200_read_application_response_includes_coroners_letter_file_name(
 
     assert response.status_code == 200
     assert response.json()["coronersLetter"]["fileName"] == "test-document.pdf"
+
+
+def test_200_potential_duplicate_applications_is_none_when_no_duplicates_exist(
+    session, client
+):
+    first_application_row = session.exec(select(Application)).first()
+
+    response = client.get(
+        f"/applications/{first_application_row.laa_reference}",
+        headers={
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["potentialDuplicateApplications"] is None
