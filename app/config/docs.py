@@ -43,6 +43,7 @@ Reports are returned as CSV file downloads.
 Authorised workflow reporting users can:
 * Download a report of open applications pending assessment or decision by sending a get request to **/reports/applications/backlog**.
 * Download a report of open claims pending assessment or decision by sending a get request to **/reports/claims/backlog**.
+* Download a report of all application and claim decisions (including auto approved and auto rejected claims) by sending a get request to **/reports/decisions**. The **from** and **to** query parameters (YYYY-MM-DD, inclusive, UTC) are required and the range must not be longer than one calendar month. Rows are ordered by decision time, oldest first. **Who** is the caseworker's email address, falling back to their name when no email was recorded, and **System** for automatic decisions. If the report cannot be generated in full, an error is returned instead of a file.
 
 ### Finance and assurance
 Authorised finance and assurance users can:

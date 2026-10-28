@@ -6,6 +6,7 @@ class ReportType(StrEnum):
     APPLICATIONS_BACKLOG = "Applications Backlog"
     PAYMENT_EXTRACT = "Payment Extract"
     AUDIT_TRAIL = "User Audit Trail"
+    DECISIONS = "Decisions"
 
 
 class AuditEventReference(StrEnum):

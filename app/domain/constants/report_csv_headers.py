@@ -46,3 +46,16 @@ AUDIT_TRAIL_REPORT_HEADERS = [
     "Firm name",
     "Office account number",
 ]
+
+DECISIONS_REPORT_HEADERS = [
+    "Submission type",
+    "Case reference",
+    "Claim reference",
+    "Decision",
+    "Submission date",
+    "Date of decision",
+    "Time of decision",
+    "Who",
+    "Refusal reason",
+    "Justification",
+]
