@@ -57,7 +57,7 @@ jobs:
           slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL_STAGING }}
           pipeline_status: "${{ job.status }} ${{ join(needs.*.result, ' ') }}"
 
-  deploy-production:
+  deploy-prod:
     environment: prod
     runs-on: ubuntu-latest
     needs: deploy-staging
@@ -95,8 +95,8 @@ jobs:
   notify-slack-prod:
     permissions:
       contents: read
-    environment: production
-    needs: deploy-production
+    environment: prod
+    needs: deploy-prod
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
     steps:
