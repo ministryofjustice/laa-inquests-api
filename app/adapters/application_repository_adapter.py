@@ -1,7 +1,8 @@
 import logging
 import random
 import uuid
-from sqlalchemy import case, false, func, and_
+
+from sqlalchemy import and_, case, false, func
 from sqlmodel import Session, exists, select
 
 from app.config import Config

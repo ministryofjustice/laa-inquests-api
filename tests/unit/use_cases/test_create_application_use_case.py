@@ -11,12 +11,12 @@ from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.create_application import CreateApplicationUseCase
-from app.use_cases.identify_duplicate_applications import (
-    IdentifyDuplicateApplicationsUseCase,
-)
 from app.use_cases.exceptions import (
     ProviderDetailsRetrievalError,
     ProviderOfficeMismatchError,
+)
+from app.use_cases.identify_duplicate_applications import (
+    IdentifyDuplicateApplicationsUseCase,
 )
 from tests.unit.factories import create_base_application
 

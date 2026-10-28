@@ -1,9 +1,9 @@
-from sqlalchemy.exc import IntegrityError
 import uuid
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, call
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from app.adapters.application_repository_adapter import ApplicationRepositoryAdapter
