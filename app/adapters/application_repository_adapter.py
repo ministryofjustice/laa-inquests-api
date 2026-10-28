@@ -455,3 +455,18 @@ class ApplicationRepositoryAdapter(
                 duplicate_count=len(duplicate_records),
             ),
         )
+
+    def get_potential_duplicates(self, application_id: int) -> list[int]:
+        as_primary = self.session.exec(
+            select(DuplicateApplicationRecord.duplicate_application_id).where(
+                DuplicateApplicationRecord.application_id == application_id
+            )
+        ).all()
+
+        as_secondary = self.session.exec(
+            select(DuplicateApplicationRecord.application_id).where(
+                DuplicateApplicationRecord.duplicate_application_id == application_id
+            )
+        ).all()
+
+        return list(set(as_primary + as_secondary))

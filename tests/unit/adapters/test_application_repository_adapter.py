@@ -822,3 +822,49 @@ class TestCreateDuplicateRecords:
             adapter.create_duplicate_records(
                 application.application_id, duplicate_application_id
             )
+
+
+class TestGetPotentialDuplicates:
+    def test_returns_potential_duplicates_where_target_is_application_id(self, session):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        create_application_in_db(session)
+        adapter.create_duplicate_records(2, [application.application_id])
+        create_application_in_db(session)
+        adapter.create_duplicate_records(3, [application.application_id, 2])
+
+        potential_duplicates = adapter.get_potential_duplicates(3)
+        assert potential_duplicates == [1, 2]
+
+    def test_returns_potential_duplicates_where_target_is_duplicate_application_id(
+        self, session
+    ):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        create_application_in_db(session)
+        adapter.create_duplicate_records(2, [application.application_id])
+        create_application_in_db(session)
+        adapter.create_duplicate_records(3, [application.application_id, 2])
+
+        potential_duplicates = adapter.get_potential_duplicates(
+            application.application_id
+        )
+        assert potential_duplicates == [2, 3]
+
+    def test_returns_potential_duplicates_only_unique_entries(self, session):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        create_application_in_db(session)
+        adapter.create_duplicate_records(2, [application.application_id])
+        create_application_in_db(session)
+        adapter.create_duplicate_records(3, [application.application_id, 2])
+
+        adapter.create_duplicate_records(1, [2, 3])
+
+        potential_duplicates = adapter.get_potential_duplicates(
+            application.application_id
+        )
+        assert potential_duplicates == [2, 3]
