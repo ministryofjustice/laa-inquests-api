@@ -33,6 +33,7 @@ from app.ports.create_application_port import CreateApplicationPort
 from app.ports.delete_coroners_letter_port import DeleteCoronersLetterPort
 from app.ports.duplicate_applications_port import DuplicateApplicationsPort
 from app.ports.get_application_port import GetApplicationPort
+from app.ports.get_potential_duplicates_port import GetPotentialDuplicatesPort
 from app.ports.get_coroners_letter_port import GetCoronersLetterPort
 from app.ports.list_applications_port import ListApplicationsPort
 from app.ports.list_public_bodies_port import ListPublicBodiesPort
@@ -46,6 +47,7 @@ logger = logging.getLogger(__name__)
 
 class ApplicationRepositoryAdapter(
     GetApplicationPort,
+    GetPotentialDuplicatesPort,
     CreateApplicationPort,
     ApplicationDecisionPort,
     ListApplicationsPort,
@@ -470,3 +472,17 @@ class ApplicationRepositoryAdapter(
         ).all()
 
         return list(set(as_primary + as_secondary))
+
+    def get_duplicate_applications_by_ids(
+        self, application_ids: list[int]
+    ) -> list[Application]:
+        if not application_ids:
+            return []
+
+        result = self.session.exec(
+            select(Application)
+            .where(Application.application_id.in_(application_ids))
+            .order_by(Application.application_id)
+        ).all()
+
+        return list(result)

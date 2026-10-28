@@ -9,6 +9,3 @@ class DuplicateApplicationsPort(ABC):
     def create_duplicate_records(
         self, application_id: int, duplicate_ids: list[int]
     ) -> None: ...
-
-    @abstractmethod
-    def get_potential_duplicates(self, application_id: int) -> list[int]: ...

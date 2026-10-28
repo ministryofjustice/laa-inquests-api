@@ -868,3 +868,33 @@ class TestGetPotentialDuplicates:
             application.application_id
         )
         assert potential_duplicates == [2, 3]
+
+
+class TestGetApplicationsByIds:
+    def test_returns_applications_for_given_ids(self, session):
+        adapter = ApplicationRepositoryAdapter(session)
+        first_application_id = session.exec(select(Application)).first().application_id
+        second_application_id = create_application_in_db(session).application_id
+        assert first_application_id is not None
+        assert second_application_id is not None
+
+        applications = adapter.get_duplicate_applications_by_ids(
+            [first_application_id, second_application_id]
+        )
+
+        assert len(applications) == 2
+        assert [app.application_id for app in applications] == [
+            first_application_id,
+            second_application_id,
+        ]
+
+    def test_returns_empty_list_when_no_ids_given(self, session):
+        adapter = ApplicationRepositoryAdapter(session)
+
+        applications = adapter.get_duplicate_applications_by_ids([9999, 10000])
+
+        assert applications == []
+
+    def test_ignores_nonexistent_provided_ids(self, session):
+        adapter = ApplicationRepositoryAdapter(session)
+        assert adapter.get_duplicate_applications_by_ids([9999]) == []
