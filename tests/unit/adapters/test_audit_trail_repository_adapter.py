@@ -143,7 +143,7 @@ def test_application_view_events_map_each_page_and_report_the_viewer(session):
         ),
         AuditTrailEvent(
             occurred_at=datetime(2025, 3, 15, 13, 0, tzinfo=UTC),
-            event_reference="EVT-AUD-003",
+            event_reference="EVT-AUD-002",
             username="caseworker@example.com",
             laa_reference="INQ-123-456",
         ),
@@ -183,13 +183,13 @@ def test_report_events_carry_the_report_name_and_filter_on_a_half_open_range(ses
     assert events == [
         AuditTrailEvent(
             occurred_at=FROM,
-            event_reference="EVT-AUD-002",
+            event_reference="EVT-AUD-003",
             username="assurance@example.com",
             event_data={"report_name": "Payment Extract"},
         ),
         AuditTrailEvent(
             occurred_at=IN_RANGE,
-            event_reference="EVT-AUD-002",
+            event_reference="EVT-AUD-003",
             username="assurance@example.com",
             event_data={"report_name": "User Audit Trail"},
         ),

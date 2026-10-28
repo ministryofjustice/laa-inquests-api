@@ -64,7 +64,7 @@ def _view(occurred_at: datetime | None = None) -> AuditTrailEvent:
 def _report(occurred_at: datetime | None = None) -> AuditTrailEvent:
     return AuditTrailEvent(
         occurred_at=occurred_at or _at(12),
-        event_reference="EVT-AUD-002",
+        event_reference="EVT-AUD-003",
         username="assurance@example.com",
         event_data={"report_name": "Payment Extract"},
     )
@@ -202,7 +202,7 @@ class TestCsvContent:
             {
                 "Event title": "Application submitted",
                 "Event description": "Application received",
-                "Event date": "15-03-2025",
+                "Event date": "2025-03-15",
                 "Event time": "14:05:09",
                 "Username": "provider@example.com",
                 "Case reference": "INQ-123-456",
@@ -235,7 +235,7 @@ class TestCsvContent:
 
         (row,) = parse_csv_rows(use_case.execute(FROM_DATE, TO_DATE))
 
-        assert (row["Event date"], row["Event time"]) == ("15-03-2025", "23:30:00")
+        assert (row["Event date"], row["Event time"]) == ("2025-03-15", "23:30:00")
 
     def test_treats_naive_timestamps_as_utc(self):
         use_case, _, _ = _build_use_case(

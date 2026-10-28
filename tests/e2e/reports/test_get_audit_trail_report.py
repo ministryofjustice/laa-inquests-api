@@ -189,7 +189,7 @@ class TestGetAuditTrailReport:
         assert row == {
             "Event title": "Application submitted",
             "Event description": "Application received",
-            "Event date": "15-03-2025",
+            "Event date": "2025-03-15",
             "Event time": "12:00:00",
             "Username": "provider@example.com",
             "Case reference": SEEDED_LAA_REFERENCE,
@@ -217,7 +217,7 @@ class TestGetAuditTrailReport:
         assert row["Firm name"] == ""
         assert row["Office account number"] == ""
 
-    def test_200_historical_caseworker_event_without_email_has_blank_username(
+    def test_200_historical_caseworker_event_without_email_shows_the_stored_name(
         self, session, client
     ):
         _add_history_event(
@@ -232,7 +232,7 @@ class TestGetAuditTrailReport:
 
         row = _single_row(client)
 
-        assert row["Username"] == ""
+        assert row["Username"] == "Test Name"
 
     def test_200_system_history_event_row_has_system_username_and_no_firm_details(
         self, session, client
@@ -437,7 +437,7 @@ class TestGetAuditTrailReport:
         assert row == {
             "Event title": "Application viewed",
             "Event description": "Application viewed",
-            "Event date": "15-03-2025",
+            "Event date": "2025-03-15",
             "Event time": "12:00:00",
             "Username": "caseworker@example.com",
             "Case reference": SEEDED_LAA_REFERENCE,
@@ -486,7 +486,7 @@ class TestGetAuditTrailReport:
         assert row == {
             "Event title": "Report downloaded",
             "Event description": f"{report_name} downloaded",
-            "Event date": "15-03-2025",
+            "Event date": "2025-03-15",
             "Event time": "12:00:00",
             "Username": "assurance@example.com",
             "Case reference": "",
@@ -597,8 +597,8 @@ class TestGetAuditTrailReport:
         rows = _rows(client)
 
         assert [(row["Event date"], row["Event time"]) for row in rows] == [
-            ("02-03-2025", "00:00:00"),
-            ("31-03-2025", "23:59:59"),
+            ("2025-03-02", "00:00:00"),
+            ("2025-03-31", "23:59:59"),
         ]
         assert {row["Event title"] for row in rows} == {event_title}
 
@@ -655,7 +655,7 @@ class TestGetAuditTrailReport:
         assert row == {
             "Event title": "Report downloaded",
             "Event description": "User Audit Trail downloaded",
-            "Event date": "01-09-2026",
+            "Event date": "2026-09-01",
             "Event time": "16:45:01",
             "Username": "test@example.com",
             "Case reference": "",
@@ -761,21 +761,14 @@ class TestGetAuditTrailReportAuth:
     """Authentication and authorisation tests for GET /reports/audit-trail."""
 
     # The audit trail shares the MI report permission until it is amended separately.
-    @pytest.mark.parametrize(
-        "role", [Role.ASSURANCE, Role.FINANCE, Role.POLICY], ids=lambda r: r.name
-    )
-    def test_200_returns_ok_for_mi_report_roles(self, client, role):
-        response = _get(client, headers={"Authorization": f"Bearer {role.value}"})
+    def test_200_returns_ok_for_the_assurance_role(self, client):
+        response = _get(client)
 
         assert response.status_code == 200
 
     @pytest.mark.parametrize(
         "role",
-        [
-            role
-            for role in Role
-            if role not in (Role.ASSURANCE, Role.FINANCE, Role.POLICY)
-        ],
+        [role for role in Role if role != Role.ASSURANCE],
         ids=lambda r: r.name,
     )
     def test_403_for_roles_without_mi_report_permission(self, client, role):

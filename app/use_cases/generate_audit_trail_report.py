@@ -114,7 +114,7 @@ class GenerateAuditTrailReportUseCase:
             for value in (
                 described.title,
                 described.description,
-                occurred_at.strftime("%d-%m-%Y"),
+                occurred_at.strftime("%Y-%m-%d"),
                 occurred_at.strftime("%H:%M:%S"),
                 event.username,
                 event.laa_reference or "",

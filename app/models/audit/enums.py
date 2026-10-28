@@ -12,8 +12,8 @@ class AuditEventReference(StrEnum):
     """Case Audit event references from the Event Catalogue (EVT-AUD-###)."""
 
     APPLICATION_VIEWED = "EVT-AUD-001"
-    REPORT_DOWNLOADED = "EVT-AUD-002"
-    CERTIFICATE_VIEWED = "EVT-AUD-003"
+    CERTIFICATE_VIEWED = "EVT-AUD-002"
+    REPORT_DOWNLOADED = "EVT-AUD-003"
 
 
 class ApplicationPageType(StrEnum):

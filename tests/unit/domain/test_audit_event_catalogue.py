@@ -146,9 +146,9 @@ def test_describes_dynamic_history_events_from_event_data(
     ("event_reference", "event_data", "title", "description"),
     [
         ("EVT-AUD-001", None, "Application viewed", "Application viewed"),
-        ("EVT-AUD-003", None, "Certificate viewed", "Certificate viewed"),
+        ("EVT-AUD-002", None, "Certificate viewed", "Certificate viewed"),
         (
-            "EVT-AUD-002",
+            "EVT-AUD-003",
             {"report_name": "Payment Extract"},
             "Report downloaded",
             "Payment Extract downloaded",
@@ -176,7 +176,7 @@ def test_unknown_event_reference_raises_an_error():
         ("EVT-BUS-APP-004", {"old_public_bodies": []}),
         ("EVT-BUS-CLM-001", {"claim_type": "FINAL_BILL"}),
         ("EVT-BUS-CLM-003", {}),
-        ("EVT-AUD-002", None),
+        ("EVT-AUD-003", None),
     ],
 )
 def test_missing_event_data_raises_an_error(event_reference, event_data):

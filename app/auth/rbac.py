@@ -94,11 +94,8 @@ ROLE_PERMISSIONS_MAP: dict[Role, set[Permission]] = {
     Role.CLAIM_WORKFLOW_REPORTING: {
         Permission.REPORTS_CLAIM_WORKFLOW_READ,
     },
-    Role.POLICY: {
-        Permission.REPORTS_MI_READ,
-    },
+    Role.POLICY: set(),
     Role.FINANCE: {
-        Permission.REPORTS_MI_READ,
         Permission.REPORTS_PAYMENT_READ,
     },
 }

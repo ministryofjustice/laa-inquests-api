@@ -168,13 +168,10 @@ def test_internal_claim_workflow_reporting_permission_set():
 
 
 def test_internal_policy_permission_set():
-    assert ROLE_PERMISSIONS_MAP[Role.POLICY.value] == {
-        Permission.REPORTS_MI_READ,
-    }
+    assert ROLE_PERMISSIONS_MAP[Role.POLICY.value] == set()
 
 
 def test_internal_finance_permission_set():
     assert ROLE_PERMISSIONS_MAP[Role.FINANCE.value] == {
-        Permission.REPORTS_MI_READ,
         Permission.REPORTS_PAYMENT_READ,
     }

@@ -31,8 +31,8 @@ def resolve_history_username(
     if actor_type == ActorType.SYSTEM:
         return SYSTEM_USERNAME
     if actor_type == ActorType.CASEWORKER:
-        # Caseworker events recorded before emails were stored have none to report.
-        return actor_email_address or ""
+        # Caseworker events recorded before emails were stored only have the name.
+        return actor_email_address or actor
     return actor
 
 

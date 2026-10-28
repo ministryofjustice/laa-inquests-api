@@ -43,12 +43,20 @@ def test_caseworker_username_is_the_actor_email_address():
     assert username == "caseworker@example.com"
 
 
-def test_caseworker_username_is_blank_when_no_email_was_recorded():
+def test_caseworker_username_falls_back_to_the_stored_name_when_no_email_was_recorded():
     username = resolve_history_username(
         ActorType.CASEWORKER, "Test Name", actor_email_address=None
     )
 
-    assert username == ""
+    assert username == "Test Name"
+
+
+def test_caseworker_username_falls_back_to_the_stored_name_for_an_empty_email():
+    username = resolve_history_username(
+        ActorType.CASEWORKER, "Test Name", actor_email_address=""
+    )
+
+    assert username == "Test Name"
 
 
 @pytest.mark.parametrize("actor", ["System", ActorType.SYSTEM, "anything"])
@@ -121,7 +129,7 @@ def test_application_certificate_view_event_is_reported_as_certificate_viewed():
 
     assert event == AuditTrailEvent(
         occurred_at=OCCURRED_AT,
-        event_reference="EVT-AUD-003",
+        event_reference="EVT-AUD-002",
         username="caseworker@example.com",
         laa_reference="INQ-123-456",
     )
@@ -134,7 +142,7 @@ def test_report_download_event_carries_the_report_name():
 
     assert event == AuditTrailEvent(
         occurred_at=OCCURRED_AT,
-        event_reference="EVT-AUD-002",
+        event_reference="EVT-AUD-003",
         username="assurance@example.com",
         event_data={"report_name": "Payment Extract"},
     )
