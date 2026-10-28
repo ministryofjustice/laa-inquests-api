@@ -5,6 +5,7 @@ import pytest
 from app.models.application.enums import AddressSource
 from app.models.application.index import Address, AddressResponse
 from app.ports.get_application_port import GetApplicationPort
+from app.ports.get_potential_duplicates_port import GetPotentialDuplicatesPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
@@ -18,15 +19,31 @@ from tests.unit.factories import (
 )
 
 
+def _make_use_case(
+    get_application_port,
+    provider_details_port,
+    duplicate_ids=None,
+    duplicate_applications=None,
+):
+    duplicates_port = MagicMock(spec=GetPotentialDuplicatesPort)
+    duplicates_port.get_potential_duplicates.return_value = duplicate_ids or []
+    duplicates_port.get_duplicate_applications_by_ids.return_value = (
+        duplicate_applications or []
+    )
+    use_case = GetApplicationUseCase(
+        get_application_port=get_application_port,
+        provider_details_port=provider_details_port,
+        get_potential_duplicates_port=duplicates_port,
+    )
+    return use_case, duplicates_port
+
+
 def test_execute_raises_application_not_found_error_when_application_not_found():
     get_application_port = MagicMock(spec=GetApplicationPort)
     get_application_port.get_application_by_laa_reference.return_value = None
     port = MagicMock(spec=ProviderDetailsPort)
 
-    use_case = GetApplicationUseCase(
-        get_application_port=get_application_port,
-        provider_details_port=port,
-    )
+    use_case, _ = _make_use_case(get_application_port, port)
 
     with pytest.raises(ApplicationNotFoundError):
         use_case.execute("99999")
@@ -41,10 +58,7 @@ def test_execute_calls_provider_details_port_get_firm_name_with_firm_code():
     port = MagicMock(spec=ProviderDetailsPort)
     port.get_firm_name.return_value = "Test Firm"
 
-    use_case = GetApplicationUseCase(
-        get_application_port=get_application_port,
-        provider_details_port=port,
-    )
+    use_case, _ = _make_use_case(get_application_port, port)
     use_case.execute("1")
 
     port.get_firm_name.assert_called_once_with("0A123B")
@@ -58,10 +72,7 @@ def test_execute_returns_application_response_with_firm_name():
     port = MagicMock(spec=ProviderDetailsPort)
     port.get_firm_name.return_value = "Test Firm"
 
-    use_case = GetApplicationUseCase(
-        get_application_port=get_application_port,
-        provider_details_port=port,
-    )
+    use_case, _ = _make_use_case(get_application_port, port)
     result = use_case.execute("1")
 
     assert result.provider.firm_name == "Test Firm"
@@ -77,10 +88,7 @@ def test_execute_raises_exception_when_provider_details_port_get_firm_name_raise
         "Provider details service error"
     )
 
-    use_case = GetApplicationUseCase(
-        get_application_port=get_application_port,
-        provider_details_port=port,
-    )
+    use_case, _ = _make_use_case(get_application_port, port)
 
     with pytest.raises(ProviderDetailsRetrievalError) as exc_info:
         use_case.execute("1")
@@ -97,10 +105,7 @@ def test_execute_returns_correct_account_number():
     port = MagicMock(spec=ProviderDetailsPort)
     port.get_firm_name.return_value = "Test Firm"
 
-    use_case = GetApplicationUseCase(
-        get_application_port=get_application_port,
-        provider_details_port=port,
-    )
+    use_case, _ = _make_use_case(get_application_port, port)
     result = use_case.execute("1")
 
     assert result.provider.account_number == "042"
@@ -115,10 +120,7 @@ def test_execute_returns_provider_email_in_response():
     port = MagicMock(spec=ProviderDetailsPort)
     port.get_firm_name.return_value = "Test Firm"
 
-    use_case = GetApplicationUseCase(
-        get_application_port=get_application_port,
-        provider_details_port=port,
-    )
+    use_case, _ = _make_use_case(get_application_port, port)
     result = use_case.execute("1")
 
     assert result.provider.email_address == "provider@example.com"
@@ -144,10 +146,7 @@ def test_execute_calls_provider_details_port_get_office_address_with_office_id()
     port.get_firm_name.return_value = "Test Firm"
     port.get_office_address.return_value = office_address
 
-    use_case = GetApplicationUseCase(
-        get_application_port=get_application_port,
-        provider_details_port=port,
-    )
+    use_case, _ = _make_use_case(get_application_port, port)
     use_case.execute("1")
 
     port.get_office_address.assert_called_once_with("0U651L")
@@ -173,10 +172,7 @@ def test_execute_returns_application_response_with_office_correspondence_address
     port.get_firm_name.return_value = "Test Firm"
     port.get_office_address.return_value = office_address
 
-    use_case = GetApplicationUseCase(
-        get_application_port=get_application_port,
-        provider_details_port=port,
-    )
+    use_case, _ = _make_use_case(get_application_port, port)
     result = use_case.execute("1")
 
     assert result.client.correspondence_address == AddressResponse(
@@ -204,10 +200,7 @@ def test_execute_returns_application_response_with_office_correspondence_address
     port.get_firm_name.return_value = "Test Firm"
     port.get_office_address.return_value = office_address
 
-    use_case = GetApplicationUseCase(
-        get_application_port=get_application_port,
-        provider_details_port=port,
-    )
+    use_case, _ = _make_use_case(get_application_port, port)
     result = use_case.execute("1")
 
     assert result.client.correspondence_address == AddressResponse(
@@ -229,10 +222,7 @@ def test_execute_raises_exception_when_provider_details_port_get_office_address_
         "Provider details service error"
     )
 
-    use_case = GetApplicationUseCase(
-        get_application_port=get_application_port,
-        provider_details_port=port,
-    )
+    use_case, _ = _make_use_case(get_application_port, port)
 
     with pytest.raises(ProviderDetailsRetrievalError) as exc_info:
         use_case.execute("1")

@@ -81,6 +81,7 @@ from app.ports.duplicate_applications_port import DuplicateApplicationsPort
 from app.ports.get_application_history_port import GetApplicationHistoryPort
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.get_coroners_letter_port import GetCoronersLetterPort
+from app.ports.get_potential_duplicates_port import GetPotentialDuplicatesPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.list_applications_port import ListApplicationsPort
 from app.ports.list_public_bodies_port import ListPublicBodiesPort
@@ -194,10 +195,14 @@ def get_history_event_adapter(
 def get_get_application_use_case(
     get_application_port: GetApplicationPort = Depends(get_application_db_adapter),
     provider_details_port: ProviderDetailsPort = Depends(get_provider_details_port),
+    get_potential_duplicates_port: GetPotentialDuplicatesPort = Depends(
+        get_application_db_adapter
+    ),
 ) -> GetApplicationUseCase:
     return GetApplicationUseCase(
         get_application_port=get_application_port,
         provider_details_port=provider_details_port,
+        get_potential_duplicates_port=get_potential_duplicates_port,
     )
 
 

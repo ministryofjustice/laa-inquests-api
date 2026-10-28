@@ -599,7 +599,7 @@ class PotentialDuplicateApplicationResponse(BaseModel):
         populate_by_name=True,
     )
     laa_reference: str
-    status: MeritsDecision
+    status: str
 
 
 class ApplicationResponse(BaseModel):
