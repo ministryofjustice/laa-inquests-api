@@ -242,7 +242,9 @@ class TestCsvContent:
             views=[
                 AuditTrailEvent(
                     # Naive on purpose: the history table can return naive values.
-                    occurred_at=datetime(2025, 3, 15, 8, 0),  # noqa: DTZ001
+                    occurred_at=datetime(2025, 3, 15, 8, 0, tzinfo=UTC).replace(
+                        tzinfo=None
+                    ),
                     event_reference="EVT-AUD-001",
                     username="a@example.com",
                 )
