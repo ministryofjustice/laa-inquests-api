@@ -9,7 +9,9 @@ from app.models.application.index import (
     PotentialDuplicateApplicationResponse,
 )
 from app.ports.get_application_port import GetApplicationPort
-from app.ports.get_potential_duplicates_port import GetPotentialDuplicatesPort
+from app.ports.get_potential_duplicate_applications_port import (
+    GetPotentialDuplicateApplicationsPort,
+)
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
@@ -29,15 +31,17 @@ def _make_use_case(
     duplicate_ids=None,
     duplicate_applications=None,
 ):
-    duplicates_port = MagicMock(spec=GetPotentialDuplicatesPort)
-    duplicates_port.get_potential_duplicates.return_value = duplicate_ids or []
+    duplicates_port = MagicMock(spec=GetPotentialDuplicateApplicationsPort)
+    duplicates_port.get_potential_duplicate_application_ids.return_value = (
+        duplicate_ids or []
+    )
     duplicates_port.get_duplicate_applications_by_ids.return_value = (
         duplicate_applications or []
     )
     use_case = GetApplicationUseCase(
         get_application_port=get_application_port,
         provider_details_port=provider_details_port,
-        get_potential_duplicates_port=duplicates_port,
+        get_potential_duplicate_applications_port=duplicates_port,
     )
     return use_case, duplicates_port
 
@@ -234,7 +238,7 @@ def test_execute_raises_exception_when_provider_details_port_get_office_address_
     assert str(exc_info.value) == "Provider details service error"
 
 
-def test_execute_returns_empty_potential_duplicates_list_when_get_potential_duplicates_returns_empty():
+def test_execute_returns_empty_list_when_get_potential_duplicates_handles_empty_ids_list():
     get_application_port = MagicMock(spec=GetApplicationPort)
     client = create_base_client()
     get_application_port.get_application_by_laa_reference.return_value = (
@@ -257,7 +261,9 @@ def test_execute_returns_empty_potential_duplicates_list_when_get_potential_dupl
 
     result = use_case.execute("1")
 
-    application_repository_adapter.get_duplicate_applications_by_ids.assert_not_called()
+    application_repository_adapter.get_duplicate_applications_by_ids.assert_called_once_with(
+        []
+    )
     assert result.potential_duplicate_applications == []
 
 

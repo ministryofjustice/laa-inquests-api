@@ -8,7 +8,9 @@ from app.models.application.index import (
     ProviderResponse,
 )
 from app.ports.get_application_port import GetApplicationPort
-from app.ports.get_potential_duplicates_port import GetPotentialDuplicatesPort
+from app.ports.get_potential_duplicate_applications_port import (
+    GetPotentialDuplicateApplicationsPort,
+)
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.exceptions import ApplicationNotFoundError
 
@@ -20,11 +22,13 @@ class GetApplicationUseCase:
         self,
         get_application_port: GetApplicationPort,
         provider_details_port: ProviderDetailsPort,
-        get_potential_duplicates_port: GetPotentialDuplicatesPort,
+        get_potential_duplicate_applications_port: GetPotentialDuplicateApplicationsPort,
     ) -> None:
         self.get_application_port = get_application_port
         self.provider_details_port = provider_details_port
-        self.get_potential_duplicates_port = get_potential_duplicates_port
+        self.get_potential_duplicate_applications_port = (
+            get_potential_duplicate_applications_port
+        )
 
     def execute(self, laa_reference: str) -> ApplicationResponse:
         application = self.get_application_port.get_application_by_laa_reference(
@@ -58,22 +62,15 @@ class GetApplicationUseCase:
         response = ApplicationResponse.model_validate(application)
         response.provider = provider_response
 
-        duplicate_applications_ids = (
-            self.get_potential_duplicates_port.get_potential_duplicates(
-                application.application_id
-            )
+        duplicate_applications_ids = self.get_potential_duplicate_applications_port.get_potential_duplicate_application_ids(
+            application.application_id
         )
-        if duplicate_applications_ids:
-            duplicate_applications = (
-                self.get_potential_duplicates_port.get_duplicate_applications_by_ids(
-                    duplicate_applications_ids
-                )
-            )
-            response.potential_duplicate_applications = (
-                self.prepare_duplicate_applications_response(duplicate_applications)
-            )
-        else:
-            response.potential_duplicate_applications = []
+        duplicate_applications = self.get_potential_duplicate_applications_port.get_duplicate_applications_by_ids(
+            duplicate_applications_ids
+        )
+        response.potential_duplicate_applications = (
+            self.prepare_duplicate_applications_response(duplicate_applications)
+        )
 
         logger.info(
             "Application retrieved",

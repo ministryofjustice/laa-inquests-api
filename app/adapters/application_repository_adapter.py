@@ -34,7 +34,9 @@ from app.ports.delete_coroners_letter_port import DeleteCoronersLetterPort
 from app.ports.duplicate_applications_port import DuplicateApplicationsPort
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.get_coroners_letter_port import GetCoronersLetterPort
-from app.ports.get_potential_duplicates_port import GetPotentialDuplicatesPort
+from app.ports.get_potential_duplicate_applications_port import (
+    GetPotentialDuplicateApplicationsPort,
+)
 from app.ports.list_applications_port import ListApplicationsPort
 from app.ports.list_public_bodies_port import ListPublicBodiesPort
 from app.ports.search_application_port import SearchApplicationPort
@@ -47,7 +49,7 @@ logger = logging.getLogger(__name__)
 
 class ApplicationRepositoryAdapter(
     GetApplicationPort,
-    GetPotentialDuplicatesPort,
+    GetPotentialDuplicateApplicationsPort,
     CreateApplicationPort,
     ApplicationDecisionPort,
     ListApplicationsPort,
@@ -453,12 +455,12 @@ class ApplicationRepositoryAdapter(
         logger.info(
             "Added duplicate records in db",
             extra=build_log_extra(
-                event="added_duplicate_records_started",
+                event="added_duplicate_records_success",
                 duplicate_count=len(duplicate_records),
             ),
         )
 
-    def get_potential_duplicates(self, application_id: int) -> list[int]:
+    def get_potential_duplicate_application_ids(self, application_id: int) -> list[int]:
         as_primary = self.session.exec(
             select(DuplicateApplicationRecord.duplicate_application_id).where(
                 DuplicateApplicationRecord.application_id == application_id
