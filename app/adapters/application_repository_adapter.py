@@ -33,8 +33,8 @@ from app.ports.create_application_port import CreateApplicationPort
 from app.ports.delete_coroners_letter_port import DeleteCoronersLetterPort
 from app.ports.duplicate_applications_port import DuplicateApplicationsPort
 from app.ports.get_application_port import GetApplicationPort
-from app.ports.get_potential_duplicates_port import GetPotentialDuplicatesPort
 from app.ports.get_coroners_letter_port import GetCoronersLetterPort
+from app.ports.get_potential_duplicates_port import GetPotentialDuplicatesPort
 from app.ports.list_applications_port import ListApplicationsPort
 from app.ports.list_public_bodies_port import ListPublicBodiesPort
 from app.ports.search_application_port import SearchApplicationPort

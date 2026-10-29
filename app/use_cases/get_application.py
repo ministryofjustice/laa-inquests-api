@@ -2,14 +2,14 @@ import logging
 
 from app.logging_utils import build_log_extra
 from app.models.application.index import (
-    ApplicationResponse,
-    ProviderResponse,
     Application,
+    ApplicationResponse,
     PotentialDuplicateApplicationResponse,
+    ProviderResponse,
 )
 from app.ports.get_application_port import GetApplicationPort
-from app.ports.provider_details_port import ProviderDetailsPort
 from app.ports.get_potential_duplicates_port import GetPotentialDuplicatesPort
+from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.exceptions import ApplicationNotFoundError
 
 logger = logging.getLogger(__name__)
