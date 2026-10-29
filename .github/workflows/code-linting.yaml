@@ -38,14 +38,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: Install linting requirements
+        run: python -m pip install -r requirements/generated/requirements-linting.txt
       - name: Lint
-        uses: astral-sh/ruff-action@278981a28ce3188b1e39527901f38254bf3aac89 # v4.1.0
-        with:
-          args: check --output-format=github
+        run: python -m ruff check --output-format=github
       - name: Format
-        uses: astral-sh/ruff-action@278981a28ce3188b1e39527901f38254bf3aac89 # v4.1.0
-        with:
-          args: format --check
+        run: python -m ruff format --check
 
   # This skeleton app is not configured to be scanned by SonarCloud
   #sonarcloud:

@@ -153,6 +153,31 @@ All tests use a mocked user that circumvents the authorisation.
 For information on writing tests please see [here](./tests/README.md).
 
 ## Code formatting and linting
+Ruff's version is pinned in `requirements/source/requirements-linting.in` and
+compiled into the generated linting and development requirements. CI installs
+the generated linting requirements; local commands and pre-commit hooks use
+Ruff from the active virtual environment rather than a separate hook installation.
+
+Before running hooks or Ruff manually, activate the virtual environment and
+synchronise its dependencies:
+
+```bash
+source .venv/bin/activate
+python -m pip install -r requirements/generated/requirements-development.txt
+```
+
+Repeat the install after pulling requirements changes. The hooks use `ruff` on
+`PATH`, so an inactive or stale virtual environment can use the wrong version
+or fail to find Ruff.
+
+To upgrade Ruff, update the pin in `requirements/source/requirements-linting.in`,
+regenerate both affected requirements files, and synchronise the environment:
+
+```bash
+pre-commit run pip-compile --files requirements/source/requirements-linting.in requirements/source/requirements-development.in
+python -m pip install -r requirements/generated/requirements-development.txt
+```
+
 The following will:
 - Generate requirement.txt files from files inside `requirements/source/*.in` and put them into `requirements/generated/*.txt`
 - Run linting checks with ruff
