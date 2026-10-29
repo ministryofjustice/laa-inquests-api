@@ -479,12 +479,15 @@ class ApplicationRepositoryAdapter(
         if not application_ids:
             return []
 
-        # TODO: Put in checks that each ID can be looked up successfully
-
         result = self.session.exec(
             select(Application)
             .where(Application.application_id.in_(application_ids))
             .order_by(Application.application_id)
         ).all()
+
+        if len(result) != len(application_ids):
+            raise LookupError(
+                "Some application IDs for duplicate applications could not be found in the database"
+            )
 
         return list(result)
