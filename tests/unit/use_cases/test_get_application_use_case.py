@@ -338,3 +338,23 @@ def test_execute_returns_multiple_potential_duplicates_when_get_potential_duplic
             status=second_application.overall_decision,
         ),
     ]
+
+
+def test_execute_returns_empty_potential_duplicates_list_when_duplicate_ids_found_but_no_applications_returned():
+    get_application_port = MagicMock(spec=GetApplicationPort)
+    get_application_port.get_application_by_laa_reference.return_value = (
+        create_base_application()
+    )
+    port = MagicMock(spec=ProviderDetailsPort)
+    port.get_firm_name.return_value = "Test Firm"
+
+    use_case, application_repository_adapter = _make_use_case(
+        get_application_port, port, [1], []
+    )
+
+    result = use_case.execute("1")
+
+    application_repository_adapter.get_duplicate_applications_by_ids.assert_called_once_with(
+        [1]
+    )
+    assert result.potential_duplicate_applications == []

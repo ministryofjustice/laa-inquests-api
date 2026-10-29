@@ -84,9 +84,9 @@ class GetApplicationUseCase:
     @staticmethod
     def prepare_duplicate_applications_response(
         duplicate_applications: list[Application],
-    ) -> list[PotentialDuplicateApplicationResponse] | None:
+    ) -> list[PotentialDuplicateApplicationResponse]:
         if not duplicate_applications:
-            return None
+            return []
 
         return [
             PotentialDuplicateApplicationResponse(
