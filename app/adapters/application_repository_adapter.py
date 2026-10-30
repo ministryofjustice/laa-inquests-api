@@ -467,7 +467,7 @@ class ApplicationRepositoryAdapter(
         application_proceeding = aliased(ApplicationProceeding)
         duplicate_proceeding = aliased(ApplicationProceeding)
 
-        duplicates_of_application = self.session.exec(
+        duplicates_of_application = (
             select(DuplicateApplicationRecord.duplicate_application_id)
             .where(DuplicateApplicationRecord.application_id == application_id)
             .join(
@@ -484,9 +484,9 @@ class ApplicationRepositoryAdapter(
             .where(
                 duplicate_proceeding.merits_decision.in_(self.ELIGIBLE_DUPLICATE_STATUS)
             )
-        ).all()
+        )
 
-        applications_it_duplicates = self.session.exec(
+        applications_it_duplicates = (
             select(DuplicateApplicationRecord.application_id)
             .where(
                 DuplicateApplicationRecord.duplicate_application_id == application_id
@@ -505,9 +505,12 @@ class ApplicationRepositoryAdapter(
             .where(
                 duplicate_proceeding.merits_decision.in_(self.ELIGIBLE_DUPLICATE_STATUS)
             )
-        ).all()
+        )
 
-        return list(set(duplicates_of_application + applications_it_duplicates))
+        combined = self.session.scalars(
+            duplicates_of_application.union(applications_it_duplicates)
+        ).all()
+        return list(set(combined))
 
     def get_duplicate_applications_by_ids(
         self, application_ids: list[int]
