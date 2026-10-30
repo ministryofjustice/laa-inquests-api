@@ -464,26 +464,12 @@ class ApplicationRepositoryAdapter(
 
     def get_potential_duplicate_application_ids(self, application_id: int) -> list[int]:
         duplicates_of_application = self.session.exec(
-            select(DuplicateApplicationRecord.duplicate_application_id).where(
-                DuplicateApplicationRecord.application_id == application_id
-            )
-        ).all()
-
-        applications_it_duplicates = self.session.exec(
-            select(DuplicateApplicationRecord.application_id).where(
-                DuplicateApplicationRecord.duplicate_application_id == application_id
-            )
-        ).all()
-
-        duplicate_ids = list(
-            set(duplicates_of_application + applications_it_duplicates)
-        )
-        result = self.session.exec(
-            select(Application.application_id)
-            .where(Application.application_id.in_(duplicate_ids))
+            select(DuplicateApplicationRecord.duplicate_application_id)
+            .where(DuplicateApplicationRecord.application_id == application_id)
             .join(
                 ApplicationProceeding,
-                Application.application_id == ApplicationProceeding.application_id,
+                DuplicateApplicationRecord.duplicate_application_id
+                == ApplicationProceeding.application_id,
             )
             .where(
                 ApplicationProceeding.merits_decision.in_(
@@ -492,7 +478,24 @@ class ApplicationRepositoryAdapter(
             )
         ).all()
 
-        return result
+        applications_it_duplicates = self.session.exec(
+            select(DuplicateApplicationRecord.application_id)
+            .where(
+                DuplicateApplicationRecord.duplicate_application_id == application_id
+            )
+            .join(
+                ApplicationProceeding,
+                DuplicateApplicationRecord.application_id
+                == ApplicationProceeding.application_id,
+            )
+            .where(
+                ApplicationProceeding.merits_decision.in_(
+                    self.ELIGIBLE_DUPLICATE_STATUS
+                )
+            )
+        ).all()
+
+        return list(set(duplicates_of_application + applications_it_duplicates))
 
     def get_duplicate_applications_by_ids(
         self, application_ids: list[int]
