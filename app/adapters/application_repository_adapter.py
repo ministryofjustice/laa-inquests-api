@@ -464,11 +464,18 @@ class ApplicationRepositoryAdapter(
         )
 
     def get_potential_duplicate_application_ids(self, application_id: int) -> list[int]:
+        application_proceeding = aliased(ApplicationProceeding)
         duplicate_proceeding = aliased(ApplicationProceeding)
 
         duplicates_of_application = self.session.exec(
             select(DuplicateApplicationRecord.duplicate_application_id)
             .where(DuplicateApplicationRecord.application_id == application_id)
+            .join(
+                application_proceeding,
+                DuplicateApplicationRecord.application_id
+                == application_proceeding.application_id,
+            )
+            .where(application_proceeding.merits_decision == MeritsDecision.SUBMITTED)
             .join(
                 duplicate_proceeding,
                 DuplicateApplicationRecord.duplicate_application_id
@@ -484,6 +491,12 @@ class ApplicationRepositoryAdapter(
             .where(
                 DuplicateApplicationRecord.duplicate_application_id == application_id
             )
+            .join(
+                application_proceeding,
+                DuplicateApplicationRecord.duplicate_application_id
+                == application_proceeding.application_id,
+            )
+            .where(application_proceeding.merits_decision == MeritsDecision.SUBMITTED)
             .join(
                 duplicate_proceeding,
                 DuplicateApplicationRecord.application_id

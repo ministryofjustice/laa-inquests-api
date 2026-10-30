@@ -829,6 +829,10 @@ class TestGetPotentialDuplicates:
         application = session.exec(select(Application)).first()
         adapter = ApplicationRepositoryAdapter(session)
 
+        application.proceeding.merits_decision = MeritsDecision.SUBMITTED
+        session.add(application)
+        session.flush()
+
         create_application_in_db(session)
         adapter.create_duplicate_records(2, [application.application_id])
         create_application_in_db(session)
@@ -837,11 +841,34 @@ class TestGetPotentialDuplicates:
         potential_duplicates = adapter.get_potential_duplicate_application_ids(3)
         assert potential_duplicates == [1, 2]
 
+    @pytest.mark.parametrize(
+        "decision", [MeritsDecision.GRANTED, MeritsDecision.REFUSED]
+    )
+    def test_returns_nothing_if_application_has_decision(self, session, decision):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        application.proceeding.merits_decision = decision
+        session.add(application)
+        session.flush()
+
+        create_application_in_db(session)
+        adapter.create_duplicate_records(2, [application.application_id])
+
+        potential_duplicates = adapter.get_potential_duplicate_application_ids(
+            application.application_id
+        )
+        assert potential_duplicates == []
+
     def test_returns_potential_duplicates_where_target_is_duplicate_application_id(
         self, session
     ):
         application = session.exec(select(Application)).first()
         adapter = ApplicationRepositoryAdapter(session)
+
+        application.proceeding.merits_decision = MeritsDecision.SUBMITTED
+        session.add(application)
+        session.flush()
 
         create_application_in_db(session)
         adapter.create_duplicate_records(2, [application.application_id])
@@ -856,6 +883,10 @@ class TestGetPotentialDuplicates:
     def test_returns_potential_duplicates_only_unique_entries(self, session):
         application = session.exec(select(Application)).first()
         adapter = ApplicationRepositoryAdapter(session)
+
+        application.proceeding.merits_decision = MeritsDecision.SUBMITTED
+        session.add(application)
+        session.flush()
 
         create_application_in_db(session)
         adapter.create_duplicate_records(2, [application.application_id])
@@ -872,6 +903,10 @@ class TestGetPotentialDuplicates:
     def test_excludes_withdrawn_duplicates(self, session):
         application = session.exec(select(Application)).first()
         adapter = ApplicationRepositoryAdapter(session)
+
+        application.proceeding.merits_decision = MeritsDecision.SUBMITTED
+        session.add(application)
+        session.flush()
 
         create_application_in_db(
             session, proceeding_overrides={"overall_decision": "withdrawn"}
