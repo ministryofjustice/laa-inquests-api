@@ -107,7 +107,19 @@ class AuditerPermissionChecker:
             # The use case performs blocking database I/O, so keep it off the event loop.
             await run_in_threadpool(use_case.execute, audit_event)
         # Runs after the audit so a denied request is still recorded before the 403.
-        self.permission_checker(permissions)
+        try:
+            self.permission_checker(permissions)
+        except HTTPException as permission_denied:
+            logger.error(
+                "User without report access attempted to download a report",
+                extra=build_log_extra(
+                    event="report_access_denied",
+                    route=request.url.path,
+                    method=request.method,
+                    status_code=permission_denied.status_code,
+                ),
+            )
+            raise
 
 
 def audit_and_require_permission(

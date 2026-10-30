@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import ANY, MagicMock
 
 import pytest
@@ -161,3 +162,41 @@ def test_report_download_outcome_depends_on_permission_and_audit(
         _assert_audit_persisted(session, audit_type, parameters)
     else:
         assert session.exec(select(ReportAudit)).all() == []
+
+
+@pytest.mark.parametrize(
+    "endpoint,role,audit_type,report_dependency,parameters", REPORT_ENDPOINTS
+)
+def test_denied_report_download_emits_error_log_without_generating_report(
+    client,
+    session,
+    caplog,
+    endpoint,
+    role,
+    audit_type,
+    report_dependency,
+    parameters,
+):
+    report_use_case = MagicMock()
+    api.dependency_overrides[report_dependency] = lambda: report_use_case
+    caplog.set_level(logging.ERROR)
+
+    response = client.get(
+        endpoint,
+        params=parameters,
+        headers={"Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}"},
+    )
+
+    assert response.status_code == 403
+    report_use_case.execute.assert_not_called()
+    _assert_audit_persisted(session, audit_type, parameters)
+    denial_logs = [
+        record
+        for record in caplog.records
+        if getattr(record, "extra", {}).get("event") == "report_access_denied"
+    ]
+    assert len(denial_logs) == 1
+    assert denial_logs[0].levelno == logging.ERROR
+    assert denial_logs[0].extra["route"] == endpoint
+    assert denial_logs[0].extra["method"] == "GET"
+    assert denial_logs[0].extra["status_code"] == 403

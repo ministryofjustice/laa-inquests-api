@@ -136,6 +136,25 @@ uvicorn app:api --reload
 Swagger API documentation can be found at the `/` or `/docs` endpoint.
 Redoc documentation can be found at the `/redoc` endpoint.
 
+### MI report authorisation (IDDS-822)
+
+Future MI report endpoints must use `audit_and_require_permission` with
+`Permission.REPORTS_MI_READ` and a report-specific audit event factory, following
+the existing report routes. This permission is already assigned to Assurance,
+Policy and Finance; permissions from multiple roles are combined.
+
+The dependency records authenticated attempts before checking permission. After
+a successful audit, denied downloads emit an error-level `report_access_denied`
+event and return `403` before report generation runs. Audit failures also block
+generation and emit `report_audit_failed`; users without permission still receive
+`403`.
+
+Each new MI endpoint must add permission coverage to
+`tests/unit/auth/test_route_permissions.py` and tests for allowed and denied
+downloads, including denial logging and verification that generation is not
+executed. MI report endpoints and their UI components are not introduced by this
+preparatory change. Existing workflow and payment report permissions are unchanged.
+
 ___
 
 ## Tests
