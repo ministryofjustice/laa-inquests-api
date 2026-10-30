@@ -461,19 +461,19 @@ class ApplicationRepositoryAdapter(
         )
 
     def get_potential_duplicate_application_ids(self, application_id: int) -> list[int]:
-        as_primary = self.session.exec(
+        duplicates_of_application = self.session.exec(
             select(DuplicateApplicationRecord.duplicate_application_id).where(
                 DuplicateApplicationRecord.application_id == application_id
             )
         ).all()
 
-        as_secondary = self.session.exec(
+        applications_it_duplicates = self.session.exec(
             select(DuplicateApplicationRecord.application_id).where(
                 DuplicateApplicationRecord.duplicate_application_id == application_id
             )
         ).all()
 
-        return list(set(as_primary + as_secondary))
+        return list(set(duplicates_of_application + applications_it_duplicates))
 
     def get_duplicate_applications_by_ids(
         self, application_ids: list[int]
