@@ -34,6 +34,9 @@ from app.ports.delete_coroners_letter_port import DeleteCoronersLetterPort
 from app.ports.duplicate_applications_port import DuplicateApplicationsPort
 from app.ports.get_application_port import GetApplicationPort
 from app.ports.get_coroners_letter_port import GetCoronersLetterPort
+from app.ports.get_potential_duplicate_applications_port import (
+    GetPotentialDuplicateApplicationsPort,
+)
 from app.ports.list_applications_port import ListApplicationsPort
 from app.ports.list_public_bodies_port import ListPublicBodiesPort
 from app.ports.search_application_port import SearchApplicationPort
@@ -46,6 +49,7 @@ logger = logging.getLogger(__name__)
 
 class ApplicationRepositoryAdapter(
     GetApplicationPort,
+    GetPotentialDuplicateApplicationsPort,
     CreateApplicationPort,
     ApplicationDecisionPort,
     ListApplicationsPort,
@@ -60,6 +64,12 @@ class ApplicationRepositoryAdapter(
 ):
     GENERATE_LAA_REFERENCE_ATTEMPTS = 10
     DUPLICATE_MATCH_THRESHOLD = 2
+
+    ELIGIBLE_DUPLICATE_STATUS = (
+        MeritsDecision.GRANTED,
+        MeritsDecision.REFUSED,
+        MeritsDecision.SUBMITTED,
+    )
 
     def __init__(
         self,
@@ -412,11 +422,7 @@ class ApplicationRepositoryAdapter(
             .where(Application.application_id != application_id)
             .where(
                 ApplicationProceeding.merits_decision.in_(
-                    [
-                        MeritsDecision.SUBMITTED,
-                        MeritsDecision.GRANTED,
-                        MeritsDecision.REFUSED,
-                    ]
+                    self.ELIGIBLE_DUPLICATE_STATUS
                 )
             )
             .where(match_count >= self.DUPLICATE_MATCH_THRESHOLD)
@@ -451,7 +457,61 @@ class ApplicationRepositoryAdapter(
         logger.info(
             "Added duplicate records in db",
             extra=build_log_extra(
-                event="added_duplicate_records_started",
+                event="added_duplicate_records_success",
                 duplicate_count=len(duplicate_records),
             ),
         )
+
+    def get_potential_duplicate_application_ids(self, application_id: int) -> list[int]:
+        duplicates_of_application = self.session.exec(
+            select(DuplicateApplicationRecord.duplicate_application_id)
+            .where(DuplicateApplicationRecord.application_id == application_id)
+            .join(
+                ApplicationProceeding,
+                DuplicateApplicationRecord.duplicate_application_id
+                == ApplicationProceeding.application_id,
+            )
+            .where(
+                ApplicationProceeding.merits_decision.in_(
+                    self.ELIGIBLE_DUPLICATE_STATUS
+                )
+            )
+        ).all()
+
+        applications_it_duplicates = self.session.exec(
+            select(DuplicateApplicationRecord.application_id)
+            .where(
+                DuplicateApplicationRecord.duplicate_application_id == application_id
+            )
+            .join(
+                ApplicationProceeding,
+                DuplicateApplicationRecord.application_id
+                == ApplicationProceeding.application_id,
+            )
+            .where(
+                ApplicationProceeding.merits_decision.in_(
+                    self.ELIGIBLE_DUPLICATE_STATUS
+                )
+            )
+        ).all()
+
+        return list(set(duplicates_of_application + applications_it_duplicates))
+
+    def get_duplicate_applications_by_ids(
+        self, application_ids: list[int]
+    ) -> list[Application]:
+        if not application_ids:
+            return []
+
+        result = self.session.exec(
+            select(Application)
+            .where(Application.application_id.in_(application_ids))
+            .order_by(Application.application_id)
+        ).all()
+
+        if len(result) != len(application_ids):
+            raise LookupError(
+                "Some application IDs for duplicate applications could not be found in the database"
+            )
+
+        return list(result)

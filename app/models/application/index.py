@@ -592,6 +592,16 @@ class CoronersLetterResponse(BaseModel):
     file_name: str
 
 
+class PotentialDuplicateApplicationResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        from_attributes=True,
+        populate_by_name=True,
+    )
+    laa_reference: str
+    status: str
+
+
 class ApplicationResponse(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -612,6 +622,9 @@ class ApplicationResponse(BaseModel):
     deceased: DeceasedResponse
     provider: ProviderResponse
     coroners_letter: CoronersLetterResponse | None = None
+    potential_duplicate_applications: (
+        list[PotentialDuplicateApplicationResponse] | None
+    ) = None
 
 
 # Use case models

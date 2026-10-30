@@ -822,3 +822,110 @@ class TestCreateDuplicateRecords:
             adapter.create_duplicate_records(
                 application.application_id, duplicate_application_id
             )
+
+
+class TestGetPotentialDuplicates:
+    def test_returns_potential_duplicates_where_target_is_application_id(self, session):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        create_application_in_db(session)
+        adapter.create_duplicate_records(2, [application.application_id])
+        create_application_in_db(session)
+        adapter.create_duplicate_records(3, [application.application_id, 2])
+
+        potential_duplicates = adapter.get_potential_duplicate_application_ids(3)
+        assert potential_duplicates == [1, 2]
+
+    def test_returns_potential_duplicates_where_target_is_duplicate_application_id(
+        self, session
+    ):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        create_application_in_db(session)
+        adapter.create_duplicate_records(2, [application.application_id])
+        create_application_in_db(session)
+        adapter.create_duplicate_records(3, [application.application_id, 2])
+
+        potential_duplicates = adapter.get_potential_duplicate_application_ids(
+            application.application_id
+        )
+        assert potential_duplicates == [2, 3]
+
+    def test_returns_potential_duplicates_only_unique_entries(self, session):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        create_application_in_db(session)
+        adapter.create_duplicate_records(2, [application.application_id])
+        create_application_in_db(session)
+        adapter.create_duplicate_records(3, [application.application_id, 2])
+
+        adapter.create_duplicate_records(1, [2, 3])
+
+        potential_duplicates = adapter.get_potential_duplicate_application_ids(
+            application.application_id
+        )
+        assert potential_duplicates == [2, 3]
+
+    def test_excludes_withdrawn_duplicates(self, session):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        create_application_in_db(
+            session, proceeding_overrides={"overall_decision": "withdrawn"}
+        )
+        adapter.create_duplicate_records(2, [application.application_id])
+        create_application_in_db(session)
+        adapter.create_duplicate_records(3, [application.application_id, 2])
+
+        # Set the merits_decision of application 2 to "withdrawn" to simulate a withdrawn duplicate
+        app2 = session.exec(
+            select(Application).where(Application.application_id == 2)
+        ).first()
+        app2.proceeding.merits_decision = "withdrawn"
+        session.add(app2)
+        session.flush()
+        print(app2)
+
+        potential_duplicates = adapter.get_potential_duplicate_application_ids(
+            application.application_id
+        )
+        assert potential_duplicates == [3]
+
+
+class TestGetDuplicateApplicationsByIds:
+    def test_returns_applications_for_given_ids(self, session):
+        adapter = ApplicationRepositoryAdapter(session)
+        first_application_id = session.exec(select(Application)).first().application_id
+        second_application_id = create_application_in_db(session).application_id
+        assert first_application_id is not None
+        assert second_application_id is not None
+
+        applications = adapter.get_duplicate_applications_by_ids(
+            [first_application_id, second_application_id]
+        )
+
+        assert len(applications) == 2
+        assert [app.application_id for app in applications] == [
+            first_application_id,
+            second_application_id,
+        ]
+
+    def test_returns_empty_list_when_no_ids_given(self, session):
+        adapter = ApplicationRepositoryAdapter(session)
+
+        applications = adapter.get_duplicate_applications_by_ids([])
+
+        assert applications == []
+
+    def test_raises_lookup_error_when_some_ids_not_found(self, session):
+        adapter = ApplicationRepositoryAdapter(session)
+        first_application_id = create_application_in_db(session).application_id
+        nonexistent_id = 9999
+
+        with pytest.raises(LookupError):
+            adapter.get_duplicate_applications_by_ids(
+                [first_application_id, nonexistent_id]
+            )
