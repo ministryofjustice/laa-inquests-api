@@ -56,7 +56,9 @@ def test_database_readiness_translates_session_creation_failure(
     assert error.value.__cause__ is database_error
 
 
-def test_database_readiness_limits_postgresql_query_timeout_to_its_transaction() -> None:
+def test_database_readiness_limits_postgresql_query_timeout_to_its_transaction() -> (
+    None
+):
     session = create_autospec(Session, instance=True)
     session.__enter__.return_value = session
     session.get_bind.return_value.dialect.name = "postgresql"

@@ -48,8 +48,8 @@ def test_503_status_returns_generic_error_when_database_session_cannot_be_create
         )
 
     previous_override = client.app.dependency_overrides[get_readiness_session_factory]
-    client.app.dependency_overrides[get_readiness_session_factory] = (
-        lambda: unavailable_session
+    client.app.dependency_overrides[get_readiness_session_factory] = lambda: (
+        unavailable_session
     )
     try:
         response = client.get("/status")
