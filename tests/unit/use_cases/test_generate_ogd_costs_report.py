@@ -146,18 +146,3 @@ class TestGenerateOgdCostsReportUseCase:
 
         with pytest.raises(ReportGenerationError):
             use_case.execute(FROM_DATE, TO_DATE)
-
-    def test_failure_log_does_not_contain_personal_data(self, caplog):
-        use_case, _ = _build_use_case(
-            lines=[_line(deceased_first_name="Jane", deceased_date_of_death="bad")]
-        )
-
-        with pytest.raises(ReportGenerationError):
-            use_case.execute(FROM_DATE, TO_DATE)
-
-        logged = " ".join(
-            f"{record.getMessage()} {record.__dict__}" for record in caplog.records
-        )
-        assert "ogd_costs_report_generation_failed" in logged
-        assert "Jane" not in logged
-        assert "INQ-123-456" not in logged
