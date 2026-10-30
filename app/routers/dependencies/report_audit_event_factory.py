@@ -7,6 +7,7 @@ _REPORT_TYPES_WITH_PARAMETERS = {
     ReportType.PAYMENT_EXTRACT,
     ReportType.AUDIT_TRAIL,
     ReportType.DECISIONS,
+    ReportType.OGD_COSTS,
 }
 
 

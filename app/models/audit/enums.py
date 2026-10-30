@@ -7,6 +7,7 @@ class ReportType(StrEnum):
     PAYMENT_EXTRACT = "Payment Extract"
     AUDIT_TRAIL = "User Audit Trail"
     DECISIONS = "Decisions"
+    OGD_COSTS = "OGD Costs"
 
 
 class AuditEventReference(StrEnum):

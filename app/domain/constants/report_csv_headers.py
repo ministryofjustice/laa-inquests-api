@@ -59,3 +59,16 @@ DECISIONS_REPORT_HEADERS = [
     "Refusal reason",
     "Justification",
 ]
+
+OGD_COSTS_REPORT_HEADERS = [
+    "Claim Decision Date",
+    "Claim Decision",
+    "Bill Type",
+    "Public Body(ies)",
+    "Legal Aid Reference",
+    "Invoice Number",
+    "Invoice Amount",
+    "Tax Code",
+    "Name of Deceased",
+    "Date of Death",
+]
