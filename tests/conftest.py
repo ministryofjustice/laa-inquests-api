@@ -1,3 +1,4 @@
+from contextlib import nullcontext
 from unittest.mock import MagicMock
 
 import pytest
@@ -40,6 +41,7 @@ from app.routers.applications import (
     get_sds_port,
 )
 from app.routers.dependencies import get_entra_auth_port
+from app.routers.monitoring import get_readiness_session_factory
 
 SECRET_KEY = "TEST_KEY"
 
@@ -266,6 +268,9 @@ def client_fixture(session: Session):
         return mock_auth
 
     api.dependency_overrides[get_session] = get_session_override
+    api.dependency_overrides[get_readiness_session_factory] = lambda: (
+        lambda: nullcontext(session)
+    )
     api.dependency_overrides[get_provider_details_port] = (
         get_provider_details_port_override
     )
