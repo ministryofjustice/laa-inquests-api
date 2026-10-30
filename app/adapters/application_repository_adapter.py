@@ -65,6 +65,12 @@ class ApplicationRepositoryAdapter(
     GENERATE_LAA_REFERENCE_ATTEMPTS = 10
     DUPLICATE_MATCH_THRESHOLD = 2
 
+    ELIGIBLE_DUPLICATE_STATUS = (
+        MeritsDecision.GRANTED,
+        MeritsDecision.REFUSED,
+        MeritsDecision.SUBMITTED,
+    )
+
     def __init__(
         self,
         session: Session,
@@ -416,11 +422,7 @@ class ApplicationRepositoryAdapter(
             .where(Application.application_id != application_id)
             .where(
                 ApplicationProceeding.merits_decision.in_(
-                    [
-                        MeritsDecision.SUBMITTED,
-                        MeritsDecision.GRANTED,
-                        MeritsDecision.REFUSED,
-                    ]
+                    self.ELIGIBLE_DUPLICATE_STATUS
                 )
             )
             .where(match_count >= self.DUPLICATE_MATCH_THRESHOLD)
@@ -473,7 +475,24 @@ class ApplicationRepositoryAdapter(
             )
         ).all()
 
-        return list(set(duplicates_of_application + applications_it_duplicates))
+        duplicate_ids = list(
+            set(duplicates_of_application + applications_it_duplicates)
+        )
+        result = self.session.exec(
+            select(Application.application_id)
+            .where(Application.application_id.in_(duplicate_ids))
+            .join(
+                ApplicationProceeding,
+                Application.application_id == ApplicationProceeding.application_id,
+            )
+            .where(
+                ApplicationProceeding.merits_decision.in_(
+                    self.ELIGIBLE_DUPLICATE_STATUS
+                )
+            )
+        ).all()
+
+        return result
 
     def get_duplicate_applications_by_ids(
         self, application_ids: list[int]

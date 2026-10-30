@@ -869,6 +869,31 @@ class TestGetPotentialDuplicates:
         )
         assert potential_duplicates == [2, 3]
 
+    def test_excludes_withdrawn_duplicates(self, session):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        create_application_in_db(
+            session, proceeding_overrides={"overall_decision": "withdrawn"}
+        )
+        adapter.create_duplicate_records(2, [application.application_id])
+        create_application_in_db(session)
+        adapter.create_duplicate_records(3, [application.application_id, 2])
+
+        # Set the merits_decision of application 2 to "withdrawn" to simulate a withdrawn duplicate
+        app2 = session.exec(
+            select(Application).where(Application.application_id == 2)
+        ).first()
+        app2.proceeding.merits_decision = "withdrawn"
+        session.add(app2)
+        session.flush()
+        print(app2)
+
+        potential_duplicates = adapter.get_potential_duplicate_application_ids(
+            application.application_id
+        )
+        assert potential_duplicates == [3]
+
 
 class TestGetDuplicateApplicationsByIds:
     def test_returns_applications_for_given_ids(self, session):

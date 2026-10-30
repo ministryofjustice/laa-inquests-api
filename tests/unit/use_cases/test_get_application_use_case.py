@@ -25,27 +25,6 @@ from tests.unit.factories import (
 )
 
 
-def _make_use_case(
-    get_application_port,
-    provider_details_port,
-    duplicate_ids=None,
-    duplicate_applications=None,
-):
-    duplicates_port = MagicMock(spec=GetPotentialDuplicateApplicationsPort)
-    duplicates_port.get_potential_duplicate_application_ids.return_value = (
-        duplicate_ids or []
-    )
-    duplicates_port.get_duplicate_applications_by_ids.return_value = (
-        duplicate_applications or []
-    )
-    use_case = GetApplicationUseCase(
-        get_application_port=get_application_port,
-        provider_details_port=provider_details_port,
-        get_potential_duplicate_applications_port=duplicates_port,
-    )
-    return use_case, duplicates_port
-
-
 def test_execute_raises_application_not_found_error_when_application_not_found():
     get_application_port = MagicMock(spec=GetApplicationPort)
     get_application_port.get_application_by_laa_reference.return_value = None
