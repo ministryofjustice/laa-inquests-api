@@ -3,6 +3,7 @@ import random
 import uuid
 
 from sqlalchemy import and_, case, false, func
+from sqlalchemy.orm import aliased
 from sqlmodel import Session, exists, select
 
 from app.config import Config
@@ -463,18 +464,18 @@ class ApplicationRepositoryAdapter(
         )
 
     def get_potential_duplicate_application_ids(self, application_id: int) -> list[int]:
+        duplicate_proceeding = aliased(ApplicationProceeding)
+
         duplicates_of_application = self.session.exec(
             select(DuplicateApplicationRecord.duplicate_application_id)
             .where(DuplicateApplicationRecord.application_id == application_id)
             .join(
-                ApplicationProceeding,
+                duplicate_proceeding,
                 DuplicateApplicationRecord.duplicate_application_id
-                == ApplicationProceeding.application_id,
+                == duplicate_proceeding.application_id,
             )
             .where(
-                ApplicationProceeding.merits_decision.in_(
-                    self.ELIGIBLE_DUPLICATE_STATUS
-                )
+                duplicate_proceeding.merits_decision.in_(self.ELIGIBLE_DUPLICATE_STATUS)
             )
         ).all()
 
@@ -484,14 +485,12 @@ class ApplicationRepositoryAdapter(
                 DuplicateApplicationRecord.duplicate_application_id == application_id
             )
             .join(
-                ApplicationProceeding,
+                duplicate_proceeding,
                 DuplicateApplicationRecord.application_id
-                == ApplicationProceeding.application_id,
+                == duplicate_proceeding.application_id,
             )
             .where(
-                ApplicationProceeding.merits_decision.in_(
-                    self.ELIGIBLE_DUPLICATE_STATUS
-                )
+                duplicate_proceeding.merits_decision.in_(self.ELIGIBLE_DUPLICATE_STATUS)
             )
         ).all()
 
