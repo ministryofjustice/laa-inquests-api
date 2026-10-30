@@ -2,7 +2,7 @@ import csv
 import heapq
 import io
 import logging
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import UTC, date, datetime
 
 from app.domain.audit_event_catalogue import EventDescriptionError, describe_event
 from app.domain.audit_trail import AuditTrailEvent, csv_safe
@@ -10,7 +10,8 @@ from app.domain.constants.report_csv_headers import AUDIT_TRAIL_REPORT_HEADERS
 from app.logging_utils import build_log_extra
 from app.ports.audit_trail_report_port import AuditTrailReportPort
 from app.ports.provider_details_port import ProviderDetailsPort
-from app.use_cases.exceptions import InvalidDateRangeError, ReportGenerationError
+from app.use_cases.exceptions import ReportGenerationError
+from app.use_cases.report_date_range import resolve_report_window
 
 logger = logging.getLogger(__name__)
 
@@ -28,17 +29,8 @@ class GenerateAuditTrailReportUseCase:
 
     def execute(self, from_date: date, to_date: date) -> str:
         """Build the whole CSV before returning, so a failure never yields partial output."""
-        if from_date > to_date:
-            raise InvalidDateRangeError(
-                "The 'from' date must be on or before the 'to' date."
-            )
-        if (to_date - from_date).days + 1 > MAX_REPORT_RANGE_DAYS:
-            raise InvalidDateRangeError(
-                f"The date range must not exceed {MAX_REPORT_RANGE_DAYS} days."
-            )
-        from_inclusive = datetime.combine(from_date, time.min, tzinfo=UTC)
-        before_exclusive = datetime.combine(
-            to_date + timedelta(days=1), time.min, tzinfo=UTC
+        from_inclusive, before_exclusive = resolve_report_window(
+            from_date, to_date, MAX_REPORT_RANGE_DAYS
         )
 
         try:

@@ -10,7 +10,8 @@ from sqlmodel import Session, select
 from app.adapters.claim_repository_adapter import ClaimRepositoryAdapter
 from app.domain.claim import Claim as DomainClaim
 from app.domain.payment_extract import PaymentExtractLine
-from app.models.application.index import Application
+from app.models.application.enums import PublicBodyId
+from app.models.application.index import Application, ApplicationPublicBody
 from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
@@ -29,8 +30,10 @@ from app.models.claim.index import (
     ClaimDecisionAmount,
     ClaimEvidence,
     ClaimInquestOutcome,
+    ClaimPaymentExtract,
     DecisionReason,
 )
+from tests.e2e.factories import create_claim_in_db
 
 
 def _make_domain_claim(overrides=None) -> DomainClaim:
@@ -649,3 +652,118 @@ def test_get_claim_decision_amount_returns_none_when_decision_has_no_amount(sess
         adapter.get_claim_decision_amount_by_decision_id(decision.claim_decision_id)
         is None
     )
+
+
+OGD_WINDOW = (
+    datetime(2025, 3, 1, tzinfo=UTC),
+    datetime(2025, 4, 1, tzinfo=UTC),
+)
+
+
+def _paid_claim_with_extract(
+    session,
+    decided_at: datetime,
+    *,
+    claim_type: ClaimType = ClaimType.FINAL_BILL,
+    invoice_type: InvoiceTypeCode = InvoiceTypeCode.FINAL_BILL_FEES,
+    invoice_amount: str = "100.00",
+    decision: ClaimDecisionStatus = ClaimDecisionStatus.PAY_IN_FULL,
+) -> Claim:
+    application_id = session.exec(select(Application)).first().application_id
+    claim = create_claim_in_db(
+        session, application_id=application_id, claim_type=claim_type
+    )
+    session.add(
+        ClaimDecision(claim_id=claim.claim_id, decision=decision, created_at=decided_at)
+    )
+    session.add(
+        ClaimPaymentExtract(
+            claim_id=claim.claim_id,
+            sequence_number=1,
+            invoice_number=f"{claim.claim_reference}_001",
+            invoice_amount=Decimal(invoice_amount),
+            invoice_date=decided_at.date(),
+            invoice_type=invoice_type,
+            tax_code=TaxCode.GB_VAT_20,
+        )
+    )
+    session.commit()
+    return claim
+
+
+def test_get_ogd_public_bodies_by_application_returns_bodies_as_enum_members(session):
+    application = session.exec(select(Application)).first()
+    session.add(
+        ApplicationPublicBody(
+            application_id=application.application_id,
+            public_body_id=PublicBodyId.MINISTRY_OF_JUSTICE,
+        )
+    )
+    session.commit()
+    _paid_claim_with_extract(session, datetime(2025, 3, 15, tzinfo=UTC))
+
+    result = ClaimRepositoryAdapter(session).get_ogd_public_bodies_by_application(
+        *OGD_WINDOW
+    )
+
+    assert set(result) == {application.application_id}
+    assert set(result[application.application_id]) == {
+        PublicBodyId.DEPARTMENT_FOR_TRANSPORT,
+        PublicBodyId.MINISTRY_OF_JUSTICE,
+    }
+
+
+def test_iter_ogd_costs_report_lines_filters_on_decision_date_window_only(session):
+    inside = _paid_claim_with_extract(session, datetime(2025, 3, 1, tzinfo=UTC))
+    _paid_claim_with_extract(session, datetime(2025, 2, 28, 23, 59, 59, tzinfo=UTC))
+    _paid_claim_with_extract(session, datetime(2025, 4, 1, tzinfo=UTC))
+    _paid_claim_with_extract(
+        session,
+        datetime(2025, 3, 10, tzinfo=UTC),
+        decision=ClaimDecisionStatus.REJECT,
+    )
+
+    lines = list(
+        ClaimRepositoryAdapter(session).iter_ogd_costs_report_lines(*OGD_WINDOW)
+    )
+
+    assert [line.invoice_number for line in lines] == [f"{inside.claim_reference}_001"]
+
+
+def test_iter_ogd_costs_report_lines_maps_line_fields(session):
+    claim = _paid_claim_with_extract(
+        session,
+        datetime(2025, 3, 15, 12, tzinfo=UTC),
+        claim_type=ClaimType.NIL_BILL,
+        invoice_amount="0.00",
+    )
+
+    [line] = ClaimRepositoryAdapter(session).iter_ogd_costs_report_lines(*OGD_WINDOW)
+
+    assert line.application_id == claim.application_id
+    assert line.claim_decision == ClaimDecisionStatus.PAY_IN_FULL
+    assert line.claim_type == ClaimType.NIL_BILL
+    assert line.invoice_type == InvoiceTypeCode.FINAL_BILL_FEES
+    assert line.invoice_amount == Decimal("0.00")
+    assert line.tax_code == TaxCode.GB_VAT_20
+    assert line.laa_reference == "INQ-123-456"
+    assert (line.deceased_first_name, line.deceased_last_name) == ("Test", "Surname")
+    assert line.deceased_date_of_death == "2026-01-01"
+
+
+def test_iter_ogd_costs_report_lines_returns_recoupment_with_final_bill_decision(
+    session,
+):
+    final_bill = _paid_claim_with_extract(
+        session,
+        datetime(2025, 3, 20, tzinfo=UTC),
+        invoice_type=InvoiceTypeCode.RECOUPED,
+        invoice_amount="-100.00",
+    )
+
+    [line] = ClaimRepositoryAdapter(session).iter_ogd_costs_report_lines(*OGD_WINDOW)
+
+    assert line.invoice_type == InvoiceTypeCode.RECOUPED
+    assert line.invoice_amount == Decimal("-100.00")
+    assert line.claim_type == final_bill.claim_type_id
+    assert line.claim_decision_date.date().isoformat() == "2025-03-20"

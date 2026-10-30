@@ -3,7 +3,7 @@ import io
 import itertools
 import logging
 from collections.abc import Iterator
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import UTC, date, datetime
 
 from app.domain.constants.report_csv_headers import PAYMENT_EXTRACT_REPORT_HEADERS
 from app.domain.payment_extract_report import (
@@ -16,7 +16,8 @@ from app.domain.payment_extract_report import (
 from app.logging_utils import build_log_extra
 from app.ports.claim.payment_extract_report_port import PaymentExtractReportPort
 from app.ports.provider_details_port import ProviderDetailsPort
-from app.use_cases.exceptions import InvalidDateRangeError, ReportGenerationError
+from app.use_cases.exceptions import ReportGenerationError
+from app.use_cases.report_date_range import resolve_report_window
 
 logger = logging.getLogger(__name__)
 
@@ -35,19 +36,10 @@ class GeneratePaymentExtractReportUseCase:
 
     def execute(self, from_date: date, to_date: date) -> Iterator[str]:
         """Validate all lookups up front, then return a lazy CSV chunk stream."""
-        if from_date > to_date:
-            raise InvalidDateRangeError(
-                "The 'from' date must be on or before the 'to' date."
-            )
-        if (to_date - from_date).days + 1 > MAX_REPORT_RANGE_DAYS:
-            raise InvalidDateRangeError(
-                f"The date range must not exceed {MAX_REPORT_RANGE_DAYS} days."
-            )
-        created_from = datetime.combine(from_date, time.min, tzinfo=UTC)
-        created_before = min(
-            datetime.combine(to_date + timedelta(days=1), time.min, tzinfo=UTC),
-            datetime.now(UTC),
+        created_from, window_end = resolve_report_window(
+            from_date, to_date, MAX_REPORT_RANGE_DAYS
         )
+        created_before = min(window_end, datetime.now(UTC))
 
         firm_names = self._build_firm_name_lookup(created_from, created_before)
         classifications = self._build_classification_lookup(

@@ -14,6 +14,7 @@ from app.config import Config
 from app.domain.claim import Claim as DomainClaim
 from app.domain.claim_evidence import ClaimEvidence as DomainClaimEvidence
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
+from app.domain.ogd_costs_report import OgdCostsReportSourceLine
 from app.domain.payment_extract import PaymentExtractLine
 from app.domain.payment_extract_report import (
     PaymentExtractReportSourceLine,
@@ -21,7 +22,14 @@ from app.domain.payment_extract_report import (
 )
 from app.domain.reference_rules import ReferenceRules
 from app.logging_utils import build_log_extra
-from app.models.application.index import Application, Client, Provider
+from app.models.application.enums import PublicBodyId
+from app.models.application.index import (
+    Application,
+    ApplicationPublicBody,
+    Client,
+    Deceased,
+    Provider,
+)
 from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
@@ -63,6 +71,7 @@ from app.ports.claim.get_payment_extracts_for_claim_port import (
 from app.ports.claim.list_auto_approved_poa_claims_port import (
     ListAutoApprovedPoaClaimsPort,
 )
+from app.ports.claim.ogd_costs_report_port import OgdCostsReportPort
 from app.ports.claim.payment_extract_report_port import PaymentExtractReportPort
 from app.ports.claim.update_claim_status_port import (
     UpdateClaimStatusPort,
@@ -73,6 +82,7 @@ from app.ports.claim_backlog_port import ClaimBacklogPort
 logger = logging.getLogger(__name__)
 
 PAYMENT_EXTRACT_REPORT_BATCH_SIZE = 1000
+OGD_COSTS_REPORT_BATCH_SIZE = 1000
 
 _OriginalExtract = aliased(ClaimPaymentExtract, name="original_extract")
 _OriginalClaim = aliased(Claim, name="original_claim")
@@ -96,6 +106,7 @@ class ClaimRepositoryAdapter(
     DeleteClaimEvidencePort,
     ListAutoApprovedPoaClaimsPort,
     PaymentExtractReportPort,
+    OgdCostsReportPort,
 ):
     GENERATE_CLAIM_REFERENCE_ATTEMPTS = 10
 
@@ -400,6 +411,101 @@ class ClaimRepositoryAdapter(
             .where(
                 ClaimPaymentExtract.created_at >= created_from,
                 ClaimPaymentExtract.created_at < created_before,
+            )
+        )
+
+    def get_ogd_public_bodies_by_application(
+        self, decided_from: datetime, decided_before: datetime
+    ) -> dict[int, list[PublicBodyId]]:
+        application_ids = self._ogd_costs_statement(
+            Application.application_id,
+            decided_from=decided_from,
+            decided_before=decided_before,
+        ).distinct()
+        statement = select(
+            ApplicationPublicBody.application_id, ApplicationPublicBody.public_body_id
+        ).where(ApplicationPublicBody.application_id.in_(application_ids))
+
+        public_bodies: dict[int, list[PublicBodyId]] = {}
+        for application_id, public_body_id in self.session.exec(statement):
+            public_bodies.setdefault(application_id, []).append(public_body_id)
+        return public_bodies
+
+    def iter_ogd_costs_report_lines(
+        self, decided_from: datetime, decided_before: datetime
+    ) -> Iterator[OgdCostsReportSourceLine]:
+        statement = (
+            self._ogd_costs_statement(
+                Application.application_id,
+                ClaimDecision.created_at,
+                ClaimDecision.decision,
+                ClaimPaymentExtract.invoice_type,
+                Claim.claim_type_id,
+                Application.laa_reference,
+                ClaimPaymentExtract.invoice_number,
+                ClaimPaymentExtract.invoice_amount,
+                ClaimPaymentExtract.tax_code,
+                Deceased.deceased_first_name,
+                Deceased.deceased_last_name,
+                Deceased.deceased_date_of_death,
+                decided_from=decided_from,
+                decided_before=decided_before,
+            )
+            .order_by(
+                ClaimDecision.created_at,
+                Claim.claim_id,
+                ClaimPaymentExtract.sequence_number,
+            )
+            .execution_options(yield_per=OGD_COSTS_REPORT_BATCH_SIZE)
+        )
+        for (
+            application_id,
+            claim_decision_date,
+            claim_decision,
+            invoice_type,
+            claim_type,
+            laa_reference,
+            invoice_number,
+            invoice_amount,
+            tax_code,
+            deceased_first_name,
+            deceased_last_name,
+            deceased_date_of_death,
+        ) in self.session.exec(statement):
+            yield OgdCostsReportSourceLine(
+                application_id=application_id,
+                claim_decision_date=claim_decision_date,
+                claim_decision=claim_decision,
+                invoice_type=invoice_type,
+                claim_type=claim_type,
+                laa_reference=laa_reference,
+                invoice_number=invoice_number,
+                invoice_amount=invoice_amount,
+                tax_code=tax_code,
+                deceased_first_name=deceased_first_name,
+                deceased_last_name=deceased_last_name,
+                deceased_date_of_death=deceased_date_of_death,
+            )
+
+    def _ogd_costs_statement(
+        self, *columns: Any, decided_from: datetime, decided_before: datetime
+    ):
+        return (
+            select(*columns)
+            .select_from(ClaimPaymentExtract)
+            .join(Claim, ClaimPaymentExtract.claim_id == Claim.claim_id)
+            .join(
+                ClaimDecision,
+                and_(
+                    ClaimDecision.claim_id == Claim.claim_id,
+                    ClaimDecision.decision == ClaimDecisionStatus.PAY_IN_FULL,
+                ),
+            )
+            .join(Application, Claim.application_id == Application.application_id)
+            .join(Deceased, Application.deceased_id == Deceased.deceased_id)
+            .where(
+                ClaimDecision.created_at >= decided_from,
+                ClaimDecision.created_at < decided_before,
             )
         )
 

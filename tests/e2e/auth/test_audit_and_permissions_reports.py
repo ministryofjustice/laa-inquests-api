@@ -13,6 +13,7 @@ from app.routers.reports import (
     get_generate_application_backlog_report_use_case,
     get_generate_claim_backlog_report_use_case,
     get_generate_decisions_report_use_case,
+    get_generate_ogd_costs_report_use_case,
     get_generate_payment_extract_report_use_case,
 )
 from app.use_cases.exceptions import AuditError
@@ -53,6 +54,13 @@ REPORT_ENDPOINTS = [
         Role.APPLICATION_WORKFLOW_REPORTING,
         ReportType.DECISIONS,
         get_generate_decisions_report_use_case,
+        {"from": "2024-01-01", "to": "2024-01-31"},
+    ),
+    (
+        "/reports/ogd-costs",
+        Role.ASSURANCE,
+        ReportType.OGD_COSTS,
+        get_generate_ogd_costs_report_use_case,
         {"from": "2024-01-01", "to": "2024-01-31"},
     ),
 ]
