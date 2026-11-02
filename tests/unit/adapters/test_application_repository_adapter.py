@@ -4,8 +4,9 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock, call, patch
 
 import pytest
+from sqlalchemy import inspect
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import select
+from sqlmodel import Session, select
 
 from app.adapters.application_repository_adapter import ApplicationRepositoryAdapter
 from app.domain.coroners_letter import CoronersLetter
@@ -517,6 +518,29 @@ class TestGetLaaReference:
 
 
 class TestGetPendingApplications:
+    def test_eager_loads_provider_and_proceeding_to_prevent_N_plus_1_query_problem_with_lazy_loading(
+        self, session
+    ):
+        application = create_application_in_db(session)
+        laa_reference = application.laa_reference
+
+        # A fresh session prevents setup from preloading relationships.
+        with Session(session.get_bind()) as fresh_session:
+            adapter = ApplicationRepositoryAdapter(fresh_session)
+
+            applications = adapter.get_pending_applications()
+
+            assert len(applications) == 1
+            pending_application = applications[0]
+            assert pending_application.laa_reference == laa_reference
+            assert "provider" not in inspect(pending_application).unloaded
+            assert "proceeding" not in inspect(pending_application).unloaded
+
+            assert pending_application.provider.firm_code == "TEST01"
+            assert pending_application.proceeding.merits_decision == (
+                MeritsDecision.SUBMITTED
+            )
+
     def test_returns_applications_with_pending_decision(self, session):
         app = session.exec(select(Application)).first()
         app.proceeding.merits_decision = MeritsDecision.SUBMITTED

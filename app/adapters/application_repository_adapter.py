@@ -3,7 +3,7 @@ import random
 import uuid
 
 from sqlalchemy import and_, case, false, func
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import aliased, joinedload
 from sqlmodel import Session, exists, select
 
 from app.config import Config
@@ -378,6 +378,12 @@ class ApplicationRepositoryAdapter(
                 Application.application_id == ApplicationProceeding.application_id,
             )
             .where(ApplicationProceeding.merits_decision == "SUBMITTED")
+            .options(
+                joinedload(Application.provider),
+                joinedload(Application.proceeding).joinedload(
+                    ApplicationProceeding.proceeding
+                ),
+            )
             .order_by(Application.created_at.asc())
         )
         return list(self.session.exec(statement).unique().all())
