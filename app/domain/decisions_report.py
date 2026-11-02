@@ -1,8 +1,9 @@
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime
 from enum import StrEnum
 
 from app.domain.audit_trail import resolve_history_username
+from app.domain.date_utils import as_utc
 from app.models.application.enums import ReasonForRefusal
 from app.models.history.enums import ActorType, HistoryEventReference
 
@@ -167,13 +168,13 @@ def _build_row(
     refusal_reason: str,
     justification: str,
 ) -> DecisionsReportRow:
-    decided_at = _as_utc(record.decided_at)
+    decided_at = as_utc(record.decided_at)
     return DecisionsReportRow(
         submission_type=submission_type.value,
         case_reference=record.laa_reference,
         claim_reference=claim_reference,
         decision=decision,
-        submission_date=_as_utc(submitted_at).strftime(_DATE_FORMAT),
+        submission_date=as_utc(submitted_at).strftime(_DATE_FORMAT),
         date_of_decision=decided_at.strftime(_DATE_FORMAT),
         time_of_decision=decided_at.strftime(_TIME_FORMAT),
         who=neutralise_csv_formula(
@@ -190,9 +191,3 @@ def _event_data(record: DecisionsReportSourceRecord) -> dict:
     if not isinstance(record.event_data, dict):
         raise InvalidDecisionRecordError("Decision event has no event data")
     return record.event_data
-
-
-def _as_utc(value: datetime) -> datetime:
-    if value.tzinfo is None:
-        return value.replace(tzinfo=UTC)
-    return value.astimezone(UTC)

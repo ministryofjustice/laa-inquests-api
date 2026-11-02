@@ -1,5 +1,12 @@
 import calendar
-from datetime import date
+from datetime import UTC, date, datetime
+
+
+def as_utc(value: datetime) -> datetime:
+    """Treat naive stored timestamps as UTC and convert aware timestamps to UTC."""
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
 
 
 def add_calendar_months(start: date, months: int) -> date:
