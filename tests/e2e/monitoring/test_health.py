@@ -17,7 +17,7 @@ def test_200_health_does_not_query_unavailable_database(
 ) -> None:
     with patch.object(
         session,
-        "execute",
+        "exec",
         side_effect=OperationalError(
             "SELECT 1", {}, Exception("Database connection refused")
         ),

@@ -1,4 +1,4 @@
-from unittest.mock import Mock, create_autospec
+from unittest.mock import ANY, Mock, call, create_autospec
 
 import pytest
 from sqlalchemy.exc import OperationalError, SQLAlchemyError, TimeoutError
@@ -17,15 +17,16 @@ def test_database_readiness_opens_session_and_executes_connectivity_query() -> N
     adapter.check()
 
     session_factory.assert_called_once_with()
-    session.execute.assert_called_once()
-    assert str(session.execute.call_args.args[0]).strip().upper() == "SELECT 1"
+    session.exec.assert_called_once()
+    assert str(session.exec.call_args.args[0]).strip().upper() == "SELECT 1"
+    session.connection.assert_not_called()
     session.__exit__.assert_called_once_with(None, None, None)
 
 
 def test_database_readiness_translates_connection_failure() -> None:
     session = create_autospec(Session, instance=True)
     session.__enter__.return_value = session
-    session.execute.side_effect = OperationalError(
+    session.exec.side_effect = OperationalError(
         "SELECT 1", {}, Exception("Database connection refused")
     )
     adapter = DatabaseReadinessAdapter(Mock(return_value=session))
@@ -66,10 +67,17 @@ def test_database_readiness_limits_postgresql_query_timeout_to_its_transaction()
 
     adapter.check()
 
-    statements = [str(call.args[0]) for call in session.execute.call_args_list]
-    assert statements == [
-        "SET LOCAL statement_timeout = '1000ms'",
-        "SELECT 1",
-    ]
+    session.connection.return_value.exec_driver_sql.assert_called_once_with(
+        "SET LOCAL statement_timeout = '1000ms'"
+    )
+    session.exec.assert_called_once()
+    assert str(session.exec.call_args.args[0]).strip().upper() == "SELECT 1"
+    session.assert_has_calls(
+        [
+            call.connection(),
+            call.connection().exec_driver_sql("SET LOCAL statement_timeout = '1000ms'"),
+            call.exec(ANY),
+        ]
+    )
     session.commit.assert_not_called()
     session.__exit__.assert_called_once_with(None, None, None)

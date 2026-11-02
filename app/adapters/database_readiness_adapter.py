@@ -3,9 +3,8 @@ import time
 from collections.abc import Callable
 from contextlib import AbstractContextManager
 
-from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.logging_utils import build_log_extra, duration_ms
 from app.ports.check_readiness_port import (
@@ -27,8 +26,10 @@ class DatabaseReadinessAdapter(CheckReadinessPort):
         try:
             with self.session_factory() as session:
                 if session.get_bind().dialect.name == "postgresql":
-                    session.execute(text("SET LOCAL statement_timeout = '1000ms'"))
-                session.execute(text("SELECT 1"))
+                    session.connection().exec_driver_sql(
+                        "SET LOCAL statement_timeout = '1000ms'"
+                    )
+                session.exec(select(1))
         except SQLAlchemyError as exc:
             logger.warning(
                 "Database readiness check failed",

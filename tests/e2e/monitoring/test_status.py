@@ -11,7 +11,7 @@ from app.routers.monitoring import get_readiness_session_factory
 def test_200_status_checks_database_and_contains_expected_body(
     client: TestClient, session: Session
 ) -> None:
-    with patch.object(session, "execute", wraps=session.execute) as execute:
+    with patch.object(session, "exec", wraps=session.exec) as execute:
         response = client.get("/status")
 
     assert response.status_code == 200
@@ -32,7 +32,7 @@ def test_200_status_checks_database_and_contains_expected_body(
 def test_503_status_returns_generic_error_when_database_check_fails(
     client: TestClient, session: Session, database_error: SQLAlchemyError
 ) -> None:
-    with patch.object(session, "execute", side_effect=database_error):
+    with patch.object(session, "exec", side_effect=database_error):
         response = client.get("/status")
 
     assert response.status_code == 503
@@ -67,7 +67,7 @@ def test_200_status_recovers_after_database_becomes_available(
 ) -> None:
     with patch.object(
         session,
-        "execute",
+        "exec",
         side_effect=OperationalError(
             "SELECT 1", {}, Exception("Database connection refused")
         ),
