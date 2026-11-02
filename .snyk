@@ -20,3 +20,18 @@ ignore:
               expires: 2026-11-07T00:00:00.000Z
               created: 2026-10-08T00:00:00.000Z
               reason: "There is no fixed version for Debian:13 zlib"
+    "SNYK-DEBIAN13-SQLITE3-22119065":
+        - "*":
+              expires: 2026-12-02T00:00:00.000Z
+              created: 2026-11-02T00:00:00.000Z
+              reason: "There is no fixed version for Debian:13 sqlite3 (CVE-2026-119373, FTS5 only; app uses PostgreSQL and no FTS5)"
+    "SNYK-DEBIAN13-SQLITE3-22119091":
+        - "*":
+              expires: 2026-12-02T00:00:00.000Z
+              created: 2026-11-02T00:00:00.000Z
+              reason: "There is no fixed version for Debian:13 sqlite3 (CVE-2026-119374, FTS5 only; app uses PostgreSQL and no FTS5)"
+    "SNYK-DEBIAN13-SQLITE3-22119098":
+        - "*":
+              expires: 2026-12-02T00:00:00.000Z
+              created: 2026-11-02T00:00:00.000Z
+              reason: "There is no fixed version for Debian:13 sqlite3 (CVE-2026-119379, session extension only; not used by the app)"
