@@ -124,7 +124,7 @@ class TestGetPaymentExtractReport:
         assert "text/csv" in response.headers["content-type"]
         assert "attachment" in response.headers["content-disposition"]
         assert (
-            "2026-09-01-164501 - Report - IDDS Financial Payments - OFFICIAL-SENSITIVE - LAA Use Only.csv"
+            "2026-09-01 - Report - IDDS Financial Payments - OFFICIAL-SENSITIVE - LAA Use Only.csv"
             in response.headers["content-disposition"]
         )
         assert parse_csv_fieldnames(response.text) == PAYMENT_EXTRACT_REPORT_HEADERS
