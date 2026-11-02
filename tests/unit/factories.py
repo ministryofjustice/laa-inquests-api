@@ -1,7 +1,12 @@
 from datetime import UTC, datetime
 
+from app.domain.application_backlog_report import ApplicationBacklogRecord
 from app.models.application.certificate import ApplicationCertificate
-from app.models.application.enums import AddressSource, CorrespondenceRecipientType
+from app.models.application.enums import (
+    AddressSource,
+    CorrespondenceRecipientType,
+    MeritsDecision,
+)
 from app.models.application.index import (
     Address,
     Application,
@@ -295,3 +300,16 @@ def create_base_certificate(
         "scope_limitation_description": application_proceeding.proceeding.scope_description,
     }
     return ApplicationCertificate(**(defaults | overrides))
+
+
+def create_base_application_backlog_record(**overrides):
+    defaults = {
+        "laa_reference": "INQ-AAA-001",
+        "merits_decision": MeritsDecision.SUBMITTED,
+        "created_at": datetime(2026, 1, 1, tzinfo=UTC),
+        "firm_code": "123",
+        "proceeding_code": "IQOT",
+        "matter_type": "INQUESTS",
+        "potential_duplicate_applications": [],
+    }
+    return ApplicationBacklogRecord(**(defaults | overrides))

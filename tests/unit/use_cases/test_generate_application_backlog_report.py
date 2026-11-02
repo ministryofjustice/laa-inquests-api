@@ -16,20 +16,7 @@ from app.use_cases.generate_application_backlog_report import (
     GenerateApplicationBacklogReportUseCase,
 )
 from tests.helpers.csv_helpers import parse_csv_rows
-
-
-def _create_record(
-    laa_reference: str = "INQ-AAA-001", firm_code: str = "123"
-) -> ApplicationBacklogRecord:
-    return ApplicationBacklogRecord(
-        laa_reference=laa_reference,
-        merits_decision=MeritsDecision.SUBMITTED,
-        created_at=datetime(2026, 1, 1, tzinfo=UTC),
-        firm_code=firm_code,
-        proceeding_code="IQOT",
-        matter_type="INQUESTS",
-        potential_duplicate_applications=[],
-    )
+from tests.unit.factories import create_base_application_backlog_record
 
 
 def _build_use_case(
@@ -119,7 +106,7 @@ class TestGenerateApplicationBacklogReportUseCase:
         def test_returns_No_in_Potential_duplicate_column_when_no_application_duplicates(
             self,
         ):
-            application = _create_record()
+            application = create_base_application_backlog_record()
 
             use_case = _build_use_case(
                 applications=[application],
@@ -146,7 +133,7 @@ class TestGenerateApplicationBacklogReportUseCase:
         assert len(rows) == 0
 
     def test_returns_csv_row_for_pending_application(self):
-        application = _create_record()
+        application = create_base_application_backlog_record()
 
         use_case = _build_use_case(
             applications=[application],
@@ -170,7 +157,7 @@ class TestGenerateApplicationBacklogReportUseCase:
         assert row["Potential duplicate submitted application reference(s)"] == ""
 
     def test_resolves_firm_name_from_firms_response(self):
-        application = _create_record(firm_code="456")
+        application = create_base_application_backlog_record(firm_code="456")
 
         use_case = _build_use_case(
             applications=[application],
@@ -183,7 +170,7 @@ class TestGenerateApplicationBacklogReportUseCase:
         assert rows[0]["Firm Name"] == "Acme Solicitors"
 
     def test_raises_error_when_firm_name_not_found_for_application(self):
-        application = _create_record(firm_code="999")
+        application = create_base_application_backlog_record(firm_code="999")
 
         use_case = _build_use_case(
             applications=[application],
@@ -194,8 +181,12 @@ class TestGenerateApplicationBacklogReportUseCase:
             use_case.execute()
 
     def test_multiple_applications_all_included(self):
-        app1 = _create_record(laa_reference="INQ-AAA-001", firm_code="1")
-        app2 = _create_record(laa_reference="INQ-AAA-002", firm_code="2")
+        app1 = create_base_application_backlog_record(
+            laa_reference="INQ-AAA-001", firm_code="1"
+        )
+        app2 = create_base_application_backlog_record(
+            laa_reference="INQ-AAA-002", firm_code="2"
+        )
 
         use_case = _build_use_case(
             applications=[app1, app2],
@@ -214,7 +205,7 @@ class TestGenerateApplicationBacklogReportUseCase:
         assert app2.laa_reference in refs
 
     def test_raises_exception_when_firms_retrieval_fails(self):
-        application = _create_record()
+        application = create_base_application_backlog_record()
 
         backlog_port = MagicMock()
         backlog_port.get_application_backlog_records.return_value = [application]
@@ -233,8 +224,8 @@ class TestGenerateApplicationBacklogReportUseCase:
             use_case.execute()
 
     def test_deduplicates_firm_ids_before_calling_port(self):
-        app1 = _create_record(laa_reference="INQ-AAA-001")
-        app2 = _create_record(laa_reference="INQ-AAA-002")
+        app1 = create_base_application_backlog_record(laa_reference="INQ-AAA-001")
+        app2 = create_base_application_backlog_record(laa_reference="INQ-AAA-002")
 
         backlog_port = MagicMock()
         backlog_port.get_application_backlog_records.return_value = [app1, app2]

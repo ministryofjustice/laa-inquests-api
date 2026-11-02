@@ -963,7 +963,7 @@ class TestCreateDuplicateRecords:
             )
 
 
-class TestGetPotentialDuplicates:
+class TestGetPotentialDuplicateApplicationIds:
     def test_returns_potential_duplicates_where_target_is_application_id(self, session):
         application = session.exec(select(Application)).first()
         adapter = ApplicationRepositoryAdapter(session)
