@@ -1,6 +1,7 @@
 import uuid
+from dataclasses import is_dataclass
 from datetime import UTC, datetime
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 from sqlalchemy.exc import IntegrityError
@@ -97,6 +98,56 @@ class TestListApplications:
         result = adapter.list_applications()
 
         assert len(result) == len(test_applications)
+
+
+class TestGetApplicationBacklogRecords:
+    def test_uses_pending_applications_to_select_report_records(self, session):
+        create_application_in_db(session)
+        adapter = ApplicationRepositoryAdapter(session)
+
+        with patch.object(
+            adapter, "get_pending_applications", return_value=[]
+        ) as get_pending_applications:
+            records = adapter.get_application_backlog_records()
+
+        get_pending_applications.assert_called_once_with()
+        assert records == []
+
+    def test_returns_all_required_report_fields(self, session):
+        first = create_application_in_db(
+            session,
+            laa_reference="INQ-AAA-001",
+            created_at=datetime(2020, 1, 1, tzinfo=UTC),
+        )
+        second = create_application_in_db(
+            session,
+            laa_reference="INQ-AAA-002",
+            created_at=datetime(2021, 1, 1, tzinfo=UTC),
+        )
+        session.add(
+            DuplicateApplicationRecord(
+                application_id=second.application_id,
+                duplicate_application_id=first.application_id,
+            )
+        )
+        session.commit()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        records = adapter.get_application_backlog_records()
+
+        assert len(records) == 2
+        assert all(is_dataclass(record) for record in records)
+        assert [record.laa_reference for record in records] == [
+            "INQ-AAA-001",
+            "INQ-AAA-002",
+        ]
+        assert records[0].merits_decision == MeritsDecision.SUBMITTED
+        assert records[0].created_at == first.created_at
+        assert records[0].firm_code == "TEST01"
+        assert records[0].proceeding_code == ProceedingId.IQOT
+        assert records[0].matter_type == "INQUESTS"
+        assert records[0].potential_duplicate_applications == ["INQ-AAA-002"]
+        assert records[1].potential_duplicate_applications == ["INQ-AAA-001"]
 
 
 class TestCreateApplication:
