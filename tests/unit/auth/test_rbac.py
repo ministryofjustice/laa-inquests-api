@@ -150,8 +150,10 @@ def test_internal_assurance_permission_set():
         Permission.CERTIFICATE_READ,
         Permission.CASE_NOTE_CREATE,
         Permission.HISTORY_READ,
-        Permission.REPORTS_MI_READ,
+        Permission.REPORTS_AUDIT_TRAIL_READ,
         Permission.REPORTS_PAYMENT_READ,
+        Permission.REPORTS_APPLICATION_WORKFLOW_READ,
+        Permission.REPORTS_CLAIM_WORKFLOW_READ,
     }
 
 
@@ -168,10 +170,15 @@ def test_internal_claim_workflow_reporting_permission_set():
 
 
 def test_internal_policy_permission_set():
-    assert ROLE_PERMISSIONS_MAP[Role.POLICY.value] == set()
+    assert ROLE_PERMISSIONS_MAP[Role.POLICY.value] == {
+        Permission.REPORTS_OGD_COSTS_READ,
+    }
 
 
 def test_internal_finance_permission_set():
     assert ROLE_PERMISSIONS_MAP[Role.FINANCE.value] == {
+        Permission.REPORTS_OGD_COSTS_READ,
         Permission.REPORTS_PAYMENT_READ,
+        Permission.REPORTS_APPLICATION_WORKFLOW_READ,
+        Permission.REPORTS_CLAIM_WORKFLOW_READ,
     }

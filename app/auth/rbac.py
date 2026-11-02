@@ -26,7 +26,8 @@ class Permission(str, Enum):
 
     PROVIDER_OFFICES_READ = "provider-offices:read"
 
-    REPORTS_MI_READ = "reports-mi:read"
+    REPORTS_AUDIT_TRAIL_READ = "reports-audit-trail:read"
+    REPORTS_OGD_COSTS_READ = "reports-ogd-costs:read"
     REPORTS_PAYMENT_READ = "reports-payment:read"
     REPORTS_APPLICATION_WORKFLOW_READ = "reports-application-workflow:read"
     REPORTS_CLAIM_WORKFLOW_READ = "reports-claim-workflow:read"
@@ -85,8 +86,10 @@ ROLE_PERMISSIONS_MAP: dict[Role, set[Permission]] = {
         Permission.CERTIFICATE_READ,
         Permission.CASE_NOTE_CREATE,
         Permission.HISTORY_READ,
-        Permission.REPORTS_MI_READ,
+        Permission.REPORTS_AUDIT_TRAIL_READ,
         Permission.REPORTS_PAYMENT_READ,
+        Permission.REPORTS_APPLICATION_WORKFLOW_READ,
+        Permission.REPORTS_CLAIM_WORKFLOW_READ,
     },
     Role.APPLICATION_WORKFLOW_REPORTING: {
         Permission.REPORTS_APPLICATION_WORKFLOW_READ,
@@ -94,9 +97,14 @@ ROLE_PERMISSIONS_MAP: dict[Role, set[Permission]] = {
     Role.CLAIM_WORKFLOW_REPORTING: {
         Permission.REPORTS_CLAIM_WORKFLOW_READ,
     },
-    Role.POLICY: set(),
+    Role.POLICY: {
+        Permission.REPORTS_OGD_COSTS_READ,
+    },
     Role.FINANCE: {
+        Permission.REPORTS_OGD_COSTS_READ,
         Permission.REPORTS_PAYMENT_READ,
+        Permission.REPORTS_APPLICATION_WORKFLOW_READ,
+        Permission.REPORTS_CLAIM_WORKFLOW_READ,
     },
 }
 
