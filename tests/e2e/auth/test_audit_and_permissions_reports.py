@@ -12,6 +12,7 @@ from app.models.audit.index import ReportAudit
 from app.routers.dependencies import auditer_permission_checker
 from app.routers.reports import (
     get_generate_application_backlog_report_use_case,
+    get_generate_audit_trail_report_use_case,
     get_generate_claim_backlog_report_use_case,
     get_generate_decisions_report_use_case,
     get_generate_ogd_costs_report_use_case,
@@ -59,9 +60,16 @@ REPORT_ENDPOINTS = [
     ),
     (
         "/reports/ogd-costs",
-        Role.ASSURANCE,
+        Role.FINANCE,
         ReportType.OGD_COSTS,
         get_generate_ogd_costs_report_use_case,
+        {"from": "2024-01-01", "to": "2024-01-31"},
+    ),
+    (
+        "/reports/audit-trail",
+        Role.ASSURANCE,
+        ReportType.AUDIT_TRAIL,
+        get_generate_audit_trail_report_use_case,
         {"from": "2024-01-01", "to": "2024-01-31"},
     ),
 ]

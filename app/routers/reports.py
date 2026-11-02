@@ -315,7 +315,7 @@ def get_payment_extract_report(
     dependencies=[
         Depends(
             audit_and_require_permission(
-                possible_permissions=Permission.REPORTS_MI_READ,
+                possible_permissions=Permission.REPORTS_AUDIT_TRAIL_READ,
                 audit_event_factory=ReportAuditEventFactory(
                     report_type=ReportType.AUDIT_TRAIL
                 ),
@@ -427,7 +427,7 @@ def get_decisions_report(
     dependencies=[
         Depends(
             audit_and_require_permission(
-                possible_permissions=Permission.REPORTS_MI_READ,
+                possible_permissions=Permission.REPORTS_OGD_COSTS_READ,
                 audit_event_factory=ReportAuditEventFactory(
                     report_type=ReportType.OGD_COSTS
                 ),

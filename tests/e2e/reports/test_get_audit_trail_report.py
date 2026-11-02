@@ -760,7 +760,6 @@ class TestGetAuditTrailReport:
 class TestGetAuditTrailReportAuth:
     """Authentication and authorisation tests for GET /reports/audit-trail."""
 
-    # The audit trail shares the MI report permission until it is amended separately.
     def test_200_returns_ok_for_the_assurance_role(self, client):
         response = _get(client)
 
@@ -771,7 +770,7 @@ class TestGetAuditTrailReportAuth:
         [role for role in Role if role != Role.ASSURANCE],
         ids=lambda r: r.name,
     )
-    def test_403_for_roles_without_mi_report_permission(self, client, role):
+    def test_403_for_roles_without_audit_trail_permission(self, client, role):
         response = _get(client, headers={"Authorization": f"Bearer {role.value}"})
 
         assert response.status_code == 403

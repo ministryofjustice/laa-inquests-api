@@ -39,7 +39,8 @@ OGD_COSTS_REPORT_HEADERS = [
 ]
 
 URL = "/reports/ogd-costs"
-ASSURANCE_HEADERS = {"Authorization": f"Bearer {Role.ASSURANCE.value}"}
+FINANCE_HEADERS = {"Authorization": f"Bearer {Role.FINANCE.value}"}
+OGD_COSTS_ROLES = [Role.FINANCE, Role.POLICY]
 
 DECIDED_IN_RANGE = datetime(2025, 3, 15, 12, 0, tzinfo=UTC)
 DEFAULT_PARAMS = {"from": "2025-03-01", "to": "2025-03-31"}
@@ -137,7 +138,7 @@ def _get(client, params: dict | None = None):
     return client.get(
         URL,
         params=DEFAULT_PARAMS if params is None else params,
-        headers=ASSURANCE_HEADERS,
+        headers=FINANCE_HEADERS,
     )
 
 
@@ -484,7 +485,31 @@ class TestGetOgdCostsReport:
 class TestGetOgdCostsReportAuth:
     """Authentication tests for GET /reports/ogd-costs."""
 
-    def test_200_returns_ok_for_assurance_role(self, client):
-        response = client.get(URL, params=DEFAULT_PARAMS, headers=ASSURANCE_HEADERS)
+    @pytest.mark.parametrize("role", OGD_COSTS_ROLES, ids=lambda r: r.name)
+    def test_200_returns_ok_for_ogd_costs_roles(self, client, role):
+        response = client.get(
+            URL,
+            params=DEFAULT_PARAMS,
+            headers={"Authorization": f"Bearer {role.value}"},
+        )
 
         assert response.status_code == 200
+
+    @pytest.mark.parametrize(
+        "role",
+        [role for role in Role if role not in OGD_COSTS_ROLES],
+        ids=lambda r: r.name,
+    )
+    def test_403_for_roles_without_ogd_costs_permission(self, client, role):
+        response = client.get(
+            URL,
+            params=DEFAULT_PARAMS,
+            headers={"Authorization": f"Bearer {role.value}"},
+        )
+
+        assert response.status_code == 403
+
+    def test_401_without_credentials(self, client):
+        response = client.get(URL, params=DEFAULT_PARAMS)
+
+        assert response.status_code == 401
