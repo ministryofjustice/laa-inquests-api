@@ -235,6 +235,52 @@ class TestGetApplicationBacklogReport:
         assert rows[0]["Potential duplicate"] == "No"
         assert rows[0]["Potential duplicate submitted application reference(s)"] == ""
 
+    def test_200_csv_retains_unrelated_pending_applications_alongside_duplicates(
+        self, session, client
+    ):
+        first = create_application_in_db(
+            session,
+            laa_reference="INQ-AAA-001",
+            created_at=datetime(2020, 1, 1, tzinfo=UTC),
+        )
+        unrelated = create_application_in_db(
+            session,
+            laa_reference="INQ-AAA-002",
+            created_at=datetime(2021, 1, 1, tzinfo=UTC),
+        )
+        second = create_application_in_db(
+            session,
+            laa_reference="INQ-AAA-003",
+            created_at=datetime(2022, 1, 1, tzinfo=UTC),
+        )
+        session.add(
+            DuplicateApplicationRecord(
+                application_id=first.application_id,
+                duplicate_application_id=second.application_id,
+            )
+        )
+        session.commit()
+
+        response = client.get(
+            "/reports/applications/backlog",
+            headers={
+                "Authorization": f"Bearer {Role.APPLICATION_WORKFLOW_REPORTING.value}"
+            },
+        )
+
+        assert response.status_code == 200
+        rows = parse_csv_rows(response.text)
+        assert [row["Application / Case Reference Number"] for row in rows] == [
+            first.laa_reference,
+            unrelated.laa_reference,
+            second.laa_reference,
+        ]
+        assert [row["Potential duplicate"] for row in rows] == ["Yes", "No", "Yes"]
+        assert [
+            row["Potential duplicate submitted application reference(s)"]
+            for row in rows
+        ] == [second.laa_reference, "", first.laa_reference]
+
     def test_200_csv_reports_no_duplicates_without_relationships(self, session, client):
         pending = create_application_in_db(session)
 

@@ -101,6 +101,70 @@ class TestListApplications:
 
 
 class TestGetApplicationBacklogRecords:
+    def test_raises_lookup_error_when_pending_application_has_no_id(self, session):
+        application = Application(laa_reference="INQ-AAA-001")
+        adapter = ApplicationRepositoryAdapter(session)
+
+        with (
+            patch.object(
+                adapter, "get_pending_applications", return_value=[application]
+            ),
+            pytest.raises(
+                LookupError, match="Pending application is missing its application ID"
+            ),
+        ):
+            adapter.get_application_backlog_records()
+
+    def test_includes_each_laa_reference_once_for_repeated_duplicate_records(
+        self, session
+    ):
+        first = create_application_in_db(
+            session,
+            laa_reference="INQ-AAA-001",
+            created_at=datetime(2020, 1, 1, tzinfo=UTC),
+        )
+        second = create_application_in_db(
+            session,
+            laa_reference="INQ-AAA-002",
+            created_at=datetime(2021, 1, 1, tzinfo=UTC),
+        )
+        session.add_all(
+            [
+                DuplicateApplicationRecord(
+                    application_id=first.application_id,
+                    duplicate_application_id=second.application_id,
+                )
+                for _ in range(2)
+            ]
+        )
+        session.commit()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        records = adapter.get_application_backlog_records()
+
+        assert len(records) == 2
+        assert records[0].laa_reference == first.laa_reference
+        assert records[0].potential_duplicate_applications == [second.laa_reference]
+        assert records[1].laa_reference == second.laa_reference
+        assert records[1].potential_duplicate_applications == [first.laa_reference]
+
+    def test_excludes_self_referencing_duplicate_records(self, session):
+        application = create_application_in_db(session)
+        session.add(
+            DuplicateApplicationRecord(
+                application_id=application.application_id,
+                duplicate_application_id=application.application_id,
+            )
+        )
+        session.commit()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        records = adapter.get_application_backlog_records()
+
+        assert len(records) == 1
+        assert records[0].laa_reference == application.laa_reference
+        assert records[0].potential_duplicate_applications == []
+
     def test_uses_pending_applications_to_select_report_records(self, session):
         create_application_in_db(session)
         adapter = ApplicationRepositoryAdapter(session)
