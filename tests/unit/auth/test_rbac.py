@@ -152,6 +152,8 @@ def test_internal_assurance_permission_set():
         Permission.HISTORY_READ,
         Permission.REPORTS_AUDIT_TRAIL_READ,
         Permission.REPORTS_PAYMENT_READ,
+        Permission.REPORTS_APPLICATION_WORKFLOW_READ,
+        Permission.REPORTS_CLAIM_WORKFLOW_READ,
     }
 
 
@@ -177,4 +179,6 @@ def test_internal_finance_permission_set():
     assert ROLE_PERMISSIONS_MAP[Role.FINANCE.value] == {
         Permission.REPORTS_OGD_COSTS_READ,
         Permission.REPORTS_PAYMENT_READ,
+        Permission.REPORTS_APPLICATION_WORKFLOW_READ,
+        Permission.REPORTS_CLAIM_WORKFLOW_READ,
     }

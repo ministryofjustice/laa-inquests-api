@@ -88,6 +88,8 @@ ROLE_PERMISSIONS_MAP: dict[Role, set[Permission]] = {
         Permission.HISTORY_READ,
         Permission.REPORTS_AUDIT_TRAIL_READ,
         Permission.REPORTS_PAYMENT_READ,
+        Permission.REPORTS_APPLICATION_WORKFLOW_READ,
+        Permission.REPORTS_CLAIM_WORKFLOW_READ,
     },
     Role.APPLICATION_WORKFLOW_REPORTING: {
         Permission.REPORTS_APPLICATION_WORKFLOW_READ,
@@ -101,6 +103,8 @@ ROLE_PERMISSIONS_MAP: dict[Role, set[Permission]] = {
     Role.FINANCE: {
         Permission.REPORTS_OGD_COSTS_READ,
         Permission.REPORTS_PAYMENT_READ,
+        Permission.REPORTS_APPLICATION_WORKFLOW_READ,
+        Permission.REPORTS_CLAIM_WORKFLOW_READ,
     },
 }
 
