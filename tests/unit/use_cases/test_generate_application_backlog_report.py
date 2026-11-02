@@ -50,7 +50,9 @@ def _build_use_case(
 
 class TestGenerateApplicationBacklogReportUseCase:
     class TestDuplicateApplicationColumns:
-        def test_writes_duplicate_columns_for_applications_with_duplicates(self):
+        def test_returns_Yes_in_Potential_duplicate_column_for_applications_with_multiple_duplicates(
+            self,
+        ):
             record = ApplicationBacklogRecord(
                 laa_reference="INQ-AAA-001",
                 merits_decision="SUBMITTED",
@@ -80,6 +82,39 @@ class TestGenerateApplicationBacklogReportUseCase:
             assert rows[0][
                 "Potential duplicate submitted application reference(s)"
             ] == ("INQ-AAA-002; INQ-AAA-003")
+
+        def test_returns_Yes_in_Potential_duplicate_column_for_application_with_a_duplicate(
+            self,
+        ):
+            record = ApplicationBacklogRecord(
+                laa_reference="INQ-AAA-001",
+                merits_decision="SUBMITTED",
+                created_at=datetime(2026, 1, 1, tzinfo=UTC),
+                firm_code="123",
+                proceeding_code="IQOT",
+                matter_type="INQUESTS",
+                potential_duplicate_applications=["INQ-AAA-002"],
+            )
+            backlog_port = MagicMock()
+            backlog_port.get_application_backlog_records.return_value = [record]
+            provider_details_port = MagicMock()
+            provider_details_port.get_firms_by_ids.return_value = [
+                {"firmNumber": "123", "firmName": "Test Firm"}
+            ]
+            use_case = GenerateApplicationBacklogReportUseCase(
+                application_backlog_port=backlog_port,
+                provider_details_port=provider_details_port,
+            )
+
+            rows = parse_csv_rows(use_case.execute())
+
+            backlog_port.get_application_backlog_records.assert_called_once_with()
+            backlog_port.get_pending_applications.assert_not_called()
+            assert len(rows) == 1
+            assert rows[0]["Potential duplicate"] == "Yes"
+            assert rows[0][
+                "Potential duplicate submitted application reference(s)"
+            ] == ("INQ-AAA-002")
 
         def test_returns_No_in_Potential_duplicate_column_when_no_application_duplicates(
             self,
