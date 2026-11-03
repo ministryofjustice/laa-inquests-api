@@ -147,9 +147,7 @@ class TestGenerateApplicationBacklogReportUseCase:
         row = rows[0]
 
         assert len(rows) == 1
-        assert row["Application reference"] == str(
-            application.laa_reference
-        )
+        assert row["Application reference"] == str(application.laa_reference)
         assert row["Current application status"] == MeritsDecision.SUBMITTED
         assert row["Office account number"] == application.office_id
         assert row["Firm name"] == "Test Firm"

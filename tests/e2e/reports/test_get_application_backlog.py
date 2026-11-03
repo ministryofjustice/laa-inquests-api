@@ -129,9 +129,7 @@ class TestGetApplicationBacklogReport:
 
         dates = [row["Application received date"] for row in rows]
         assert dates == sorted(dates)
-        assert rows[0]["Application reference"] == str(
-            older_app.laa_reference
-        )
+        assert rows[0]["Application reference"] == str(older_app.laa_reference)
 
     def test_200_csv_reports_direct_submitted_duplicates_in_both_directions(
         self, session, client
