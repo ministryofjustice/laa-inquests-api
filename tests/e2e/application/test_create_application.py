@@ -523,6 +523,23 @@ class TestCreateApplication:
 
         assert response.status_code == 422
 
+    def test_422_create_application_rejected_when_proceeding_id_is_invalid(
+        self, client
+    ):
+        body = _make_request_body()
+        body["proceeding"] = {"proceedingId": "INVALID"}
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 422
+
     def test_500_create_application_rolls_back_when_gov_notify_fails(
         self, client, session, mock_gov_notify
     ):
