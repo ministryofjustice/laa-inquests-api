@@ -91,7 +91,7 @@ def test_denied_mi_report_request_emits_error_log_after_successful_audit(
         MagicMock(return_value=audit_use_case),
     )
     checker = audit_and_require_permission(
-        Permission.REPORTS_OGD_COSTS_READ, audit_event_factory=MagicMock()
+        Permission.REPORTS_COSTS_READ, audit_event_factory=MagicMock()
     )
     request = Request(
         {
