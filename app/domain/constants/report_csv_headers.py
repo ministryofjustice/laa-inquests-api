@@ -1,11 +1,11 @@
 APPLICATION_BACKLOG_REPORT_HEADERS = [
-    "Application / Case Reference Number",
-    "Current Application Status",
-    "Application Received Date",
-    "Firm Name",
-    "Firm Account Number",
-    "Proceeding Code",
-    "Matter Type",
+    "Application reference",
+    "Current application status",
+    "Application received date",
+    "Firm name",
+    "Office account number",
+    "Proceeding",
+    "Matter type",
     "Potential duplicate",
     "Potential duplicate submitted application reference(s)",
 ]

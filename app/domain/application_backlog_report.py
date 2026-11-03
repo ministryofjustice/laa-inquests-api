@@ -8,6 +8,7 @@ class ApplicationBacklogRecord:
     merits_decision: str
     created_at: datetime
     firm_code: str
-    proceeding_code: str
+    office_id: str
+    proceeding_description: str | None
     matter_type: str | None
     potential_duplicate_applications: list[str]

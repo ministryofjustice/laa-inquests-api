@@ -209,7 +209,10 @@ class TestGetApplicationBacklogRecords:
         assert records[0].merits_decision == MeritsDecision.SUBMITTED
         assert records[0].created_at == first.created_at
         assert records[0].firm_code == "TEST01"
-        assert records[0].proceeding_code == ProceedingId.IQOT
+        assert records[0].office_id == first.provider.office_id
+        assert (
+            records[0].proceeding_description == first.proceeding.proceeding_description
+        )
         assert records[0].matter_type == "INQUESTS"
         assert records[0].potential_duplicate_applications == ["INQ-AAA-002"]
         assert records[1].potential_duplicate_applications == ["INQ-AAA-001"]
