@@ -35,3 +35,13 @@ ignore:
               expires: 2026-12-02T00:00:00.000Z
               created: 2026-11-02T00:00:00.000Z
               reason: "There is no fixed version for Debian:13 sqlite3 (CVE-2026-119379, session extension only; not used by the app)"
+    "SNYK-DEBIAN13-EXPAT-21762794":
+        - "*":
+              expires: 2026-12-03T00:00:00.000Z
+              created: 2026-11-03T00:00:00.000Z
+              reason: "There is no fixed version for Debian:13 expat (CVE-2026-117610); only reachable via fontconfig parsing its own config files, not user-supplied XML"
+    "SNYK-DEBIAN13-EXPAT-21762798":
+        - "*":
+              expires: 2026-12-03T00:00:00.000Z
+              created: 2026-11-03T00:00:00.000Z
+              reason: "There is no fixed version for Debian:13 expat (CVE-2026-118370); only reachable via fontconfig parsing its own config files, not user-supplied XML"
