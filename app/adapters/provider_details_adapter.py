@@ -16,7 +16,7 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
         self.base_url = base_url
         self.api_key = api_key
 
-    def get_firm_name(self, firm_code: str) -> str:
+    def get_firm_name(self, firm_code: str, office_id: str) -> str | None:
         started_at = time.perf_counter()
         try:
             url = f"{self.base_url}/api/v1/provider-firms/{firm_code}"
@@ -24,6 +24,23 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
                 url,
                 headers={"X-Authorization": self.api_key},
             )
+
+            if response.status_code == 204:
+                # 204 is ambiguous upstream: firm not found, or firm has no offices.
+                # Fall back to the office lookup to recover a firm name and confirm office validity.
+                logger.info(
+                    f"No offices found for firm {firm_code}, falling back to office lookup",
+                    extra=build_log_extra(
+                        event="provider_details_firm_name_fallback_used",
+                        route="provider-details:provider-firms",
+                        method="GET",
+                        status_code=response.status_code,
+                        duration_ms=duration_ms(started_at),
+                        firm_code=firm_code,
+                        office_id=office_id,
+                    ),
+                )
+                return self._get_firm_name_from_office(office_id)
 
             response.raise_for_status()
             result = response.json()["firm"]["firmName"]
@@ -66,6 +83,57 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
             )
             raise ProviderDetailsRetrievalError(
                 f"Unexpected provider-firms response for firm {firm_code}"
+            ) from exc
+
+    def _get_firm_name_from_office(self, office_id: str) -> str | None:
+        started_at = time.perf_counter()
+        try:
+            url = f"{self.base_url}/api/v1/provider-offices/{office_id}"
+            response = httpx.get(
+                url,
+                headers={"X-Authorization": self.api_key},
+            )
+            response.raise_for_status()
+            result = response.json()["firm"]["firmName"]
+            logger.info(
+                "Provider firm name office fallback succeeded",
+                extra=build_log_extra(
+                    event="provider_details_firm_name_office_fallback_success",
+                    route="provider-details:provider-offices",
+                    method="GET",
+                    status_code=response.status_code,
+                    duration_ms=duration_ms(started_at),
+                    office_id=office_id,
+                ),
+            )
+            return result
+        except httpx.HTTPError as exc:
+            logger.exception(
+                "Provider firm name office fallback failed",
+                extra=build_log_extra(
+                    event="provider_details_firm_name_office_fallback_failed",
+                    route="provider-details:provider-offices",
+                    method="GET",
+                    duration_ms=duration_ms(started_at),
+                    office_id=office_id,
+                ),
+            )
+            raise ProviderDetailsRetrievalError(
+                f"HTTP error occurred while retrieving provider details: {exc}"
+            ) from exc
+        except (KeyError, ValueError) as exc:
+            logger.exception(
+                "Provider firm name office fallback failed",
+                extra=build_log_extra(
+                    event="provider_details_firm_name_office_fallback_failed",
+                    route="provider-details:provider-offices",
+                    method="GET",
+                    duration_ms=duration_ms(started_at),
+                    office_id=office_id,
+                ),
+            )
+            raise ProviderDetailsRetrievalError(
+                f"Unexpected provider-offices response for office {office_id}"
             ) from exc
 
     def get_office_address(self, office_id: str) -> Address:

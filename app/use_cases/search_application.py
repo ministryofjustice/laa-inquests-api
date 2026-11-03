@@ -43,7 +43,8 @@ class SearchApplicationUseCase:
                 return []
 
             firm_name = self.provider_details_port.get_firm_name(
-                matching_applications[0].provider.firm_code
+                matching_applications[0].provider.firm_code,
+                matching_applications[0].provider.office_id,
             )
 
             response = [

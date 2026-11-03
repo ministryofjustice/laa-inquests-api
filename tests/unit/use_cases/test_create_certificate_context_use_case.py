@@ -165,7 +165,7 @@ def test_populate_certificate_context_populates_provider_fields():
     result = usecase.populate_certificate_context(application, application.proceeding)
 
     assert result.firm_name == "Jones Legal Services"
-    mock_provider_port.get_firm_name.assert_called_once_with("XYZ789")
+    mock_provider_port.get_firm_name.assert_called_once_with("XYZ789", "0U651L")
     assert result.office_address is not None
 
 

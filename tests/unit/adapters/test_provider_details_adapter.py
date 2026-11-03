@@ -14,20 +14,22 @@ def adapter() -> ProviderDetailsAdapter:
 
 def test_get_firm_name_returns_firm_name_from_successful_api_response(adapter):
     mock_response = MagicMock()
+    mock_response.status_code = 200
     mock_response.json.return_value = {"firm": {"firmName": "Smith & Co"}}
 
     with patch("httpx.get", return_value=mock_response):
-        result = adapter.get_firm_name("1234")
+        result = adapter.get_firm_name("1234", "OFFICE123")
 
     assert result == "Smith & Co"
 
 
 def test_get_firm_name_calls_correct_url_with_api_key_header(adapter):
     mock_response = MagicMock()
+    mock_response.status_code = 200
     mock_response.json.return_value = {"firm": {"firmName": "Smith & Co"}}
 
     with patch("httpx.get", return_value=mock_response) as mock_get:
-        adapter.get_firm_name("1234")
+        adapter.get_firm_name("1234", "OFFICE123")
 
     mock_get.assert_called_once_with(
         "https://example.com/api/v1/provider-firms/1234",
@@ -39,6 +41,7 @@ def test_get_firm_name_raises_provider_details_retrieval_error_when_api_returns_
     adapter,
 ):
     mock_response = MagicMock()
+    mock_response.status_code = 500
     mock_response.raise_for_status.side_effect = _httpx.HTTPStatusError(
         "error", request=MagicMock(), response=MagicMock()
     )
@@ -47,7 +50,7 @@ def test_get_firm_name_raises_provider_details_retrieval_error_when_api_returns_
         patch("httpx.get", return_value=mock_response),
         pytest.raises(ProviderDetailsRetrievalError) as exc_info,
     ):
-        adapter.get_firm_name("1234")
+        adapter.get_firm_name("1234", "OFFICE123")
 
     assert (
         str(exc_info.value)
@@ -62,12 +65,95 @@ def test_get_firm_name_raises_provider_details_retrieval_error_when_request_rais
         patch("httpx.get", side_effect=_httpx.RequestError("connection failed")),
         pytest.raises(ProviderDetailsRetrievalError) as exc_info,
     ):
-        adapter.get_firm_name("1234")
+        adapter.get_firm_name("1234", "OFFICE123")
 
     assert (
         str(exc_info.value)
         == "HTTP error occurred while retrieving provider details: connection failed"
     )
+
+
+def test_get_firm_name_accepts_null_firm_name_on_200_response(adapter):
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"firm": {"firmName": None}}
+
+    with patch("httpx.get", return_value=mock_response):
+        result = adapter.get_firm_name("1234", "OFFICE123")
+
+    assert result is None
+
+
+def test_get_firm_name_falls_back_to_office_lookup_on_204(adapter):
+    firm_response = MagicMock()
+    firm_response.status_code = 204
+    office_response = MagicMock()
+    office_response.status_code = 200
+    office_response.json.return_value = {"firm": {"firmName": "Smith & Co"}}
+
+    with patch("httpx.get", side_effect=[firm_response, office_response]) as mock_get:
+        result = adapter.get_firm_name("1234", "OFFICE123")
+
+    assert result == "Smith & Co"
+    mock_get.assert_any_call(
+        "https://example.com/api/v1/provider-firms/1234",
+        headers={"X-Authorization": "test-key"},
+    )
+    mock_get.assert_any_call(
+        "https://example.com/api/v1/provider-offices/OFFICE123",
+        headers={"X-Authorization": "test-key"},
+    )
+
+
+def test_get_firm_name_fallback_accepts_null_firm_name(adapter):
+    firm_response = MagicMock()
+    firm_response.status_code = 204
+    office_response = MagicMock()
+    office_response.status_code = 200
+    office_response.json.return_value = {"firm": {"firmName": None}}
+
+    with patch("httpx.get", side_effect=[firm_response, office_response]):
+        result = adapter.get_firm_name("1234", "OFFICE123")
+
+    assert result is None
+
+
+def test_get_firm_name_raises_when_both_firm_and_office_lookups_fail(adapter):
+    firm_response = MagicMock()
+    firm_response.status_code = 204
+    office_response = MagicMock()
+    office_response.raise_for_status.side_effect = _httpx.HTTPStatusError(
+        "error", request=MagicMock(), response=MagicMock()
+    )
+
+    with (
+        patch("httpx.get", side_effect=[firm_response, office_response]),
+        pytest.raises(ProviderDetailsRetrievalError) as exc_info,
+    ):
+        adapter.get_firm_name("1234", "OFFICE123")
+
+    assert (
+        str(exc_info.value)
+        == "HTTP error occurred while retrieving provider details: error"
+    )
+
+
+def test_get_firm_name_logs_fallback_used_on_204(adapter, caplog):
+    import logging
+
+    firm_response = MagicMock()
+    firm_response.status_code = 204
+    office_response = MagicMock()
+    office_response.status_code = 200
+    office_response.json.return_value = {"firm": {"firmName": "Smith & Co"}}
+
+    with (
+        patch("httpx.get", side_effect=[firm_response, office_response]),
+        caplog.at_level(logging.INFO),
+    ):
+        adapter.get_firm_name("1234", "OFFICE123")
+
+    assert "No offices found for firm 1234" in caplog.text
 
 
 def test_get_office_address_returns_full_address_from_successful_api_response(adapter):

@@ -16,14 +16,14 @@
         * {
             font-family: Arial, sans-serif !important;
         }
-        
+
         /* Remove grey background for PDF generation */
         html,
         body,
         .govuk-template {
             background-color: #ffffff !important;
         }
-        
+
         /* Force table layout for PDF generation to ensure keys and values are on the same line */
         .govuk-summary-list {
             display: table !important;
@@ -32,12 +32,12 @@
             border-collapse: collapse;
             margin-bottom: 30px;
         }
-        
+
         .govuk-summary-list__row {
             display: table-row !important;
             border-bottom: 1px solid #b1b4b6;
         }
-        
+
         .govuk-summary-list__key,
         .govuk-summary-list__value {
             display: table-cell !important;
@@ -46,43 +46,43 @@
             padding-bottom: 10px;
             vertical-align: top;
         }
-        
+
         .govuk-summary-list__key {
             width: 40%;
             font-weight: 700;
         }
-        
+
         .govuk-summary-list__value {
             width: 60%;
         }
-        
+
         /* Preserve heading and text spacing */
         .govuk-heading-l,
         .govuk-heading-m {
             margin-top: 0;
         }
-        
+
         .govuk-inset-text {
             padding: 15px;
             margin-top: 20px;
             margin-bottom: 20px;
         }
-        
+
         /* Ensure summary cards display properly */
         .govuk-summary-card {
             margin-bottom: 20px;
             border: 1px solid #b1b4b6;
         }
-        
+
         .govuk-summary-card__title-wrapper {
             padding: 15px 20px;
             background-color: #f3f2f1;
         }
-        
+
         .govuk-summary-card__content {
             padding: 15px 20px;
         }
-        
+
         .govuk-summary-card__content .govuk-summary-list {
             margin-bottom: 0;
         }
@@ -141,7 +141,7 @@
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Firm name</dt>
-                                        <dd class="govuk-summary-list__value">{{ firm_name }}</dd>
+                                        <dd class="govuk-summary-list__value">{{ firm_name or '' }}</dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Office address</dt>
@@ -313,4 +313,3 @@
 
 </body>
 </html>
-

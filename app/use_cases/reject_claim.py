@@ -115,8 +115,11 @@ class RejectClaimUseCase:
 
         if self.gov_notify_port is not None:
             try:
-                firm_name = self.provider_details_port.get_firm_name(
-                    application.provider.firm_code
+                firm_name = (
+                    self.provider_details_port.get_firm_name(
+                        application.provider.firm_code, application.provider.office_id
+                    )
+                    or ""
                 )
                 self.gov_notify_port.send_claim_rejected_decision_email(
                     claim=claim,

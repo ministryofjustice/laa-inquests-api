@@ -58,7 +58,7 @@ def test_execute_calls_provider_details_port_get_firm_name_with_firm_code():
     )
     use_case.execute("1")
 
-    provider_details_port.get_firm_name.assert_called_once_with("0A123B")
+    provider_details_port.get_firm_name.assert_called_once_with("0A123B", "0U651L")
 
 
 def test_execute_returns_application_response_with_firm_name():

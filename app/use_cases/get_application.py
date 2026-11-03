@@ -45,7 +45,7 @@ class GetApplicationUseCase:
             raise ApplicationNotFoundError(f"Application {laa_reference} not found")
 
         firm_name = self.provider_details_port.get_firm_name(
-            application.provider.firm_code
+            application.provider.firm_code, application.provider.office_id
         )
         provider_response = ProviderResponse(
             firm_name=firm_name,

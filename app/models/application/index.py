@@ -639,7 +639,7 @@ class ApplicationSearchResponse(BaseModel):
     client_last_name: str
     client_date_of_birth: str
     date_submitted: datetime
-    firm_name: str
+    firm_name: str | None
     firm_number: str
     overall_decision: str
 
