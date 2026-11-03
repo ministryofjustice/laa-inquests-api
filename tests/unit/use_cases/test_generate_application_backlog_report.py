@@ -45,7 +45,8 @@ class TestGenerateApplicationBacklogReportUseCase:
                 merits_decision="SUBMITTED",
                 created_at=datetime(2026, 1, 1, tzinfo=UTC),
                 firm_code="123",
-                proceeding_code="IQOT",
+                office_id="T3STID",
+                proceeding_description="Inquest",
                 matter_type="INQUESTS",
                 potential_duplicate_applications=["INQ-AAA-002", "INQ-AAA-003"],
             )
@@ -78,7 +79,8 @@ class TestGenerateApplicationBacklogReportUseCase:
                 merits_decision="SUBMITTED",
                 created_at=datetime(2026, 1, 1, tzinfo=UTC),
                 firm_code="123",
-                proceeding_code="IQOT",
+                office_id="T3STID",
+                proceeding_description="Inquest",
                 matter_type="INQUESTS",
                 potential_duplicate_applications=["INQ-AAA-002"],
             )
@@ -145,14 +147,14 @@ class TestGenerateApplicationBacklogReportUseCase:
         row = rows[0]
 
         assert len(rows) == 1
-        assert row["Application / Case Reference Number"] == str(
+        assert row["Application reference"] == str(
             application.laa_reference
         )
-        assert row["Current Application Status"] == MeritsDecision.SUBMITTED
-        assert row["Firm Account Number"] == "123"
-        assert row["Firm Name"] == "Test Firm"
-        assert row["Proceeding Code"] == "IQOT"
-        assert row["Matter Type"] == "INQUESTS"
+        assert row["Current application status"] == MeritsDecision.SUBMITTED
+        assert row["Office account number"] == application.office_id
+        assert row["Firm name"] == "Test Firm"
+        assert row["Proceeding"] == application.proceeding_description
+        assert row["Matter type"] == "INQUESTS"
         assert row["Potential duplicate"] == "No"
         assert row["Potential duplicate submitted application reference(s)"] == ""
 
@@ -167,7 +169,7 @@ class TestGenerateApplicationBacklogReportUseCase:
         result = use_case.execute()
         rows = parse_csv_rows(result)
 
-        assert rows[0]["Firm Name"] == "Acme Solicitors"
+        assert rows[0]["Firm name"] == "Acme Solicitors"
 
     def test_raises_error_when_firm_name_not_found_for_application(self):
         application = create_base_application_backlog_record(firm_code="999")
@@ -200,7 +202,7 @@ class TestGenerateApplicationBacklogReportUseCase:
         rows = parse_csv_rows(result)
 
         assert len(rows) == 2
-        refs = [row["Application / Case Reference Number"] for row in rows]
+        refs = [row["Application reference"] for row in rows]
         assert app1.laa_reference in refs
         assert app2.laa_reference in refs
 

@@ -441,7 +441,8 @@ class ApplicationRepositoryAdapter(
                 merits_decision=application.proceeding.merits_decision,
                 created_at=application.created_at,
                 firm_code=application.provider.firm_code,
-                proceeding_code=application.proceeding.proceeding_id,
+                office_id=application.provider.office_id,
+                proceeding_description=application.proceeding.proceeding_description,
                 matter_type=application.proceeding.matter_type,
                 potential_duplicate_applications=sorted(
                     duplicate_laa_references_by_application_id[application_id]

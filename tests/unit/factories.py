@@ -308,7 +308,8 @@ def create_base_application_backlog_record(**overrides):
         "merits_decision": MeritsDecision.SUBMITTED,
         "created_at": datetime(2026, 1, 1, tzinfo=UTC),
         "firm_code": "123",
-        "proceeding_code": "IQOT",
+        "office_id": "T3STID",
+        "proceeding_description": "Inquest",
         "matter_type": "INQUESTS",
         "potential_duplicate_applications": [],
     }

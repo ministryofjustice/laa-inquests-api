@@ -1,6 +1,7 @@
 import logging
 from datetime import UTC, date, datetime
 from typing import Annotated
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import Response, StreamingResponse
@@ -197,11 +198,16 @@ def get_application_backlog_report(
             detail=f"Failed to generate application backlog report: {exc}",
         )
 
+    filename = (
+        f"{datetime.now(ZoneInfo('Europe/London')).strftime('%Y-%m-%d-%H%M%S')} - "
+        "Report - IDDS Applications Backlog - OFFICIAL-SENSITIVE - LAA Use Only.csv"
+    )
+
     return StreamingResponse(
         iter([csv_content]),
         media_type="text/csv",
         headers={
-            "Content-Disposition": "attachment; filename=application_backlog_report.csv"
+            "Content-Disposition": f'attachment; filename="{filename}"'
         },
     )
 

@@ -62,7 +62,9 @@ class TestGetApplicationBacklogReport:
         rows = parse_csv_rows(response.text)
 
         row = rows[0]
-        assert row["Current Application Status"] == MeritsDecision.SUBMITTED
+        assert row["Office account number"] == application.provider.office_id
+        assert row["Proceeding"] == application.proceeding.proceeding_description
+        assert row["Current application status"] == MeritsDecision.SUBMITTED
         for header in APPLICATION_BACKLOG_REPORT_HEADERS:
             if header == "Potential duplicate submitted application reference(s)":
                 assert row[header] == ""
@@ -90,7 +92,7 @@ class TestGetApplicationBacklogReport:
         )
 
         rows = parse_csv_rows(response.text)
-        status = [row["Current Application Status"] for row in rows]
+        status = [row["Current application status"] for row in rows]
 
         assert MeritsDecision.GRANTED not in status
         assert MeritsDecision.REFUSED not in status
@@ -125,9 +127,9 @@ class TestGetApplicationBacklogReport:
         rows = parse_csv_rows(response.text)
         assert len(rows) >= 3
 
-        dates = [row["Application Received Date"] for row in rows]
+        dates = [row["Application received date"] for row in rows]
         assert dates == sorted(dates)
-        assert rows[0]["Application / Case Reference Number"] == str(
+        assert rows[0]["Application reference"] == str(
             older_app.laa_reference
         )
 
@@ -184,7 +186,7 @@ class TestGetApplicationBacklogReport:
 
         assert response.status_code == 200
         rows = parse_csv_rows(response.text)
-        assert [row["Application / Case Reference Number"] for row in rows] == [
+        assert [row["Application reference"] for row in rows] == [
             first.laa_reference,
             second.laa_reference,
             third.laa_reference,
@@ -231,7 +233,7 @@ class TestGetApplicationBacklogReport:
         assert response.status_code == 200
         rows = parse_csv_rows(response.text)
         assert len(rows) == 1
-        assert rows[0]["Application / Case Reference Number"] == pending.laa_reference
+        assert rows[0]["Application reference"] == pending.laa_reference
         assert rows[0]["Potential duplicate"] == "No"
         assert rows[0]["Potential duplicate submitted application reference(s)"] == ""
 
@@ -270,7 +272,7 @@ class TestGetApplicationBacklogReport:
 
         assert response.status_code == 200
         rows = parse_csv_rows(response.text)
-        assert [row["Application / Case Reference Number"] for row in rows] == [
+        assert [row["Application reference"] for row in rows] == [
             first.laa_reference,
             unrelated.laa_reference,
             second.laa_reference,
@@ -294,7 +296,7 @@ class TestGetApplicationBacklogReport:
         assert response.status_code == 200
         rows = parse_csv_rows(response.text)
         assert len(rows) == 1
-        assert rows[0]["Application / Case Reference Number"] == pending.laa_reference
+        assert rows[0]["Application reference"] == pending.laa_reference
         assert rows[0]["Potential duplicate"] == "No"
         assert rows[0]["Potential duplicate submitted application reference(s)"] == ""
 
