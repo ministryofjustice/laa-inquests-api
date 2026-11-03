@@ -78,13 +78,6 @@ def session_fixture():
                 proceeding_description="A family member has died (Other)",
             )
         )
-        db_session.add(
-            Proceeding(
-                proceeding_id=ProceedingId.IQ011,
-                proceeding_name="An individual has died in police custody",
-                proceeding_description="An individual has died in police custody",
-            )
-        )
         db_session.commit()
         application_proceeding = ApplicationProceeding(
             proceeding_id=ProceedingId.IQ042,
