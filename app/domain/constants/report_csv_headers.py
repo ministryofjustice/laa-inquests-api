@@ -6,6 +6,8 @@ APPLICATION_BACKLOG_REPORT_HEADERS = [
     "Firm Account Number",
     "Proceeding Code",
     "Matter Type",
+    "Potential duplicate",
+    "Potential duplicate submitted application reference(s)",
 ]
 
 CLAIMS_BACKLOG_REPORT_HEADERS = [

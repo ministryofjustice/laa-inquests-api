@@ -3,9 +3,11 @@ import random
 import uuid
 
 from sqlalchemy import and_, case, false, func
+from sqlalchemy.orm import aliased, joinedload
 from sqlmodel import Session, exists, select
 
 from app.config import Config
+from app.domain.application_backlog_report import ApplicationBacklogRecord
 from app.domain.coroners_letter import CoronersLetter
 from app.domain.reference_rules import ReferenceRules
 from app.logging_utils import build_log_extra
@@ -376,9 +378,79 @@ class ApplicationRepositoryAdapter(
                 Application.application_id == ApplicationProceeding.application_id,
             )
             .where(ApplicationProceeding.merits_decision == "SUBMITTED")
+            .options(
+                joinedload(Application.provider),
+                joinedload(Application.proceeding).joinedload(
+                    ApplicationProceeding.proceeding
+                ),
+            )
             .order_by(Application.created_at.asc())
         )
         return list(self.session.exec(statement).unique().all())
+
+    def get_application_backlog_records(self) -> list[ApplicationBacklogRecord]:
+        applications = self.get_pending_applications()
+        if not applications:
+            return []
+
+        laa_references_by_application_id: dict[int, str] = {}
+        for application in applications:
+            if application.application_id is None:
+                raise LookupError("Pending application is missing its application ID")
+            laa_references_by_application_id[application.application_id] = (
+                application.laa_reference
+            )
+
+        pending_application_ids = list(laa_references_by_application_id)
+        pending_duplicate_relationships = (
+            select(
+                DuplicateApplicationRecord.application_id,
+                DuplicateApplicationRecord.duplicate_application_id,
+            )
+            .where(
+                DuplicateApplicationRecord.application_id.in_(pending_application_ids),
+                DuplicateApplicationRecord.duplicate_application_id.in_(
+                    pending_application_ids
+                ),
+                DuplicateApplicationRecord.application_id
+                != DuplicateApplicationRecord.duplicate_application_id,
+            )
+            .subquery()
+        )
+        duplicates_of_applications = select(
+            pending_duplicate_relationships.c.application_id,
+            pending_duplicate_relationships.c.duplicate_application_id,
+        )
+        applications_they_duplicate = select(
+            pending_duplicate_relationships.c.duplicate_application_id,
+            pending_duplicate_relationships.c.application_id,
+        )
+        duplicate_laa_references_by_application_id: dict[int, set[str]] = {
+            application_id: set() for application_id in pending_application_ids
+        }
+        for application_id, duplicate_application_id in self.session.exec(
+            duplicates_of_applications.union(applications_they_duplicate)
+        ).all():
+            duplicate_laa_references_by_application_id[application_id].add(
+                laa_references_by_application_id[duplicate_application_id]
+            )
+
+        return [
+            ApplicationBacklogRecord(
+                laa_reference=application.laa_reference,
+                merits_decision=application.proceeding.merits_decision,
+                created_at=application.created_at,
+                firm_code=application.provider.firm_code,
+                proceeding_code=application.proceeding.proceeding_id,
+                matter_type=application.proceeding.matter_type,
+                potential_duplicate_applications=sorted(
+                    duplicate_laa_references_by_application_id[application_id]
+                ),
+            )
+            for application_id, application in zip(
+                pending_application_ids, applications, strict=True
+            )
+        ]
 
     def identify_duplicates(self, application_id: int) -> list[int]:
         application = self.session.get(Application, application_id)
@@ -463,39 +535,53 @@ class ApplicationRepositoryAdapter(
         )
 
     def get_potential_duplicate_application_ids(self, application_id: int) -> list[int]:
-        duplicates_of_application = self.session.exec(
+        application_proceeding = aliased(ApplicationProceeding)
+        duplicate_proceeding = aliased(ApplicationProceeding)
+
+        duplicates_of_application = (
             select(DuplicateApplicationRecord.duplicate_application_id)
             .where(DuplicateApplicationRecord.application_id == application_id)
             .join(
-                ApplicationProceeding,
+                application_proceeding,
+                DuplicateApplicationRecord.application_id
+                == application_proceeding.application_id,
+            )
+            .where(application_proceeding.merits_decision == MeritsDecision.SUBMITTED)
+            .join(
+                duplicate_proceeding,
                 DuplicateApplicationRecord.duplicate_application_id
-                == ApplicationProceeding.application_id,
+                == duplicate_proceeding.application_id,
             )
             .where(
-                ApplicationProceeding.merits_decision.in_(
-                    self.ELIGIBLE_DUPLICATE_STATUS
-                )
+                duplicate_proceeding.merits_decision.in_(self.ELIGIBLE_DUPLICATE_STATUS)
             )
-        ).all()
+        )
 
-        applications_it_duplicates = self.session.exec(
+        applications_it_duplicates = (
             select(DuplicateApplicationRecord.application_id)
             .where(
                 DuplicateApplicationRecord.duplicate_application_id == application_id
             )
             .join(
-                ApplicationProceeding,
+                application_proceeding,
+                DuplicateApplicationRecord.duplicate_application_id
+                == application_proceeding.application_id,
+            )
+            .where(application_proceeding.merits_decision == MeritsDecision.SUBMITTED)
+            .join(
+                duplicate_proceeding,
                 DuplicateApplicationRecord.application_id
-                == ApplicationProceeding.application_id,
+                == duplicate_proceeding.application_id,
             )
             .where(
-                ApplicationProceeding.merits_decision.in_(
-                    self.ELIGIBLE_DUPLICATE_STATUS
-                )
+                duplicate_proceeding.merits_decision.in_(self.ELIGIBLE_DUPLICATE_STATUS)
             )
-        ).all()
+        )
 
-        return list(set(duplicates_of_application + applications_it_duplicates))
+        combined = self.session.scalars(
+            duplicates_of_application.union(applications_it_duplicates)
+        ).all()
+        return list(set(combined))
 
     def get_duplicate_applications_by_ids(
         self, application_ids: list[int]

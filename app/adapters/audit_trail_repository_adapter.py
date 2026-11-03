@@ -10,6 +10,7 @@ from app.domain.audit_trail import (
     history_event,
     report_download_event,
 )
+from app.domain.date_utils import as_utc
 from app.models.application.index import Application, Provider
 from app.models.audit.enums import ApplicationPageType
 from app.models.audit.index import ReportAudit, ViewApplicationPagesAudit
@@ -46,7 +47,7 @@ class AuditTrailRepositoryAdapter(AuditTrailReportPort):
         )
         for event, laa_reference, firm_code, office_id in self.session.exec(statement):
             yield history_event(
-                occurred_at=event.timestamp,
+                occurred_at=as_utc(event.timestamp),
                 event_reference=event.event_reference.value,
                 actor_type=event.actor_type,
                 actor=event.actor,
@@ -80,7 +81,7 @@ class AuditTrailRepositoryAdapter(AuditTrailReportPort):
             case ApplicationPageType.CERTIFICATE:
                 to_domain_event = application_certificate_view_event
         return to_domain_event(
-            occurred_at=event.timestamp,
+            occurred_at=as_utc(event.timestamp),
             user_email_address=event.user_email_address,
             laa_reference=event.laa_reference,
         )
@@ -99,7 +100,7 @@ class AuditTrailRepositoryAdapter(AuditTrailReportPort):
         )
         for event in self.session.exec(statement):
             yield report_download_event(
-                occurred_at=event.timestamp,
+                occurred_at=as_utc(event.timestamp),
                 user_email_address=event.user_email_address,
                 report_type=event.report_type,
             )
