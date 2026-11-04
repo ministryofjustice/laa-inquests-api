@@ -18,7 +18,7 @@ from app.use_cases.send_auto_approved_poa_claim_emails import (
     SendAutoApprovedPoaClaimEmailsUseCase,
 )
 from tests.e2e.factories import create_application_in_db
-from tests.helpers.application_payloads import make_poa_claim_request_body
+from tests.helpers.claim_payloads import make_poa_claim_request_body
 
 FIRM_NAME = "Test Firm Name"
 BATCH_RUN_TIME = datetime(2026, 9, 7, 9, 0, tzinfo=UTC)

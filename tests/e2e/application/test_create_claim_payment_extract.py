@@ -6,7 +6,7 @@ from app.auth.rbac import Role
 from app.models.application.index import Application
 from app.models.claim.enums import InvoiceTypeCode, TaxCode
 from app.models.claim.index import Claim, ClaimPaymentExtract
-from tests.helpers.application_payloads import make_poa_claim_request_body
+from tests.helpers.claim_payloads import make_poa_claim_request_body
 
 
 def _post_claim(session, client, overrides=None):

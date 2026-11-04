@@ -30,7 +30,7 @@ from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.models.notifications.enums import NotificationType
 from tests.e2e.factories import create_application_in_db, create_claim_for_reference
-from tests.helpers.application_payloads import (
+from tests.helpers.claim_payloads import (
     make_final_bill_claim_body,
     make_nil_bill_claim_body,
     make_poa_claim_request_body,

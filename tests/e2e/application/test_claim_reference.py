@@ -7,7 +7,7 @@ from app.models.application.index import Application
 from app.models.claim.enums import ClaimStatus
 from app.models.claim.index import Claim
 from tests.e2e.factories import create_claim_in_db
-from tests.helpers.application_payloads import make_poa_claim_request_body
+from tests.helpers.claim_payloads import make_poa_claim_request_body
 
 CLAIM_REFERENCE_PATTERN = re.compile(r"^INQC-[A-Z0-9]{4}-[A-Z0-9]{4}$")
 AMBIGUOUS_CHARACTERS = "B8G6I10OQDS5Z2"
