@@ -44,11 +44,16 @@ from app.routers.monitoring import get_readiness_session_factory
 SECRET_KEY = "TEST_KEY"
 
 
-@pytest.fixture(name="session")
-def session_fixture():
-    engine = create_engine(
+def _new_engine():
+    return create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
+
+
+@pytest.fixture(scope="session")
+def seeded_template_db():
+    """Schema and seed data built once per run; each test gets its own copy."""
+    engine = _new_engine()
     test_session = sessionmaker(
         autocommit=False, autoflush=False, bind=engine, class_=CustomSession
     )
@@ -147,6 +152,20 @@ def session_fixture():
         db_session.commit()
         db_session.refresh(new_application)
 
+    return engine.raw_connection().driver_connection
+
+
+@pytest.fixture(name="session")
+def session_fixture(seeded_template_db):
+    engine = _new_engine()
+    raw_connection = engine.raw_connection()
+    seeded_template_db.backup(raw_connection.driver_connection)
+    raw_connection.close()
+
+    test_session = sessionmaker(
+        autocommit=False, autoflush=False, bind=engine, class_=CustomSession
+    )
+    with test_session() as db_session:
         yield db_session
 
 
