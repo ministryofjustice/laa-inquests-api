@@ -188,7 +188,7 @@ class TestGetCostLimitForecastReport:
     ):
         _live_application(session)
         proceeding = session.exec(
-            select(Proceeding).where(Proceeding.proceeding_id == ProceedingId.IQOT)
+            select(Proceeding).where(Proceeding.proceeding_id == ProceedingId.IQ042)
         ).one()
         proceeding.substantive_cost_limitation = 25000
         session.add(proceeding)
@@ -376,7 +376,7 @@ class TestGetCostLimitForecastReport:
         applications = [
             Application(
                 proceeding=ApplicationProceeding(
-                    proceeding_id=ProceedingId.IQOT,
+                    proceeding_id=ProceedingId.IQ042,
                     merits_decision=MeritsDecision.GRANTED,
                     certificate_start_date=date(2019, 1, 1)
                     + timedelta(days=index % 300),

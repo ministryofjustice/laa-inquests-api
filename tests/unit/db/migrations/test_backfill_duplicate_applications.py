@@ -87,7 +87,7 @@ def _add_application(
         deceased_id=deceased.deceased_id,
         provider_id=provider.provider_id,
         laa_reference=f"INQ-{laa_reference_number:03d}-{laa_reference_number:03d}",
-        proceeding=ApplicationProceeding(proceeding_id=ProceedingId.IQOT),
+        proceeding=ApplicationProceeding(proceeding_id=ProceedingId.IQ042),
     )
     session.add(application)
     session.commit()

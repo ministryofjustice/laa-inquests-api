@@ -1,7 +1,7 @@
 """IDDS-1086 add new proceeding ids IQ011-IQ042 to proceedingid enum
 
 Revision ID: idds_1086_add_new_proceedings
-Revises: idds_730_ogd_costs_report
+Revises: 7cc4f2bbc722
 Create Date: 2026-11-03 12:00:00.000000
 
 """
@@ -12,7 +12,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "idds_1086_add_new_proceedings"
-down_revision: str | Sequence[str] | None = "idds_730_ogd_costs_report"
+down_revision: str | Sequence[str] | None = "7cc4f2bbc722"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
