@@ -41,6 +41,10 @@ class GrantDecisionUseCase:
         )
         if application is None:
             raise ApplicationNotFoundError(f"Application {laa_reference} not found")
+        if application.proceeding.merits_decision == MeritsDecision.GRANTED:
+            raise GrantDecisionError(
+                f"Application {laa_reference} has already been granted and in protected final state"
+            )
 
         proceeding = application.proceeding
         proceeding.merits_decision = MeritsDecision.GRANTED
