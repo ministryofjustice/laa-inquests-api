@@ -4,6 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.contexts.user import set_entra_user_context
+from app.models.application.enums import MeritsDecision
 from app.models.application.index import (
     RefuseApplicationUpdate,
 )
@@ -181,3 +182,27 @@ def test_refuse_decision_raises_exception_and_rolls_back_if_gov_notify_fails(
 
     update_decision_port.rollback.assert_called_once()
     create_history_event_port.rollback.assert_called_once()
+
+
+def test_refuse_decision_raises_exception_when_application_already_granted(
+    use_case,
+    application,
+    refuse_request,
+    create_history_event_port,
+    update_decision_port,
+    gov_notify_port,
+):
+    application = update_decision_port.get_application_by_laa_reference.return_value
+    application.proceeding.merits_decision = MeritsDecision.GRANTED
+
+    with pytest.raises(
+        RefuseDecisionError,
+        match="Application has already been granted and in protected final state",
+    ):
+        use_case.execute("1", refuse_request)
+
+    update_decision_port.commit.assert_not_called()
+    update_decision_port.rollback.assert_not_called()
+    create_history_event_port.commit.assert_not_called()
+    create_history_event_port.rollback.assert_not_called()
+    gov_notify_port.send_application_refused_decision_email.assert_not_called()

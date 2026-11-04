@@ -80,3 +80,23 @@ def test_422_grant_decision_certificate_start_date_in_future(client):
     )
 
     assert response.status_code == 422
+
+
+def test_500_grant_decision_application_already_granted(client, session):
+    application = session.exec(select(Application)).first()
+    laa_reference = application.laa_reference
+    application.proceeding.merits_decision = MeritsDecision.GRANTED
+    session.add(application.proceeding)
+    session.commit()
+    session.refresh(application)
+
+    response = client.patch(
+        f"/applications/{laa_reference}/grant-decision",
+        json=_grant_decision_payload(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
+        },
+    )
+
+    assert response.status_code == 500  # TODO confirm expected status
