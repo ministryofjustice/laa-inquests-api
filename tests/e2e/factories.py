@@ -2,8 +2,9 @@
 
 import uuid
 from datetime import UTC, datetime
+from decimal import Decimal
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import (
@@ -110,6 +111,46 @@ def create_application_in_db(
     return application
 
 
+def _new_claim_reference() -> str:
+    return f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}"
+
+
+def get_application_id(session: Session, laa_reference: str | int) -> int:
+    return session.exec(
+        select(Application.application_id).where(
+            Application.laa_reference == laa_reference
+        )
+    ).one()
+
+
+def create_claim_for_reference(
+    session: Session,
+    laa_reference: str | int,
+    status: ClaimStatus = ClaimStatus.SUBMITTED,
+    claim_type: ClaimType = ClaimType.PAYMENT_ON_ACCOUNT,
+    **overrides,
+) -> Claim:
+    """Persist a claim with standard POA amounts for the application with this LAA reference.
+
+    ``**overrides`` are ``Claim`` field names and replace the defaults.
+    """
+    fields = {
+        "application_id": get_application_id(session, laa_reference),
+        "claim_reference": _new_claim_reference(),
+        "claim_type_id": claim_type,
+        "status_id": status,
+        "total_profit_cost_net": Decimal("1000.00"),
+        "total_profit_cost_gross": Decimal("1200.00"),
+        "total_profit_cost_vat_zero": Decimal("500.00"),
+        "poa_type_id": POAType.PROFIT_COST,
+    }
+    claim = Claim(**(fields | overrides))
+    session.add(claim)
+    session.commit()
+    session.refresh(claim)
+    return claim
+
+
 def create_claim_in_db(
     session: Session,
     *,
@@ -126,10 +167,7 @@ def create_claim_in_db(
     """Persist a claim with optional field overrides."""
     claim = Claim(
         application_id=application_id,
-        claim_reference=(
-            claim_reference
-            or f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}"
-        ),
+        claim_reference=claim_reference or _new_claim_reference(),
         claim_type_id=claim_type,
         status_id=status,
         submission_date=submission_date or datetime.now(UTC),

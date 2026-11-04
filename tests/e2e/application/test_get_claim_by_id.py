@@ -26,7 +26,7 @@ from app.models.claim.index import (
     ClaimInquestOutcome,
     DecisionReason,
 )
-from tests.e2e.factories import create_application_in_db
+from tests.e2e.factories import create_application_in_db, create_claim_for_reference
 
 
 def _seed_claim(
@@ -37,29 +37,12 @@ def _seed_claim(
         SUBSTANTIVE_CERTIFICATE_AMOUNT
     ),
 ) -> Claim:
-    application_id = (
-        session.exec(
-            select(Application).where(Application.laa_reference == laa_reference)
-        )
-        .one()
-        .application_id
-    )
-    claim = Claim(
-        application_id=application_id,
-        claim_type_id=claim_type,
-        status_id=ClaimStatus.SUBMITTED,
-        submission_date=datetime.now(UTC),
-        total_profit_cost_net=Decimal("1000.00"),
-        total_profit_cost_gross=Decimal("1200.00"),
-        total_profit_cost_vat_zero=Decimal("500.00"),
+    return create_claim_for_reference(
+        session,
+        laa_reference,
+        claim_type=claim_type,
         total_funds_remaining_after_claim=total_funds_remaining_after_claim,
-        poa_type_id=POAType.PROFIT_COST,
-        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
     )
-    session.add(claim)
-    session.commit()
-    session.refresh(claim)
-    return claim
 
 
 def _seed_evidence(

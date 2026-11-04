@@ -29,7 +29,7 @@ from app.models.claim.index import (
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.models.notifications.enums import NotificationType
-from tests.e2e.factories import create_application_in_db
+from tests.e2e.factories import create_application_in_db, create_claim_for_reference
 
 
 def _make_request_body(overrides=None):
@@ -104,27 +104,16 @@ def _seed_approved_claim(
     gross: Decimal | None = None,
     vat_zero: Decimal | None = None,
 ) -> Claim:
-    application_id = (
-        session.exec(
-            select(Application).where(Application.laa_reference == laa_reference)
-        )
-        .one()
-        .application_id
-    )
-    claim = Claim(
-        application_id=application_id,
-        claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
-        status_id=ClaimStatus.PAY_IN_FULL,
-        submission_date=datetime.now(UTC),
+    claim = create_claim_for_reference(
+        session,
+        laa_reference,
+        ClaimStatus.PAY_IN_FULL,
+        total_profit_cost_net=None,
         total_profit_cost_gross=gross,
         total_profit_cost_vat_zero=vat_zero,
         total_funds_remaining_after_claim=Decimal(0),
         poa_type_id=None,
-        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
     )
-    session.add(claim)
-    session.commit()
-    session.refresh(claim)
     session.add(ClaimDecision(claim_id=claim.claim_id, decision=decision))
     session.commit()
     return claim
@@ -136,27 +125,17 @@ def _seed_claim_with_type_and_status(
     claim_type: ClaimType,
     status: ClaimStatus,
 ) -> Claim:
-    application_id = (
-        session.exec(
-            select(Application).where(Application.laa_reference == laa_reference)
-        )
-        .one()
-        .application_id
-    )
-    claim = Claim(
-        application_id=application_id,
-        claim_type_id=claim_type,
-        status_id=status,
-        submission_date=datetime.now(UTC),
+    return create_claim_for_reference(
+        session,
+        laa_reference,
+        status,
+        claim_type,
+        total_profit_cost_net=None,
         total_profit_cost_gross=Decimal("100.00"),
+        total_profit_cost_vat_zero=None,
         total_funds_remaining_after_claim=Decimal(0),
         poa_type_id=None,
-        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
     )
-    session.add(claim)
-    session.commit()
-    session.refresh(claim)
-    return claim
 
 
 class TestCreateClaimBaseBehaviour:
