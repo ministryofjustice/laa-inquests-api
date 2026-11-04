@@ -36,7 +36,7 @@ class RefuseDecisionUseCase:
             raise ApplicationNotFoundError(f"Application {laa_reference} not found")
         if application.proceeding.merits_decision == MeritsDecision.GRANTED:
             raise RefuseDecisionError(
-                "Application has already been granted and in protected final state"
+                f"Application {laa_reference} has already been granted and in protected final state"
             )
 
         proceeding = application.proceeding
