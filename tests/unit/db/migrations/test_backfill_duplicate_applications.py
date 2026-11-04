@@ -126,14 +126,14 @@ def _all_pairs(session: Session) -> list[tuple[int, int]]:
     )
 
 
-def test_backfill_creates_records_in_both_directions_for_matching_applications():
+def test_backfill_creates_records_in_only_one_direction_for_matching_applications():
     session = _make_session()
     first, second = _add_matching_applications(session)
 
     migration.backfill_duplicate_applications(session)
     session.commit()
 
-    assert _all_pairs(session) == sorted([(first, second), (second, first)])
+    assert _all_pairs(session) == sorted([(first, second)])
 
 
 def test_backfill_does_not_repeat_pairs_that_already_exist():
@@ -149,7 +149,7 @@ def test_backfill_does_not_repeat_pairs_that_already_exist():
     migration.backfill_duplicate_applications(session)
     session.commit()
 
-    assert _all_pairs(session) == sorted([(first, second), (second, first)])
+    assert _all_pairs(session) == sorted([(first, second)])
 
 
 def test_backfill_is_idempotent_when_run_twice():

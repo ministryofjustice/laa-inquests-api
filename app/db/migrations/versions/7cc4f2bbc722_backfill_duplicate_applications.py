@@ -36,7 +36,7 @@ def backfill_duplicate_applications(session: sqlmodel.Session) -> None:
     )
 
     all_application_ids = session.exec(
-        select(Application.application_id).order_by(Application.application_id)
+        select(Application.application_id).order_by(Application.created_at)
     ).all()
 
     for application_id in all_application_ids:
@@ -45,7 +45,7 @@ def backfill_duplicate_applications(session: sqlmodel.Session) -> None:
         new_duplicate_ids = [
             duplicate_id
             for duplicate_id in potential_duplicates
-            if (application_id, duplicate_id) not in existing_pairs
+            if (application_id, duplicate_id) not in existing_pairs and (duplicate_id, application_id) not in existing_pairs
         ]
 
         repository.create_duplicate_records(application_id, new_duplicate_ids)
