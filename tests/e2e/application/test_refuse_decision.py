@@ -4,6 +4,7 @@ from sqlmodel import select
 from app.auth.rbac import Role
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import Application
+from tests.e2e.factories import create_application_in_db
 
 pytestmark = pytest.mark.usefixtures("mock_gov_notify")
 
@@ -19,7 +20,7 @@ def _refuse_decision_payload(overrides=None):
 
 
 def test_204_refuse_decision_to_refused(session, client):
-    application = session.exec(select(Application)).first()
+    application = create_application_in_db(session)
     laa_reference = application.laa_reference
 
     response = client.patch(

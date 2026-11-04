@@ -197,7 +197,7 @@ def test_refuse_decision_raises_exception_when_application_already_granted(
 
     with pytest.raises(
         RefuseDecisionError,
-        match="Application has already been granted and in protected final state",
+        match="Application 1 has already been granted and in protected final state",
     ):
         use_case.execute("1", refuse_request)
 
