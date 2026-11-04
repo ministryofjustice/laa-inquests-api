@@ -1,3 +1,4 @@
+import sys
 from datetime import UTC, datetime
 
 from sqlmodel import select
@@ -26,7 +27,15 @@ CLAIMS_BACKLOG_REPORT_HEADERS = [
 class TestGetClaimBacklogReport:
     """E2E tests for GET /reports/claims/backlog."""
 
-    def test_200_csv_has_good_data_quality(self, session, client):
+    def test_200_csv_has_good_data_quality(self, session, client, monkeypatch):
+        class FixedDatetime(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return datetime(2026, 9, 1, 16, 45, 1, tzinfo=tz)
+
+        monkeypatch.setattr(
+            sys.modules["app.routers.reports"], "datetime", FixedDatetime
+        )
         application = session.exec(select(Application)).first()
         claim = create_claim_in_db(
             session,
@@ -43,7 +52,10 @@ class TestGetClaimBacklogReport:
         assert response.status_code == 200
         assert "text/csv" in response.headers["content-type"]
         assert "attachment" in response.headers["content-disposition"]
-        assert "claims_backlog_report.csv" in response.headers["content-disposition"]
+        assert (
+            "2026-09-01-164501 - Report - IDDS Claims Backlog - OFFICIAL-SENSITIVE - LAA Use Only.csv"
+            in response.headers["content-disposition"]
+        )
         assert parse_csv_fieldnames(response.text) == CLAIMS_BACKLOG_REPORT_HEADERS
 
         rows = parse_csv_rows(response.text)
