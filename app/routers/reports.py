@@ -21,6 +21,7 @@ from app.ports.audit_trail_report_port import AuditTrailReportPort
 from app.ports.claim.ogd_costs_report_port import OgdCostsReportPort
 from app.ports.claim.payment_extract_report_port import PaymentExtractReportPort
 from app.ports.claim_backlog_port import ClaimBacklogPort
+from app.ports.cost_limit_forecast_report_port import CostLimitForecastReportPort
 from app.ports.decisions_report_port import DecisionsReportPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.routers.applications import get_provider_details_port
@@ -43,6 +44,9 @@ from app.use_cases.generate_audit_trail_report import (
 )
 from app.use_cases.generate_claim_backlog_report import (
     GenerateClaimBacklogReportUseCase,
+)
+from app.use_cases.generate_cost_limit_forecast_report import (
+    GenerateCostLimitForecastReportUseCase,
 )
 from app.use_cases.generate_decisions_report import GenerateDecisionsReportUseCase
 from app.use_cases.generate_ogd_costs_report import GenerateOgdCostsReportUseCase
@@ -158,6 +162,20 @@ def get_generate_ogd_costs_report_use_case(
     ogd_costs_report_port: OgdCostsReportPort = Depends(get_ogd_costs_report_port),
 ) -> GenerateOgdCostsReportUseCase:
     return GenerateOgdCostsReportUseCase(ogd_costs_report_port=ogd_costs_report_port)
+
+
+def get_cost_limit_forecast_report_port(
+    session: Session = Depends(get_session),
+) -> CostLimitForecastReportPort:
+    return ClaimRepositoryAdapter(session=session)
+
+
+def get_generate_cost_limit_forecast_report_use_case(
+    report_port: CostLimitForecastReportPort = Depends(
+        get_cost_limit_forecast_report_port
+    ),
+) -> GenerateCostLimitForecastReportUseCase:
+    return GenerateCostLimitForecastReportUseCase(report_port=report_port)
 
 
 @router.get(
@@ -431,7 +449,7 @@ def get_decisions_report(
     dependencies=[
         Depends(
             audit_and_require_permission(
-                possible_permissions=Permission.REPORTS_OGD_COSTS_READ,
+                possible_permissions=Permission.REPORTS_COSTS_READ,
                 audit_event_factory=ReportAuditEventFactory(
                     report_type=ReportType.OGD_COSTS
                 ),
@@ -471,6 +489,58 @@ def get_ogd_costs_report(
             detail="Failed to generate OGD costs report",
         )
     filename = f"{datetime.now(UTC).strftime('%Y-%m-%d')} - Report - IDDS OGD Costs - OFFICIAL-SENSITIVE - LAA Use Only.csv"
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@router.get(
+    "/cost-limit-forecast",
+    dependencies=[
+        Depends(
+            audit_and_require_permission(
+                possible_permissions=Permission.REPORTS_COSTS_READ,
+                audit_event_factory=ReportAuditEventFactory(
+                    report_type=ReportType.COST_LIMIT_FORECAST
+                ),
+            )
+        ),
+    ],
+)
+def get_cost_limit_forecast_report(
+    from_date: Annotated[date, Query(alias="from")],
+    to_date: Annotated[date, Query(alias="to")],
+    use_case: GenerateCostLimitForecastReportUseCase = Depends(
+        get_generate_cost_limit_forecast_report_use_case
+    ),
+    request: Request = None,
+) -> Response:
+    """Return a CSV of live certificates with an outstanding cost limit balance, filtered by certificate effective date (inclusive)."""
+    try:
+        csv_content = use_case.execute(from_date, to_date)
+    except InvalidDateRangeError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid date range: {exc}",
+        )
+    except (ReportGenerationError, SQLAlchemyError) as exc:
+        logger.error(
+            "Cost limit forecast report generation failed",
+            extra=build_log_extra(
+                event="cost_limit_forecast_report_failed",
+                route=_route(request),
+                method=_method(request),
+                status_code=500,
+                error_type=type(exc).__name__,
+            ),
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate cost limit forecast report",
+        )
+    filename = f"{datetime.now(UTC).strftime('%Y-%m-%d-%H%M%S')} - Report - IDDS Cost estimation and Forecasting - OFFICIAL-SENSITIVE - LAA Use Only.csv"
     return Response(
         content=csv_content,
         media_type="text/csv",

@@ -14,6 +14,7 @@ from app.routers.reports import (
     get_generate_application_backlog_report_use_case,
     get_generate_audit_trail_report_use_case,
     get_generate_claim_backlog_report_use_case,
+    get_generate_cost_limit_forecast_report_use_case,
     get_generate_decisions_report_use_case,
     get_generate_ogd_costs_report_use_case,
     get_generate_payment_extract_report_use_case,
@@ -63,6 +64,20 @@ REPORT_ENDPOINTS = [
         Role.FINANCE,
         ReportType.OGD_COSTS,
         get_generate_ogd_costs_report_use_case,
+        {"from": "2024-01-01", "to": "2024-01-31"},
+    ),
+    (
+        "/reports/cost-limit-forecast",
+        Role.FINANCE,
+        ReportType.COST_LIMIT_FORECAST,
+        get_generate_cost_limit_forecast_report_use_case,
+        {"from": "2024-01-01", "to": "2024-01-31"},
+    ),
+    (
+        "/reports/cost-limit-forecast",
+        Role.POLICY,
+        ReportType.COST_LIMIT_FORECAST,
+        get_generate_cost_limit_forecast_report_use_case,
         {"from": "2024-01-01", "to": "2024-01-31"},
     ),
     (

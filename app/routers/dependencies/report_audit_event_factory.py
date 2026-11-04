@@ -8,6 +8,7 @@ _REPORT_TYPES_WITH_PARAMETERS = {
     ReportType.AUDIT_TRAIL,
     ReportType.DECISIONS,
     ReportType.OGD_COSTS,
+    ReportType.COST_LIMIT_FORECAST,
 }
 
 

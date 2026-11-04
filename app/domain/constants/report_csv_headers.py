@@ -74,3 +74,11 @@ OGD_COSTS_REPORT_HEADERS = [
     "Name of Deceased",
     "Date of Death",
 ]
+
+COST_LIMIT_FORECAST_REPORT_HEADERS = [
+    "Case Reference",
+    "Public Body(ies)",
+    "Cost Limit",
+    "Total Remaining Cost Limit Value",
+    "Certificate Effective Date",
+]

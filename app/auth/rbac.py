@@ -27,7 +27,7 @@ class Permission(str, Enum):
     PROVIDER_OFFICES_READ = "provider-offices:read"
 
     REPORTS_AUDIT_TRAIL_READ = "reports-audit-trail:read"
-    REPORTS_OGD_COSTS_READ = "reports-ogd-costs:read"
+    REPORTS_COSTS_READ = "reports-costs:read"
     REPORTS_PAYMENT_READ = "reports-payment:read"
     REPORTS_APPLICATION_WORKFLOW_READ = "reports-application-workflow:read"
     REPORTS_CLAIM_WORKFLOW_READ = "reports-claim-workflow:read"
@@ -98,10 +98,10 @@ ROLE_PERMISSIONS_MAP: dict[Role, set[Permission]] = {
         Permission.REPORTS_CLAIM_WORKFLOW_READ,
     },
     Role.POLICY: {
-        Permission.REPORTS_OGD_COSTS_READ,
+        Permission.REPORTS_COSTS_READ,
     },
     Role.FINANCE: {
-        Permission.REPORTS_OGD_COSTS_READ,
+        Permission.REPORTS_COSTS_READ,
         Permission.REPORTS_PAYMENT_READ,
         Permission.REPORTS_APPLICATION_WORKFLOW_READ,
         Permission.REPORTS_CLAIM_WORKFLOW_READ,
