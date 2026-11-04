@@ -25,7 +25,7 @@ def _make_request(email_address: str = "provider@example.com") -> ApplicationCre
     return ApplicationCreate.model_validate(
         {
             "coronersLetterId": str(uuid.uuid4()),
-            "proceeding": {"proceedingId": "IQOT"},
+            "proceeding": {"proceedingId": "IQ042"},
             "client": {
                 "clientFirstName": "Test",
                 "clientLastName": "Surname",

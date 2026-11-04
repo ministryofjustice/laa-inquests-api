@@ -282,7 +282,7 @@ class ProceedingCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    proceeding_id: ProceedingId = PydanticField(examples=["IQPC"])
+    proceeding_id: ProceedingId = PydanticField(examples=["IQ011"])
 
 
 class AddressCreate(BaseModel):

@@ -61,7 +61,7 @@ def _make_request(with_addresses: bool = True) -> ApplicationCreate:
     return ApplicationCreate.model_validate(
         {
             "coronersLetterId": str(uuid.uuid4()),
-            "proceeding": {"proceedingId": "IQOT"},
+            "proceeding": {"proceedingId": "IQ042"},
             "client": client,
             "publicBodies": [{"publicBodyId": "Department for Transport"}],
             "deceased": {
@@ -246,7 +246,7 @@ class TestCreateApplication:
         )
         assert stored_application.client.home_address_id is not None
         assert stored_application.client.correspondence_address_id is not None
-        assert stored_application.proceeding.proceeding_id == ProceedingId.IQOT
+        assert stored_application.proceeding.proceeding_id == ProceedingId.IQ042
         assert (
             stored_application.public_bodies[0].public_body_id
             == PublicBodyId.DEPARTMENT_FOR_TRANSPORT
@@ -317,7 +317,7 @@ class TestUpdateDecision:
         mock_session = MagicMock()
         adapter = ApplicationRepositoryAdapter(mock_session)
         proceeding = ApplicationProceeding(
-            application_id=1, proceeding_id=ProceedingId.IQOT
+            application_id=1, proceeding_id=ProceedingId.IQ042
         )
 
         adapter.update_decision(proceeding)

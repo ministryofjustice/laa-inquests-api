@@ -136,7 +136,7 @@ def create_base_proceeding(**overrides):
     """Create a base proceeding with optional field overrides."""
     defaults = {
         "id": 1,
-        "proceeding_id": ProceedingId.IQOT,
+        "proceeding_id": ProceedingId.IQ042,
         "proceeding_name": "Inquest into death",
         "proceeding_description": "Inquest into death",
         "matter_type": "INQUESTS",
@@ -152,7 +152,7 @@ def create_base_application_proceeding(proceeding=_NOT_PROVIDED, **overrides):
     defaults = {
         "application_proceeding_id": 1,
         "application_id": 12345,
-        "proceeding_id": ProceedingId.IQOT,
+        "proceeding_id": ProceedingId.IQ042,
         "proceeding": proceeding,
         "certificate_start_date": datetime(2026, 6, 18, tzinfo=UTC),
         "certificate_issue_date": datetime(2026, 6, 18, tzinfo=UTC),

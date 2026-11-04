@@ -71,15 +71,16 @@ def session_fixture():
                 username=username, hashed_password=password, disabled=disabled
             )
             db_session.add(new_user)
-        proceeding = Proceeding(
-            proceeding_id=ProceedingId.IQOT,
-            proceeding_name="Other",
-            proceeding_description="Other",
+        db_session.add(
+            Proceeding(
+                proceeding_id=ProceedingId.IQ042,
+                proceeding_name="A family member has died (Other)",
+                proceeding_description="A family member has died (Other)",
+            )
         )
-        db_session.add(proceeding)
         db_session.commit()
         application_proceeding = ApplicationProceeding(
-            proceeding_id=ProceedingId.IQOT,
+            proceeding_id=ProceedingId.IQ042,
             merits_decision=MeritsDecision.GRANTED,
         )
 

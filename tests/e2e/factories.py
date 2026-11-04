@@ -87,7 +87,7 @@ def create_application_in_db(
     )
 
     proceeding_defaults = {
-        "proceeding_id": ProceedingId.IQOT,
+        "proceeding_id": ProceedingId.IQ042,
         "merits_decision": MeritsDecision.SUBMITTED,
     }
     proceeding = ApplicationProceeding(
