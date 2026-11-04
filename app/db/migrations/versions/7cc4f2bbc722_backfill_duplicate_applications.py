@@ -1,7 +1,7 @@
 """backfill duplicate applications
 
 Revision ID: 7cc4f2bbc722
-Revises: idds_730_ogd_costs_report
+Revises: idds_709_forecast_report_type
 Create Date: 2026-11-03 14:59:17.597971
 
 """
@@ -18,7 +18,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = '7cc4f2bbc722'
-down_revision: Union[str, None] = 'idds_730_ogd_costs_report'
+down_revision: Union[str, None] = 'idds_709_forecast_report_type'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
