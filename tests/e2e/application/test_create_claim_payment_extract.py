@@ -1,4 +1,3 @@
-import uuid
 from decimal import Decimal
 
 from sqlmodel import select
@@ -7,27 +6,14 @@ from app.auth.rbac import Role
 from app.models.application.index import Application
 from app.models.claim.enums import InvoiceTypeCode, TaxCode
 from app.models.claim.index import Claim, ClaimPaymentExtract
-
-
-def _make_request_body(overrides=None):
-    body = {
-        "claimType": "PAYMENT_ON_ACCOUNT",
-        "totalProfitCostNet": 1000,
-        "totalProfitCostGross": 1200,
-        "poaTypeId": "PROFIT_COST",
-        "claimantId": "claimant-123@provider.co.uk",
-        "claimEvidenceIds": [str(uuid.uuid4())],
-    }
-    if overrides is not None:
-        body.update(overrides)
-    return body
+from tests.helpers.application_payloads import make_poa_claim_request_body
 
 
 def _post_claim(session, client, overrides=None):
     laa_reference = session.exec(select(Application)).first().laa_reference
     return client.post(
         f"/applications/{laa_reference}/claim",
-        json=_make_request_body(overrides),
+        json=make_poa_claim_request_body(overrides),
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
