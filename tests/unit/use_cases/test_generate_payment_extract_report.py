@@ -21,7 +21,7 @@ from app.use_cases.generate_payment_extract_report import (
 from tests.helpers.csv_helpers import parse_csv_fieldnames, parse_csv_rows
 
 FROM_DATE = date(2025, 3, 1)
-TO_DATE = date(2025, 3, 31)
+TO_DATE = date(2025, 3, 30)
 FINAL_BILL_FEES = PaymentLineType(invoice_type=InvoiceTypeCode.FINAL_BILL_FEES)
 OFFICE_ID = "9Z999Z"
 PAYMENT_EXTRACT_REPORT_HEADERS = [
@@ -215,7 +215,7 @@ class TestGeneratePaymentExtractReportUseCase:
 
         expected = (
             datetime(2025, 3, 1, tzinfo=UTC),
-            datetime(2025, 4, 1, tzinfo=UTC),
+            datetime(2025, 3, 31, tzinfo=UTC),
         )
         for method in (
             report_port.get_payment_extract_firm_codes,
@@ -227,9 +227,9 @@ class TestGeneratePaymentExtractReportUseCase:
     def test_caps_created_before_at_now_when_to_date_in_future(self):
         use_case, report_port, _ = _build_use_case(lines=[])
         today = datetime.now(UTC).date()
-        future = today + timedelta(days=30)
+        future = today + timedelta(days=10)
 
-        _csv(use_case.execute(today - timedelta(days=30), future))
+        _csv(use_case.execute(today - timedelta(days=10), future))
 
         created_before = report_port.get_payment_extract_firm_codes.call_args.args[1]
         assert created_before <= datetime.now(UTC)
@@ -258,11 +258,11 @@ class TestGeneratePaymentExtractReportUseCase:
         with pytest.raises(InvalidDateRangeError):
             use_case.execute(FROM_DATE, TO_DATE)
 
-    def test_raises_invalid_date_range_when_range_exceeds_90_days(self):
+    def test_raises_invalid_date_range_when_range_exceeds_30_days(self):
         use_case, report_port, _ = _build_use_case(lines=[_line()])
 
-        with pytest.raises(InvalidDateRangeError, match="90 days"):
-            use_case.execute(date(2025, 1, 1), date(2025, 4, 1))
+        with pytest.raises(InvalidDateRangeError, match="30 days"):
+            use_case.execute(date(2025, 3, 1), date(2025, 3, 31))
 
         report_port.get_payment_extract_firm_codes.assert_not_called()
 

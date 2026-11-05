@@ -7,7 +7,7 @@ from app.domain.constants.report_csv_headers import COST_LIMIT_FORECAST_REPORT_H
 from app.domain.cost_limit_forecast_report import build_cost_limit_forecast_row
 from app.logging_utils import build_log_extra
 from app.ports.cost_limit_forecast_report_port import CostLimitForecastReportPort
-from app.use_cases.exceptions import InvalidDateRangeError, ReportGenerationError
+from app.use_cases.exceptions import ReportGenerationError
 
 logger = logging.getLogger(__name__)
 
@@ -16,14 +16,8 @@ class GenerateCostLimitForecastReportUseCase:
     def __init__(self, report_port: CostLimitForecastReportPort) -> None:
         self.report_port = report_port
 
-    def execute(
-        self, from_date: date, to_date: date, report_date: date | None = None
-    ) -> str:
+    def execute(self, report_date: date | None = None) -> str:
         """Build the whole CSV or fail, so a partial extract is never returned."""
-        if from_date > to_date:
-            raise InvalidDateRangeError(
-                "The 'from' date must be on or before the 'to' date."
-            )
         report_date = report_date or datetime.now(UTC).date()
 
         buffer = io.StringIO()
@@ -32,9 +26,7 @@ class GenerateCostLimitForecastReportUseCase:
         row_count = 0
 
         try:
-            for candidate in self.report_port.iter_forecast_candidates(
-                from_date, to_date
-            ):
+            for candidate in self.report_port.iter_forecast_candidates():
                 row = build_cost_limit_forecast_row(candidate, report_date)
                 if row is not None:
                     writer.writerow(row)

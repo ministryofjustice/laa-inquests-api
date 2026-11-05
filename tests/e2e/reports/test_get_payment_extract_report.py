@@ -36,7 +36,7 @@ FINANCE_HEADERS = {"Authorization": f"Bearer {Role.FINANCE.value}"}
 
 
 IN_RANGE = datetime(2025, 3, 15, 12, 0, tzinfo=UTC)
-DEFAULT_PARAMS = {"from": "2025-03-01", "to": "2025-03-31"}
+DEFAULT_PARAMS = {"from": "2025-03-01", "to": "2025-03-30"}
 
 
 def _application(session: Session) -> Application:
@@ -254,8 +254,8 @@ class TestGetPaymentExtractReport:
         created_ats = {
             "before": datetime(2025, 2, 28, 23, 59, 59, tzinfo=UTC),
             "start": datetime(2025, 3, 1, 0, 0, tzinfo=UTC),
-            "end": datetime(2025, 3, 31, 23, 59, 59, tzinfo=UTC),
-            "after": datetime(2025, 4, 1, 0, 0, tzinfo=UTC),
+            "end": datetime(2025, 3, 30, 23, 59, 59, tzinfo=UTC),
+            "after": datetime(2025, 3, 31, 0, 0, tzinfo=UTC),
         }
         invoice_numbers = {}
         for sequence, (label, created_at) in enumerate(created_ats.items(), start=1):
@@ -340,14 +340,14 @@ class TestGetPaymentExtractReport:
 
         assert response.status_code == 422
 
-    def test_422_when_date_range_exceeds_90_days(self, client):
-        response = _get(client, {"from": "2025-01-01", "to": "2025-04-01"})
+    def test_422_when_date_range_exceeds_30_days(self, client):
+        response = _get(client, {"from": "2025-03-01", "to": "2025-03-31"})
 
         assert response.status_code == 422
-        assert "90 days" in response.json()["detail"]
+        assert "30 days" in response.json()["detail"]
 
-    def test_200_when_date_range_is_exactly_90_days(self, client):
-        response = _get(client, {"from": "2025-01-01", "to": "2025-03-31"})
+    def test_200_when_date_range_is_exactly_30_days(self, client):
+        response = _get(client, {"from": "2025-03-01", "to": "2025-03-30"})
 
         assert response.status_code == 200
 
