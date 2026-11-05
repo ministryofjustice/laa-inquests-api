@@ -1,6 +1,5 @@
 """E2E tests for the deferred POA auto-approve grant email batch job."""
 
-import uuid
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
@@ -19,26 +18,12 @@ from app.use_cases.send_auto_approved_poa_claim_emails import (
     SendAutoApprovedPoaClaimEmailsUseCase,
 )
 from tests.e2e.factories import create_application_in_db
+from tests.helpers.claim_payloads import make_poa_claim_request_body
 
 FIRM_NAME = "Test Firm Name"
 BATCH_RUN_TIME = datetime(2026, 9, 7, 9, 0, tzinfo=UTC)
 FIRM_CODE = "0A123B"
 OFFICE_ID = "0U651L"
-
-
-def _make_request_body(overrides=None):
-    """Build an eligible payment-on-account claim request body."""
-    body = {
-        "claimType": "PAYMENT_ON_ACCOUNT",
-        "totalProfitCostNet": 1000,
-        "totalProfitCostGross": 1200,
-        "poaTypeId": "PROFIT_COST",
-        "claimantId": "claimant-123@provider.co.uk",
-        "claimEvidenceIds": [str(uuid.uuid4())],
-    }
-    if overrides is not None:
-        body.update(overrides)
-    return body
 
 
 def _build_batch_use_case(session):
@@ -65,7 +50,7 @@ def _auto_approve_poa_claim(session, client, laa_reference, submission_date):
     """Auto-approve a POA claim via the API, then pin its submission date."""
     response = client.post(
         f"/applications/{laa_reference}/claim",
-        json=_make_request_body(),
+        json=make_poa_claim_request_body(),
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
