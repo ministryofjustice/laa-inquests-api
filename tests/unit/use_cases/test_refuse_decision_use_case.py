@@ -11,7 +11,11 @@ from app.models.application.index import (
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.notifications.enums import NotificationType
 from app.ports.update_decision_port import ApplicationDecisionPort
-from app.use_cases.exceptions import ApplicationNotFoundError, RefuseDecisionError
+from app.use_cases.exceptions import (
+    ApllicationAssessmentConflictError,
+    ApplicationNotFoundError,
+    RefuseDecisionError,
+)
 from app.use_cases.refuse_decision import RefuseDecisionUseCase
 from tests.unit.factories import create_base_application
 
@@ -196,7 +200,7 @@ def test_refuse_decision_raises_exception_when_application_already_granted(
     application.proceeding.merits_decision = MeritsDecision.GRANTED
 
     with pytest.raises(
-        RefuseDecisionError,
+        ApllicationAssessmentConflictError,
         match="Application 1 has already been granted and in protected final state",
     ):
         use_case.execute("1", refuse_request)
