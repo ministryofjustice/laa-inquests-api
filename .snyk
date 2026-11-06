@@ -45,3 +45,8 @@ ignore:
               expires: 2026-12-03T00:00:00.000Z
               created: 2026-11-03T00:00:00.000Z
               reason: "There is no fixed version for Debian:13 expat (CVE-2026-118370); only reachable via fontconfig parsing its own config files, not user-supplied XML"
+    "SNYK-DEBIAN13-ZLIB-22249554":
+        - "*":
+              expires: 2026-12-06T00:00:00.000Z
+              created: 2026-11-06T00:00:00.000Z
+              reason: "There is no fixed version for Debian:13 zlib (out-of-bounds write)"
