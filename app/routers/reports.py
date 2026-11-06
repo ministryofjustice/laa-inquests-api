@@ -509,21 +509,14 @@ def get_ogd_costs_report(
     ],
 )
 def get_cost_limit_forecast_report(
-    from_date: Annotated[date, Query(alias="from")],
-    to_date: Annotated[date, Query(alias="to")],
     use_case: GenerateCostLimitForecastReportUseCase = Depends(
         get_generate_cost_limit_forecast_report_use_case
     ),
     request: Request = None,
 ) -> Response:
-    """Return a CSV of live certificates with an outstanding cost limit balance, filtered by certificate effective date (inclusive)."""
+    """Return a CSV of all live certificates with an outstanding cost limit balance."""
     try:
-        csv_content = use_case.execute(from_date, to_date)
-    except InvalidDateRangeError as exc:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Invalid date range: {exc}",
-        )
+        csv_content = use_case.execute()
     except (ReportGenerationError, SQLAlchemyError) as exc:
         logger.error(
             "Cost limit forecast report generation failed",

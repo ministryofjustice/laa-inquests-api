@@ -13,9 +13,6 @@ from app.models.application.index import (
 from app.models.claim.enums import ClaimStatus, ClaimType
 from tests.e2e.factories import create_application_in_db, create_claim_in_db
 
-EFFECTIVE_FROM = date(2026, 1, 1)
-EFFECTIVE_TO = date(2026, 12, 31)
-
 
 def _certified_application(
     session,
@@ -39,12 +36,8 @@ def _certified_application(
     )
 
 
-def _candidates(session, effective_from=EFFECTIVE_FROM, effective_to=EFFECTIVE_TO):
-    return list(
-        ClaimRepositoryAdapter(session).iter_forecast_candidates(
-            effective_from, effective_to
-        )
-    )
+def _candidates(session):
+    return list(ClaimRepositoryAdapter(session).iter_forecast_candidates())
 
 
 def test_iter_forecast_candidates_maps_certificate_fields(session):
@@ -79,17 +72,27 @@ def test_iter_forecast_candidates_uses_the_proceeding_cost_limitation(session):
     assert candidate.cost_limit == 25000
 
 
-def test_iter_forecast_candidates_filters_on_inclusive_effective_date_range(session):
-    _certified_application(session, "INQ-000-001", date(2026, 1, 1))
+def test_iter_forecast_candidates_returns_certificates_from_any_effective_date(
+    session,
+):
+    _certified_application(session, "INQ-000-001", date(2000, 1, 1))
     _certified_application(session, "INQ-000-002", date(2026, 12, 31))
-    _certified_application(session, "INQ-000-003", date(2025, 12, 31))
-    _certified_application(session, "INQ-000-004", date(2027, 1, 1))
-    _certified_application(session, "INQ-000-005", None)
+    _certified_application(session, "INQ-000-003", date(2099, 1, 1))
 
     assert [c.laa_reference for c in _candidates(session)] == [
         "INQ-000-001",
         "INQ-000-002",
+        "INQ-000-003",
     ]
+
+
+def test_iter_forecast_candidates_skips_certificates_without_an_effective_date(
+    session,
+):
+    _certified_application(session, "INQ-000-001", date(2026, 1, 1))
+    _certified_application(session, "INQ-000-005", None)
+
+    assert [c.laa_reference for c in _candidates(session)] == ["INQ-000-001"]
 
 
 def test_iter_forecast_candidates_does_not_decide_eligibility(session):
@@ -190,14 +193,15 @@ def test_iter_forecast_candidates_returns_the_claims_of_each_application(session
     ]
 
 
-def test_iter_forecast_candidates_ignores_claims_of_applications_outside_the_range(
+def test_iter_forecast_candidates_attaches_claims_only_to_their_own_application(
     session,
 ):
-    inside = _certified_application(session, "INQ-000-001", date(2026, 3, 1))
-    outside = _certified_application(session, "INQ-000-002", date(2027, 3, 1))
-    create_claim_in_db(session, application_id=inside.application_id)
-    create_claim_in_db(session, application_id=outside.application_id)
+    first = _certified_application(session, "INQ-000-001", date(2026, 3, 1))
+    second = _certified_application(session, "INQ-000-002", date(2027, 3, 1))
+    create_claim_in_db(session, application_id=first.application_id)
+    create_claim_in_db(session, application_id=second.application_id)
+    create_claim_in_db(session, application_id=second.application_id)
 
-    [candidate] = _candidates(session)
+    claim_counts = {c.laa_reference: len(c.claims) for c in _candidates(session)}
 
-    assert len(candidate.claims) == 1
+    assert claim_counts == {"INQ-000-001": 1, "INQ-000-002": 2}

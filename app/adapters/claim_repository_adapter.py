@@ -2,7 +2,7 @@ import logging
 import random
 import uuid
 from collections.abc import Iterator
-from datetime import date, datetime
+from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
@@ -496,12 +496,12 @@ class ClaimRepositoryAdapter(
                 deceased_date_of_death=deceased_date_of_death,
             )
 
-    def iter_forecast_candidates(
-        self, effective_from: date, effective_to: date
-    ) -> Iterator[CostLimitForecastCandidate]:
+    def iter_forecast_candidates(self) -> Iterator[CostLimitForecastCandidate]:
         effective_date = ApplicationProceeding.certificate_start_date
-        in_range = (effective_date >= effective_from, effective_date <= effective_to)
-        application_ids = select(ApplicationProceeding.application_id).where(*in_range)
+        has_effective_date = effective_date.is_not(None)
+        application_ids = select(ApplicationProceeding.application_id).where(
+            has_effective_date
+        )
 
         claims_by_application: dict[int, list[ForecastClaim]] = {}
         claim_rows = self.session.exec(
@@ -552,7 +552,7 @@ class ClaimRepositoryAdapter(
                 Proceeding,
                 Proceeding.proceeding_id == ApplicationProceeding.proceeding_id,
             )
-            .where(*in_range)
+            .where(has_effective_date)
             .order_by(effective_date, Application.laa_reference)
             .execution_options(yield_per=COST_LIMIT_FORECAST_REPORT_BATCH_SIZE)
         )

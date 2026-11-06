@@ -10,14 +10,12 @@ from app.domain.cost_limit_forecast_report import (
 )
 from app.models.application.enums import MeritsDecision, PublicBodyId
 from app.models.claim.enums import ClaimStatus, ClaimType
-from app.use_cases.exceptions import InvalidDateRangeError, ReportGenerationError
+from app.use_cases.exceptions import ReportGenerationError
 from app.use_cases.generate_cost_limit_forecast_report import (
     GenerateCostLimitForecastReportUseCase,
 )
 from tests.helpers.csv_helpers import parse_csv_fieldnames, parse_csv_rows
 
-FROM_DATE = date(2026, 1, 1)
-TO_DATE = date(2026, 12, 31)
 REPORT_DATE = date(2026, 11, 3)
 COST_LIMIT_FORECAST_REPORT_HEADERS = [
     "Case Reference",
@@ -55,32 +53,17 @@ class TestGenerateCostLimitForecastReportUseCase:
     def test_returns_headers_only_when_there_are_no_candidates(self):
         use_case, _ = _build_use_case()
 
-        content = use_case.execute(FROM_DATE, TO_DATE, REPORT_DATE)
+        content = use_case.execute(REPORT_DATE)
 
         assert parse_csv_fieldnames(content) == COST_LIMIT_FORECAST_REPORT_HEADERS
         assert parse_csv_rows(content) == []
 
-    def test_passes_the_inclusive_dates_to_the_port(self):
+    def test_asks_the_port_for_every_certificate_without_a_date_filter(self):
         use_case, port = _build_use_case()
 
-        use_case.execute(FROM_DATE, TO_DATE, REPORT_DATE)
+        use_case.execute(REPORT_DATE)
 
-        port.iter_forecast_candidates.assert_called_once_with(FROM_DATE, TO_DATE)
-
-    def test_accepts_the_same_day_and_a_very_long_range(self):
-        use_case, _ = _build_use_case()
-
-        use_case.execute(FROM_DATE, FROM_DATE, REPORT_DATE)
-        use_case, _ = _build_use_case()
-        use_case.execute(date(1990, 1, 1), date(2099, 12, 31), REPORT_DATE)
-
-    def test_rejects_from_after_to_without_calling_the_port(self):
-        use_case, port = _build_use_case()
-
-        with pytest.raises(InvalidDateRangeError):
-            use_case.execute(TO_DATE, FROM_DATE, REPORT_DATE)
-
-        port.iter_forecast_candidates.assert_not_called()
+        port.iter_forecast_candidates.assert_called_once_with()
 
     def test_writes_one_row_per_qualifying_candidate_in_port_order(self):
         use_case, _ = _build_use_case(
@@ -101,7 +84,7 @@ class TestGenerateCostLimitForecastReportUseCase:
             ]
         )
 
-        rows = parse_csv_rows(use_case.execute(FROM_DATE, TO_DATE, REPORT_DATE))
+        rows = parse_csv_rows(use_case.execute(REPORT_DATE))
 
         assert [
             (row["Case Reference"], row["Total Remaining Cost Limit Value"])
@@ -125,7 +108,7 @@ class TestGenerateCostLimitForecastReportUseCase:
             ]
         )
 
-        rows = parse_csv_rows(use_case.execute(FROM_DATE, TO_DATE))
+        rows = parse_csv_rows(use_case.execute())
 
         assert [row["Case Reference"] for row in rows] == ["INQ-000-001"]
 
@@ -138,10 +121,10 @@ class TestGenerateCostLimitForecastReportUseCase:
         port.iter_forecast_candidates.return_value = candidates_then_failure()
 
         with pytest.raises(ReportGenerationError):
-            use_case.execute(FROM_DATE, TO_DATE, REPORT_DATE)
+            use_case.execute(REPORT_DATE)
 
     def test_fails_when_a_candidate_cannot_be_rendered(self):
         use_case, _ = _build_use_case([_candidate(certificate_effective_date=None)])
 
         with pytest.raises(ReportGenerationError):
-            use_case.execute(FROM_DATE, TO_DATE, REPORT_DATE)
+            use_case.execute(REPORT_DATE)

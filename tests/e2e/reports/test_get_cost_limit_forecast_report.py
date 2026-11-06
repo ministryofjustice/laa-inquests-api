@@ -33,7 +33,6 @@ FINANCE_HEADERS = {"Authorization": f"Bearer {Role.FINANCE.value}"}
 FORECAST_ROLES = [Role.FINANCE, Role.POLICY]
 
 EFFECTIVE_DATE = date(2019, 3, 15)
-DEFAULT_PARAMS = {"from": "2019-01-01", "to": "2019-12-31"}
 PAST_DATE = date(2019, 6, 1)
 FAR_FUTURE_DATE = date(2099, 1, 1)
 
@@ -119,22 +118,18 @@ def _set_public_bodies(
     session.commit()
 
 
-def _get(client, params: dict | None = None):
-    return client.get(
-        URL,
-        params=DEFAULT_PARAMS if params is None else params,
-        headers=FINANCE_HEADERS,
-    )
+def _get(client):
+    return client.get(URL, headers=FINANCE_HEADERS)
 
 
-def _rows(client, params: dict | None = None) -> list[dict[str, str]]:
-    response = _get(client, params)
+def _rows(client) -> list[dict[str, str]]:
+    response = _get(client)
     assert response.status_code == 200
     return parse_csv_rows(response.text)
 
 
-def _references(client, params: dict | None = None) -> list[str]:
-    return [row["Case Reference"] for row in _rows(client, params)]
+def _references(client) -> list[str]:
+    return [row["Case Reference"] for row in _rows(client)]
 
 
 class TestGetCostLimitForecastReport:
@@ -256,16 +251,40 @@ class TestGetCostLimitForecastReport:
         assert len(rows) == 1
         assert rows[0]["Public Body(ies)"] == "Cabinet Office; Ministry of Justice"
 
-    def test_200_filters_on_certificate_effective_date_with_inclusive_bounds(
+    def test_200_lists_every_live_certificate_regardless_of_effective_date(
         self, session, client
     ):
         _live_application(session, start=date(2019, 1, 1))
-        _another_application(session, "INQ-000-002", start=date(2019, 12, 31))
-        _another_application(session, "INQ-000-003", start=date(2018, 12, 31))
-        _another_application(session, "INQ-000-004", start=date(2020, 1, 1))
+        _another_application(session, "INQ-000-002", start=date(2018, 12, 31))
+        _another_application(session, "INQ-000-003", start=date(2020, 1, 1))
+        _another_application(session, "INQ-000-004", start=date(2000, 1, 1))
+
+        assert sorted(_references(client)) == [
+            "INQ-000-002",
+            "INQ-000-003",
+            "INQ-000-004",
+            "INQ-123-456",
+        ]
+
+    def test_200_excludes_certificates_without_an_effective_date(self, session, client):
+        _live_application(session)
         _another_application(session, "INQ-000-005", start=None)
 
-        assert sorted(_references(client)) == ["INQ-000-002", "INQ-123-456"]
+        assert _references(client) == ["INQ-123-456"]
+
+    def test_200_ignores_legacy_date_query_parameters(self, session, client):
+        _live_application(session, start=date(2019, 1, 1))
+
+        response = client.get(
+            URL,
+            params={"from": "2030-01-01", "to": "2030-12-31"},
+            headers=FINANCE_HEADERS,
+        )
+
+        assert response.status_code == 200
+        assert [row["Case Reference"] for row in parse_csv_rows(response.text)] == [
+            "INQ-123-456"
+        ]
 
     def test_200_orders_by_effective_date_oldest_first(self, session, client):
         _live_application(session, start=date(2019, 9, 1))
@@ -396,36 +415,6 @@ class TestGetCostLimitForecastReport:
 
         assert len(_rows(client)) == 2000
 
-    @pytest.mark.parametrize(
-        "params",
-        [{"to": "2019-12-31"}, {"from": "2019-01-01"}, {}],
-    )
-    def test_422_when_date_params_missing(self, client, params):
-        assert _get(client, params).status_code == 422
-
-    @pytest.mark.parametrize(
-        "params",
-        [
-            {"from": "not-a-date", "to": "2019-12-31"},
-            {"from": "2019-01-01", "to": "31/12/2019"},
-        ],
-    )
-    def test_422_when_date_params_invalid(self, client, params):
-        assert _get(client, params).status_code == 422
-
-    def test_422_when_from_is_after_to_and_no_csv_is_returned(self, client):
-        response = _get(client, {"from": "2019-12-31", "to": "2019-01-01"})
-
-        assert response.status_code == 422
-        assert "text/csv" not in response.headers["content-type"]
-
-    def test_200_accepts_a_range_of_many_years(self, session, client):
-        _live_application(session)
-
-        assert _references(client, {"from": "2000-01-01", "to": "2099-12-31"}) == [
-            "INQ-123-456"
-        ]
-
     def test_500_when_a_qualifying_case_has_no_public_bodies_and_no_csv_is_returned(
         self, session, client
     ):
@@ -461,7 +450,6 @@ class TestGetCostLimitForecastReportAuth:
     def test_200_returns_ok_for_finance_and_policy(self, client, role):
         response = client.get(
             URL,
-            params=DEFAULT_PARAMS,
             headers={"Authorization": f"Bearer {role.value}"},
         )
 
@@ -475,13 +463,12 @@ class TestGetCostLimitForecastReportAuth:
     def test_403_for_roles_without_costs_permission(self, client, role):
         response = client.get(
             URL,
-            params=DEFAULT_PARAMS,
             headers={"Authorization": f"Bearer {role.value}"},
         )
 
         assert response.status_code == 403
 
     def test_401_without_credentials(self, client):
-        response = client.get(URL, params=DEFAULT_PARAMS)
+        response = client.get(URL)
 
         assert response.status_code == 401
