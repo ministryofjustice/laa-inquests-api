@@ -96,4 +96,4 @@ def test_500_grant_decision_application_already_granted(client, session):
         },
     )
 
-    assert response.status_code == 500  # TODO confirm expected status
+    assert response.status_code == 409
