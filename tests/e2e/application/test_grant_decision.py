@@ -1,7 +1,7 @@
 from datetime import UTC, date, datetime
 
 from app.auth.rbac import Role
-from app.models.application.enums import AddressSource, MeritsDecision
+from app.models.application.enums import MeritsDecision
 from tests.e2e.factories import create_application_in_db
 
 
@@ -13,12 +13,7 @@ def _grant_decision_payload(overrides=None):
 
 
 def test_204_grant_decision_to_granted(session, client):
-    application = create_application_in_db(
-        session,
-        client_overrides={
-            "correspondence_address_source": AddressSource.USE_PROVIDER_ADDRESS
-        },
-    )
+    application = create_application_in_db(session)
     laa_reference = application.laa_reference
     assert application.proceeding.substantive_cost_limitation == 0
 

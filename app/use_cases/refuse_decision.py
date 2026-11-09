@@ -10,7 +10,7 @@ from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.use_cases.exceptions import (
-    ApllicationAssessmentConflictError,
+    ApplicationAssessmentConflictError,
     ApplicationNotFoundError,
     RefuseDecisionError,
 )
@@ -36,7 +36,7 @@ class RefuseDecisionUseCase:
         if application is None:
             raise ApplicationNotFoundError(f"Application {laa_reference} not found")
         if application.proceeding.merits_decision == MeritsDecision.GRANTED:
-            raise ApllicationAssessmentConflictError(
+            raise ApplicationAssessmentConflictError(
                 f"Application {laa_reference} has already been granted and in protected final state"
             )
 

@@ -114,7 +114,7 @@ class AuditError(Exception):
     pass
 
 
-class ApllicationAssessmentConflictError(Exception):
+class ApplicationAssessmentConflictError(Exception):
     pass
 
 

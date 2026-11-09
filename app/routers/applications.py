@@ -112,7 +112,7 @@ from app.use_cases.create_claim import CreateClaimCommand, CreateClaimUseCase
 from app.use_cases.create_note import CreateNoteUseCase
 from app.use_cases.delete_coroners_letter import DeleteCoronersLetterUseCase
 from app.use_cases.exceptions import (
-    ApllicationAssessmentConflictError,
+    ApplicationAssessmentConflictError,
     ApplicationNotFoundError,
     ApplicationNotGrantedError,
     ClaimAssessmentConflictError,
@@ -1080,7 +1080,7 @@ def grant_decision(
 
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
-    except ApllicationAssessmentConflictError as e:
+    except ApplicationAssessmentConflictError as e:
         raise HTTPException(status_code=409, detail=str(e))
 
     return Response(status_code=204)
@@ -1126,7 +1126,7 @@ def refuse_decision(
         use_case.execute(laa_reference, request)
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
-    except ApllicationAssessmentConflictError as e:
+    except ApplicationAssessmentConflictError as e:
         raise HTTPException(status_code=409, detail=str(e))
 
     return Response(status_code=204)

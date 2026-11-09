@@ -1,7 +1,6 @@
 """E2E tests for sending grant letter print pack via Gov Notify precompiled letter."""
 
 from app.auth.rbac import Role
-from app.models.application.enums import AddressSource
 from tests.e2e.factories import create_application_in_db
 
 
@@ -13,12 +12,7 @@ def test_204_grant_decision_calls_generate_print_letter_pdf(
     session, client, mock_pdf_generation_port
 ):
     """Granting a decision generates the print letter PDF pack."""
-    application = create_application_in_db(
-        session,
-        client_overrides={
-            "correspondence_address_source": AddressSource.USE_PROVIDER_ADDRESS
-        },
-    )
+    application = create_application_in_db(session)
     laa_reference = application.laa_reference
 
     response = client.patch(
@@ -41,12 +35,7 @@ def test_204_grant_decision_calls_send_precompiled_letter(
     mock_pdf_generation_port.generate_print_letter_pdf.return_value = (
         b"%PDF-1.4 print letter"
     )
-    application = create_application_in_db(
-        session,
-        client_overrides={
-            "correspondence_address_source": AddressSource.USE_PROVIDER_ADDRESS
-        },
-    )
+    application = create_application_in_db(session)
     laa_reference = application.laa_reference
 
     response = client.patch(
@@ -72,12 +61,7 @@ def test_204_grant_decision_sends_precompiled_letter_after_email(
     mock_pdf_generation_port.generate_print_letter_pdf.return_value = (
         b"%PDF-1.4 print letter"
     )
-    application = create_application_in_db(
-        session,
-        client_overrides={
-            "correspondence_address_source": AddressSource.USE_PROVIDER_ADDRESS
-        },
-    )
+    application = create_application_in_db(session)
     laa_reference = application.laa_reference
 
     response = client.patch(

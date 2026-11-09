@@ -13,7 +13,7 @@ from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.notifications.enums import NotificationType
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.use_cases.exceptions import (
-    ApllicationAssessmentConflictError,
+    ApplicationAssessmentConflictError,
     ApplicationNotFoundError,
     GrantDecisionError,
 )
@@ -274,7 +274,7 @@ def test_grant_decision_raises_exception_when_send_grant_letter_fails_and_rollba
     create_history_event_port.rollback.assert_called_once()
 
 
-def test_grant_decision_raises_exception_when_application_already_granted(
+def test_grant_decision_raises_ApplicationAssessmentConflictError_when_application_already_granted(
     use_case,
     update_decision_port,
     create_history_event_port,
@@ -286,7 +286,7 @@ def test_grant_decision_raises_exception_when_application_already_granted(
     application.proceeding.merits_decision = MeritsDecision.GRANTED
 
     with pytest.raises(
-        ApllicationAssessmentConflictError,
+        ApplicationAssessmentConflictError,
         match="Application 1 has already been granted and in protected final state",
     ):
         use_case.execute("1", grant_request)
