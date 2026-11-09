@@ -572,6 +572,7 @@ class ProviderResponse(BaseModel):
     firm_name: str | None = None
     account_number: str | None = None
     email_address: str
+    office_address: AddressResponse | None = None
 
 
 class UploadCoronersLetterResponse(BaseModel):
