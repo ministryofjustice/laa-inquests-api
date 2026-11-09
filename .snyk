@@ -1,15 +1,5 @@
 version: v1.5.0
 ignore:
-    "SNYK-DEBIAN13-ATTR-17678182":
-        - "*":
-              expires: 2026-11-07T00:00:00.000Z
-              created: 2026-10-08T00:00:00.000Z
-              reason: "There is no fixed version for Debian:13 attr"
-    "SNYK-DEBIAN13-ACL-17677866":
-        - "*":
-              expires: 2026-11-07T00:00:00.000Z
-              created: 2026-10-08T00:00:00.000Z
-              reason: "There is no fixed version for Debian:13 acl"
     "snyk:lic:pip:pyphen:(GPL-2.0_OR_LGPL-2.0_OR_MPL-1.1)":
         - "*":
               expires: 2026-11-26T00:00:00.000Z
@@ -50,3 +40,13 @@ ignore:
               expires: 2026-12-06T00:00:00.000Z
               created: 2026-11-06T00:00:00.000Z
               reason: "There is no fixed version for Debian:13 zlib (out-of-bounds write)"
+  "SNYK-DEBIAN13-ATTR-17678182":
+          - "*":
+                expires: 2026-12-09T00:00:00.000Z
+                created: 2026-11-09T00:00:00.000Z
+                reason: "There is no fixed version for Debian:13 attr"
+  "SNYK-DEBIAN13-ACL-17677866":
+          - "*":
+                expires: 2026-12-09T00:00:00.000Z
+                created: 2026-11-09T00:00:00.000Z
+                reason: "There is no fixed version for Debian:13 acl"
