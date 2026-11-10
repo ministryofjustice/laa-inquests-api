@@ -282,7 +282,7 @@ class ProceedingCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    proceeding_id: ProceedingId = PydanticField(examples=["IQPC"])
+    proceeding_id: ProceedingId = PydanticField(examples=["IQ011"])
 
 
 class AddressCreate(BaseModel):
@@ -572,6 +572,7 @@ class ProviderResponse(BaseModel):
     firm_name: str | None = None
     account_number: str | None = None
     email_address: str
+    office_address: AddressResponse | None = None
 
 
 class UploadCoronersLetterResponse(BaseModel):

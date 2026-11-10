@@ -44,6 +44,18 @@ def test_ogd_costs_audit_event_records_query_parameters():
     assert audit_event.parameters == query_params
 
 
+def test_cost_limit_forecast_audit_event_records_query_parameters():
+    query_params = {"from": "2024-01-01", "to": "2024-12-31"}
+
+    audit_event = ReportAuditEventFactory(report_type=ReportType.COST_LIMIT_FORECAST)(
+        user_email_address="user@example.com",
+        request=MagicMock(query_params=query_params),
+    )
+
+    assert audit_event.report_type == ReportType.COST_LIMIT_FORECAST
+    assert audit_event.parameters == query_params
+
+
 def test_decisions_audit_event_records_query_parameters():
     query_params = {"from": "2024-01-01", "to": "2024-01-31"}
 

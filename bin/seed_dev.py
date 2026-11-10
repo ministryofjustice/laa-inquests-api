@@ -282,7 +282,7 @@ def _create_granted_application(
         provider_id=provider.provider_id,
         coroners_letter_id=coroners_letter.coroners_letter_id,
         proceeding=ApplicationProceeding(
-            proceeding_id=ProceedingId.IQPC,
+            proceeding_id=ProceedingId.IQ011,
             merits_decision=MeritsDecision.GRANTED,
             certificate_start_date=CERTIFICATE_START_DATE,
             substantive_cost_limitation_effective_date=CERTIFICATE_START_DATE,

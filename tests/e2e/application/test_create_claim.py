@@ -29,72 +29,12 @@ from app.models.claim.index import (
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.models.notifications.enums import NotificationType
-from tests.e2e.factories import create_application_in_db
-
-
-def _make_request_body(overrides=None):
-    body = {
-        "claimType": "PAYMENT_ON_ACCOUNT",
-        "totalProfitCostNet": 1000,
-        "totalProfitCostGross": 1200,
-        "poaTypeId": "PROFIT_COST",
-        "claimantId": "claimant-123@provider.co.uk",
-        "claimEvidenceIds": [str(uuid.uuid4())],
-    }
-    if overrides is not None:
-        body.update(overrides)
-    return body
-
-
-def _make_final_bill_body(overrides=None):
-    body = _make_request_body(
-        {
-            "claimType": "FINAL_BILL",
-            "poaTypeId": None,
-            "totalProfitCostNet": None,
-            "totalProfitCostGross": 1200,
-            "inquestOutcomes": ["NATURAL_CAUSES"],
-            "claimCostTemplateFile": {
-                "claimCostTemplateFileId": str(uuid.uuid4()),
-                "claimCostTemplateFileName": "final_bill_costs.xlsx",
-            },
-            "hasCounselBeenPaid": True,
-            "hasAlternativeFunding": False,
-            "hasRecoveryCostsAwarded": True,
-            "financialRecoveryPreviousPreCertificateCosts": 100.00,
-            "financialRecoveryCost": 200.00,
-            "financialRecoveryDamages": 300.00,
-            "financialRecoveryInterest": 50.00,
-            "payingParty": "Test Council",
-            "numberOfCounselInstructed": "2",
-        }
-    )
-    if overrides is not None:
-        body.update(overrides)
-    return body
-
-
-def _make_nil_bill_body(overrides=None):
-    body = _make_request_body(
-        {
-            "claimType": "NIL_BILL",
-            "poaTypeId": None,
-            "totalProfitCostNet": None,
-            "totalProfitCostGross": 0,
-            "inquestOutcomes": ["OPEN_CONCLUSION"],
-            "hasAlternativeFunding": False,
-            "hasRecoveryCostsAwarded": True,
-            "financialRecoveryPreviousPreCertificateCosts": 100.00,
-            "financialRecoveryCost": 200.00,
-            "financialRecoveryDamages": 300.00,
-            "financialRecoveryInterest": 50.00,
-            "payingParty": "Test Council",
-        }
-    )
-    del body["claimEvidenceIds"]
-    if overrides is not None:
-        body.update(overrides)
-    return body
+from tests.e2e.factories import create_application_in_db, create_claim_for_reference
+from tests.helpers.claim_payloads import (
+    make_final_bill_claim_body,
+    make_nil_bill_claim_body,
+    make_poa_claim_request_body,
+)
 
 
 def _seed_approved_claim(
@@ -104,27 +44,16 @@ def _seed_approved_claim(
     gross: Decimal | None = None,
     vat_zero: Decimal | None = None,
 ) -> Claim:
-    application_id = (
-        session.exec(
-            select(Application).where(Application.laa_reference == laa_reference)
-        )
-        .one()
-        .application_id
-    )
-    claim = Claim(
-        application_id=application_id,
-        claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
-        status_id=ClaimStatus.PAY_IN_FULL,
-        submission_date=datetime.now(UTC),
+    claim = create_claim_for_reference(
+        session,
+        laa_reference,
+        ClaimStatus.PAY_IN_FULL,
+        total_profit_cost_net=None,
         total_profit_cost_gross=gross,
         total_profit_cost_vat_zero=vat_zero,
         total_funds_remaining_after_claim=Decimal(0),
         poa_type_id=None,
-        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
     )
-    session.add(claim)
-    session.commit()
-    session.refresh(claim)
     session.add(ClaimDecision(claim_id=claim.claim_id, decision=decision))
     session.commit()
     return claim
@@ -136,27 +65,17 @@ def _seed_claim_with_type_and_status(
     claim_type: ClaimType,
     status: ClaimStatus,
 ) -> Claim:
-    application_id = (
-        session.exec(
-            select(Application).where(Application.laa_reference == laa_reference)
-        )
-        .one()
-        .application_id
-    )
-    claim = Claim(
-        application_id=application_id,
-        claim_type_id=claim_type,
-        status_id=status,
-        submission_date=datetime.now(UTC),
+    return create_claim_for_reference(
+        session,
+        laa_reference,
+        status,
+        claim_type,
+        total_profit_cost_net=None,
         total_profit_cost_gross=Decimal("100.00"),
+        total_profit_cost_vat_zero=None,
         total_funds_remaining_after_claim=Decimal(0),
         poa_type_id=None,
-        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
     )
-    session.add(claim)
-    session.commit()
-    session.refresh(claim)
-    return claim
 
 
 class TestCreateClaimBaseBehaviour:
@@ -174,7 +93,7 @@ class TestCreateClaimBaseBehaviour:
 
         response = client.post(
             f"/applications/{other_application.laa_reference}/claim",
-            json=_make_request_body(),
+            json=make_poa_claim_request_body(),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -191,7 +110,7 @@ class TestCreateClaimBaseBehaviour:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(),
+            json=make_poa_claim_request_body(),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -210,7 +129,7 @@ class TestCreateClaimBaseBehaviour:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(),
+            json=make_poa_claim_request_body(),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -238,7 +157,7 @@ class TestCreateClaimBaseBehaviour:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(),
+            json=make_poa_claim_request_body(),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -274,7 +193,7 @@ class TestCreateClaimBaseBehaviour:
     ):
         application = session.exec(select(Application)).first()
         laa_reference = application.laa_reference
-        request_body = _make_request_body()
+        request_body = make_poa_claim_request_body()
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
@@ -318,7 +237,7 @@ class TestCreateClaimFundsAndPersistence:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(),
+            json=make_poa_claim_request_body(),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -348,7 +267,7 @@ class TestCreateClaimFundsAndPersistence:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {"poaTypeId": "PROFIT_COST", "totalProfitCostNet": 1000}
             ),
             headers={
@@ -388,7 +307,7 @@ class TestCreateClaimFundsAndPersistence:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "poaTypeId": POAType.EXPERT_COST.value,
                     "totalProfitCostNet": 1000,
@@ -435,7 +354,7 @@ class TestCreateClaimFundsAndPersistence:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(),
+            json=make_poa_claim_request_body(),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -461,7 +380,7 @@ class TestCreateClaimFundsAndPersistence:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "claimType": "FINAL_BILL",
                     "poaTypeId": None,
@@ -521,7 +440,7 @@ class TestCreateClaimFundsAndPersistence:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {"totalProfitCostNet": 800, "totalProfitCostGross": 1000}
             ),
             headers={
@@ -553,7 +472,7 @@ class TestCreateClaimFundsAndPersistence:
 
         create_response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(),
+            json=make_poa_claim_request_body(),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -574,7 +493,7 @@ class TestCreateClaimFundsAndPersistence:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "claimType": "FINAL_BILL",
                     "poaTypeId": None,
@@ -612,7 +531,7 @@ class TestCreateClaimFundsAndPersistence:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(),
+            json=make_poa_claim_request_body(),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -637,7 +556,7 @@ class TestCreateClaimFundsAndPersistence:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {"claimEvidenceIds": [str(evidence.claim_evidence_id)]}
             ),
             headers={
@@ -665,7 +584,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body({"claimEvidenceIds": []}),
+            json=make_poa_claim_request_body({"claimEvidenceIds": []}),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -680,7 +599,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body({"poaTypeId": None}),
+            json=make_poa_claim_request_body({"poaTypeId": None}),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -698,7 +617,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {"claimType": "FINAL_BILL", "poaTypeId": "PROFIT_COST"}
             ),
             headers={
@@ -720,7 +639,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "claimType": "FINAL_BILL",
                     "poaTypeId": None,
@@ -768,7 +687,7 @@ class TestCreateClaimValidation:
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
-        body = _make_request_body(
+        body = make_poa_claim_request_body(
             {
                 "claimType": "NIL_BILL",
                 "poaTypeId": None,
@@ -816,7 +735,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "claimType": "FINAL_BILL",
                     "poaTypeId": None,
@@ -841,7 +760,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body({"inquestOutcomes": ["NATURAL_CAUSES"]}),
+            json=make_poa_claim_request_body({"inquestOutcomes": ["NATURAL_CAUSES"]}),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -856,7 +775,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "claimType": "FINAL_BILL",
                     "poaTypeId": None,
@@ -883,7 +802,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "claimType": "FINAL_BILL",
                     "poaTypeId": None,
@@ -928,7 +847,7 @@ class TestCreateClaimValidation:
     def test_422_nil_bill_claim_with_cost_template_file(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
-        body = _make_request_body(
+        body = make_poa_claim_request_body(
             {
                 "claimType": "NIL_BILL",
                 "poaTypeId": None,
@@ -967,7 +886,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "claimType": "NIL_BILL",
                     "poaTypeId": None,
@@ -994,7 +913,7 @@ class TestCreateClaimValidation:
     def test_422_nil_bill_claim_with_counsel_details(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
 
-        body = _make_request_body(
+        body = make_poa_claim_request_body(
             {
                 "claimType": "NIL_BILL",
                 "poaTypeId": None,
@@ -1029,7 +948,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "claimType": "FINAL_BILL",
                     "poaTypeId": None,
@@ -1052,7 +971,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "claimCostTemplateFile": {
                         "claimCostTemplateFileId": str(uuid.uuid4()),
@@ -1076,7 +995,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "totalProfitCostNet": None,
                     "totalProfitCostGross": None,
@@ -1099,7 +1018,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "claimType": "FINAL_BILL",
                     "poaTypeId": None,
@@ -1152,7 +1071,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "claimType": "FINAL_BILL",
                     "poaTypeId": None,
@@ -1179,7 +1098,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "hasAlternativeFunding": False,
                     "hasRecoveryCostsAwarded": True,
@@ -1206,7 +1125,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "hasCounselBeenPaid": True,
                     "numberOfCounselInstructed": "2",
@@ -1226,7 +1145,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_final_bill_body({"totalProfitCostNet": 100}),
+            json=make_final_bill_claim_body({"totalProfitCostNet": 100}),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -1243,7 +1162,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_nil_bill_body({"totalProfitCostNet": 0}),
+            json=make_nil_bill_claim_body({"totalProfitCostNet": 0}),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -1260,7 +1179,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_final_bill_body({"totalProfitCostVatZero": 100}),
+            json=make_final_bill_claim_body({"totalProfitCostVatZero": 100}),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -1278,7 +1197,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_final_bill_body({"totalProfitCostGross": None}),
+            json=make_final_bill_claim_body({"totalProfitCostGross": None}),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -1293,7 +1212,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_final_bill_body({"totalProfitCostGross": 0}),
+            json=make_final_bill_claim_body({"totalProfitCostGross": 0}),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -1311,7 +1230,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_nil_bill_body({"totalProfitCostGross": 100}),
+            json=make_nil_bill_claim_body({"totalProfitCostGross": 100}),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -1326,7 +1245,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_final_bill_body(),
+            json=make_final_bill_claim_body(),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -1347,7 +1266,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_nil_bill_body(),
+            json=make_nil_bill_claim_body(),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -1368,7 +1287,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {"totalProfitCostNet": 1200, "totalProfitCostGross": 1000}
             ),
             headers={
@@ -1388,7 +1307,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "totalProfitCostNet": None,
                     "totalProfitCostGross": None,
@@ -1408,7 +1327,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {"totalProfitCostNet": 1000, "totalProfitCostVatZero": 500}
             ),
             headers={
@@ -1442,7 +1361,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "poaTypeId": "EXPERT_COST",
                     "totalProfitCostNet": net,
@@ -1474,7 +1393,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "poaTypeId": "NON_EXPERT_DISBURSEMENT",
                     "totalProfitCostNet": "1000.00",
@@ -1508,7 +1427,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{application.laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "poaTypeId": "EXPERT_COST",
                     "totalProfitCostNet": None,
@@ -1541,7 +1460,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{application.laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "poaTypeId": "EXPERT_COST",
                     "totalProfitCostNet": None,
@@ -1568,7 +1487,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "poaTypeId": "EXPERT_COST",
                     "totalProfitCostNet": None,
@@ -1594,7 +1513,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "poaTypeId": "NON_EXPERT_DISBURSEMENT",
                     "totalProfitCostNet": "120.00",
@@ -1624,7 +1543,7 @@ class TestCreateClaimValidation:
         application = session.exec(select(Application)).first()
         laa_reference = application.laa_reference
 
-        request_body = _make_request_body()
+        request_body = make_poa_claim_request_body()
         request_body["claimantId"] = None
 
         response = client.post(
@@ -1653,7 +1572,7 @@ class TestCreateClaimValidation:
 
         response = client.post(
             f"/applications/{other_application.laa_reference}/claim",
-            json=_make_request_body(),
+            json=make_poa_claim_request_body(),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -1672,7 +1591,7 @@ class TestCreateClaimAutoDecisionRules:
 
         client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {"totalProfitCostNet": 6000, "totalProfitCostGross": 6000}
             ),
             headers={
@@ -1683,7 +1602,7 @@ class TestCreateClaimAutoDecisionRules:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {"totalProfitCostNet": 5000, "totalProfitCostGross": 6000}
             ),
             headers={
@@ -1702,7 +1621,7 @@ class TestCreateClaimAutoDecisionRules:
         for _ in range(4):
             seed_response = client.post(
                 f"/applications/{laa_reference}/claim",
-                json=_make_request_body(
+                json=make_poa_claim_request_body(
                     {
                         "totalProfitCostNet": 1,
                         "totalProfitCostGross": 1,
@@ -1717,7 +1636,7 @@ class TestCreateClaimAutoDecisionRules:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "totalProfitCostNet": 1,
                     "totalProfitCostGross": 1,
@@ -1764,7 +1683,7 @@ class TestCreateClaimAutoDecisionRules:
         for _ in range(4):
             seed_response = client.post(
                 f"/applications/{laa_reference}/claim",
-                json=_make_request_body(
+                json=make_poa_claim_request_body(
                     {
                         "totalProfitCostNet": 1,
                         "totalProfitCostGross": 1,
@@ -1787,7 +1706,7 @@ class TestCreateClaimAutoDecisionRules:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "totalProfitCostNet": 1,
                     "totalProfitCostGross": 1,
@@ -1824,7 +1743,7 @@ class TestCreateClaimAutoDecisionRules:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "totalProfitCostNet": 1,
                     "totalProfitCostGross": 1,
@@ -1871,7 +1790,7 @@ class TestCreateClaimAutoDecisionRules:
 
         response = client.post(
             f"/applications/{application.laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "totalProfitCostNet": 50000.01,
                     "totalProfitCostGross": 50000.01,
@@ -1913,7 +1832,7 @@ class TestCreateClaimAutoDecisionRules:
 
         response = client.post(
             f"/applications/{application.laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "totalProfitCostNet": 50000,
                     "totalProfitCostGross": 50000,
@@ -1948,7 +1867,7 @@ class TestCreateClaimAutoDecisionRules:
 
         response = client.post(
             f"/applications/{application.laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "totalProfitCostNet": 1000,
                     "totalProfitCostGross": 1200,
@@ -1980,7 +1899,7 @@ class TestCreateClaimAutoDecisionRules:
         for _ in range(4):
             seed_response = client.post(
                 f"/applications/{laa_reference}/claim",
-                json=_make_request_body(
+                json=make_poa_claim_request_body(
                     {
                         "totalProfitCostNet": 1,
                         "totalProfitCostGross": 1,
@@ -2003,7 +1922,7 @@ class TestCreateClaimAutoDecisionRules:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {
                     "totalProfitCostNet": 10,
                     "totalProfitCostGross": 10,
@@ -2059,7 +1978,7 @@ class TestCreateClaimAutoDecisionRules:
 
         rejected_response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {"totalProfitCostNet": 12000, "totalProfitCostGross": 12000}
             ),
             headers={
@@ -2081,7 +2000,7 @@ class TestCreateClaimAutoDecisionRules:
 
         approved_response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {"totalProfitCostNet": 5000, "totalProfitCostGross": 5000}
             ),
             headers={
@@ -2113,7 +2032,7 @@ class TestCreateClaimAutoDecisionRules:
         for gross in (7000, 2000):
             approved = client.post(
                 f"/applications/{laa_reference}/claim",
-                json=_make_request_body(
+                json=make_poa_claim_request_body(
                     {"totalProfitCostNet": gross, "totalProfitCostGross": gross}
                 ),
                 headers={
@@ -2126,7 +2045,7 @@ class TestCreateClaimAutoDecisionRules:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {"totalProfitCostNet": 2000, "totalProfitCostGross": 2000}
             ),
             headers={
@@ -2164,7 +2083,7 @@ class TestCreateClaimAutoDecisionRules:
 
         response = client.post(
             f"/applications/{application.laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {"totalProfitCostNet": 60000, "totalProfitCostGross": 60000}
             ),
             headers={
@@ -2204,7 +2123,7 @@ class TestCreateClaimAutoDecisionRules:
 
         response = client.post(
             f"/applications/{application.laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {"totalProfitCostNet": 60000, "totalProfitCostGross": 60000}
             ),
             headers={
@@ -2244,7 +2163,7 @@ class TestCreateClaimAutoDecisionRules:
         for _ in range(4):
             seed_response = client.post(
                 f"/applications/{laa_reference}/claim",
-                json=_make_request_body(
+                json=make_poa_claim_request_body(
                     {"totalProfitCostNet": 1, "totalProfitCostGross": 1}
                 ),
                 headers={
@@ -2256,7 +2175,7 @@ class TestCreateClaimAutoDecisionRules:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(
+            json=make_poa_claim_request_body(
                 {"totalProfitCostNet": 60000, "totalProfitCostGross": 60000}
             ),
             headers={
@@ -2300,7 +2219,7 @@ class TestCreateClaimActiveFinalBillRestriction:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(),
+            json=make_poa_claim_request_body(),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -2332,7 +2251,7 @@ class TestCreateClaimActiveFinalBillRestriction:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_final_bill_body(),
+            json=make_final_bill_claim_body(),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -2360,7 +2279,7 @@ class TestCreateClaimActiveFinalBillRestriction:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(),
+            json=make_poa_claim_request_body(),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -2383,7 +2302,7 @@ class TestCreateClaimActiveFinalBillRestriction:
 
         blocked_response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(),
+            json=make_poa_claim_request_body(),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -2404,7 +2323,7 @@ class TestCreateClaimActiveFinalBillRestriction:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(),
+            json=make_poa_claim_request_body(),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -2420,7 +2339,7 @@ class TestCreateClaimRbac:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(),
+            json=make_poa_claim_request_body(),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
@@ -2439,7 +2358,7 @@ class TestCreateClaimRbac:
 
         response = client.post(
             f"/applications/{laa_reference}/claim",
-            json=_make_request_body(),
+            json=make_poa_claim_request_body(),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",

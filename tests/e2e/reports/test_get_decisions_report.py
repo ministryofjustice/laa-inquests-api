@@ -36,7 +36,7 @@ NO_PERMISSION_HEADERS = {
     "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"
 }
 
-DEFAULT_PARAMS = {"from": "2025-03-01", "to": "2025-03-31"}
+DEFAULT_PARAMS = {"from": "2025-03-01", "to": "2025-03-30"}
 DECIDED_AT = datetime(2025, 3, 15, 13, 5, 9, tzinfo=UTC)
 SUBMITTED_AT = datetime(2025, 3, 2, 9, 30, tzinfo=UTC)
 CASEWORKER = "Jane Smith"
@@ -329,12 +329,12 @@ class TestGetDecisionsReport:
         _grant(
             session,
             applications["last_second"],
-            timestamp=datetime(2025, 3, 31, 23, 59, 59, tzinfo=UTC),
+            timestamp=datetime(2025, 3, 30, 23, 59, 59, tzinfo=UTC),
         )
         _grant(
             session,
             applications["after"],
-            timestamp=datetime(2025, 4, 1, 0, 0, 0, tzinfo=UTC),
+            timestamp=datetime(2025, 3, 31, 0, 0, 0, tzinfo=UTC),
         )
 
         rows = _rows(client)
@@ -357,8 +357,8 @@ class TestGetDecisionsReport:
 
         assert _rows(client) == []
 
-    def test_200_range_ending_same_day_next_month_is_allowed(self, client):
-        response = _get(client, {"from": "2025-03-01", "to": "2025-04-01"})
+    def test_200_range_of_exactly_30_days_is_allowed(self, client):
+        response = _get(client, {"from": "2025-03-01", "to": "2025-03-30"})
 
         assert response.status_code == 200
 
@@ -490,10 +490,11 @@ class TestGetDecisionsReport:
 
         assert response.status_code == 422
 
-    def test_422_range_longer_than_one_calendar_month(self, client):
-        response = _get(client, {"from": "2025-03-01", "to": "2025-04-02"})
+    def test_422_range_longer_than_30_days(self, client):
+        response = _get(client, {"from": "2025-03-01", "to": "2025-03-31"})
 
         assert response.status_code == 422
+        assert "30 days" in response.json()["detail"]
 
     @pytest.mark.parametrize(
         "params", [{}, {"from": "2025-03-01"}, {"to": "2025-03-31"}]

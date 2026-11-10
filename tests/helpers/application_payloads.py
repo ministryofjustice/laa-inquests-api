@@ -4,7 +4,7 @@ import uuid
 def create_application_payload() -> dict:
     return {
         "coronersLetterId": str(uuid.uuid4()),
-        "proceeding": {"proceedingId": "IQOT"},
+        "proceeding": {"proceedingId": "IQ042"},
         "client": {
             "clientFirstName": "Test",
             "clientLastName": "Surname",

@@ -1,19 +1,21 @@
 import csv
 import io
 import logging
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import date
 
 from app.domain.constants.report_csv_headers import DECISIONS_REPORT_HEADERS
-from app.domain.date_utils import add_calendar_months
 from app.domain.decisions_report import (
     InvalidDecisionRecordError,
     build_decisions_report_row,
 )
 from app.logging_utils import build_log_extra
 from app.ports.decisions_report_port import DecisionsReportPort
-from app.use_cases.exceptions import InvalidDateRangeError, ReportGenerationError
+from app.use_cases.exceptions import ReportGenerationError
+from app.use_cases.report_date_range import resolve_report_window
 
 logger = logging.getLogger(__name__)
+
+MAX_REPORT_RANGE_DAYS = 30
 
 
 class GenerateDecisionsReportUseCase:
@@ -22,18 +24,8 @@ class GenerateDecisionsReportUseCase:
 
     def execute(self, from_date: date, to_date: date) -> str:
         """Build the whole CSV or fail, so a partial report is never returned."""
-        if from_date > to_date:
-            raise InvalidDateRangeError(
-                "The 'from' date must be on or before the 'to' date."
-            )
-        if to_date > add_calendar_months(from_date, 1):
-            raise InvalidDateRangeError(
-                "The date range must not exceed one calendar month."
-            )
-
-        decided_from = datetime.combine(from_date, time.min, tzinfo=UTC)
-        decided_before = datetime.combine(
-            to_date + timedelta(days=1), time.min, tzinfo=UTC
+        decided_from, decided_before = resolve_report_window(
+            from_date, to_date, MAX_REPORT_RANGE_DAYS
         )
         records = self.decisions_report_port.get_decisions_report_records(
             decided_from, decided_before

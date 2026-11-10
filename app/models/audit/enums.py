@@ -8,6 +8,7 @@ class ReportType(StrEnum):
     AUDIT_TRAIL = "User Audit Trail"
     DECISIONS = "Decisions"
     OGD_COSTS = "OGD Costs"
+    COST_LIMIT_FORECAST = "Cost Limit Forecast"
 
 
 class AuditEventReference(StrEnum):

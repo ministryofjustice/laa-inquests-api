@@ -14,6 +14,10 @@ from app.config import Config
 from app.domain.claim import Claim as DomainClaim
 from app.domain.claim_evidence import ClaimEvidence as DomainClaimEvidence
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
+from app.domain.cost_limit_forecast_report import (
+    CostLimitForecastCandidate,
+    ForecastClaim,
+)
 from app.domain.ogd_costs_report import OgdCostsReportSourceLine
 from app.domain.payment_extract import PaymentExtractLine
 from app.domain.payment_extract_report import (
@@ -25,9 +29,11 @@ from app.logging_utils import build_log_extra
 from app.models.application.enums import PublicBodyId
 from app.models.application.index import (
     Application,
+    ApplicationProceeding,
     ApplicationPublicBody,
     Client,
     Deceased,
+    Proceeding,
     Provider,
 )
 from app.models.claim.enums import (
@@ -78,11 +84,13 @@ from app.ports.claim.update_claim_status_port import (
 )
 from app.ports.claim.upload_claim_evidence_port import UploadClaimEvidencePort
 from app.ports.claim_backlog_port import ClaimBacklogPort
+from app.ports.cost_limit_forecast_report_port import CostLimitForecastReportPort
 
 logger = logging.getLogger(__name__)
 
 PAYMENT_EXTRACT_REPORT_BATCH_SIZE = 1000
 OGD_COSTS_REPORT_BATCH_SIZE = 1000
+COST_LIMIT_FORECAST_REPORT_BATCH_SIZE = 1000
 
 _OriginalExtract = aliased(ClaimPaymentExtract, name="original_extract")
 _OriginalClaim = aliased(Claim, name="original_claim")
@@ -107,6 +115,7 @@ class ClaimRepositoryAdapter(
     ListAutoApprovedPoaClaimsPort,
     PaymentExtractReportPort,
     OgdCostsReportPort,
+    CostLimitForecastReportPort,
 ):
     GENERATE_CLAIM_REFERENCE_ATTEMPTS = 10
 
@@ -485,6 +494,87 @@ class ClaimRepositoryAdapter(
                 deceased_first_name=deceased_first_name,
                 deceased_last_name=deceased_last_name,
                 deceased_date_of_death=deceased_date_of_death,
+            )
+
+    def iter_forecast_candidates(self) -> Iterator[CostLimitForecastCandidate]:
+        effective_date = ApplicationProceeding.certificate_start_date
+        has_effective_date = effective_date.is_not(None)
+        application_ids = select(ApplicationProceeding.application_id).where(
+            has_effective_date
+        )
+
+        claims_by_application: dict[int, list[ForecastClaim]] = {}
+        claim_rows = self.session.exec(
+            select(
+                Claim.application_id,
+                Claim.claim_type_id,
+                Claim.status_id,
+                Claim.total_profit_cost_gross,
+                Claim.total_profit_cost_vat_zero,
+            ).where(Claim.application_id.in_(application_ids))
+        )
+        for application_id, claim_type, status, gross, vat_zero_total in claim_rows:
+            claims_by_application.setdefault(application_id, []).append(
+                ForecastClaim(
+                    claim_type=claim_type,
+                    status=status,
+                    gross=gross,
+                    vat_zero_total=vat_zero_total,
+                )
+            )
+
+        bodies_by_application: dict[int, list[PublicBodyId]] = {}
+        body_rows = self.session.exec(
+            select(
+                ApplicationPublicBody.application_id,
+                ApplicationPublicBody.public_body_id,
+            ).where(ApplicationPublicBody.application_id.in_(application_ids))
+        )
+        for application_id, public_body_id in body_rows:
+            bodies_by_application.setdefault(application_id, []).append(public_body_id)
+
+        statement = (
+            select(
+                Application.application_id,
+                Application.laa_reference,
+                Application.status,
+                ApplicationProceeding.merits_decision,
+                ApplicationProceeding.certificate_end_date,
+                Proceeding.substantive_cost_limitation,
+                effective_date,
+            )
+            .select_from(Application)
+            .join(
+                ApplicationProceeding,
+                ApplicationProceeding.application_id == Application.application_id,
+            )
+            .join(
+                Proceeding,
+                Proceeding.proceeding_id == ApplicationProceeding.proceeding_id,
+            )
+            .where(has_effective_date)
+            .order_by(effective_date, Application.laa_reference)
+            .execution_options(yield_per=COST_LIMIT_FORECAST_REPORT_BATCH_SIZE)
+        )
+        for (
+            application_id,
+            laa_reference,
+            application_status,
+            merits_decision,
+            certificate_end_date,
+            cost_limit,
+            certificate_effective_date,
+        ) in self.session.exec(statement):
+            yield CostLimitForecastCandidate(
+                application_id=application_id,
+                laa_reference=laa_reference,
+                application_status=application_status,
+                merits_decision=merits_decision,
+                certificate_end_date=certificate_end_date,
+                cost_limit=cost_limit,
+                certificate_effective_date=certificate_effective_date,
+                claims=tuple(claims_by_application.get(application_id, ())),
+                public_bodies=tuple(bodies_by_application.get(application_id, ())),
             )
 
     def _ogd_costs_statement(

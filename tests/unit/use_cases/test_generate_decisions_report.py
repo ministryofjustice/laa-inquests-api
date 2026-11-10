@@ -12,7 +12,7 @@ from app.use_cases.generate_decisions_report import GenerateDecisionsReportUseCa
 from tests.helpers.csv_helpers import parse_csv_fieldnames, parse_csv_rows
 
 FROM_DATE = date(2025, 3, 1)
-TO_DATE = date(2025, 3, 31)
+TO_DATE = date(2025, 3, 30)
 
 
 def _grant_record(
@@ -53,13 +53,12 @@ class TestDateRangeValidation:
     @pytest.mark.parametrize(
         "from_date,to_date",
         [
-            (date(2025, 3, 1), date(2025, 4, 1)),
-            (date(2025, 1, 31), date(2025, 2, 28)),
-            (date(2024, 1, 31), date(2024, 2, 29)),
-            (date(2025, 12, 15), date(2026, 1, 15)),
+            (date(2025, 3, 1), date(2025, 3, 30)),
+            (date(2025, 1, 31), date(2025, 3, 1)),
+            (date(2024, 2, 1), date(2024, 3, 1)),
         ],
     )
-    def test_range_up_to_same_day_next_month_is_allowed(self, from_date, to_date):
+    def test_range_of_up_to_30_days_is_allowed(self, from_date, to_date):
         use_case, _ = _use_case()
 
         use_case.execute(from_date, to_date)
@@ -67,14 +66,14 @@ class TestDateRangeValidation:
     @pytest.mark.parametrize(
         "from_date,to_date",
         [
-            (date(2025, 3, 1), date(2025, 4, 2)),
-            (date(2025, 1, 31), date(2025, 3, 1)),
+            (date(2025, 3, 1), date(2025, 3, 31)),
+            (date(2025, 2, 1), date(2025, 3, 3)),
         ],
     )
-    def test_range_longer_than_one_calendar_month_is_rejected(self, from_date, to_date):
+    def test_range_longer_than_30_days_is_rejected(self, from_date, to_date):
         use_case, port = _use_case()
 
-        with pytest.raises(InvalidDateRangeError):
+        with pytest.raises(InvalidDateRangeError, match="30 days"):
             use_case.execute(from_date, to_date)
 
         port.get_decisions_report_records.assert_not_called()
@@ -108,7 +107,7 @@ class TestCsvOutput:
 
         port.get_decisions_report_records.assert_called_once_with(
             datetime(2025, 3, 1, 0, 0, tzinfo=UTC),
-            datetime(2025, 4, 1, 0, 0, tzinfo=UTC),
+            datetime(2025, 3, 31, 0, 0, tzinfo=UTC),
         )
 
     def test_who_column_holds_the_caseworker_email_address(self):

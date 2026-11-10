@@ -22,7 +22,7 @@ from app.models.claim.index import (
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.models.notifications.enums import NotificationType
-from tests.e2e.factories import create_application_in_db
+from tests.e2e.factories import create_application_in_db, create_claim_for_reference
 
 
 def _pay_in_full_payload(overrides=None):
@@ -46,29 +46,9 @@ def _seed_claim(
     claimant_id: str | None = "claimant-123@provider.co.uk",
     claim_type: ClaimType = ClaimType.FINAL_BILL,
 ) -> Claim:
-    application_id = (
-        session.exec(
-            select(Application).where(Application.laa_reference == laa_reference)
-        )
-        .one()
-        .application_id
+    return create_claim_for_reference(
+        session, laa_reference, status, claim_type, claimant_id=claimant_id
     )
-    claim = Claim(
-        application_id=application_id,
-        claim_type_id=claim_type,
-        status_id=status,
-        submission_date=datetime.now(UTC),
-        total_profit_cost_net=Decimal("1000.00"),
-        total_profit_cost_gross=Decimal("1200.00"),
-        total_profit_cost_vat_zero=Decimal("500.00"),
-        poa_type_id=POAType.PROFIT_COST,
-        claimant_id=claimant_id,
-        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
-    )
-    session.add(claim)
-    session.commit()
-    session.refresh(claim)
-    return claim
 
 
 def test_204_pay_in_full_claim_creates_decision_amount_and_updates_status(

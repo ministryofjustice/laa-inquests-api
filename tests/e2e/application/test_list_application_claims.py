@@ -1,5 +1,3 @@
-import uuid
-from datetime import UTC, datetime
 from decimal import Decimal
 
 from sqlmodel import select
@@ -14,6 +12,7 @@ from app.models.claim.enums import (
     POAType,
 )
 from app.models.claim.index import Claim, ClaimDecision
+from tests.e2e.factories import create_claim_for_reference
 
 
 def _seed_claim(
@@ -22,32 +21,17 @@ def _seed_claim(
     status: ClaimStatus,
     claim_type: ClaimType = ClaimType.PAYMENT_ON_ACCOUNT,
 ) -> Claim:
-    application_id = (
-        session.exec(
-            select(Application).where(Application.laa_reference == laa_reference)
-        )
-        .one()
-        .application_id
-    )
     poa_type = (
         POAType.PROFIT_COST if claim_type == ClaimType.PAYMENT_ON_ACCOUNT else None
     )
-    claim = Claim(
-        application_id=application_id,
-        claim_type_id=claim_type,
-        status_id=status,
-        submission_date=datetime.now(UTC),
-        total_profit_cost_net=Decimal("1000.00"),
-        total_profit_cost_gross=Decimal("1200.00"),
-        total_profit_cost_vat_zero=Decimal("500.00"),
+    return create_claim_for_reference(
+        session,
+        laa_reference,
+        status,
+        claim_type,
         total_funds_remaining_after_claim=Decimal("8800.00"),
         poa_type_id=poa_type,
-        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
     )
-    session.add(claim)
-    session.commit()
-    session.refresh(claim)
-    return claim
 
 
 def _seed_final_bill_claim(
@@ -56,21 +40,15 @@ def _seed_final_bill_claim(
     status: ClaimStatus,
     claim_type: ClaimType = ClaimType.NIL_BILL,
 ) -> Claim:
-    application_id = (
-        session.exec(
-            select(Application).where(Application.laa_reference == laa_reference)
-        )
-        .one()
-        .application_id
-    )
-
-    claim = Claim(
-        application_id=application_id,
-        claim_type_id=claim_type,
-        status_id=status,
-        claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
+    return create_claim_for_reference(
+        session,
+        laa_reference,
+        status,
+        claim_type,
         total_profit_cost_gross=0,
         total_profit_cost_net=None,
+        total_profit_cost_vat_zero=None,
+        poa_type_id=None,
         inquest_outcomes=(InquestOutcomeCode.OPEN_CONCLUSION,),
         has_alternative_funding=False,
         has_recovery_costs_awarded=True,
@@ -80,10 +58,6 @@ def _seed_final_bill_claim(
         financial_recovery_interest=50,
         paying_party="Test Council",
     )
-    session.add(claim)
-    session.commit()
-    session.refresh(claim)
-    return claim
 
 
 def _seed_decision(

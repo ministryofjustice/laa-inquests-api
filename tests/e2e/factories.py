@@ -2,11 +2,13 @@
 
 import uuid
 from datetime import UTC, datetime
+from decimal import Decimal
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import (
+    Address,
     Application,
     ApplicationProceeding,
     Client,
@@ -32,6 +34,20 @@ def create_provider_in_db(session: Session, **overrides) -> Provider:
     return provider
 
 
+def create_address_in_db(session: Session, **overrides) -> Address:
+    """Persist an address and return it as an Address instance."""
+    defaults = {
+        "address_line_1": "123 Test Street",
+        "town_or_city": "Testville",
+        "postcode": "TE57 1NG",
+    }
+    address = Address(**(defaults | overrides))
+    session.add(address)
+    session.flush()
+    session.refresh(address)
+    return address
+
+
 def create_client_in_db(session: Session, **overrides) -> Client:
     """Persist a client with optional field overrides."""
     defaults = {
@@ -41,6 +57,8 @@ def create_client_in_db(session: Session, **overrides) -> Client:
         "correspondence_address_source": "USE_CLIENT_HOME_ADDRESS",
     }
     client = Client(**(defaults | overrides))
+    address = create_address_in_db(session)
+    client.home_address = address
     session.add(client)
     session.flush()
     session.refresh(client)
@@ -87,7 +105,7 @@ def create_application_in_db(
     )
 
     proceeding_defaults = {
-        "proceeding_id": ProceedingId.IQOT,
+        "proceeding_id": ProceedingId.IQ042,
         "merits_decision": MeritsDecision.SUBMITTED,
     }
     proceeding = ApplicationProceeding(
@@ -110,6 +128,46 @@ def create_application_in_db(
     return application
 
 
+def _new_claim_reference() -> str:
+    return f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}"
+
+
+def get_application_id(session: Session, laa_reference: str | int) -> int:
+    return session.exec(
+        select(Application.application_id).where(
+            Application.laa_reference == laa_reference
+        )
+    ).one()
+
+
+def create_claim_for_reference(
+    session: Session,
+    laa_reference: str | int,
+    status: ClaimStatus = ClaimStatus.SUBMITTED,
+    claim_type: ClaimType = ClaimType.PAYMENT_ON_ACCOUNT,
+    **overrides,
+) -> Claim:
+    """Persist a claim with standard POA amounts for the application with this LAA reference.
+
+    ``**overrides`` are ``Claim`` field names and replace the defaults.
+    """
+    fields = {
+        "application_id": get_application_id(session, laa_reference),
+        "claim_reference": _new_claim_reference(),
+        "claim_type_id": claim_type,
+        "status_id": status,
+        "total_profit_cost_net": Decimal("1000.00"),
+        "total_profit_cost_gross": Decimal("1200.00"),
+        "total_profit_cost_vat_zero": Decimal("500.00"),
+        "poa_type_id": POAType.PROFIT_COST,
+    }
+    claim = Claim(**(fields | overrides))
+    session.add(claim)
+    session.commit()
+    session.refresh(claim)
+    return claim
+
+
 def create_claim_in_db(
     session: Session,
     *,
@@ -126,10 +184,7 @@ def create_claim_in_db(
     """Persist a claim with optional field overrides."""
     claim = Claim(
         application_id=application_id,
-        claim_reference=(
-            claim_reference
-            or f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}"
-        ),
+        claim_reference=claim_reference or _new_claim_reference(),
         claim_type_id=claim_type,
         status_id=status,
         submission_date=submission_date or datetime.now(UTC),

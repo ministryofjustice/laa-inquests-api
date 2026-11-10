@@ -94,7 +94,7 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(c
         "/applications",
         json={
             "coronersLetterId": str(uuid.uuid4()),
-            "proceeding": {"proceedingId": "IQOT"},
+            "proceeding": {"proceedingId": "IQ042"},
             "client": {
                 "clientFirstName": "Test",
                 "clientLastName": "Surname",
@@ -202,6 +202,9 @@ def test_200_provider_details_included_on_application_response(session, client):
     provider = response.json()["provider"]
     assert provider["firmName"] == "Test Firm Name"
     assert provider["accountNumber"] == "0U651L"
+    assert provider["officeAddress"]["addressLine1"] == "Test Office Street"
+    assert provider["officeAddress"]["townOrCity"] == "Test City"
+    assert provider["officeAddress"]["postcode"] == "TE1 1ST"
 
 
 def test_200_provider_fields_are_null_when_provider_api_unavailable(session):
@@ -215,6 +218,7 @@ def test_200_provider_fields_are_null_when_provider_api_unavailable(session):
 
     mock_port = MagicMock()
     mock_port.get_firm_name.return_value = None
+    mock_port.get_office_address.return_value = None
 
     original_overrides = api.dependency_overrides.copy()
     api.dependency_overrides[get_provider_details_port] = lambda: mock_port
@@ -234,6 +238,7 @@ def test_200_provider_fields_are_null_when_provider_api_unavailable(session):
         api.dependency_overrides = original_overrides
 
     assert response.json()["provider"]["firmName"] is None
+    assert response.json()["provider"]["officeAddress"] is None
 
 
 def test_200_read_application_response_includes_coroners_letter_file_name(

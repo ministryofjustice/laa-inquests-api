@@ -61,7 +61,7 @@ def _make_request(with_addresses: bool = True) -> ApplicationCreate:
     return ApplicationCreate.model_validate(
         {
             "coronersLetterId": str(uuid.uuid4()),
-            "proceeding": {"proceedingId": "IQOT"},
+            "proceeding": {"proceedingId": "IQ042"},
             "client": client,
             "publicBodies": [{"publicBodyId": "Department for Transport"}],
             "deceased": {
@@ -209,7 +209,10 @@ class TestGetApplicationBacklogRecords:
         assert records[0].merits_decision == MeritsDecision.SUBMITTED
         assert records[0].created_at == first.created_at
         assert records[0].firm_code == "TEST01"
-        assert records[0].proceeding_code == ProceedingId.IQOT
+        assert records[0].office_id == first.provider.office_id
+        assert (
+            records[0].proceeding_description == first.proceeding.proceeding_description
+        )
         assert records[0].matter_type == "INQUESTS"
         assert records[0].potential_duplicate_applications == ["INQ-AAA-002"]
         assert records[1].potential_duplicate_applications == ["INQ-AAA-001"]
@@ -243,7 +246,7 @@ class TestCreateApplication:
         )
         assert stored_application.client.home_address_id is not None
         assert stored_application.client.correspondence_address_id is not None
-        assert stored_application.proceeding.proceeding_id == ProceedingId.IQOT
+        assert stored_application.proceeding.proceeding_id == ProceedingId.IQ042
         assert (
             stored_application.public_bodies[0].public_body_id
             == PublicBodyId.DEPARTMENT_FOR_TRANSPORT
@@ -314,7 +317,7 @@ class TestUpdateDecision:
         mock_session = MagicMock()
         adapter = ApplicationRepositoryAdapter(mock_session)
         proceeding = ApplicationProceeding(
-            application_id=1, proceeding_id=ProceedingId.IQOT
+            application_id=1, proceeding_id=ProceedingId.IQ042
         )
 
         adapter.update_decision(proceeding)

@@ -6,8 +6,8 @@ from app.auth.rbac import Role
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimStatus
 from app.models.claim.index import Claim
-from tests.e2e.application.test_create_claim import _make_request_body
 from tests.e2e.factories import create_claim_in_db
+from tests.helpers.claim_payloads import make_poa_claim_request_body
 
 CLAIM_REFERENCE_PATTERN = re.compile(r"^INQC-[A-Z0-9]{4}-[A-Z0-9]{4}$")
 AMBIGUOUS_CHARACTERS = "B8G6I10OQDS5Z2"
@@ -25,7 +25,7 @@ CASEWORKER_HEADERS = {
 def _submit_claim(client, laa_reference, overrides=None):
     return client.post(
         f"/applications/{laa_reference}/claim",
-        json=_make_request_body(overrides),
+        json=make_poa_claim_request_body(overrides),
         headers=PROVIDER_HEADERS,
     )
 

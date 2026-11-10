@@ -5,7 +5,6 @@ import pytest
 import sentry_sdk
 from fastapi import HTTPException, status
 from fastapi.testclient import TestClient
-from passlib.hash import argon2
 from sentry_sdk.transport import Transport
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session, SQLModel, StaticPool, create_engine
@@ -15,7 +14,6 @@ from app.auth.rbac import ROLE_PERMISSIONS_MAP
 from app.config.sentry import sentry_config
 from app.db import get_session
 from app.db.session import CustomSession
-from app.models import User
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import (
     Address,
@@ -46,40 +44,32 @@ from app.routers.monitoring import get_readiness_session_factory
 SECRET_KEY = "TEST_KEY"
 
 
-@pytest.fixture(name="session")
-def session_fixture():
-    engine = create_engine(
+def _new_engine():
+    return create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
+
+
+@pytest.fixture(scope="session")
+def seeded_template_db():
+    """Schema and seed data built once per run; each test gets its own copy."""
+    engine = _new_engine()
     test_session = sessionmaker(
         autocommit=False, autoflush=False, bind=engine, class_=CustomSession
     )
     SQLModel.metadata.create_all(engine)
-    users_to_add = [
-        {"username": "test_user", "password": "test_password", "disabled": False},
-        {"username": "jane_doe", "password": "password", "disabled": True},
-    ]
 
     with test_session() as db_session:
-        for user in users_to_add:
-            username = user.get("username")
-            password = user.get("password")
-            disabled = user.get("disabled")
-
-            password = argon2.hash(password)
-            new_user = User(
-                username=username, hashed_password=password, disabled=disabled
+        db_session.add(
+            Proceeding(
+                proceeding_id=ProceedingId.IQ042,
+                proceeding_name="A family member has died (Other)",
+                proceeding_description="A family member has died (Other)",
             )
-            db_session.add(new_user)
-        proceeding = Proceeding(
-            proceeding_id=ProceedingId.IQOT,
-            proceeding_name="Other",
-            proceeding_description="Other",
         )
-        db_session.add(proceeding)
         db_session.commit()
         application_proceeding = ApplicationProceeding(
-            proceeding_id=ProceedingId.IQOT,
+            proceeding_id=ProceedingId.IQ042,
             merits_decision=MeritsDecision.GRANTED,
         )
 
@@ -162,6 +152,20 @@ def session_fixture():
         db_session.commit()
         db_session.refresh(new_application)
 
+    return engine.raw_connection().driver_connection
+
+
+@pytest.fixture(name="session")
+def session_fixture(seeded_template_db):
+    engine = _new_engine()
+    raw_connection = engine.raw_connection()
+    seeded_template_db.backup(raw_connection.driver_connection)
+    raw_connection.close()
+
+    test_session = sessionmaker(
+        autocommit=False, autoflush=False, bind=engine, class_=CustomSession
+    )
+    with test_session() as db_session:
         yield db_session
 
 

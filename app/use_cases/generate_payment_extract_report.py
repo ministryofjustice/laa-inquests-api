@@ -22,7 +22,7 @@ from app.use_cases.report_date_range import resolve_report_window
 logger = logging.getLogger(__name__)
 
 ROWS_PER_CHUNK = 500
-MAX_REPORT_RANGE_DAYS = 90
+MAX_REPORT_RANGE_DAYS = 30
 
 
 class GeneratePaymentExtractReportUseCase:

@@ -1,3 +1,4 @@
+import sys
 from datetime import UTC, datetime
 
 import pytest
@@ -14,7 +15,16 @@ from tests.helpers.csv_helpers import parse_csv_rows
 class TestGetApplicationBacklogReport:
     """E2E tests for GET /reports/applications/backlog."""
 
-    def test_200_returns_csv_with_pending_applications(self, client):
+    def test_200_returns_csv_with_pending_applications(self, client, monkeypatch):
+        class FixedDatetime(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return datetime(2026, 9, 1, 16, 45, 1, tzinfo=tz)
+
+        monkeypatch.setattr(
+            sys.modules["app.routers.reports"], "datetime", FixedDatetime
+        )
+
         response = client.get(
             "/reports/applications/backlog",
             headers={
@@ -25,7 +35,10 @@ class TestGetApplicationBacklogReport:
         assert response.status_code == 200
         assert "text/csv" in response.headers["content-type"]
         assert "attachment" in response.headers["content-disposition"]
-        assert ".csv" in response.headers["content-disposition"]
+        assert (
+            "2026-09-01-164501 - Report - IDDS Applications Backlog - OFFICIAL-SENSITIVE - LAA Use Only.csv"
+            in response.headers["content-disposition"]
+        )
 
     def test_200_csv_contains_expected_headers(self, session, client):
         application = session.exec(select(Application)).first()
@@ -62,7 +75,9 @@ class TestGetApplicationBacklogReport:
         rows = parse_csv_rows(response.text)
 
         row = rows[0]
-        assert row["Current Application Status"] == MeritsDecision.SUBMITTED
+        assert row["Office account number"] == application.provider.office_id
+        assert row["Proceeding"] == application.proceeding.proceeding_description
+        assert row["Current application status"] == MeritsDecision.SUBMITTED
         for header in APPLICATION_BACKLOG_REPORT_HEADERS:
             if header == "Potential duplicate submitted application reference(s)":
                 assert row[header] == ""
@@ -90,7 +105,7 @@ class TestGetApplicationBacklogReport:
         )
 
         rows = parse_csv_rows(response.text)
-        status = [row["Current Application Status"] for row in rows]
+        status = [row["Current application status"] for row in rows]
 
         assert MeritsDecision.GRANTED not in status
         assert MeritsDecision.REFUSED not in status
@@ -125,11 +140,9 @@ class TestGetApplicationBacklogReport:
         rows = parse_csv_rows(response.text)
         assert len(rows) >= 3
 
-        dates = [row["Application Received Date"] for row in rows]
+        dates = [row["Application received date"] for row in rows]
         assert dates == sorted(dates)
-        assert rows[0]["Application / Case Reference Number"] == str(
-            older_app.laa_reference
-        )
+        assert rows[0]["Application reference"] == str(older_app.laa_reference)
 
     def test_200_csv_reports_direct_submitted_duplicates_in_both_directions(
         self, session, client
@@ -184,7 +197,7 @@ class TestGetApplicationBacklogReport:
 
         assert response.status_code == 200
         rows = parse_csv_rows(response.text)
-        assert [row["Application / Case Reference Number"] for row in rows] == [
+        assert [row["Application reference"] for row in rows] == [
             first.laa_reference,
             second.laa_reference,
             third.laa_reference,
@@ -231,7 +244,7 @@ class TestGetApplicationBacklogReport:
         assert response.status_code == 200
         rows = parse_csv_rows(response.text)
         assert len(rows) == 1
-        assert rows[0]["Application / Case Reference Number"] == pending.laa_reference
+        assert rows[0]["Application reference"] == pending.laa_reference
         assert rows[0]["Potential duplicate"] == "No"
         assert rows[0]["Potential duplicate submitted application reference(s)"] == ""
 
@@ -270,7 +283,7 @@ class TestGetApplicationBacklogReport:
 
         assert response.status_code == 200
         rows = parse_csv_rows(response.text)
-        assert [row["Application / Case Reference Number"] for row in rows] == [
+        assert [row["Application reference"] for row in rows] == [
             first.laa_reference,
             unrelated.laa_reference,
             second.laa_reference,
@@ -294,7 +307,7 @@ class TestGetApplicationBacklogReport:
         assert response.status_code == 200
         rows = parse_csv_rows(response.text)
         assert len(rows) == 1
-        assert rows[0]["Application / Case Reference Number"] == pending.laa_reference
+        assert rows[0]["Application reference"] == pending.laa_reference
         assert rows[0]["Potential duplicate"] == "No"
         assert rows[0]["Potential duplicate submitted application reference(s)"] == ""
 

@@ -4,7 +4,6 @@ import pytest
 
 from app.models.application.enums import AddressSource
 from app.models.application.index import (
-    Address,
     AddressResponse,
     PotentialDuplicateApplicationResponse,
 )
@@ -21,6 +20,7 @@ from app.use_cases.get_application import GetApplicationUseCase
 from tests.unit.factories import (
     create_base_application,
     create_base_client,
+    create_base_office_address,
     create_base_provider,
 )
 
@@ -49,6 +49,7 @@ def test_execute_calls_provider_details_port_get_firm_name_with_firm_code():
     )
     provider_details_port = MagicMock(spec=ProviderDetailsPort)
     provider_details_port.get_firm_name.return_value = "Test Firm"
+    provider_details_port.get_office_address.return_value = create_base_office_address()
     duplicates_port = MagicMock(spec=GetPotentialDuplicateApplicationsPort)
 
     use_case = GetApplicationUseCase(
@@ -68,6 +69,7 @@ def test_execute_returns_application_response_with_firm_name():
     )
     provider_details_port = MagicMock(spec=ProviderDetailsPort)
     provider_details_port.get_firm_name.return_value = "Test Firm"
+    provider_details_port.get_office_address.return_value = create_base_office_address()
     duplicates_port = MagicMock(spec=GetPotentialDuplicateApplicationsPort)
 
     use_case = GetApplicationUseCase(
@@ -111,6 +113,7 @@ def test_execute_returns_correct_account_number():
     )
     provider_details_port = MagicMock(spec=ProviderDetailsPort)
     provider_details_port.get_firm_name.return_value = "Test Firm"
+    provider_details_port.get_office_address.return_value = create_base_office_address()
     duplicates_port = MagicMock(spec=GetPotentialDuplicateApplicationsPort)
 
     use_case = GetApplicationUseCase(
@@ -131,6 +134,7 @@ def test_execute_returns_provider_email_in_response():
     )
     provider_details_port = MagicMock(spec=ProviderDetailsPort)
     provider_details_port.get_firm_name.return_value = "Test Firm"
+    provider_details_port.get_office_address.return_value = create_base_office_address()
     duplicates_port = MagicMock(spec=GetPotentialDuplicateApplicationsPort)
 
     use_case = GetApplicationUseCase(
@@ -145,19 +149,10 @@ def test_execute_returns_provider_email_in_response():
 
 def test_execute_calls_provider_details_port_get_office_address_with_office_id():
     get_application_port = MagicMock(spec=GetApplicationPort)
-    client = create_base_client(
-        correspondence_address_source=AddressSource.USE_PROVIDER_ADDRESS
-    )
     get_application_port.get_application_by_laa_reference.return_value = (
-        create_base_application(client=client)
+        create_base_application()
     )
-    office_address = Address(
-        address_line_1="123 Main St",
-        address_line_2="Suite 100",
-        town_or_city="Anytown",
-        county="Anycounty",
-        postcode="AB12 3CD",
-    )
+    office_address = create_base_office_address()
 
     port = MagicMock(spec=ProviderDetailsPort)
     port.get_firm_name.return_value = "Test Firm"
@@ -174,6 +169,28 @@ def test_execute_calls_provider_details_port_get_office_address_with_office_id()
     port.get_office_address.assert_called_once_with("0U651L")
 
 
+def test_execute_returns_application_response_with_provider_office_address():
+    get_application_port = MagicMock(spec=GetApplicationPort)
+    get_application_port.get_application_by_laa_reference.return_value = (
+        create_base_application()
+    )
+    office_address = create_base_office_address()
+
+    provider_details_port = MagicMock(spec=ProviderDetailsPort)
+    provider_details_port.get_firm_name.return_value = "Test Firm"
+    provider_details_port.get_office_address.return_value = office_address
+    duplicates_port = MagicMock(spec=GetPotentialDuplicateApplicationsPort)
+
+    use_case = GetApplicationUseCase(
+        get_application_port=get_application_port,
+        provider_details_port=provider_details_port,
+        get_potential_duplicate_applications_port=duplicates_port,
+    )
+    result = use_case.execute("1")
+
+    assert result.provider.office_address == AddressResponse(**office_address.__dict__)
+
+
 def test_execute_returns_application_response_with_office_correspondence_address():
     get_application_port = MagicMock(spec=GetApplicationPort)
     client = create_base_client(
@@ -182,13 +199,7 @@ def test_execute_returns_application_response_with_office_correspondence_address
     get_application_port.get_application_by_laa_reference.return_value = (
         create_base_application(client=client)
     )
-    office_address = Address(
-        address_line_1="123 Main St",
-        address_line_2="Suite 100",
-        town_or_city="Anytown",
-        county="Anycounty",
-        postcode="AB12 3CD",
-    )
+    office_address = create_base_office_address()
 
     port = MagicMock(spec=ProviderDetailsPort)
     port.get_firm_name.return_value = "Test Firm"
@@ -215,13 +226,7 @@ def test_execute_returns_application_response_with_office_correspondence_address
     get_application_port.get_application_by_laa_reference.return_value = (
         create_base_application(client=client)
     )
-    office_address = Address(
-        address_line_1="123 Main St",
-        address_line_2="Suite 100",
-        town_or_city="Anytown",
-        county="Anycounty",
-        postcode="AB12 3CD",
-    )
+    office_address = create_base_office_address()
 
     provider_details_port = MagicMock(spec=ProviderDetailsPort)
     provider_details_port.get_firm_name.return_value = "Test Firm"
@@ -276,13 +281,7 @@ def test_execute_returns_empty_list_when_get_potential_duplicates_handles_empty_
 
     provider_details_port = MagicMock(spec=ProviderDetailsPort)
     provider_details_port.get_firm_name.return_value = "Test Firm"
-    provider_details_port.get_office_address.return_value = Address(
-        address_line_1="123 Main St",
-        address_line_2="Suite 100",
-        town_or_city="Anytown",
-        county="Anycounty",
-        postcode="AB12 3CD",
-    )
+    provider_details_port.get_office_address.return_value = create_base_office_address()
     duplicates_port = MagicMock(spec=GetPotentialDuplicateApplicationsPort)
     duplicates_port.get_potential_duplicate_application_ids.return_value = []
 
@@ -306,13 +305,7 @@ def test_execute_returns_potential_duplicates_when_get_potential_duplicates_retu
 
     provider_details_port = MagicMock(spec=ProviderDetailsPort)
     provider_details_port.get_firm_name.return_value = "Test Firm"
-    provider_details_port.get_office_address.return_value = Address(
-        address_line_1="123 Main St",
-        address_line_2="Suite 100",
-        town_or_city="Anytown",
-        county="Anycounty",
-        postcode="AB12 3CD",
-    )
+    provider_details_port.get_office_address.return_value = create_base_office_address()
     duplicates_port = MagicMock(spec=GetPotentialDuplicateApplicationsPort)
     duplicates_port.get_potential_duplicate_application_ids.return_value = [1]
     duplicates_port.get_duplicate_applications_by_ids.return_value = [application]
@@ -345,13 +338,7 @@ def test_execute_returns_multiple_potential_duplicates_when_get_potential_duplic
 
     provider_details_port = MagicMock(spec=ProviderDetailsPort)
     provider_details_port.get_firm_name.return_value = "Test Firm"
-    provider_details_port.get_office_address.return_value = Address(
-        address_line_1="123 Main St",
-        address_line_2="Suite 100",
-        town_or_city="Anytown",
-        county="Anycounty",
-        postcode="AB12 3CD",
-    )
+    provider_details_port.get_office_address.return_value = create_base_office_address()
     duplicates_port = MagicMock(spec=GetPotentialDuplicateApplicationsPort)
     duplicates_port.get_potential_duplicate_application_ids.return_value = [1, 2]
     duplicates_port.get_duplicate_applications_by_ids.return_value = [
@@ -387,6 +374,7 @@ def test_execute_returns_empty_potential_duplicates_list_when_duplicate_ids_foun
     )
     provider_details_port = MagicMock(spec=ProviderDetailsPort)
     provider_details_port.get_firm_name.return_value = "Test Firm"
+    provider_details_port.get_office_address.return_value = create_base_office_address()
     duplicates_port = MagicMock(spec=GetPotentialDuplicateApplicationsPort)
     duplicates_port.get_potential_duplicate_application_ids.return_value = [1]
     duplicates_port.get_duplicate_applications_by_ids.return_value = []

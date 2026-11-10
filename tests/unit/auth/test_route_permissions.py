@@ -106,7 +106,8 @@ EXPECTED_ROUTE_PERMISSIONS: dict[
         Permission.REPORTS_APPLICATION_WORKFLOW_READ,
         Permission.REPORTS_CLAIM_WORKFLOW_READ,
     ],
-    ("GET", "/reports/ogd-costs"): Permission.REPORTS_OGD_COSTS_READ,
+    ("GET", "/reports/ogd-costs"): Permission.REPORTS_COSTS_READ,
+    ("GET", "/reports/cost-limit-forecast"): Permission.REPORTS_COSTS_READ,
     # Monitoring
     ("GET", "/health"): PUBLIC,
     ("GET", "/status"): PUBLIC,

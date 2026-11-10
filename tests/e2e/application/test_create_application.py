@@ -38,7 +38,7 @@ def _make_request_body(client_overrides=None):
         client.update(client_overrides)
     return {
         "coronersLetterId": str(uuid.uuid4()),
-        "proceeding": {"proceedingId": "IQOT"},
+        "proceeding": {"proceedingId": "IQ042"},
         "client": client,
         "publicBodies": [{"publicBodyId": "Department for Transport"}],
         "deceased": {
@@ -94,7 +94,7 @@ class TestCreateApplication:
         )
         new_application = response.json()
         proceeding = new_application["proceeding"]
-        assert proceeding["proceedingId"] == "IQOT"
+        assert proceeding["proceedingId"] == "IQ042"
         assert proceeding["categoryOfLaw"] == "INQUESTS"
         assert proceeding["matterType"] == "INQUESTS"
         assert proceeding["levelOfService"] == "FULL_REPRESENTATION"
@@ -511,6 +511,23 @@ class TestCreateApplication:
     def test_422_create_application_fails_without_office_id(self, client):
         body = _make_request_body()
         del body["provider"]["officeId"]
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 422
+
+    def test_422_create_application_rejected_when_proceeding_id_is_invalid(
+        self, client
+    ):
+        body = _make_request_body()
+        body["proceeding"] = {"proceedingId": "INVALID"}
 
         response = client.post(
             "/applications",
