@@ -1,7 +1,11 @@
 from datetime import UTC, datetime
 
 from app.models.application.certificate import ApplicationCertificate
-from app.models.application.index import Application, ApplicationProceeding
+from app.models.application.index import (
+    AddressResponse,
+    Application,
+    ApplicationProceeding,
+)
 from app.ports.provider_details_port import ProviderDetailsPort
 
 
@@ -41,15 +45,20 @@ class CreateCertificateContextUseCase:
         )
 
         if application.client.correspondence_address_source == "USE_PROVIDER_ADDRESS":
-            client_address = office_address.model_copy()
+            source_address = office_address
         elif (
             application.client.correspondence_address_source == "USE_SPECIFIED_ADDRESS"
         ):
-            client_address = application.client.correspondence_address
+            source_address = application.client.correspondence_address
         else:
-            client_address = application.client.home_address
+            source_address = application.client.home_address
 
-        if application.client.correspondence_recipient:
+        # Copy so the c/o prefix is never written back to the persisted Address.
+        client_address = (
+            AddressResponse.model_validate(source_address) if source_address else None
+        )
+
+        if client_address and application.client.correspondence_recipient:
             client_address.address_line_1 = f"c/o {application.client.correspondence_recipient.recipient_name} {client_address.address_line_1}"
 
         certificate_type = proceeding.certificate_type
