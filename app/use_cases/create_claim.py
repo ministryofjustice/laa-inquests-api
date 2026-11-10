@@ -276,43 +276,6 @@ class CreateClaimUseCase:
             )
             raise
 
-        if (
-            application is not None
-            and self.gov_notify_port is not None
-            and self.provider_details_port is not None
-        ):
-            try:
-                self.create_history_event_port.create_history_event(
-                    event_reference=HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION,
-                    actor=ActorType.SYSTEM,
-                    actor_type=ActorType.SYSTEM,
-                    application_id=application.application_id,
-                    event_data={
-                        "recipient": application.provider.email_address,
-                        "channel": NotificationType.EMAIL,
-                    },
-                )
-                self.gov_notify_port.send_claim_submit_confirmation_email(
-                    claim=claim,
-                    application=application,
-                    recipient_email=application.provider.email_address,
-                    firm_name=self.provider_details_port.get_firm_name(
-                        application.provider.firm_code
-                    ),
-                )
-                self.create_history_event_port.commit()
-            except Exception:
-                logger.exception(
-                    "Failed to send claim submission email",
-                    extra=build_log_extra(
-                        event="notification_requested_failed",
-                        laa_reference=command.laa_reference,
-                        claim_id=claim.claim_id,
-                        notification_channel="email",
-                    ),
-                )
-                self.create_history_event_port.rollback()
-
         rejection_reasons: list[ReasonCode] | None = None
 
         if application is not None:
@@ -371,6 +334,10 @@ class CreateClaimUseCase:
                             claim_id=claim.claim_id,
                         ),
                     )
+
+            # An auto-rejected claim is treated as not received, so no email is sent
+            if claim.status_id != ClaimStatus.REJECTED:
+                self._send_submission_confirmation(command, application, claim)
 
             if (
                 not rejection.is_rejected
@@ -432,6 +399,42 @@ class CreateClaimUseCase:
                     )
 
         return CreateClaimResult(claim=claim, rejection_reasons=rejection_reasons)
+
+    def _send_submission_confirmation(self, command, application, claim) -> None:
+        if self.gov_notify_port is None or self.provider_details_port is None:
+            return
+
+        try:
+            self.create_history_event_port.create_history_event(
+                event_reference=HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION,
+                actor=ActorType.SYSTEM,
+                actor_type=ActorType.SYSTEM,
+                application_id=application.application_id,
+                event_data={
+                    "recipient": application.provider.email_address,
+                    "channel": NotificationType.EMAIL,
+                },
+            )
+            self.gov_notify_port.send_claim_submit_confirmation_email(
+                claim=claim,
+                application=application,
+                recipient_email=application.provider.email_address,
+                firm_name=self.provider_details_port.get_firm_name(
+                    application.provider.firm_code
+                ),
+            )
+            self.create_history_event_port.commit()
+        except Exception:
+            logger.exception(
+                "Failed to send claim submission email",
+                extra=build_log_extra(
+                    event="notification_requested_failed",
+                    laa_reference=command.laa_reference,
+                    claim_id=claim.claim_id,
+                    notification_channel="email",
+                ),
+            )
+            self.create_history_event_port.rollback()
 
     def _calculate_total_funds_remaining(
         self, application, existing_claims, validated_claim
