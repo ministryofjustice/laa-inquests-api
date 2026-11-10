@@ -76,7 +76,7 @@ def test_422_grant_decision_certificate_start_date_in_future(client):
     assert response.status_code == 422
 
 
-def test_500_grant_decision_application_already_granted(client, session):
+def test_409_grant_decision_application_already_granted(client, session):
     application = create_application_in_db(
         session, proceeding_overrides={"merits_decision": MeritsDecision.GRANTED}
     )

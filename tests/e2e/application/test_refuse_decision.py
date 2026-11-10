@@ -1,9 +1,7 @@
 import pytest
-from sqlmodel import select
 
 from app.auth.rbac import Role
 from app.models.application.enums import MeritsDecision
-from app.models.application.index import Application
 from tests.e2e.factories import create_application_in_db
 
 pytestmark = pytest.mark.usefixtures("mock_gov_notify")
@@ -48,8 +46,10 @@ def test_404_refuse_decision_application_not_found(client):
     assert response.status_code == 404
 
 
-def test_500_refuse_decision_application_already_granted(client, session):
-    application = session.exec(select(Application)).first()
+def test_409_refuse_decision_application_already_granted(client, session):
+    application = create_application_in_db(
+        session, proceeding_overrides={"merits_decision": MeritsDecision.GRANTED}
+    )
     laa_reference = application.laa_reference
     application.proceeding.merits_decision = MeritsDecision.GRANTED
     session.add(application.proceeding)
