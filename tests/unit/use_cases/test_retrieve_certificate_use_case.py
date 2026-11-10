@@ -4,7 +4,6 @@ import pytest
 
 from app.models.application.certificate import ApplicationCertificate
 from app.models.application.enums import MeritsDecision
-from app.models.application.index import Application, ApplicationProceeding
 from app.ports.get_application_port import GetApplicationPort
 from app.use_cases.create_certificate_context import CreateCertificateContextUseCase
 from app.use_cases.exceptions import (
@@ -21,17 +20,13 @@ from tests.unit.factories import (
 )
 
 
-def _make_application() -> Application:
-    application = MagicMock(spec=Application)
-    application.laa_reference = "INQ-123-REF"
-    application.proceeding = MagicMock(spec=ApplicationProceeding)
-    application.overall_decision = MeritsDecision.GRANTED
-    return application
-
-
 def test_execute_calls_get_application_port_with_laa_reference():
     get_application_port = MagicMock(spec=GetApplicationPort)
-    application = _make_application()
+    application = create_base_application(
+        proceeding=create_base_application_proceeding(
+            merits_decision=MeritsDecision.GRANTED
+        ),
+    )
     get_application_port.get_application_by_laa_reference.return_value = application
     create_certificate_context_use_case = MagicMock(
         spec=CreateCertificateContextUseCase
@@ -52,7 +47,11 @@ def test_execute_calls_get_application_port_with_laa_reference():
 
 def test_execute_returns_populated_certificate_context():
     get_application_port = MagicMock(spec=GetApplicationPort)
-    application = _make_application()
+    application = create_base_application(
+        proceeding=create_base_application_proceeding(
+            merits_decision=MeritsDecision.GRANTED
+        ),
+    )
     get_application_port.get_application_by_laa_reference.return_value = application
     certificate_context = MagicMock(spec=ApplicationCertificate)
     create_certificate_context_use_case = MagicMock(
@@ -101,8 +100,9 @@ def test_execute_raises_application_not_granted_error_when_application_not_grant
     overall_decision,
 ):
     get_application_port = MagicMock(spec=GetApplicationPort)
-    application = _make_application()
-    application.overall_decision = overall_decision
+    application = create_base_application(
+        proceeding=create_base_application_proceeding(merits_decision=overall_decision),
+    )
     get_application_port.get_application_by_laa_reference.return_value = application
     create_certificate_context_use_case = MagicMock(
         spec=CreateCertificateContextUseCase
