@@ -13,6 +13,7 @@ from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.notifications.enums import NotificationType
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.use_cases.exceptions import (
+    ApplicationAssessmentConflictError,
     ApplicationNotFoundError,
     GrantDecisionError,
 )
@@ -271,3 +272,28 @@ def test_grant_decision_raises_exception_when_send_grant_letter_fails_and_rollba
 
     update_decision_port.rollback.assert_called_once()
     create_history_event_port.rollback.assert_called_once()
+
+
+def test_grant_decision_raises_ApplicationAssessmentConflictError_when_application_already_granted(
+    use_case,
+    update_decision_port,
+    create_history_event_port,
+    send_grant_email_use_case,
+    send_grant_letter_use_case,
+    grant_request,
+):
+    application = update_decision_port.get_application_by_laa_reference.return_value
+    application.proceeding.merits_decision = MeritsDecision.GRANTED
+
+    with pytest.raises(
+        ApplicationAssessmentConflictError,
+        match="Application 1 has already been granted and in protected final state",
+    ):
+        use_case.execute("1", grant_request)
+
+    update_decision_port.commit.assert_not_called()
+    update_decision_port.rollback.assert_not_called()
+    create_history_event_port.commit.assert_not_called()
+    create_history_event_port.rollback.assert_not_called()
+    send_grant_email_use_case.execute.assert_not_called()
+    send_grant_letter_use_case.execute.assert_not_called()

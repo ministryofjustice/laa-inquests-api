@@ -114,6 +114,10 @@ class AuditError(Exception):
     pass
 
 
+class ApplicationAssessmentConflictError(Exception):
+    pass
+
+
 class GrantDecisionError(Exception):
     pass
 

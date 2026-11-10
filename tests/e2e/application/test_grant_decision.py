@@ -1,10 +1,8 @@
 from datetime import UTC, date, datetime
 
-from sqlmodel import select
-
 from app.auth.rbac import Role
 from app.models.application.enums import MeritsDecision
-from app.models.application.index import Application
+from tests.e2e.factories import create_application_in_db
 
 
 def _grant_decision_payload(overrides=None):
@@ -15,12 +13,8 @@ def _grant_decision_payload(overrides=None):
 
 
 def test_204_grant_decision_to_granted(session, client):
-    application = session.exec(select(Application)).first()
+    application = create_application_in_db(session)
     laa_reference = application.laa_reference
-    application.proceeding.merits_decision = MeritsDecision.SUBMITTED
-    session.add(application.proceeding)
-    session.commit()
-    session.refresh(application)
     assert application.proceeding.substantive_cost_limitation == 0
 
     response = client.patch(
@@ -80,3 +74,21 @@ def test_422_grant_decision_certificate_start_date_in_future(client):
     )
 
     assert response.status_code == 422
+
+
+def test_409_grant_decision_application_already_granted(client, session):
+    application = create_application_in_db(
+        session, proceeding_overrides={"merits_decision": MeritsDecision.GRANTED}
+    )
+    laa_reference = application.laa_reference
+
+    response = client.patch(
+        f"/applications/{laa_reference}/grant-decision",
+        json=_grant_decision_payload(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
+        },
+    )
+
+    assert response.status_code == 409

@@ -8,6 +8,7 @@ from sqlmodel import Session, select
 
 from app.models.application.enums import MeritsDecision
 from app.models.application.index import (
+    Address,
     Application,
     ApplicationProceeding,
     Client,
@@ -33,6 +34,20 @@ def create_provider_in_db(session: Session, **overrides) -> Provider:
     return provider
 
 
+def create_address_in_db(session: Session, **overrides) -> Address:
+    """Persist an address and return it as an Address instance."""
+    defaults = {
+        "address_line_1": "123 Test Street",
+        "town_or_city": "Testville",
+        "postcode": "TE57 1NG",
+    }
+    address = Address(**(defaults | overrides))
+    session.add(address)
+    session.flush()
+    session.refresh(address)
+    return address
+
+
 def create_client_in_db(session: Session, **overrides) -> Client:
     """Persist a client with optional field overrides."""
     defaults = {
@@ -42,6 +57,8 @@ def create_client_in_db(session: Session, **overrides) -> Client:
         "correspondence_address_source": "USE_CLIENT_HOME_ADDRESS",
     }
     client = Client(**(defaults | overrides))
+    address = create_address_in_db(session)
+    client.home_address = address
     session.add(client)
     session.flush()
     session.refresh(client)

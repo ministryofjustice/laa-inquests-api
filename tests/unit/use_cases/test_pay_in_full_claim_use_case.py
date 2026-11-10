@@ -39,6 +39,7 @@ from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.exceptions import (
     ApplicationNotFoundError,
+    ClaimAssessmentConflictError,
     ClaimNotFoundError,
     InvalidClaimError,
 )
@@ -149,6 +150,18 @@ def test_raises_claim_not_found_when_claim_belongs_to_another_application():
 
     with pytest.raises(ClaimNotFoundError):
         use_case.execute(PayInFullClaimCommand("2", "INQC-0000-0001"))
+
+
+def test_raises_claim_assessment_conflict_when_claim_has_been_assessed():
+    assessed_claim = _claim(claim_id=1, application_id=1)
+    assessed_claim.status_id = ClaimStatus.PAY_IN_FULL
+    use_case, *_ = _build_use_case(
+        claim=assessed_claim,
+        application=_application(application_id=1),
+    )
+
+    with pytest.raises(ClaimAssessmentConflictError):
+        use_case.execute(PayInFullClaimCommand("1", "INQC-0000-0001"))
 
 
 def test_creates_pay_in_full_decision_amount_updates_status_and_commits():

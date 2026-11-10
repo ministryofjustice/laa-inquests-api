@@ -23,7 +23,11 @@ from app.ports.claim.update_claim_status_port import UpdateClaimStatusPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.provider_details_port import ProviderDetailsPort
-from app.use_cases.exceptions import ApplicationNotFoundError, ClaimNotFoundError
+from app.use_cases.exceptions import (
+    ApplicationNotFoundError,
+    ClaimAssessmentConflictError,
+    ClaimNotFoundError,
+)
 from app.use_cases.reject_claim import RejectClaimCommand, RejectClaimUseCase
 
 
@@ -120,6 +124,18 @@ def test_raises_claim_not_found_when_claim_belongs_to_another_application():
 
     with pytest.raises(ClaimNotFoundError):
         use_case.execute(RejectClaimCommand("2", "INQC-0000-0001", "reason"))
+
+
+def test_raises_claim_assessment_conflict_when_claim_has_been_assessed():
+    assessed_claim = _claim(claim_id=1, application_id=1)
+    assessed_claim.status_id = ClaimStatus.PAY_IN_FULL
+    use_case, *_ = _build_use_case(
+        claim=assessed_claim,
+        application=_application(application_id=1),
+    )
+
+    with pytest.raises(ClaimAssessmentConflictError):
+        use_case.execute(RejectClaimCommand("1", "INQC-0000-0001", "reason"))
 
 
 def test_creates_reject_decision_reason_updates_status_and_commits():
