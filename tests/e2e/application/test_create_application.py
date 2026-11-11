@@ -360,6 +360,46 @@ class TestCreateApplication:
 
         assert response.status_code == 422
 
+    def test_422_rejected_when_deceased_date_of_death_is_before_date_of_birth(
+        self, client
+    ):
+        body = _make_request_body()
+        body["deceased"]["deceasedDateOfBirth"] = "2025-01-02"
+        body["deceased"]["deceasedDateOfDeath"] = "2025-01-01"
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 422
+        assert (
+            "deceased_date_of_death must not be before deceased_date_of_birth"
+            in response.text
+        )
+
+    def test_201_accepted_when_deceased_date_of_death_equals_date_of_birth(
+        self, client
+    ):
+        body = _make_request_body()
+        body["deceased"]["deceasedDateOfBirth"] = "2025-01-01"
+        body["deceased"]["deceasedDateOfDeath"] = "2025-01-01"
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 201
+
     def test_201_accepted_when_has_no_fixed_abode_is_true_and_no_home_address_provided(
         self, client
     ):
