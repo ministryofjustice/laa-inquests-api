@@ -26,7 +26,10 @@ from app.auth.rbac import Permission, require_permission_from
 from app.config import Config
 from app.db import get_session
 from app.domain.claim_error import ClaimErrorCode
-from app.domain.constants.claim_messages import PROVIDER_OFFICE_ID_MISMATCH_MESSAGE
+from app.domain.constants.claim_messages import (
+    PROVIDER_OFFICE_ID_MISMATCH_MESSAGE,
+    PROVIDER_OFFICE_NOT_FOUND_MESSAGE,
+)
 from app.logging_utils import build_log_extra
 from app.models.application.certificate import ApplicationCertificateResponse
 from app.models.application.enums import MeritsDecision
@@ -702,6 +705,14 @@ def create_claim(
             detail={
                 "errorCode": ClaimErrorCode.PROVIDER_OFFICE_ID_MISMATCH,
                 "message": PROVIDER_OFFICE_ID_MISMATCH_MESSAGE,
+            },
+        )
+    except ProviderOfficeNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "errorCode": ClaimErrorCode.PROVIDER_OFFICE_NOT_FOUND,
+                "message": PROVIDER_OFFICE_NOT_FOUND_MESSAGE,
             },
         )
     except InvalidClaimError as e:
