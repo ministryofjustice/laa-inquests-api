@@ -1,7 +1,7 @@
 from datetime import UTC, date, datetime
 
 from app.auth.rbac import Role
-from app.models.application.enums import MeritsDecision
+from app.models.application.enums import CorrespondenceRecipientType, MeritsDecision
 from tests.e2e.factories import create_application_in_db
 
 
@@ -33,6 +33,32 @@ def test_204_grant_decision_to_granted(session, client):
     assert application.proceeding.certificate_start_date == date(2000, 1, 1)
     assert application.proceeding.certificate_issue_date == datetime.now(UTC).date()
     assert application.proceeding.substantive_cost_limitation == 10000
+
+
+def test_204_grant_decision_does_not_persist_care_of_recipient_into_client_address(
+    session, client
+):
+    application = create_application_in_db(
+        session,
+        client_overrides={
+            "correspondence_recipient_type": CorrespondenceRecipientType.PERSON,
+            "correspondence_recipient_name": "Test Recipient Name",
+        },
+    )
+    original_address_line_1 = application.client.home_address.address_line_1
+
+    response = client.patch(
+        f"/applications/{application.laa_reference}/grant-decision",
+        json=_grant_decision_payload(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {Role.APPLICATIONS_CASEWORKER.value}",
+        },
+    )
+
+    assert response.status_code == 204
+    session.expire_all()
+    assert application.client.home_address.address_line_1 == original_address_line_1
 
 
 def test_404_grant_decision_application_not_found(client):
