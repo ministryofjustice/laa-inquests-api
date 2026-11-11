@@ -126,6 +126,7 @@ from app.use_cases.exceptions import (
     InvalidCoronersLetterDocumentIdError,
     ProviderDetailsRetrievalError,
     ProviderOfficeMismatchError,
+    ProviderOfficeNotFoundError,
 )
 from app.use_cases.get_application import GetApplicationUseCase
 from app.use_cases.get_application_history import GetApplicationHistoryUseCase
@@ -571,6 +572,8 @@ def create_application(
         return application
     except ProviderOfficeMismatchError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except ProviderOfficeNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except ProviderDetailsRetrievalError as e:
         raise HTTPException(status_code=500, detail=str(e))
 

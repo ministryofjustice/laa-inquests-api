@@ -6,7 +6,10 @@ import httpx
 from app.logging_utils import build_log_extra, duration_ms
 from app.models.application.index import Address
 from app.ports.provider_details_port import ProviderDetailsPort
-from app.use_cases.exceptions import ProviderDetailsRetrievalError
+from app.use_cases.exceptions import (
+    ProviderDetailsRetrievalError,
+    ProviderOfficeNotFoundError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +43,7 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
                         office_id=office_id,
                     ),
                 )
-                return self._get_firm_name_from_office(office_id)
+                return self._get_firm_name_from_office(office_id, firm_code)
 
             response.raise_for_status()
             result = response.json()["firm"]["firmName"]
@@ -85,7 +88,7 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
                 f"Unexpected provider-firms response for firm {firm_code}"
             ) from exc
 
-    def _get_firm_name_from_office(self, office_id: str) -> str | None:
+    def _get_firm_name_from_office(self, office_id: str, firm_code: str) -> str | None:
         started_at = time.perf_counter()
         try:
             url = f"{self.base_url}/api/v1/provider-offices/{office_id}"
@@ -93,6 +96,13 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
                 url,
                 headers={"X-Authorization": self.api_key},
             )
+
+            if response.status_code == 204:
+                # Both the firm and office lookups came back empty: genuinely not found.
+                raise ProviderOfficeNotFoundError(
+                    f"Office {office_id} details not found for firm {firm_code}"
+                )
+
             response.raise_for_status()
             result = response.json()["firm"]["firmName"]
             logger.info(
@@ -144,6 +154,10 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
                 url,
                 headers={"X-Authorization": self.api_key},
             )
+
+            if response.status_code == 204:
+                raise ProviderOfficeNotFoundError(f"Office {office_id} not found")
+
             response.raise_for_status()
 
             address = Address(
@@ -193,13 +207,6 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
             raise ProviderDetailsRetrievalError(
                 f"Unexpected provider-offices response for office {office_id}"
             ) from exc
-
-    def does_office_exist(self, office_id: str) -> bool:
-        try:
-            self.get_office_address(office_id)
-        except ProviderDetailsRetrievalError:
-            return False
-        return True
 
     def get_firms_by_ids(self, firm_ids: list[str]) -> list[dict]:
         if not firm_ids:

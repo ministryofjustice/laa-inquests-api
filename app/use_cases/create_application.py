@@ -8,10 +8,7 @@ from app.ports.create_application_port import CreateApplicationPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.provider_details_port import ProviderDetailsPort
-from app.use_cases.exceptions import (
-    ProviderDetailsRetrievalError,
-    ProviderOfficeMismatchError,
-)
+from app.use_cases.exceptions import ProviderOfficeMismatchError
 from app.use_cases.identify_duplicate_applications import (
     IdentifyDuplicateApplicationsUseCase,
 )
@@ -55,12 +52,9 @@ class CreateApplicationUseCase:
                     f"Office id {application.provider.office_id} is not in the user's office codes"
                 )
 
-            if not self.provider_details_port.does_office_exist(
-                application.provider.office_id
-            ):
-                raise ProviderDetailsRetrievalError(
-                    f"Office id {application.provider.office_id} does not exist in provider details API"
-                )
+            self.provider_details_port.get_firm_name(
+                firm_code, application.provider.office_id
+            )
 
             self.identify_duplicate_applications_use_case.execute(
                 application_id=application.application_id
