@@ -249,7 +249,9 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
                 f"Failed to retrieve firms from provider details API: #{exc}"
             ) from exc
 
-    def get_provider_offices_by_firm_id(self, firm_id: str) -> list[dict]:
+    def get_provider_offices_by_firm_id(
+        self, firm_id: str, candidate_office_codes: frozenset[str]
+    ) -> list[dict]:
         started_at = time.perf_counter()
         try:
             url = f"{self.base_url}/api/v1/provider-firms/{firm_id}/provider-offices"
@@ -257,6 +259,24 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
                 url,
                 headers={"X-Authorization": self.api_key},
             )
+
+            if response.status_code == 204:
+                # 204 is ambiguous upstream: firm not found, or firm has no offices.
+                # Doesn't mean the user's own known offices are invalid, so resolve them individually.
+                logger.info(
+                    f"No offices found for firm {firm_id}, falling back to per-office lookups",
+                    extra=build_log_extra(
+                        event="provider_details_offices_by_firm_fallback_used",
+                        route="provider-details:provider-firms:provider-offices",
+                        method="GET",
+                        status_code=response.status_code,
+                        duration_ms=duration_ms(started_at),
+                        firm_id=firm_id,
+                        candidate_office_count=len(candidate_office_codes),
+                    ),
+                )
+                return self._get_offices_from_candidates(candidate_office_codes)
+
             response.raise_for_status()
 
             offices = response.json()["offices"]
@@ -315,3 +335,35 @@ class ProviderDetailsAdapter(ProviderDetailsPort):
             raise ProviderDetailsRetrievalError(
                 f"Unexpected provider-offices response for firm {firm_id}"
             ) from exc
+
+    def _get_offices_from_candidates(self, office_codes: frozenset[str]) -> list[dict]:
+        results = []
+        for office_code in office_codes:
+            try:
+                address = self.get_office_address(office_code)
+            except ProviderDetailsRetrievalError:
+                # Best-effort: a single office failing (genuinely not found, or a
+                # transient error) shouldn't hide the caller's other valid offices.
+                logger.warning(
+                    "Skipping office in candidate fallback lookup",
+                    extra=build_log_extra(
+                        event="provider_details_offices_by_firm_fallback_candidate_skipped",
+                        route="provider-details:provider-offices",
+                        method="GET",
+                        office_code=office_code,
+                    ),
+                )
+                continue
+            results.append(
+                {
+                    "office_code": office_code,
+                    "address": {
+                        "address_line_1": address.address_line_1,
+                        "address_line_2": address.address_line_2 or "",
+                        "town_or_city": address.town_or_city,
+                        "county": address.county or "",
+                        "postcode": address.postcode,
+                    },
+                }
+            )
+        return results

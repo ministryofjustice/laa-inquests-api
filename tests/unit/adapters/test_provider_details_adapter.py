@@ -335,7 +335,7 @@ class TestGetProviderOfficesByFirmId:
         }
 
         with patch("httpx.get", return_value=mock_response):
-            result = adapter.get_provider_offices_by_firm_id("1234")
+            result = adapter.get_provider_offices_by_firm_id("1234", frozenset())
 
         assert result == [
             {
@@ -365,7 +365,7 @@ class TestGetProviderOfficesByFirmId:
         mock_response.json.return_value = {"offices": []}
 
         with patch("httpx.get", return_value=mock_response) as mock_get:
-            adapter.get_provider_offices_by_firm_id("1234")
+            adapter.get_provider_offices_by_firm_id("1234", frozenset())
 
         mock_get.assert_called_once_with(
             "https://example.com/api/v1/provider-firms/1234/provider-offices",
@@ -382,7 +382,7 @@ class TestGetProviderOfficesByFirmId:
             patch("httpx.get", return_value=mock_response),
             pytest.raises(ProviderDetailsRetrievalError),
         ):
-            adapter.get_provider_offices_by_firm_id("1234")
+            adapter.get_provider_offices_by_firm_id("1234", frozenset())
 
     def test_raises_provider_details_retrieval_error_with_message_on_http_error(
         self, adapter
@@ -396,7 +396,7 @@ class TestGetProviderOfficesByFirmId:
             patch("httpx.get", return_value=mock_response),
             pytest.raises(ProviderDetailsRetrievalError) as exc_info,
         ):
-            adapter.get_provider_offices_by_firm_id("1234")
+            adapter.get_provider_offices_by_firm_id("1234", frozenset())
 
         assert (
             str(exc_info.value)
@@ -411,8 +411,107 @@ class TestGetProviderOfficesByFirmId:
             patch("httpx.get", return_value=mock_response),
             pytest.raises(ProviderDetailsRetrievalError) as exc_info,
         ):
-            adapter.get_provider_offices_by_firm_id("1234")
+            adapter.get_provider_offices_by_firm_id("1234", frozenset())
 
         assert (
             str(exc_info.value) == "Unexpected provider-offices response for firm 1234"
         )
+
+    def test_falls_back_to_candidate_offices_on_204(self, adapter):
+        firm_response = MagicMock()
+        firm_response.status_code = 204
+
+        office_response = MagicMock()
+        office_response.status_code = 200
+        office_response.json.return_value = {
+            "office": {
+                "addressLine1": "1 Test Street",
+                "addressLine2": "Suite 2",
+                "city": "London",
+                "county": "Greater London",
+                "postCode": "SW1A 1AA",
+            }
+        }
+
+        with patch("httpx.get", side_effect=[firm_response, office_response]):
+            result = adapter.get_provider_offices_by_firm_id(
+                "1234", frozenset({"0A123A"})
+            )
+
+        assert result == [
+            {
+                "office_code": "0A123A",
+                "address": {
+                    "address_line_1": "1 Test Street",
+                    "address_line_2": "Suite 2",
+                    "town_or_city": "London",
+                    "county": "Greater London",
+                    "postcode": "SW1A 1AA",
+                },
+            }
+        ]
+
+    def test_fallback_skips_candidates_that_are_not_found(self, adapter):
+        firm_response = MagicMock()
+        firm_response.status_code = 204
+
+        found_response = MagicMock()
+        found_response.status_code = 200
+        found_response.json.return_value = {
+            "office": {
+                "addressLine1": "1 Test Street",
+                "addressLine2": "",
+                "city": "London",
+                "county": "",
+                "postCode": "SW1A 1AA",
+            }
+        }
+        not_found_response = MagicMock()
+        not_found_response.status_code = 204
+
+        def fake_get(url, headers):
+            if url.endswith("/provider-firms/1234/provider-offices"):
+                return firm_response
+            if url.endswith("/provider-offices/0A123A"):
+                return found_response
+            return not_found_response
+
+        with patch("httpx.get", side_effect=fake_get):
+            result = adapter.get_provider_offices_by_firm_id(
+                "1234", frozenset({"0A123A", "0A999Z"})
+            )
+
+        assert result == [
+            {
+                "office_code": "0A123A",
+                "address": {
+                    "address_line_1": "1 Test Street",
+                    "address_line_2": "",
+                    "town_or_city": "London",
+                    "county": "",
+                    "postcode": "SW1A 1AA",
+                },
+            }
+        ]
+
+    def test_fallback_returns_empty_list_when_no_candidates_resolve(self, adapter):
+        firm_response = MagicMock()
+        firm_response.status_code = 204
+        office_response = MagicMock()
+        office_response.status_code = 204
+
+        with patch("httpx.get", side_effect=[firm_response, office_response]):
+            result = adapter.get_provider_offices_by_firm_id(
+                "1234", frozenset({"0A123A"})
+            )
+
+        assert result == []
+
+    def test_fallback_returns_empty_list_when_candidates_is_empty(self, adapter):
+        firm_response = MagicMock()
+        firm_response.status_code = 204
+
+        with patch("httpx.get", return_value=firm_response):
+            result = adapter.get_provider_offices_by_firm_id("1234", frozenset())
+
+        assert result == []
