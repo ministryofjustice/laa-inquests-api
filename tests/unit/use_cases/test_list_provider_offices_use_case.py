@@ -23,9 +23,13 @@ def test_execute_returns_provider_offices_for_firm_id():
         }
     ]
 
-    result = ListProviderOfficesUseCase(provider_details_port).execute("123")
+    result = ListProviderOfficesUseCase(provider_details_port).execute(
+        "123", frozenset({"0A123A"})
+    )
 
-    provider_details_port.get_provider_offices_by_firm_id.assert_called_once_with("123")
+    provider_details_port.get_provider_offices_by_firm_id.assert_called_once_with(
+        "123", frozenset({"0A123A"})
+    )
     assert result == [
         {
             "office_code": "0A123A",
@@ -49,7 +53,7 @@ def test_execute_raises_when_provider_details_lookup_fails():
     use_case = ListProviderOfficesUseCase(provider_details_port)
 
     with pytest.raises(ProviderDetailsRetrievalError):
-        use_case.execute("123")
+        use_case.execute("123", frozenset())
 
 
 def test_execute_logs_success(caplog):
@@ -70,6 +74,6 @@ def test_execute_logs_success(caplog):
     use_case = ListProviderOfficesUseCase(provider_details_port)
 
     with caplog.at_level(logging.INFO):
-        use_case.execute("123")
+        use_case.execute("123", frozenset())
 
     assert "Provider offices listed" in caplog.text

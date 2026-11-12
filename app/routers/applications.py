@@ -26,10 +26,7 @@ from app.auth.rbac import Permission, require_permission_from
 from app.config import Config
 from app.db import get_session
 from app.domain.claim_error import ClaimErrorCode
-from app.domain.constants.claim_messages import (
-    PROVIDER_OFFICE_ID_MISMATCH_MESSAGE,
-    PROVIDER_OFFICE_NOT_FOUND_MESSAGE,
-)
+from app.domain.constants.claim_messages import PROVIDER_OFFICE_ID_MISMATCH_MESSAGE
 from app.logging_utils import build_log_extra
 from app.models.application.certificate import ApplicationCertificateResponse
 from app.models.application.enums import MeritsDecision
@@ -707,14 +704,6 @@ def create_claim(
                 "message": PROVIDER_OFFICE_ID_MISMATCH_MESSAGE,
             },
         )
-    except ProviderOfficeNotFoundError:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "errorCode": ClaimErrorCode.PROVIDER_OFFICE_NOT_FOUND,
-                "message": PROVIDER_OFFICE_NOT_FOUND_MESSAGE,
-            },
-        )
     except InvalidClaimError as e:
         raise HTTPException(
             status_code=422, detail={"errorCode": e.code, "message": e.message}
@@ -815,11 +804,12 @@ async def search_application(
 )
 async def list_provider_offices(
     firm_id: str,
+    office_codes: Annotated[frozenset[str], Depends(get_current_provider_office_codes)],
     use_case: ListProviderOfficesUseCase = Depends(get_list_provider_offices_use_case),
     request: Request = None,
 ) -> list[dict]:
     try:
-        provider_offices = use_case.execute(firm_id)
+        provider_offices = use_case.execute(firm_id, office_codes)
         return provider_offices
     except ProviderDetailsRetrievalError:
         logger.warning(

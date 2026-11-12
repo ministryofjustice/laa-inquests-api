@@ -97,7 +97,6 @@ class CreateClaimUseCase:
         application_lookup_port: ApplicationLookupPort,
         get_claims_for_application_port: GetClaimsForApplicationPort,
         create_history_event_port: CreateHistoryEventPort,
-        provider_details_port: ProviderDetailsPort,
         gov_notify_port: GovNotifyPort | None = None,
         create_claim_decision_port: CreateClaimDecisionPort | None = None,
         create_claim_decision_amount_port: CreateClaimDecisionAmountPort | None = None,
@@ -105,6 +104,7 @@ class CreateClaimUseCase:
         update_claim_status_port: UpdateClaimStatusPort | None = None,
         get_claim_decision_port: GetClaimDecisionPort | None = None,
         create_payment_extract_port: CreatePaymentExtractPort | None = None,
+        provider_details_port: ProviderDetailsPort | None = None,
     ) -> None:
         self.create_claim_port = create_claim_port
         self.application_lookup_port = application_lookup_port
@@ -149,10 +149,6 @@ class CreateClaimUseCase:
                 ),
             )
             raise ProviderOfficeMismatchError(command.laa_reference)
-
-        self.provider_details_port.get_firm_name(
-            command.firm_code, application.provider.office_id
-        )
 
         domain_application = ApplicationDomain(
             overall_decision=application.overall_decision
@@ -280,7 +276,11 @@ class CreateClaimUseCase:
             )
             raise
 
-        if application is not None and self.gov_notify_port is not None:
+        if (
+            application is not None
+            and self.gov_notify_port is not None
+            and self.provider_details_port is not None
+        ):
             try:
                 self.create_history_event_port.create_history_event(
                     event_reference=HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION,

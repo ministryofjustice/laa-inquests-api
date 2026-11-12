@@ -15,11 +15,12 @@ def test_list_provider_offices_calls_use_case_with_firm_id():
     asyncio.run(
         list_provider_offices(
             firm_id="123",
+            office_codes=frozenset({"0A123A"}),
             use_case=use_case,
         )
     )
 
-    use_case.execute.assert_called_once_with("123")
+    use_case.execute.assert_called_once_with("123", frozenset({"0A123A"}))
 
 
 def test_list_provider_offices_returns_required_data():
@@ -40,6 +41,7 @@ def test_list_provider_offices_returns_required_data():
     result = asyncio.run(
         list_provider_offices(
             firm_id="123",
+            office_codes=frozenset({"0A123A"}),
             use_case=use_case,
         )
     )
@@ -66,6 +68,7 @@ def test_list_provider_offices_raises_500_when_provider_details_lookup_fails():
         asyncio.run(
             list_provider_offices(
                 firm_id="123",
+                office_codes=frozenset({"0A123A"}),
                 use_case=use_case,
             )
         )

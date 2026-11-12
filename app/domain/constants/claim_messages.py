@@ -22,9 +22,6 @@ APPLICATION_NOT_GRANTED_MESSAGE = (
 PROVIDER_OFFICE_ID_MISMATCH_MESSAGE = (
     "Claims may only be submitted by an office associated with the application"
 )
-PROVIDER_OFFICE_NOT_FOUND_MESSAGE = (
-    "Claims may only be submitted for an office registered with a valid firm"
-)
 MISSING_INQUEST_OUTCOMES_MESSAGE = (
     "At least one inquest outcome is required for final bill and nil bill claims"
 )

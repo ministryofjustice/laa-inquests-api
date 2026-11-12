@@ -50,7 +50,6 @@ from app.use_cases.exceptions import (
     ApplicationNotFoundError,
     InvalidClaimError,
     ProviderOfficeMismatchError,
-    ProviderOfficeNotFoundError,
 )
 
 _UNSET = object()
@@ -254,42 +253,6 @@ def test_execute_raises_provider_office_mismatch_when_office_id_not_in_office_co
     with pytest.raises(ProviderOfficeMismatchError):
         use_case.execute(command)
     create_claim_port.create_claim.assert_not_called()
-
-
-def test_execute_raises_provider_office_not_found_and_does_not_create_claim():
-    command = _make_command()
-    create_claim_port = MagicMock(spec=CreateClaimPort)
-    provider_details_port = MagicMock(spec=ProviderDetailsPort)
-    provider_details_port.get_firm_name.side_effect = ProviderOfficeNotFoundError(
-        "Office 0U651L details not found for firm 0A123B"
-    )
-    use_case = _make_use_case(
-        create_claim_port=create_claim_port,
-        application_lookup_port=_make_application_lookup_port(),
-        get_claims_for_application_port=_make_get_claims_port(),
-        provider_details_port=provider_details_port,
-    )
-
-    with pytest.raises(ProviderOfficeNotFoundError):
-        use_case.execute(command)
-    create_claim_port.create_claim.assert_not_called()
-
-
-def test_execute_calls_get_firm_name_with_firm_code_and_office_id_before_creating_claim():
-    command = _make_command()
-    create_claim_port = MagicMock(spec=CreateClaimPort)
-    create_claim_port.create_claim.return_value = _make_created_claim()
-    provider_details_port = _make_provider_details_port()
-    use_case = _make_use_case(
-        create_claim_port=create_claim_port,
-        application_lookup_port=_make_application_lookup_port(),
-        get_claims_for_application_port=_make_get_claims_port(),
-        provider_details_port=provider_details_port,
-    )
-
-    use_case.execute(command)
-
-    provider_details_port.get_firm_name.assert_called_once_with("0A123B", "0U651L")
 
 
 def test_execute_creates_claim_when_office_id_is_one_of_multiple_office_codes():

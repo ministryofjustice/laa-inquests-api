@@ -2,7 +2,6 @@ import re
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
-from unittest.mock import MagicMock
 
 import pytest
 from sqlmodel import select
@@ -30,8 +29,6 @@ from app.models.claim.index import (
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.models.notifications.enums import NotificationType
-from app.routers.applications import get_provider_details_port
-from app.use_cases.exceptions import ProviderOfficeNotFoundError
 from tests.e2e.factories import create_application_in_db, create_claim_for_reference
 from tests.helpers.claim_payloads import (
     make_final_bill_claim_body,
@@ -1584,32 +1581,6 @@ class TestCreateClaimValidation:
 
         assert response.status_code == 403
         assert response.json()["detail"]["errorCode"] == "PROVIDER_OFFICE_ID_MISMATCH"
-
-    def test_404_create_claim_when_provider_office_not_found(self, session, client):
-        laa_reference = session.exec(select(Application)).first().laa_reference
-
-        def get_provider_details_port_override():
-            mock_port = MagicMock()
-            mock_port.get_firm_name.side_effect = ProviderOfficeNotFoundError(
-                "Office 0U651L details not found for firm 0A123B"
-            )
-            return mock_port
-
-        api.dependency_overrides[get_provider_details_port] = (
-            get_provider_details_port_override
-        )
-
-        response = client.post(
-            f"/applications/{laa_reference}/claim",
-            json=make_poa_claim_request_body(),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}",
-            },
-        )
-
-        assert response.status_code == 404
-        assert response.json()["detail"]["errorCode"] == "PROVIDER_OFFICE_NOT_FOUND"
 
 
 class TestCreateClaimAutoDecisionRules:
