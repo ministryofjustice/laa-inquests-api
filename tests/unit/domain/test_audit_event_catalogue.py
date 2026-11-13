@@ -54,7 +54,7 @@ CLAIM_REFERENCE = "INQC-AAAA-BBBB"
             "EVT-BUS-X-001",
             {"note_text": "Called the provider"},
             "Case note added",
-            "Caseworker note added\nCalled the provider",
+            "Case note added\nCalled the provider",
         ),
         (
             "EVT-BUS-APP-002",

@@ -278,7 +278,7 @@ class TestGetAuditTrailReport:
                 HistoryEventReference.CASE_NOTE_ADDED,
                 {"note_text": "Called the provider"},
                 "Case note added",
-                "Caseworker note added\nCalled the provider",
+                "Case note added\nCalled the provider",
             ),
             (
                 HistoryEventReference.APPLICATION_SUBMITTED,
