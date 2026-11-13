@@ -1,4 +1,5 @@
 import uuid
+from unittest.mock import MagicMock
 
 import pytest
 from sqlmodel import select
@@ -8,7 +9,9 @@ from app.auth.rbac import Permission, Role, get_current_user_permissions
 from app.models.application.index import Application, DuplicateApplicationRecord
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
+from app.routers.applications import get_provider_details_port
 from app.routers.dependencies.entra_auth import get_current_provider_office_codes
+from app.use_cases.exceptions import ProviderOfficeNotFoundError
 
 pytestmark = pytest.mark.usefixtures("mock_gov_notify")
 
@@ -517,6 +520,29 @@ class TestCreateApplication:
         )
 
         assert response.status_code == 403
+
+    def test_404_create_application_rejected_when_office_not_found(self, client):
+        def get_provider_details_port_override():
+            mock_port = MagicMock()
+            mock_port.get_firm_name.side_effect = ProviderOfficeNotFoundError(
+                "Office 0U651L details not found for firm 0A123B"
+            )
+            return mock_port
+
+        api.dependency_overrides[get_provider_details_port] = (
+            get_provider_details_port_override
+        )
+
+        response = client.post(
+            "/applications",
+            json=_make_request_body(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 404
 
     def test_422_create_application_rejected_when_provider_email_missing(self, client):
         body = _make_request_body()

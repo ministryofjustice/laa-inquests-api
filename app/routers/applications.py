@@ -126,6 +126,7 @@ from app.use_cases.exceptions import (
     InvalidCoronersLetterDocumentIdError,
     ProviderDetailsRetrievalError,
     ProviderOfficeMismatchError,
+    ProviderOfficeNotFoundError,
 )
 from app.use_cases.get_application import GetApplicationUseCase
 from app.use_cases.get_application_history import GetApplicationHistoryUseCase
@@ -571,6 +572,8 @@ def create_application(
         return application
     except ProviderOfficeMismatchError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except ProviderOfficeNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except ProviderDetailsRetrievalError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -801,11 +804,12 @@ async def search_application(
 )
 async def list_provider_offices(
     firm_id: str,
+    office_codes: Annotated[frozenset[str], Depends(get_current_provider_office_codes)],
     use_case: ListProviderOfficesUseCase = Depends(get_list_provider_offices_use_case),
     request: Request = None,
 ) -> list[dict]:
     try:
-        provider_offices = use_case.execute(firm_id)
+        provider_offices = use_case.execute(firm_id, office_codes)
         return provider_offices
     except ProviderDetailsRetrievalError:
         logger.warning(

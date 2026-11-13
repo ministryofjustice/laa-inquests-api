@@ -18,7 +18,7 @@ class ApplicationCertificate(BaseModel):
 
     client_name: str
     client_address: AddressResponse | None
-    firm_name: str
+    firm_name: str | None
     office_address: AddressResponse | None
     opponent_details: list[str] | None = None
     guardian_name: str = "Not applicable"

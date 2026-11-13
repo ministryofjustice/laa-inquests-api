@@ -37,7 +37,7 @@ class CreateCertificateContextUseCase:
         )
 
         firm_name = self.provider_details_port.get_firm_name(
-            application.provider.firm_code
+            application.provider.firm_code, application.provider.office_id
         )
 
         office_address = self.provider_details_port.get_office_address(

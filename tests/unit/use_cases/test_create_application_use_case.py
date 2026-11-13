@@ -12,8 +12,8 @@ from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.exceptions import (
-    ProviderDetailsRetrievalError,
     ProviderOfficeMismatchError,
+    ProviderOfficeNotFoundError,
 )
 from app.use_cases.identify_duplicate_applications import (
     IdentifyDuplicateApplicationsUseCase,
@@ -114,8 +114,8 @@ def test_execute_creates_application_sends_confirmation_email_and_commits():
         application,
         "provider@example.com",
     )
-    provider_details_port.does_office_exist.assert_called_once_with(
-        application.provider.office_id
+    provider_details_port.get_firm_name.assert_called_once_with(
+        "0A123B", application.provider.office_id
     )
     create_application_port.commit.assert_called_once_with()
     create_application_port.rollback.assert_not_called()
@@ -213,7 +213,6 @@ def test_execute_rolls_back_and_reraises_when_provider_office_mismatch():
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
     gov_notify_port = MagicMock(spec=GovNotifyPort)
     provider_details_port = MagicMock(spec=ProviderDetailsPort)
-    provider_details_port.does_office_exist.return_value = False
     identify_duplicate_applications_use_case = MagicMock(
         spec=IdentifyDuplicateApplicationsUseCase
     )
@@ -241,7 +240,7 @@ def test_execute_rolls_back_and_reraises_when_provider_office_mismatch():
     create_application_port.rollback.assert_called_once_with()
 
 
-def test_execute_rolls_back_and_reraises_when_does_office_exist_fails():
+def test_execute_rolls_back_and_reraises_when_provider_office_not_found():
     request = _make_request()
     application = create_base_application()
     create_application_port = MagicMock(spec=CreateApplicationPort)
@@ -249,7 +248,9 @@ def test_execute_rolls_back_and_reraises_when_does_office_exist_fails():
     create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
     gov_notify_port = MagicMock(spec=GovNotifyPort)
     provider_details_port = MagicMock(spec=ProviderDetailsPort)
-    provider_details_port.does_office_exist.return_value = False
+    provider_details_port.get_firm_name.side_effect = ProviderOfficeNotFoundError(
+        f"Office {application.provider.office_id} details not found for firm 0A123B"
+    )
     identify_duplicate_applications_use_case = MagicMock(
         spec=IdentifyDuplicateApplicationsUseCase
     )
@@ -262,11 +263,11 @@ def test_execute_rolls_back_and_reraises_when_does_office_exist_fails():
         identify_duplicate_applications_use_case=identify_duplicate_applications_use_case,
     )
 
-    with pytest.raises(ProviderDetailsRetrievalError):
+    with pytest.raises(ProviderOfficeNotFoundError):
         use_case.execute(request, "0A123B", frozenset(["0U651L"]))
 
-    provider_details_port.does_office_exist.assert_called_once_with(
-        application.provider.office_id
+    provider_details_port.get_firm_name.assert_called_once_with(
+        "0A123B", application.provider.office_id
     )
     create_history_event_port.create_history_event.assert_not_called()
     gov_notify_port.send_application_submit_confirmation_email.assert_not_called()

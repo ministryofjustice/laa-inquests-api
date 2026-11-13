@@ -10,9 +10,11 @@ class ListProviderOfficesUseCase:
     def __init__(self, provider_details_port: ProviderDetailsPort) -> None:
         self.provider_details_port = provider_details_port
 
-    def execute(self, firm_id: str) -> list[dict]:
+    def execute(
+        self, firm_id: str, candidate_office_codes: frozenset[str]
+    ) -> list[dict]:
         provider_offices = self.provider_details_port.get_provider_offices_by_firm_id(
-            firm_id
+            firm_id, candidate_office_codes
         )
         logger.info(
             "Provider offices listed",

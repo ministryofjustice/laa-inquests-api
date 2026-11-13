@@ -31,7 +31,9 @@ def _claim(claim_id: int = 7) -> MagicMock:
     application = SimpleNamespace(
         application_id=12345,
         provider=SimpleNamespace(
-            firm_code="ABC123", email_address="provider@example.com"
+            firm_code="ABC123",
+            office_id="OFFICE999",
+            email_address="provider@example.com",
         ),
     )
     claim.application = application

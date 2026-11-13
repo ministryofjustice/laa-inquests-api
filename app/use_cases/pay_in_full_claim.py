@@ -196,8 +196,11 @@ class PayInFullClaimUseCase:
                 },
             )
 
-            firm_name = self.provider_details_port.get_firm_name(
-                application.provider.firm_code
+            firm_name = (
+                self.provider_details_port.get_firm_name(
+                    application.provider.firm_code, application.provider.office_id
+                )
+                or ""
             )
             self._send_pay_in_full_decision_email(
                 claim=claim,

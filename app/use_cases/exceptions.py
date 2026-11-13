@@ -102,6 +102,10 @@ class ProviderDetailsRetrievalError(Exception):
     pass
 
 
+class ProviderOfficeNotFoundError(ProviderDetailsRetrievalError):
+    pass
+
+
 class ProviderOfficeMismatchError(Exception):
     pass
 
