@@ -1085,6 +1085,75 @@ def test_execute_persists_auto_reject_and_returns_rejection_reasons_and_creates_
     assert create_claim_port.commit.call_count == 2
 
 
+def _execute_auto_rejection(create_history_event_port, gov_notify_port, fail_reject):
+    command = _make_command({"net": Decimal("1.00"), "gross": Decimal("1.00")})
+    create_claim_port = MagicMock(spec=CreateClaimPort)
+    create_claim_port.create_claim.return_value = _make_created_claim()
+    create_decision_reason_port = _make_create_decision_reason_port()
+    if fail_reject:
+        create_decision_reason_port.create_decision_reason.side_effect = Exception(
+            "Unable to create decision reason"
+        )
+
+    application = _make_matching_application()
+    application.proceeding.substantive_cost_limitation = 999999
+    existing_claims = [
+        Claim(
+            claim_id=index + 100,
+            application_id=12345,
+            claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
+            status_id=ClaimStatus.SUBMITTED,
+            poa_type_id=POAType.PROFIT_COST,
+            submission_date=datetime.now(UTC),
+            total_profit_cost_net=Decimal("1.00"),
+            total_profit_cost_gross=Decimal("1.00"),
+        )
+        for index in range(4)
+    ]
+
+    use_case = _make_use_case(
+        create_claim_port=create_claim_port,
+        application_lookup_port=_make_application_lookup_port(application),
+        get_claims_for_application_port=_make_get_claims_port(existing_claims),
+        create_claim_decision_port=_make_create_claim_decision_port(),
+        create_decision_reason_port=create_decision_reason_port,
+        update_claim_status_port=_make_update_claim_status_port(),
+        create_history_event_port=create_history_event_port,
+        gov_notify_port=gov_notify_port,
+    )
+    return use_case.execute(command)
+
+
+def test_execute_does_not_send_submission_email_or_history_event_when_claim_auto_rejected():
+    create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
+    gov_notify_port = MagicMock()
+
+    result = _execute_auto_rejection(
+        create_history_event_port, gov_notify_port, fail_reject=False
+    )
+
+    assert result.claim.status_id == ClaimStatus.REJECTED
+    gov_notify_port.send_claim_submit_confirmation_email.assert_not_called()
+    gov_notify_port.send_claim_rejected_decision_email.assert_not_called()
+    references = [
+        c.kwargs["event_reference"]
+        for c in create_history_event_port.create_history_event.mock_calls
+    ]
+    assert HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION not in references
+
+
+def test_execute_sends_submission_email_when_auto_reject_persistence_fails():
+    create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
+    gov_notify_port = MagicMock()
+
+    result = _execute_auto_rejection(
+        create_history_event_port, gov_notify_port, fail_reject=True
+    )
+
+    assert result.claim.status_id == ClaimStatus.SUBMITTED
+    gov_notify_port.send_claim_submit_confirmation_email.assert_called_once()
+
+
 def test_execute_returns_submitted_claim_when_auto_reject_persistence_fails_and_does_not_create_history_event():
     command = _make_command({"net": Decimal("1.00"), "gross": Decimal("1.00")})
     claim = _make_created_claim()

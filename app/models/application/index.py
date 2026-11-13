@@ -379,6 +379,16 @@ class DeceasedCreate(BaseModel):
             raise ValueError("date must be in YYYY-MM-DD format")
         return v
 
+    @model_validator(mode="after")
+    def validate_date_of_death_not_before_date_of_birth(self) -> "DeceasedCreate":
+        if date.fromisoformat(self.deceased_date_of_death) < date.fromisoformat(
+            self.deceased_date_of_birth
+        ):
+            raise ValueError(
+                "deceased_date_of_death must not be before deceased_date_of_birth"
+            )
+        return self
+
     further_information: str | None = PydanticField(
         default=None, examples=["Further information."]
     )

@@ -271,9 +271,7 @@ class TestCsvContent:
         rows = parse_csv_rows(use_case.execute(FROM_DATE, TO_DATE))
 
         assert len(rows) == 1
-        assert (
-            rows[0]["Event description"] == "Caseworker note added\nline one\nline two"
-        )
+        assert rows[0]["Event description"] == "Case note added\nline one\nline two"
 
     @pytest.mark.parametrize("character", ["=", "+", "-", "@"])
     def test_prefixes_values_that_a_spreadsheet_could_evaluate(self, character):

@@ -151,6 +151,66 @@ def test_populate_certificate_context_uses_client_home_address_when_corresponden
     assert result.client_address.postcode == "L1 3CD"
 
 
+def test_populate_certificate_context_does_not_modify_client_home_address_when_care_of_recipient_is_set():
+    mock_provider_port = MagicMock()
+    mock_provider_port.get_firm_name.return_value = "Test Firm"
+    mock_provider_port.get_office_address.return_value = create_base_office_address()
+    usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
+
+    home_address = create_base_home_address(address_line_1="789 Pine Road")
+    client = create_base_client(
+        home_address=home_address,
+        correspondence_address=None,
+        correspondence_recipient_name="John Smith",
+    )
+    application = create_base_application(client=client)
+
+    usecase.populate_certificate_context(application, application.proceeding)
+
+    assert application.client.home_address.address_line_1 == "789 Pine Road"
+
+
+def test_populate_certificate_context_does_not_modify_client_correspondence_address_when_care_of_recipient_is_set():
+    mock_provider_port = MagicMock()
+    mock_provider_port.get_firm_name.return_value = "Test Firm"
+    mock_provider_port.get_office_address.return_value = create_base_office_address()
+    usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
+
+    correspondence_address = create_base_correspondence_address(
+        address_line_1="456 Oak Avenue"
+    )
+    client = create_base_client(
+        correspondence_address_source="USE_SPECIFIED_ADDRESS",
+        correspondence_address=correspondence_address,
+        correspondence_recipient_name="John Smith",
+    )
+    application = create_base_application(client=client)
+
+    usecase.populate_certificate_context(application, application.proceeding)
+
+    assert application.client.correspondence_address.address_line_1 == "456 Oak Avenue"
+
+
+def test_populate_certificate_context_adds_care_of_recipient_only_once_when_called_repeatedly():
+    mock_provider_port = MagicMock()
+    mock_provider_port.get_firm_name.return_value = "Test Firm"
+    mock_provider_port.get_office_address.return_value = create_base_office_address()
+    usecase = CreateCertificateContextUseCase(provider_details_port=mock_provider_port)
+
+    home_address = create_base_home_address(address_line_1="789 Pine Road")
+    client = create_base_client(
+        home_address=home_address,
+        correspondence_address=None,
+        correspondence_recipient_name="John Smith",
+    )
+    application = create_base_application(client=client)
+
+    usecase.populate_certificate_context(application, application.proceeding)
+    result = usecase.populate_certificate_context(application, application.proceeding)
+
+    assert result.client_address.address_line_1 == "c/o John Smith 789 Pine Road"
+
+
 def test_populate_certificate_context_populates_provider_fields():
     """Test that firm name and office address are populated correctly."""
     mock_provider_port = MagicMock()

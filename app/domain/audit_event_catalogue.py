@@ -81,7 +81,7 @@ def _claim_received(event_data: EventData) -> str:
 _DYNAMIC_EVENTS: dict[str, tuple[str, _DescriptionBuilder]] = {
     "EVT-BUS-X-001": (
         "Case note added",
-        lambda data: f"Caseworker note added\n{_text(data, 'note_text')}",
+        lambda data: f"Case note added\n{_text(data, 'note_text')}",
     ),
     "EVT-BUS-APP-002": ("Application assessment complete", _application_assessment),
     "EVT-BUS-APP-004": ("Interested party updated", _interested_parties),
