@@ -276,44 +276,6 @@ class CreateClaimUseCase:
             )
             raise
 
-        if (
-            application is not None
-            and self.gov_notify_port is not None
-            and self.provider_details_port is not None
-        ):
-            try:
-                self.create_history_event_port.create_history_event(
-                    event_reference=HistoryEventReference.CLAIM_SUBMISSION_CONFIRMATION,
-                    actor=ActorType.SYSTEM,
-                    actor_type=ActorType.SYSTEM,
-                    application_id=application.application_id,
-                    event_data={
-                        "recipient": application.provider.email_address,
-                        "channel": NotificationType.EMAIL,
-                    },
-                )
-                self.gov_notify_port.send_claim_submit_confirmation_email(
-                    claim=claim,
-                    application=application,
-                    recipient_email=application.provider.email_address,
-                    firm_name=self.provider_details_port.get_firm_name(
-                        application.provider.firm_code, application.provider.office_id
-                    )
-                    or "",
-                )
-                self.create_history_event_port.commit()
-            except Exception:
-                logger.exception(
-                    "Failed to send claim submission email",
-                    extra=build_log_extra(
-                        event="notification_requested_failed",
-                        laa_reference=command.laa_reference,
-                        claim_id=claim.claim_id,
-                        notification_channel="email",
-                    ),
-                )
-                self.create_history_event_port.rollback()
-
         rejection_reasons: list[ReasonCode] | None = None
 
         if application is not None:
@@ -458,8 +420,9 @@ class CreateClaimUseCase:
                 application=application,
                 recipient_email=application.provider.email_address,
                 firm_name=self.provider_details_port.get_firm_name(
-                    application.provider.firm_code
-                ),
+                    application.provider.firm_code, application.provider.office_id
+                )
+                or "",
             )
             self.create_history_event_port.commit()
         except Exception:
