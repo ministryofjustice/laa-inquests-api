@@ -11,6 +11,7 @@ psycopg2-binary
 passlib
 argon2_cffi
 python-multipart
+dnspython>=2.9.2
 uvicorn
 mako>=1.3.12
 pyjwt>=2.13.0

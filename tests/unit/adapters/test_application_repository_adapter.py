@@ -1085,10 +1085,9 @@ class TestGetDuplicateApplicationsByIds:
         )
 
         assert len(applications) == 2
-        assert [app.application_id for app in applications] == [
-            first_application_id,
-            second_application_id,
-        ]
+        result_ids = [app.application_id for app in applications]
+        assert set(result_ids) == {first_application_id, second_application_id}
+        assert len(result_ids) == 2
 
     def test_returns_empty_list_when_no_ids_given(self, session):
         adapter = ApplicationRepositoryAdapter(session)
@@ -1106,3 +1105,53 @@ class TestGetDuplicateApplicationsByIds:
             adapter.get_duplicate_applications_by_ids(
                 [first_application_id, nonexistent_id]
             )
+
+
+class TestSortDuplicateApplications:
+    def test_sorts_by_status_priority_then_by_creation_date(self):
+        from tests.unit.factories import (
+            create_base_application,
+            create_base_application_proceeding,
+        )
+
+        proceeding_submitted_old = create_base_application_proceeding(
+            merits_decision=MeritsDecision.SUBMITTED
+        )
+        app_submitted_old = create_base_application(
+            proceeding=proceeding_submitted_old,
+            created_at=datetime(2026, 1, 5, tzinfo=UTC),
+        )
+
+        proceeding_granted = create_base_application_proceeding(
+            merits_decision=MeritsDecision.GRANTED
+        )
+        app_granted = create_base_application(
+            proceeding=proceeding_granted,
+            application_id=2,
+            laa_reference="INQ-GGG-GGG",
+            created_at=datetime(2026, 1, 10, tzinfo=UTC),
+        )
+
+        proceeding_submitted_new = create_base_application_proceeding(
+            merits_decision=MeritsDecision.SUBMITTED
+        )
+        app_submitted_new = create_base_application(
+            proceeding=proceeding_submitted_new,
+            application_id=3,
+            laa_reference="INQ-NNN-NNN",
+            created_at=datetime(2026, 1, 15, tzinfo=UTC),
+        )
+
+        unsorted = [app_granted, app_submitted_new, app_submitted_old]
+
+        sorted_apps = ApplicationRepositoryAdapter._sort_duplicate_applications(
+            unsorted
+        )
+
+        assert len(sorted_apps) == 3
+        assert sorted_apps[0].application_id == app_submitted_old.application_id
+        assert sorted_apps[0].proceeding.merits_decision == MeritsDecision.SUBMITTED
+        assert sorted_apps[1].application_id == app_submitted_new.application_id
+        assert sorted_apps[1].proceeding.merits_decision == MeritsDecision.SUBMITTED
+        assert sorted_apps[2].application_id == app_granted.application_id
+        assert sorted_apps[2].proceeding.merits_decision == MeritsDecision.GRANTED

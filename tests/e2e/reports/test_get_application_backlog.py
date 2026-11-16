@@ -311,6 +311,51 @@ class TestGetApplicationBacklogReport:
         assert rows[0]["Potential duplicate"] == "No"
         assert rows[0]["Potential duplicate submitted application reference(s)"] == ""
 
+    def test_200_csv_orders_duplicate_references_by_submission_date(
+        self, session, client
+    ):
+        newer = create_application_in_db(
+            session,
+            laa_reference="INQ-AAA-001",
+            created_at=datetime(2022, 1, 1, tzinfo=UTC),
+        )
+        older = create_application_in_db(
+            session,
+            laa_reference="INQ-ZZZ-001",
+            created_at=datetime(2020, 1, 1, tzinfo=UTC),
+        )
+        target = create_application_in_db(session, laa_reference="INQ-TTT-001")
+
+        session.add_all(
+            [
+                DuplicateApplicationRecord(
+                    application_id=target.application_id,
+                    duplicate_application_id=newer.application_id,
+                ),
+                DuplicateApplicationRecord(
+                    application_id=target.application_id,
+                    duplicate_application_id=older.application_id,
+                ),
+            ]
+        )
+        session.commit()
+
+        response = client.get(
+            "/reports/applications/backlog",
+            headers={
+                "Authorization": f"Bearer {Role.APPLICATION_WORKFLOW_REPORTING.value}"
+            },
+        )
+
+        assert response.status_code == 200
+        rows = parse_csv_rows(response.text)
+        target_row = next(
+            row for row in rows if row["Application reference"] == target.laa_reference
+        )
+        assert target_row["Potential duplicate submitted application reference(s)"] == (
+            f"{older.laa_reference}; {newer.laa_reference}"
+        )
+
 
 class TestGetApplicationBacklogReportAuth:
     """Authentication tests for GET /reports/applications/backlog."""
