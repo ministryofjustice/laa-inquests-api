@@ -73,7 +73,9 @@ def test_generate_pdf_returns_valid_pdf(certificate_pdf):
 def test_generate_pdf_returns_pdf_with_correct_content(certificate_pdf):
     """Test that generate_pdf returns a PDF containing expected content."""
     reader = PdfReader(BytesIO(certificate_pdf))
-    pdf_text = "\n".join(page.extract_text() or "" for page in reader.pages)
+    pdf_text = "\n".join(
+        page.extract_text(extraction_mode="layout") or "" for page in reader.pages
+    )
 
     assert "Jane Doe" in pdf_text
     assert "Test Firm Ltd" in pdf_text
@@ -117,7 +119,9 @@ def test_generate_print_letter_pdf_contains_cover_letter_content(print_letter_pd
 def test_generate_print_letter_pdf_contains_certificate_content(print_letter_pdf):
     """Test that the combined PDF contains certificate content."""
     reader = PdfReader(BytesIO(print_letter_pdf))
-    pdf_text = "\n".join(page.extract_text() or "" for page in reader.pages)
+    pdf_text = "\n".join(
+        page.extract_text(extraction_mode="layout") or "" for page in reader.pages
+    )
 
     assert "Civil legal aid certificate" in pdf_text
     assert "Test Firm Ltd" in pdf_text

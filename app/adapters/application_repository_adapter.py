@@ -267,6 +267,23 @@ class ApplicationRepositoryAdapter(
             for _ in range(3)
         )
 
+    @staticmethod
+    def _sort_duplicate_applications(
+        applications: list[Application],
+    ) -> list[Application]:
+        status_priority = {
+            MeritsDecision.SUBMITTED: 0,
+            MeritsDecision.GRANTED: 1,
+            MeritsDecision.REFUSED: 2,
+        }
+        return sorted(
+            applications,
+            key=lambda app: (
+                status_priority[MeritsDecision(app.proceeding.merits_decision)],
+                app.created_at,
+            ),
+        )
+
     def commit(self) -> None:
         self.session.commit()
 
@@ -425,14 +442,18 @@ class ApplicationRepositoryAdapter(
             pending_duplicate_relationships.c.duplicate_application_id,
             pending_duplicate_relationships.c.application_id,
         )
-        duplicate_laa_references_by_application_id: dict[int, set[str]] = {
-            application_id: set() for application_id in pending_application_ids
+        applications_by_id: dict[int, Application] = {
+            app.application_id: app for app in applications
         }
+        duplicate_applications_by_application_id: dict[int, list[Application]] = {
+            application_id: [] for application_id in pending_application_ids
+        }
+
         for application_id, duplicate_application_id in self.session.exec(
             duplicates_of_applications.union(applications_they_duplicate)
         ).all():
-            duplicate_laa_references_by_application_id[application_id].add(
-                laa_references_by_application_id[duplicate_application_id]
+            duplicate_applications_by_application_id[application_id].append(
+                applications_by_id[duplicate_application_id]
             )
 
         return [
@@ -444,9 +465,12 @@ class ApplicationRepositoryAdapter(
                 office_id=application.provider.office_id,
                 proceeding_description=application.proceeding.proceeding_description,
                 matter_type=application.proceeding.matter_type,
-                potential_duplicate_applications=sorted(
-                    duplicate_laa_references_by_application_id[application_id]
-                ),
+                potential_duplicate_applications=[
+                    dup.laa_reference
+                    for dup in self._sort_duplicate_applications(
+                        duplicate_applications_by_application_id[application_id]
+                    )
+                ],
             )
             for application_id, application in zip(
                 pending_application_ids, applications, strict=True
@@ -591,9 +615,7 @@ class ApplicationRepositoryAdapter(
             return []
 
         result = self.session.exec(
-            select(Application)
-            .where(Application.application_id.in_(application_ids))
-            .order_by(Application.application_id)
+            select(Application).where(Application.application_id.in_(application_ids))
         ).all()
 
         if len(result) != len(application_ids):
@@ -601,4 +623,4 @@ class ApplicationRepositoryAdapter(
                 "Some application IDs for duplicate applications could not be found in the database"
             )
 
-        return list(result)
+        return self._sort_duplicate_applications(list(result))
