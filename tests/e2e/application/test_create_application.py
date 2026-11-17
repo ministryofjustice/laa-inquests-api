@@ -297,6 +297,7 @@ class TestCreateApplication:
     def test_201_create_application_response_contains_coroners_letter(self, client):
         upload_response = client.post(
             "/applications/upload-coroners-letter",
+            data={"office_id": "0U651L"},
             files={
                 "file": (
                     "test-file_abc123.pdf",

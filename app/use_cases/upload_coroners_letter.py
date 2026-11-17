@@ -28,6 +28,7 @@ class UploadCoronersLetterUseCase:
         self,
         coroners_letter: bytes,
         file_name: str,
+        office_id: str,
     ) -> uuid.UUID:
         try:
             is_safe = self.sds_port.virus_check_coroners_letter(
@@ -71,7 +72,8 @@ class UploadCoronersLetterUseCase:
             )
             coroners_letter_id = (
                 self.upload_coroners_letter_port.save_uploaded_coroners_letter(
-                    new_coroners_letter
+                    new_coroners_letter,
+                    office_id,
                 )
             )
             logger.info(

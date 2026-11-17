@@ -293,10 +293,12 @@ class ApplicationRepositoryAdapter(
     def save_uploaded_coroners_letter(
         self,
         coroners_letter: CoronersLetter,
+        office_id: str,
     ) -> uuid.UUID:
         coroners_letter_model = CoronersLetterModel(
             sds_file_name=coroners_letter.sds_file_name,
             file_name=coroners_letter.file_name,
+            office_id=office_id,
         )
         self.session.add(coroners_letter_model)
         self.session.flush()

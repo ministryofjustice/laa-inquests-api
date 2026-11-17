@@ -173,6 +173,7 @@ class CoronersLetter(SQLModel, table=True):
     )
     sds_file_name: str
     file_name: str
+    office_id: str
 
 
 class Application(ApplicationBase, table=True):
