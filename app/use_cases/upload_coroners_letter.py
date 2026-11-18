@@ -2,6 +2,7 @@ import logging
 import uuid
 
 from app.domain.coroners_letter import CoronersLetter
+from app.domain.office_authorisation import is_office_authorised
 from app.logging_utils import build_log_extra
 from app.ports.sds_port import SdsPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
@@ -9,6 +10,7 @@ from app.use_cases.exceptions import (
     CoronersLetterUploadError,
     CoronersLetterVirusCheckError,
     CoronersLetterVirusDetectedError,
+    ProviderOfficeMismatchError,
 )
 
 logger = logging.getLogger(__name__)
@@ -29,7 +31,20 @@ class UploadCoronersLetterUseCase:
         coroners_letter: bytes,
         file_name: str,
         office_id: str,
+        user_office_codes: frozenset[str],
     ) -> uuid.UUID:
+        if not is_office_authorised(office_id, user_office_codes):
+            logger.warning(
+                "Coroners letter upload rejected: office not in user's office codes",
+                extra=build_log_extra(
+                    event="coroners_letter_upload_failed",
+                    reason="office_not_authorised",
+                ),
+            )
+            raise ProviderOfficeMismatchError(
+                "Office id is not in the user's office codes"
+            )
+
         try:
             is_safe = self.sds_port.virus_check_coroners_letter(
                 coroners_letter, file_name

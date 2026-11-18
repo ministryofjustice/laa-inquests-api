@@ -11,6 +11,7 @@ from app.use_cases.exceptions import (
     CoronersLetterUploadError,
     CoronersLetterVirusCheckError,
     CoronersLetterVirusDetectedError,
+    ProviderOfficeMismatchError,
 )
 from app.use_cases.upload_coroners_letter import UploadCoronersLetterUseCase
 
@@ -18,6 +19,7 @@ request_body = {
     "coroners_letter": b"test",
     "file_name": "test_file.pdf",
     "office_id": "0U651L",
+    "user_office_codes": frozenset({"0U651L"}),
 }
 sds_response_body = SDSUploadCoronersLetterResponse(
     sds_file_name="test_file.pdf", status="SUCCESS"
@@ -74,6 +76,7 @@ def test_execute_stores_coroners_letter_with_submitted_office_id():
         request_body["coroners_letter"],
         request_body["file_name"],
         office_id="0U651L",
+        user_office_codes=frozenset({"0U651L"}),
     )
 
     upload_port.save_uploaded_coroners_letter.assert_called_once()
@@ -135,5 +138,27 @@ def test_execute_raises_an_error_when_virus_check_returns_server_error():
     with pytest.raises(CoronersLetterVirusCheckError):
         use_case.execute(**request_body)
 
+    port.save_coroners_letter.assert_not_called()
+    upload_port.save_uploaded_coroners_letter.assert_not_called()
+
+
+def test_execute_raises_an_error_when_office_id_is_not_in_user_office_codes():
+    port = MagicMock(spec=SdsPort)
+    upload_port = MagicMock(spec=UploadCoronersLetterPort)
+
+    use_case = UploadCoronersLetterUseCase(
+        sds_port=port,
+        upload_coroners_letter_port=upload_port,
+    )
+
+    with pytest.raises(ProviderOfficeMismatchError):
+        use_case.execute(
+            request_body["coroners_letter"],
+            request_body["file_name"],
+            office_id="1A234B",
+            user_office_codes=frozenset({"0U651L"}),
+        )
+
+    port.virus_check_coroners_letter.assert_not_called()
     port.save_coroners_letter.assert_not_called()
     upload_port.save_uploaded_coroners_letter.assert_not_called()
