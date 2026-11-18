@@ -123,6 +123,33 @@ class TestGeneratePaymentExtractReportUseCase:
             }
         ]
 
+    def test_neutralises_client_name_after_concatenation(self):
+        use_case, _, _ = _build_use_case(
+            lines=[_line(client_first_name="=HYPERLINK(", client_last_name='"x")')]
+        )
+
+        rows = parse_csv_rows(_csv(use_case.execute(FROM_DATE, TO_DATE)))
+
+        assert rows[0]["Client Name"] == '\'=HYPERLINK( "x")'
+
+    def test_neutralises_client_name_when_only_last_name_is_present(self):
+        use_case, _, _ = _build_use_case(
+            lines=[_line(client_first_name=None, client_last_name="=cmd")]
+        )
+
+        rows = parse_csv_rows(_csv(use_case.execute(FROM_DATE, TO_DATE)))
+
+        assert rows[0]["Client Name"] == "'=cmd"
+
+    def test_does_not_neutralise_formula_in_the_middle_of_client_name(self):
+        use_case, _, _ = _build_use_case(
+            lines=[_line(client_first_name="John", client_last_name="=cmd")]
+        )
+
+        rows = parse_csv_rows(_csv(use_case.execute(FROM_DATE, TO_DATE)))
+
+        assert rows[0]["Client Name"] == "John =cmd"
+
     def test_uses_classification_for_each_line_type(self):
         poa_expert = PaymentLineType(
             invoice_type=InvoiceTypeCode.POA, poa_type=POAType.EXPERT_COST

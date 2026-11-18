@@ -19,6 +19,7 @@ from sqlalchemy import Column
 from sqlmodel import Enum, Field, Relationship, SQLModel
 
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
+from app.domain.csv_safety import starts_with_formula_trigger
 from app.models.application.constants import UNGRANTED_SUBSTANTIVE_COST_LIMITATION
 from app.models.application.enums import (
     AddressSource,
@@ -344,6 +345,13 @@ class ClientCreate(BaseModel):
     home_address: AddressCreate | None = None
     has_no_fixed_abode: bool = PydanticField(default=False, examples=[False])
     correspondence_recipient: CorrespondenceRecipientCreate | None = None
+
+    @field_validator("client_first_name", "client_last_name")
+    @classmethod
+    def reject_formula_prefix(cls, value: str) -> str:
+        if starts_with_formula_trigger(value):
+            raise ValueError("must not start with =, +, - or @")
+        return value
 
     @model_validator(mode="after")
     def validate_home_address_against_fixed_abode(self) -> "ClientCreate":

@@ -2,11 +2,11 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
+from app.domain.csv_safety import neutralise_csv_formula
 from app.models.audit.enums import AuditEventReference, ReportType
 from app.models.history.enums import ActorType
 
 SYSTEM_USERNAME = "System"
-_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
 
 
 @dataclass(frozen=True)
@@ -22,7 +22,7 @@ class AuditTrailEvent:
 
 def csv_safe(value: str) -> str:
     """Stops spreadsheet tools from evaluating a cell as a formula."""
-    return f"'{value}" if value.startswith(_FORMULA_PREFIXES) else value
+    return neutralise_csv_formula(value)
 
 
 def resolve_history_username(

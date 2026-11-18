@@ -363,6 +363,41 @@ class TestCreateApplication:
 
         assert response.status_code == 422
 
+    @pytest.mark.parametrize("field", ["clientFirstName", "clientLastName"])
+    @pytest.mark.parametrize("value", ["=cmd", "+1", "-1", "@SUM(A1)", " =cmd"])
+    def test_422_rejected_when_client_name_starts_with_formula_trigger(
+        self, client, field, value
+    ):
+        body = _make_request_body({field: value})
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.parametrize("value", ["O'Brien", "Smith-Jones", "Zoë", "a=b"])
+    def test_201_accepts_client_names_that_only_contain_formula_characters_inside(
+        self, client, value
+    ):
+        body = _make_request_body({"clientLastName": value})
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 201
+
     def test_422_rejected_when_deceased_date_of_death_is_before_date_of_birth(
         self, client
     ):
