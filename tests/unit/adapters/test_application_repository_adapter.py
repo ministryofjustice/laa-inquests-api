@@ -314,6 +314,30 @@ class TestSaveUploadedCoronersLetter:
         assert result == saved_model.coroners_letter_id
 
 
+class TestGetCoronersLetterById:
+    def test_returns_domain_coroners_letter(self):
+        mock_session = MagicMock()
+        coroners_letter_id = uuid.uuid4()
+        mock_session.get.return_value = CoronersLetterModel(
+            coroners_letter_id=coroners_letter_id,
+            sds_file_name="sds-file.pdf",
+            file_name="upload.pdf",
+            office_id="1A234B",
+        )
+        adapter = ApplicationRepositoryAdapter(mock_session)
+
+        result = adapter.get_coroners_letter_by_id(coroners_letter_id)
+
+        mock_session.get.assert_called_once_with(
+            CoronersLetterModel, coroners_letter_id
+        )
+        assert result == CoronersLetter(
+            sds_file_name="sds-file.pdf",
+            file_name="upload.pdf",
+            office_id="1A234B",
+        )
+
+
 class TestUpdateDecision:
     def test_adds_entities_and_commits(self):
         mock_session = MagicMock()

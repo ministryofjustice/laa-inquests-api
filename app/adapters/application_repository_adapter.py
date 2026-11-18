@@ -326,6 +326,7 @@ class ApplicationRepositoryAdapter(
         return CoronersLetter(
             sds_file_name=coroners_letter_model.sds_file_name,
             file_name=coroners_letter_model.file_name,
+            office_id=coroners_letter_model.office_id,
         )
 
     def delete_coroners_letter_by_id(
