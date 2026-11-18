@@ -8,6 +8,7 @@ from fastapi import (
     APIRouter,
     Depends,
     File,
+    Form,
     HTTPException,
     Request,
     Response,
@@ -585,8 +586,11 @@ def create_application(
     dependencies=[Depends(require_permission_from(Permission.APPLICATION_CREATE))],
 )
 async def upload_coroners_letter(
+    user_office_codes: Annotated[
+        frozenset[str], Depends(get_current_provider_office_codes)
+    ],
+    office_id: Annotated[str, Form(min_length=1)],
     file: UploadFile = File(...),
-    # TODO: Add office_id parameter for coroners letter upload
     use_case: UploadCoronersLetterUseCase = Depends(
         get_upload_coroners_letter_use_case
     ),
@@ -599,7 +603,11 @@ async def upload_coroners_letter(
         coroners_letter_id = use_case.execute(
             contents,
             file_name,
+            office_id,
+            user_office_codes,
         )
+    except ProviderOfficeMismatchError as e:
+        raise HTTPException(status_code=403, detail=str(e))
     except CoronersLetterVirusDetectedError:
         logger.warning(
             "Coroners letter upload failed virus check",
