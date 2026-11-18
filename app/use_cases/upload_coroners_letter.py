@@ -69,11 +69,11 @@ class UploadCoronersLetterUseCase:
             new_coroners_letter = CoronersLetter(
                 sds_file_name=response_body.sds_file_name,
                 file_name=file_name,
+                office_id=office_id,
             )
             coroners_letter_id = (
                 self.upload_coroners_letter_port.save_uploaded_coroners_letter(
                     new_coroners_letter,
-                    office_id,
                 )
             )
             logger.info(
