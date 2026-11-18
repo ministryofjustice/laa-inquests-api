@@ -589,14 +589,25 @@ async def upload_coroners_letter(
     user_office_codes: Annotated[
         frozenset[str], Depends(get_current_provider_office_codes)
     ],
-    office_id: Annotated[str, Form(min_length=1)],
+    office_id: Annotated[
+        str,
+        Form(
+            min_length=1,
+            description="Office uploading the letter; must be one of the user's office codes.",
+        ),
+    ],
     file: UploadFile = File(...),
     use_case: UploadCoronersLetterUseCase = Depends(
         get_upload_coroners_letter_use_case
     ),
     request: Request = None,
 ) -> UploadCoronersLetterResponse:
-    """Upload a coroner's letter to document storage and return its file ID."""
+    """Upload a coroner's letter to document storage and return its file ID.
+
+    The multipart body must include `office_id` alongside `file`, and the letter is
+    stored against that office. Returns 403 if the office is not one of the user's
+    office codes.
+    """
     contents = await file.read()
     file_name = file.filename
     try:
