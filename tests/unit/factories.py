@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 
 from app.domain.application_backlog_report import ApplicationBacklogRecord
+from app.domain.coroners_letter import CoronersLetter as CoronersLetterDomain
 from app.models.application.certificate import ApplicationCertificate
 from app.models.application.enums import (
     AddressSource,
@@ -13,6 +14,7 @@ from app.models.application.index import (
     ApplicationProceeding,
     ApplicationPublicBody,
     Client,
+    CoronersLetter,
     Deceased,
     Proceeding,
     ProceedingId,
@@ -314,3 +316,23 @@ def create_base_application_backlog_record(**overrides):
         "potential_duplicate_applications": [],
     }
     return ApplicationBacklogRecord(**(defaults | overrides))
+
+
+def create_base_coroners_letter(**overrides) -> CoronersLetter:
+    """Create a base coroner's letter database model with optional field overrides."""
+    defaults = {
+        "sds_file_name": "coroners-letter_abc123.pdf",
+        "file_name": "test-coroners-letter.pdf",
+        "office_id": "0U651L",
+    }
+    return CoronersLetter(**(defaults | overrides))
+
+
+def create_base_coroners_letter_domain(**overrides) -> CoronersLetterDomain:
+    """Create a base coroner's letter domain object with optional field overrides."""
+    defaults = {
+        "sds_file_name": "coroners-letter_abc123.pdf",
+        "file_name": "test-coroners-letter.pdf",
+        "office_id": "0U651L",
+    }
+    return CoronersLetterDomain(**(defaults | overrides))
