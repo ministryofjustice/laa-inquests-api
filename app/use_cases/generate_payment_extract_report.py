@@ -6,6 +6,7 @@ from collections.abc import Iterator
 from datetime import UTC, date, datetime
 
 from app.domain.constants.report_csv_headers import PAYMENT_EXTRACT_REPORT_HEADERS
+from app.domain.csv_safety import neutralise_csv_formula
 from app.domain.payment_extract_report import (
     PaymentExtractReportSourceLine,
     PaymentLineClassification,
@@ -165,8 +166,12 @@ class GeneratePaymentExtractReportUseCase:
             firm_name,
             line.office_id,
             line.laa_reference,
-            " ".join(
-                name for name in (line.client_first_name, line.client_last_name) if name
+            neutralise_csv_formula(
+                " ".join(
+                    name
+                    for name in (line.client_first_name, line.client_last_name)
+                    if name
+                )
             ),
             line.tax_code.value,
             classification.model_number,

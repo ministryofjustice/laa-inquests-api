@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
-from app.domain.decisions_report import neutralise_csv_formula
+from app.domain.csv_safety import neutralise_csv_formula
 from app.models.application.enums import PublicBodyId
 from app.models.claim.enums import (
     ClaimDecisionStatus,

@@ -56,6 +56,14 @@ def _claim(
     )
 
 
+def _set_client_name(session: Session, first_name: str, last_name: str) -> None:
+    client = _application(session).client
+    client.client_first_name = first_name
+    client.client_last_name = last_name
+    session.add(client)
+    session.commit()
+
+
 def _add_extract(
     session: Session,
     claim: Claim,
@@ -157,6 +165,44 @@ class TestGetPaymentExtractReport:
             "Model Number": "Profit costs",
             "Provider Case Ref No": "",
         }
+
+    def test_200_client_name_formula_split_across_names_is_neutralised(
+        self, session, client
+    ):
+        _set_client_name(
+            session,
+            first_name='=HYPERLINK("http://www.example.com","Click',
+            last_name='CsvInjectionTest")',
+        )
+        _add_extract(
+            session, _claim(session), invoice_type=InvoiceTypeCode.FINAL_BILL_FEES
+        )
+
+        assert (
+            _single_row(client)["Client Name"]
+            == '\'=HYPERLINK("http://www.example.com","Click CsvInjectionTest")'
+        )
+
+    @pytest.mark.parametrize("trigger", ["=", "+", "-", "@", "\t", "\r"])
+    def test_200_client_name_starting_with_formula_trigger_is_neutralised(
+        self, session, client, trigger
+    ):
+        _set_client_name(session, first_name=f"{trigger}cmd", last_name="Doe")
+        _add_extract(
+            session, _claim(session), invoice_type=InvoiceTypeCode.FINAL_BILL_FEES
+        )
+
+        assert _single_row(client)["Client Name"] == f"'{trigger}cmd Doe"
+
+    def test_200_client_name_with_formula_only_in_last_name_is_unchanged(
+        self, session, client
+    ):
+        _set_client_name(session, first_name="John", last_name="=cmd")
+        _add_extract(
+            session, _claim(session), invoice_type=InvoiceTypeCode.FINAL_BILL_FEES
+        )
+
+        assert _single_row(client)["Client Name"] == "John =cmd"
 
     def test_200_final_bill_disbursement_row_is_expert_costs_disbursements(
         self, session, client

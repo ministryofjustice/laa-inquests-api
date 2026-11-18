@@ -3,6 +3,7 @@ from datetime import datetime
 from enum import StrEnum
 
 from app.domain.audit_trail import resolve_history_username
+from app.domain.csv_safety import neutralise_csv_formula
 from app.domain.date_utils import as_utc
 from app.models.application.enums import ReasonForRefusal
 from app.models.history.enums import ActorType, HistoryEventReference
@@ -16,7 +17,6 @@ DECISION_EVENT_REFERENCES = (
 
 _DATE_FORMAT = "%d-%m-%Y"
 _TIME_FORMAT = "%H:%M:%S"
-_FORMULA_TRIGGERS = ("=", "+", "-", "@", "\t", "\r")
 
 _PAY_IN_FULL = "PAY_IN_FULL"
 _REJECTED = "REJECTED"
@@ -78,13 +78,6 @@ class DecisionsReportRow:
             self.refusal_reason,
             self.justification,
         ]
-
-
-def neutralise_csv_formula(value: str) -> str:
-    """Stop spreadsheet applications from evaluating free text as a formula."""
-    if value.startswith(_FORMULA_TRIGGERS):
-        return f"'{value}"
-    return value
 
 
 def build_decisions_report_row(
