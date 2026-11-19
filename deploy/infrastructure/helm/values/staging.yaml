@@ -113,6 +113,7 @@ env:
   RATE_LIMIT_EXEMPT_PATHS: "/,/openapi.json,/health,/status"
   NODE_ENV: "staging"
   LOG_LEVEL: "info"
+  JAVA_TOOL_OPTIONS: "-XX:-UseBASE64Intrinsics"
 
 autoscaling:
   enabled: false
