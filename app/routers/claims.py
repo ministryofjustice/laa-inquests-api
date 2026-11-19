@@ -22,6 +22,7 @@ from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.ports.claim.get_claim_evidence_port import GetClaimEvidencePort
 from app.ports.claim.upload_claim_evidence_port import UploadClaimEvidencePort
 from app.ports.sds_port import SdsPort
+from app.routers.content_disposition import content_disposition
 from app.routers.dependencies import (
     get_claim_db_adapter,
     get_sds_port,
@@ -34,6 +35,7 @@ from app.use_cases.exceptions import (
     ClaimEvidenceUploadError,
     ClaimEvidenceVirusDetectedError,
     ClaimNotFoundError,
+    InvalidFileNameError,
 )
 from app.use_cases.retrieve_application_for_claim import (
     RetrieveApplicationForClaimUseCase,
@@ -113,7 +115,11 @@ async def upload_claim_evidence(
     use_case: UploadClaimEvidenceUseCase = Depends(get_upload_claim_evidence_use_case),
     request: Request = None,
 ) -> UploadClaimEvidenceResponse:
-    """Upload claim evidence to document storage and return its file ID."""
+    """Upload claim evidence to document storage and return its file ID.
+
+    Returns 422 if the file name is longer than 255 characters or uses anything other
+    than letters a-z/A-Z, numbers, spaces and the characters `.!()_-`.
+    """
     contents = await file.read()
     file_name = file.filename
     try:
@@ -121,6 +127,8 @@ async def upload_claim_evidence(
             contents,
             file_name,
         )
+    except InvalidFileNameError:
+        raise HTTPException(status_code=422, detail="Invalid file name")
     except ClaimEvidenceVirusDetectedError:
         logger.warning(
             "Claim evidence upload failed virus check",
@@ -218,7 +226,7 @@ def retrieve_claim_evidence(
         result.content,
         media_type=mime_type[0],
         headers={
-            "Content-Disposition": f'{disposition}; filename="{result.file_name}"'
+            "Content-Disposition": content_disposition(disposition, result.file_name)
         },
     )
 

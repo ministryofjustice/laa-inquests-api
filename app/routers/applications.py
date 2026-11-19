@@ -95,6 +95,7 @@ from app.ports.search_application_port import SearchApplicationPort
 from app.ports.update_application_public_bodies_port import ApplicationPublicBodiesPort
 from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
+from app.routers.content_disposition import content_disposition
 from app.routers.dependencies import (
     get_claim_db_adapter,
     get_current_provider_firm_code,
@@ -125,6 +126,7 @@ from app.use_cases.exceptions import (
     CoronersLetterVirusDetectedError,
     InvalidClaimError,
     InvalidCoronersLetterDocumentIdError,
+    InvalidFileNameError,
     ProviderDetailsRetrievalError,
     ProviderOfficeMismatchError,
     ProviderOfficeNotFoundError,
@@ -606,7 +608,8 @@ async def upload_coroners_letter(
 
     The multipart body must include `office_id` alongside `file`, and the letter is
     stored against that office. Returns 403 if the office is not one of the user's
-    office codes.
+    office codes. Returns 422 if the file name is longer than 255 characters or uses
+    anything other than letters a-z/A-Z, numbers, spaces and the characters `.!()_-`.
     """
     contents = await file.read()
     file_name = file.filename
@@ -619,6 +622,8 @@ async def upload_coroners_letter(
         )
     except ProviderOfficeMismatchError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except InvalidFileNameError:
+        raise HTTPException(status_code=422, detail="Invalid file name")
     except CoronersLetterVirusDetectedError:
         logger.warning(
             "Coroners letter upload failed virus check",
@@ -998,7 +1003,9 @@ def retrieve_coroners_letter(
     return StreamingResponse(
         result.content,
         media_type=mime_type[0],
-        headers={"Content-Disposition": f'inline; filename="{result.file_name}"'},
+        headers={
+            "Content-Disposition": content_disposition("inline", result.file_name)
+        },
     )
 
 

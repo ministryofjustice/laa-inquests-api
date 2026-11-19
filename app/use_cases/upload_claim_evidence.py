@@ -2,6 +2,7 @@ import logging
 import uuid
 
 from app.domain.claim_evidence import ClaimEvidence
+from app.domain.file_name import is_valid_upload_file_name
 from app.logging_utils import build_log_extra
 from app.ports.claim.upload_claim_evidence_port import UploadClaimEvidencePort
 from app.ports.sds_port import SdsPort
@@ -9,6 +10,7 @@ from app.use_cases.exceptions import (
     ClaimEvidenceUploadError,
     ClaimEvidenceVirusCheckError,
     ClaimEvidenceVirusDetectedError,
+    InvalidFileNameError,
 )
 
 logger = logging.getLogger(__name__)
@@ -28,6 +30,16 @@ class UploadClaimEvidenceUseCase:
         claim_evidence: bytes,
         file_name: str,
     ) -> uuid.UUID:
+        if not is_valid_upload_file_name(file_name):
+            logger.warning(
+                "Claim evidence upload rejected: invalid file name",
+                extra=build_log_extra(
+                    event="claim_evidence_upload_failed",
+                    reason="invalid_file_name",
+                ),
+            )
+            raise InvalidFileNameError("Invalid file name")
+
         try:
             is_safe = self.sds_port.virus_check_claim_evidence(
                 claim_evidence, file_name
