@@ -11,6 +11,7 @@ from app.use_cases.exceptions import (
     ClaimEvidenceUploadError,
     ClaimEvidenceVirusCheckError,
     ClaimEvidenceVirusDetectedError,
+    InvalidFileNameError,
 )
 from app.use_cases.upload_claim_evidence import UploadClaimEvidenceUseCase
 
@@ -135,5 +136,23 @@ def test_execute_raises_an_error_when_virus_check_returns_server_error():
     with pytest.raises(ClaimEvidenceVirusCheckError):
         use_case.execute(request_body["claim_evidence"], request_body["file_name"])
 
+    sds_port.save_claim_evidence.assert_not_called()
+    upload_port.save_uploaded_claim_evidence.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "file_name", ["<img src=x onerror=alert(1)>.pdf", 'a".pdf', ""]
+)
+def test_execute_rejects_invalid_file_name_before_any_side_effect(file_name):
+    sds_port = MagicMock(spec=SdsPort)
+    upload_port = MagicMock(spec=UploadClaimEvidencePort)
+    use_case = UploadClaimEvidenceUseCase(
+        sds_port=sds_port, upload_claim_evidence_port=upload_port
+    )
+
+    with pytest.raises(InvalidFileNameError):
+        use_case.execute(b"test", file_name)
+
+    sds_port.virus_check_claim_evidence.assert_not_called()
     sds_port.save_claim_evidence.assert_not_called()
     upload_port.save_uploaded_claim_evidence.assert_not_called()

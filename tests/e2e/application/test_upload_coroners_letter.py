@@ -13,6 +13,7 @@ from app.models.application.index import CoronersLetter
 from app.ports.sds_port import SdsPort
 from app.routers.applications import CoronersLetterUploadError, get_sds_port
 from app.routers.dependencies import get_current_provider_office_codes
+from tests.helpers.multipart import UNSAFE_FILE_NAMES, raw_file_upload
 
 
 def is_valid_uuid(val):
@@ -174,6 +175,50 @@ class TestUploadCoronersLetter:
             headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
         )
         assert response.status_code == 500
+
+
+class TestUploadCoronersLetterFileName:
+    @pytest.mark.parametrize("file_name", UNSAFE_FILE_NAMES)
+    def test_422_upload_coroners_letter_with_unsafe_file_name(
+        self, client, session, file_name
+    ):
+        mock_sds = MagicMock()
+        api.dependency_overrides[get_sds_port] = lambda: mock_sds
+        letters_before = session.exec(select(CoronersLetter)).all()
+
+        response = raw_file_upload(
+            client,
+            "/applications/upload-coroners-letter",
+            file_name,
+            {"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
+            fields={"office_id": "0U651L"},
+        )
+
+        assert response.status_code == 422
+        assert response.json()["detail"] == "Invalid file name"
+        mock_sds.virus_check_coroners_letter.assert_not_called()
+        mock_sds.save_coroners_letter.assert_not_called()
+        assert session.exec(select(CoronersLetter)).all() == letters_before
+
+    @pytest.mark.parametrize(
+        "file_name",
+        [
+            "coroners_letter.pdf",
+            "Coroners letter (1).pdf",
+            "Jane Doe - letter_2024.pdf",
+        ],
+    )
+    def test_201_upload_coroners_letter_with_normal_file_name(self, client, file_name):
+        response = raw_file_upload(
+            client,
+            "/applications/upload-coroners-letter",
+            file_name,
+            {"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
+            fields={"office_id": "0U651L"},
+        )
+
+        assert response.status_code == 201
+        assert response.json()["coronersLetterFileName"] == file_name
 
 
 PII_FILE_NAME = "Jane Doe passport.pdf"

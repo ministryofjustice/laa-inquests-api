@@ -2,6 +2,7 @@ import logging
 import uuid
 
 from app.domain.coroners_letter import CoronersLetter
+from app.domain.file_name import is_valid_upload_file_name
 from app.domain.office_authorisation import is_office_authorised
 from app.logging_utils import build_log_extra
 from app.ports.sds_port import SdsPort
@@ -10,6 +11,7 @@ from app.use_cases.exceptions import (
     CoronersLetterUploadError,
     CoronersLetterVirusCheckError,
     CoronersLetterVirusDetectedError,
+    InvalidFileNameError,
     ProviderOfficeMismatchError,
 )
 
@@ -44,6 +46,16 @@ class UploadCoronersLetterUseCase:
             raise ProviderOfficeMismatchError(
                 "Office id is not in the user's office codes"
             )
+
+        if not is_valid_upload_file_name(file_name):
+            logger.warning(
+                "Coroners letter upload rejected: invalid file name",
+                extra=build_log_extra(
+                    event="coroners_letter_upload_failed",
+                    reason="invalid_file_name",
+                ),
+            )
+            raise InvalidFileNameError("Invalid file name")
 
         try:
             is_safe = self.sds_port.virus_check_coroners_letter(

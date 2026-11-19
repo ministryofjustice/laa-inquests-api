@@ -3,11 +3,15 @@ import json
 import uuid
 from unittest.mock import MagicMock
 
+import pytest
+from sqlmodel import select
+
 from app import api
 from app.auth.rbac import Permission, Role, get_current_user_permissions
 from app.models.claim.index import ClaimEvidence
 from app.routers.claims import get_sds_port
 from app.use_cases.exceptions import ClaimEvidenceUploadError
+from tests.helpers.multipart import UNSAFE_FILE_NAMES, raw_file_upload
 
 
 def is_valid_uuid(val):
@@ -170,6 +174,42 @@ def test_201_upload_claim_evidence_allows_multiple_uploads(client):
 
     assert "claimEvidenceId" in first_body
     assert "claimEvidenceId" in second_body
+
+
+class TestUploadClaimEvidenceFileName:
+    @pytest.mark.parametrize("file_name", UNSAFE_FILE_NAMES)
+    def test_422_upload_claim_evidence_with_unsafe_file_name(
+        self, client, session, file_name
+    ):
+        mock_sds = MagicMock()
+        api.dependency_overrides[get_sds_port] = lambda: mock_sds
+
+        response = raw_file_upload(
+            client,
+            "/claims/evidence",
+            file_name,
+            {"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
+        )
+
+        assert response.status_code == 422
+        assert response.json()["detail"] == "Invalid file name"
+        mock_sds.virus_check_claim_evidence.assert_not_called()
+        mock_sds.save_claim_evidence.assert_not_called()
+        assert session.exec(select(ClaimEvidence)).all() == []
+
+    @pytest.mark.parametrize(
+        "file_name",
+        ["claim_evidence.pdf", "Evidence (1).pdf", "Jane Doe - invoice_2024.xlsx"],
+    )
+    def test_201_upload_claim_evidence_with_normal_file_name(self, client, file_name):
+        response = raw_file_upload(
+            client,
+            "/claims/evidence",
+            file_name,
+            {"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
+        )
+
+        assert response.status_code == 201
 
 
 class TestUploadClaimEvidenceRbac:

@@ -2365,3 +2365,22 @@ class TestCreateClaimRbac:
             },
         )
         assert response.status_code == 201
+
+
+def test_422_create_claim_with_unsafe_cost_template_file_name(session, client):
+    laa_reference = session.exec(select(Application)).first().laa_reference
+
+    response = client.post(
+        f"/applications/{laa_reference}/claim",
+        json=make_poa_claim_request_body(
+            {
+                "claimCostTemplateFile": {
+                    "claimCostTemplateFileId": str(uuid.uuid4()),
+                    "claimCostTemplateFileName": "<img src=x onerror=alert(1)>.xlsx",
+                },
+            }
+        ),
+        headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
+    )
+
+    assert response.status_code == 422
