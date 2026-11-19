@@ -250,6 +250,7 @@ def test_200_read_application_response_includes_coroners_letter_file_name(
     coroners_letter = CoronersLetter(
         sds_file_name="sds-abc123.pdf",
         file_name="test-document.pdf",
+        office_id="0U651L",
     )
     session.add(coroners_letter)
     session.commit()

@@ -72,6 +72,7 @@ from app.models.history.index import HistoryEvent
 SessionFactory = Callable[[], AbstractContextManager[Session]]
 
 SEED_FIRM_CODE = "1473"
+SEED_OFFICE_ID = "0U651L"
 SEED_PROVIDER_EMAIL = "provider@example.com"
 SEED_CLAIMANT_ID = "claimant-123@provider.co.uk"
 SEED_CASEWORKER_NAME = "Seed Caseworker"
@@ -684,7 +685,7 @@ def _named_application(
         home_address=_named_address(),
         provider=Provider(
             firm_code=SEED_FIRM_CODE,
-            office_id="0U651L",
+            office_id=SEED_OFFICE_ID,
             email_address=SEED_PROVIDER_EMAIL,
         ),
         recipient_name="Robert Jones",
@@ -714,6 +715,7 @@ def seed_dev(session_factory: SessionFactory = CustomSessionLocal):
                 coroners_letter_id=SEED_CORONERS_LETTER_ID,
                 sds_file_name="seed-coroners-letter",
                 file_name="coroners-letter.pdf",
+                office_id=SEED_OFFICE_ID,
             ),
             now=now,
         )
@@ -751,6 +753,7 @@ def seed_dev(session_factory: SessionFactory = CustomSessionLocal):
                 coroners_letter_id=SEED_FINAL_BILL_CORONERS_LETTER_ID,
                 sds_file_name="seed-final-bill-coroners-letter",
                 file_name="final-bill-coroners-letter.pdf",
+                office_id=SEED_OFFICE_ID,
             ),
             now=now,
         )
@@ -899,6 +902,7 @@ def _seed_bulk_claims(
 def _seed_bulk_application(db_session, reference_rules, used_references, now):
     first_name = random.choice(BULK_FIRST_NAMES)  # nosec B311
     last_name = random.choice(BULK_LAST_NAMES)  # nosec B311
+    office_id = _random_office_id()
 
     application = _create_granted_application(
         db_session,
@@ -914,6 +918,7 @@ def _seed_bulk_application(db_session, reference_rules, used_references, now):
             coroners_letter_id=uuid.uuid4(),
             sds_file_name="seed-bulk-coroners-letter",
             file_name="coroners-letter.pdf",
+            office_id=office_id,
         ),
         client_fields={
             "client_first_name": first_name,
@@ -941,7 +946,7 @@ def _seed_bulk_application(db_session, reference_rules, used_references, now):
         },
         provider=Provider(
             firm_code=random.choice(BULK_FIRM_CODES),  # nosec B311
-            office_id=_random_office_id(),
+            office_id=office_id,
             email_address=SEED_PROVIDER_EMAIL,
         ),
         recipient_name=None,

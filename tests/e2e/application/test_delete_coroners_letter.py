@@ -11,6 +11,7 @@ from app.use_cases.exceptions import CoronersLetterDeleteError
 def _upload_coroners_letter_and_get_id(client, auth_token):
     upload_response = client.post(
         "/applications/upload-coroners-letter",
+        data={"office_id": "0U651L"},
         files={
             "file": (
                 "coroners_letter.pdf",

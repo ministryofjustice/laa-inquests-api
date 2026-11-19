@@ -12,18 +12,7 @@ from app.use_cases.exceptions import (
     InvalidCoronersLetterDocumentIdError,
     SDSLetterRetrievalError,
 )
-
-
-def _make_coroners_letter(
-    coroners_letter_id: uuid.UUID | None = None,
-    sds_file_name: str = "letter_abc123.pdf",
-    file_name: str = "test-document.pdf",
-) -> CoronersLetter:
-    return CoronersLetter(
-        coroners_letter_id=coroners_letter_id or uuid.uuid4(),
-        sds_file_name=sds_file_name,
-        file_name=file_name,
-    )
+from tests.unit.factories import create_base_coroners_letter
 
 
 def _make_application(coroners_letter: CoronersLetter | None = None) -> Application:
@@ -44,7 +33,7 @@ def _make_use_case(application: Application | None, sds_port: MagicMock):
 
 def test_execute_calls_sds_port_with_sds_file_name():
     application = _make_application(
-        coroners_letter=_make_coroners_letter(
+        coroners_letter=create_base_coroners_letter(
             coroners_letter_id=uuid.uuid4(),
             sds_file_name="letter_abc123.pdf",
             file_name="test-document.pdf",
@@ -61,7 +50,7 @@ def test_execute_calls_sds_port_with_sds_file_name():
 
 def test_execute_result_contains_file_name():
     application = _make_application(
-        coroners_letter=_make_coroners_letter(
+        coroners_letter=create_base_coroners_letter(
             sds_file_name="letter_abc123.pdf", file_name="test-document.pdf"
         )
     )
@@ -76,7 +65,7 @@ def test_execute_result_contains_file_name():
 
 def test_execute_returns_iterator_from_port():
     application = _make_application(
-        coroners_letter=_make_coroners_letter(sds_file_name="letter_abc.pdf")
+        coroners_letter=create_base_coroners_letter(sds_file_name="letter_abc.pdf")
     )
     sds_port = MagicMock(spec=SdsPort)
 
@@ -113,7 +102,7 @@ def test_execute_raises_error_when_application_coroners_letter_is_none():
 
 def test_execute_raises_error_when_port_raises_invalid_id():
     application = _make_application(
-        coroners_letter=_make_coroners_letter(sds_file_name="letter_abc123.pdf")
+        coroners_letter=create_base_coroners_letter(sds_file_name="letter_abc123.pdf")
     )
     sds_port = MagicMock(spec=SdsPort)
     sds_port.retrieve_coroners_letter.side_effect = (
@@ -127,7 +116,7 @@ def test_execute_raises_error_when_port_raises_invalid_id():
 
 def test_execute_raises_error_when_port_raises_retrieval_error():
     application = _make_application(
-        coroners_letter=_make_coroners_letter(sds_file_name="letter_abc123.pdf")
+        coroners_letter=create_base_coroners_letter(sds_file_name="letter_abc123.pdf")
     )
     sds_port = MagicMock(spec=SdsPort)
     sds_port.retrieve_coroners_letter.side_effect = SDSLetterRetrievalError()

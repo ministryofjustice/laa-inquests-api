@@ -139,7 +139,9 @@ def seeded_template_db():
         )
 
         coroners_letter = CoronersLetter(
-            sds_file_name="test_sds_file.pdf", file_name="test_file.pdf"
+            sds_file_name="test_sds_file.pdf",
+            file_name="test_file.pdf",
+            office_id=new_provider.office_id,
         )
 
         db_session.add(coroners_letter)

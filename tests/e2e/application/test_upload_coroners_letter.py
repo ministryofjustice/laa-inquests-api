@@ -3,9 +3,16 @@ import json
 import uuid
 from unittest.mock import MagicMock
 
+import pytest
+from fastapi.testclient import TestClient
+from sqlmodel import Session, select
+
 from app import api
 from app.auth.rbac import Permission, Role, get_current_user_permissions
+from app.models.application.index import CoronersLetter
+from app.ports.sds_port import SdsPort
 from app.routers.applications import CoronersLetterUploadError, get_sds_port
+from app.routers.dependencies import get_current_provider_office_codes
 
 
 def is_valid_uuid(val):
@@ -17,9 +24,16 @@ def is_valid_uuid(val):
 
 
 class TestUploadCoronersLetter:
-    def test_201_upload_coroners_letter_returns_coroners_letter_id(self, client):
+    def test_201_upload_coroners_letter_returns_coroners_letter_id(
+        self, client: TestClient, session: Session
+    ) -> None:
+        api.dependency_overrides[get_current_provider_office_codes] = lambda: frozenset(
+            {"0U651L", "1A234B"}
+        )
+
         response = client.post(
             "/applications/upload-coroners-letter",
+            data={"office_id": "1A234B"},
             files={
                 "file": (
                     "coroners_letter.pdf",
@@ -33,10 +47,82 @@ class TestUploadCoronersLetter:
         body = response.json()
         assert "coronersLetterId" in body
         assert is_valid_uuid(body["coronersLetterId"])
+        assert body == {
+            "coronersLetterId": body["coronersLetterId"],
+            "coronersLetterFileName": "coroners_letter.pdf",
+        }
+        letter = session.get(CoronersLetter, uuid.UUID(body["coronersLetterId"]))
+        assert letter is not None
+        assert letter.office_id == "1A234B"
+
+    @pytest.mark.parametrize("office_id", [None, ""])
+    def test_422_upload_coroners_letter_requires_a_non_empty_office_id(
+        self, client: TestClient, session: Session, office_id: str | None
+    ) -> None:
+        mock_sds = MagicMock(spec=SdsPort)
+        api.dependency_overrides[get_sds_port] = lambda: mock_sds
+        letter_ids_before = session.exec(
+            select(CoronersLetter.coroners_letter_id)
+        ).all()
+
+        response = client.post(
+            "/applications/upload-coroners-letter",
+            data={} if office_id is None else {"office_id": office_id},
+            files={
+                "file": (
+                    "coroners_letter.pdf",
+                    io.BytesIO(b"test content"),
+                    "application/pdf",
+                )
+            },
+            headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
+        )
+
+        assert response.status_code == 422
+        assert any(
+            error["loc"] == ["body", "office_id"] for error in response.json()["detail"]
+        )
+        mock_sds.virus_check_coroners_letter.assert_not_called()
+        mock_sds.save_coroners_letter.assert_not_called()
+        assert (
+            session.exec(select(CoronersLetter.coroners_letter_id)).all()
+            == letter_ids_before
+        )
+
+    def test_403_upload_coroners_letter_for_another_office_has_no_side_effects(
+        self, client: TestClient, session: Session
+    ) -> None:
+        mock_sds = MagicMock(spec=SdsPort)
+        api.dependency_overrides[get_sds_port] = lambda: mock_sds
+        letter_ids_before = session.exec(
+            select(CoronersLetter.coroners_letter_id)
+        ).all()
+
+        response = client.post(
+            "/applications/upload-coroners-letter",
+            data={"office_id": "1A234B"},
+            files={
+                "file": (
+                    "coroners_letter.pdf",
+                    io.BytesIO(b"test content"),
+                    "application/pdf",
+                )
+            },
+            headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
+        )
+
+        assert response.status_code == 403
+        mock_sds.virus_check_coroners_letter.assert_not_called()
+        mock_sds.save_coroners_letter.assert_not_called()
+        assert (
+            session.exec(select(CoronersLetter.coroners_letter_id)).all()
+            == letter_ids_before
+        )
 
     def test_422_upload_coroners_letter_with_no_file(self, client):
         response = client.post(
             "/applications/upload-coroners-letter",
+            data={"office_id": "0U651L"},
             headers={"Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}"},
         )
         assert response.status_code == 422
@@ -53,6 +139,7 @@ class TestUploadCoronersLetter:
 
         response = client.post(
             "/applications/upload-coroners-letter",
+            data={"office_id": "0U651L"},
             files={
                 "file": (
                     "coroners_letter.pdf",
@@ -76,6 +163,7 @@ class TestUploadCoronersLetter:
 
         response = client.post(
             "/applications/upload-coroners-letter",
+            data={"office_id": "0U651L"},
             files={
                 "file": (
                     "coroners_letter.pdf",
@@ -95,6 +183,7 @@ class TestUploadCoronersLetterSentryPii:
     def _upload(self, client):
         return client.post(
             "/applications/upload-coroners-letter",
+            data={"office_id": "0U651L"},
             files={
                 "file": (PII_FILE_NAME, io.BytesIO(b"test content"), "application/pdf")
             },
@@ -154,6 +243,7 @@ class TestUploadCoronersLetterRbac:
     ):
         response = client.post(
             "/applications/upload-coroners-letter",
+            data={"office_id": "0U651L"},
             files={
                 "file": (
                     "coroners_letter.pdf",
@@ -175,6 +265,7 @@ class TestUploadCoronersLetterRbac:
 
         response = client.post(
             "/applications/upload-coroners-letter",
+            data={"office_id": "0U651L"},
             files={
                 "file": (
                     "coroners_letter.pdf",

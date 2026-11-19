@@ -5,3 +5,4 @@ from dataclasses import dataclass
 class CoronersLetter:
     sds_file_name: str
     file_name: str
+    office_id: str

@@ -297,6 +297,7 @@ class ApplicationRepositoryAdapter(
         coroners_letter_model = CoronersLetterModel(
             sds_file_name=coroners_letter.sds_file_name,
             file_name=coroners_letter.file_name,
+            office_id=coroners_letter.office_id,
         )
         self.session.add(coroners_letter_model)
         self.session.flush()
@@ -325,6 +326,7 @@ class ApplicationRepositoryAdapter(
         return CoronersLetter(
             sds_file_name=coroners_letter_model.sds_file_name,
             file_name=coroners_letter_model.file_name,
+            office_id=coroners_letter_model.office_id,
         )
 
     def delete_coroners_letter_by_id(

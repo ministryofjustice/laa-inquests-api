@@ -74,6 +74,7 @@ def test_201_upload_coroners_letter_returns_201_when_provider_application_user_t
 ):
     response = client.post(
         "/applications/upload-coroners-letter",
+        data={"office_id": "0U651L"},
         files={
             "file": (
                 "coroners_letter.pdf",
@@ -170,6 +171,7 @@ class TestDeleteCoronersLetterAuth:
         coroners_letter = CoronersLetter(
             sds_file_name="stored-file_abc123.pdf",
             file_name="coroners_letter.pdf",
+            office_id="0U651L",
         )
         session.add(coroners_letter)
         session.commit()
