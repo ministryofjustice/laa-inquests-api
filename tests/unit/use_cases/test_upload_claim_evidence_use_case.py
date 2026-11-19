@@ -8,11 +8,13 @@ from app.models.application.index import SDSUploadClaimEvidenceResponse
 from app.ports.claim.upload_claim_evidence_port import UploadClaimEvidencePort
 from app.ports.sds_port import SdsPort
 from app.use_cases.exceptions import (
+    ClaimEvidenceRejectedError,
     ClaimEvidenceUploadError,
     ClaimEvidenceVirusCheckError,
     ClaimEvidenceVirusDetectedError,
 )
 from app.use_cases.upload_claim_evidence import UploadClaimEvidenceUseCase
+from tests.helpers.spreadsheet_files import MACRO_XLSX
 
 request_body = {
     "claim_evidence": b"test",
@@ -135,5 +137,24 @@ def test_execute_raises_an_error_when_virus_check_returns_server_error():
     with pytest.raises(ClaimEvidenceVirusCheckError):
         use_case.execute(request_body["claim_evidence"], request_body["file_name"])
 
+    sds_port.save_claim_evidence.assert_not_called()
+    upload_port.save_uploaded_claim_evidence.assert_not_called()
+
+
+def test_execute_rejects_macro_enabled_spreadsheet_before_calling_sds():
+    sds_port = MagicMock(spec=SdsPort)
+    upload_port = MagicMock(spec=UploadClaimEvidencePort)
+
+    use_case = UploadClaimEvidenceUseCase(
+        sds_port=sds_port,
+        upload_claim_evidence_port=upload_port,
+    )
+
+    with pytest.raises(ClaimEvidenceRejectedError) as exc_info:
+        use_case.execute(MACRO_XLSX, "claim_cost_template.xlsx")
+
+    assert exc_info.value.code == "MACROS_NOT_ALLOWED"
+    assert exc_info.value.safe_message == "Macro-enabled spreadsheets are not allowed"
+    sds_port.virus_check_claim_evidence.assert_not_called()
     sds_port.save_claim_evidence.assert_not_called()
     upload_port.save_uploaded_claim_evidence.assert_not_called()

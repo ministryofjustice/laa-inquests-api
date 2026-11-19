@@ -46,6 +46,14 @@ class ClaimEvidenceVirusDetectedError(SentryRedactableError):
     pass
 
 
+class ClaimEvidenceRejectedError(SentryRedactableError):
+    """`message` never contains the file name, so it is also the safe message."""
+
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message, safe_message=message)
+        self.code = code
+
+
 class CoronersLetterNotFoundError(SentryRedactableError):
     pass
 

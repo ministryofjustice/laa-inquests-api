@@ -30,6 +30,7 @@ from app.use_cases.delete_claim_evidence import DeleteClaimEvidenceUseCase
 from app.use_cases.exceptions import (
     ClaimEvidenceDeleteError,
     ClaimEvidenceNotFoundError,
+    ClaimEvidenceRejectedError,
     ClaimEvidenceRetrievalError,
     ClaimEvidenceUploadError,
     ClaimEvidenceVirusDetectedError,
@@ -121,6 +122,20 @@ async def upload_claim_evidence(
             contents,
             file_name,
         )
+    except ClaimEvidenceRejectedError as e:
+        logger.warning(
+            "Claim evidence upload rejected",
+            extra=build_log_extra(
+                event="claim_evidence_uploaded_failed",
+                route=_route(request),
+                method=_method(request),
+                status_code=422,
+                reason=e.code,
+            ),
+        )
+        raise HTTPException(
+            status_code=422, detail={"code": e.code, "message": e.safe_message}
+        ) from None
     except ClaimEvidenceVirusDetectedError:
         logger.warning(
             "Claim evidence upload failed virus check",

@@ -2,10 +2,15 @@ import logging
 import uuid
 
 from app.domain.claim_evidence import ClaimEvidence
+from app.domain.spreadsheet_evidence import (
+    SpreadsheetRejectedError,
+    check_spreadsheet_evidence,
+)
 from app.logging_utils import build_log_extra
 from app.ports.claim.upload_claim_evidence_port import UploadClaimEvidencePort
 from app.ports.sds_port import SdsPort
 from app.use_cases.exceptions import (
+    ClaimEvidenceRejectedError,
     ClaimEvidenceUploadError,
     ClaimEvidenceVirusCheckError,
     ClaimEvidenceVirusDetectedError,
@@ -28,6 +33,18 @@ class UploadClaimEvidenceUseCase:
         claim_evidence: bytes,
         file_name: str,
     ) -> uuid.UUID:
+        try:
+            check_spreadsheet_evidence(file_name, claim_evidence)
+        except SpreadsheetRejectedError as e:
+            logger.warning(
+                "Claim evidence upload rejected by spreadsheet check",
+                extra=build_log_extra(
+                    event="claim_evidence_upload_rejected",
+                    reason=e.code.value,
+                ),
+            )
+            raise ClaimEvidenceRejectedError(e.code.value, e.message) from e
+
         try:
             is_safe = self.sds_port.virus_check_claim_evidence(
                 claim_evidence, file_name
