@@ -18,7 +18,9 @@ def _make_claim_evidence(
     sds_file_name: str = "claim-evidence_abc123.pdf",
     file_name: str = "test-document.pdf",
 ) -> ClaimEvidence:
-    return ClaimEvidence(sds_file_name=sds_file_name, file_name=file_name)
+    return ClaimEvidence(
+        sds_file_name=sds_file_name, file_name=file_name, office_id="0U651L"
+    )
 
 
 def test_execute_deletes_file_from_sds_and_db():

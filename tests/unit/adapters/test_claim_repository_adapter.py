@@ -478,7 +478,9 @@ def test_link_evidence_to_claim_sets_claim_id_on_existing_evidence(session):
     claim = adapter.create_claim(
         application_id, _make_domain_claim(), "claimant@example.com"
     )
-    evidence = ClaimEvidence(sds_file_name="stored.pdf", file_name="original.pdf")
+    evidence = ClaimEvidence(
+        sds_file_name="stored.pdf", file_name="original.pdf", office_id="0U651L"
+    )
     session.add(evidence)
     session.commit()
     session.refresh(evidence)
@@ -501,7 +503,9 @@ def test_link_evidence_to_claim_ignores_unknown_evidence_ids(session):
 
 def test_delete_claim_evidence_by_id_deletes_existing_evidence(session):
     adapter = ClaimRepositoryAdapter(session)
-    evidence = ClaimEvidence(sds_file_name="stored.pdf", file_name="original.pdf")
+    evidence = ClaimEvidence(
+        sds_file_name="stored.pdf", file_name="original.pdf", office_id="0U651L"
+    )
     session.add(evidence)
     session.commit()
     session.refresh(evidence)

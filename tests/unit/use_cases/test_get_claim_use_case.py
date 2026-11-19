@@ -262,6 +262,7 @@ def test_cost_template_file_includes_file_size_from_stored_evidence():
         claim_evidence=DomainClaimEvidence(
             sds_file_name="template_abc123.xlsx",
             file_name="final_bill_costs.xlsx",
+            office_id="0U651L",
             file_size=20480,
         ),
     )
