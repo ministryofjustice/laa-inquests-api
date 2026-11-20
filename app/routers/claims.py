@@ -120,7 +120,6 @@ async def upload_claim_evidence(
         Form(
             min_length=1,
             description="Office uploading the evidence; must be one of the user's office codes.",
-            examples=["0U651L"],
         ),
     ],
     file: UploadFile = File(...),
