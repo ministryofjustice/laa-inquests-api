@@ -60,6 +60,24 @@ def _make_request_body(client_overrides=None):
     }
 
 
+PERSON_NAME_CLIENT_FIELDS = [
+    "clientFirstName",
+    "clientLastName",
+    "clientLastNameAtBirth",
+    "recipientName",
+]
+
+
+def _set_client_name_field(body, field, value):
+    if field == "recipientName":
+        body["client"]["correspondenceRecipient"] = {
+            "recipientType": "PERSON",
+            "recipientName": value,
+        }
+    else:
+        body["client"][field] = value
+
+
 class TestCreateApplication:
     def test_201_create_application_response_contains_expected_base_properties(
         self, client
@@ -382,11 +400,44 @@ class TestCreateApplication:
 
         assert response.status_code == 422
 
-    @pytest.mark.parametrize("value", ["O'Brien", "Smith-Jones", "Zoë", "a=b"])
-    def test_201_accepts_client_names_that_only_contain_formula_characters_inside(
-        self, client, value
+    @pytest.mark.parametrize("field", PERSON_NAME_CLIENT_FIELDS)
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "zxdfsdfdszxdfsdfds'';!--\"=&{()}",
+            "<Test>",
+            "Smith1",
+            "Zoë",
+            "a=b",
+            "Smith\n",
+            "A" * 51,
+            "",
+        ],
+    )
+    def test_422_rejected_when_client_name_field_contains_disallowed_input(
+        self, client, field, value
     ):
-        body = _make_request_body({"clientLastName": value})
+        body = _make_request_body()
+        _set_client_name_field(body, field, value)
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.parametrize("field", PERSON_NAME_CLIENT_FIELDS)
+    @pytest.mark.parametrize("value", ["O'Donald", "Smith-Jones", "De Souza", "A" * 50])
+    def test_201_accepts_client_name_field_with_allowed_characters(
+        self, client, field, value
+    ):
+        body = _make_request_body()
+        _set_client_name_field(body, field, value)
 
         response = client.post(
             "/applications",

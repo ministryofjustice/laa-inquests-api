@@ -19,7 +19,6 @@ from sqlalchemy import Column
 from sqlmodel import Enum, Field, Relationship, SQLModel
 
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
-from app.domain.csv_safety import starts_with_formula_trigger
 from app.models.application.constants import UNGRANTED_SUBSTANTIVE_COST_LIMITATION
 from app.models.application.enums import (
     AddressSource,
@@ -29,6 +28,7 @@ from app.models.application.enums import (
     PublicBodyId,
     ReasonForRefusal,
 )
+from app.models.validated_types import PersonName
 
 
 # RELATIONS
@@ -307,7 +307,7 @@ class CorrespondenceRecipientCreate(BaseModel):
         from_attributes=True,
     )
     recipient_type: CorrespondenceRecipientType
-    recipient_name: str
+    recipient_name: PersonName
 
 
 class ClientCreate(BaseModel):
@@ -316,9 +316,9 @@ class ClientCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    client_first_name: str = PydanticField(examples=["Jane"])
-    client_last_name: str = PydanticField(examples=["Smith"])
-    client_last_name_at_birth: str | None = PydanticField(
+    client_first_name: PersonName = PydanticField(examples=["Jane"])
+    client_last_name: PersonName = PydanticField(examples=["Smith"])
+    client_last_name_at_birth: PersonName | None = PydanticField(
         default=None, examples=["Jones"]
     )
     date_of_birth: str = PydanticField(examples=["2000-01-01"])
@@ -346,13 +346,6 @@ class ClientCreate(BaseModel):
     home_address: AddressCreate | None = None
     has_no_fixed_abode: bool = PydanticField(default=False, examples=[False])
     correspondence_recipient: CorrespondenceRecipientCreate | None = None
-
-    @field_validator("client_first_name", "client_last_name")
-    @classmethod
-    def reject_formula_prefix(cls, value: str) -> str:
-        if starts_with_formula_trigger(value):
-            raise ValueError("must not start with =, +, - or @")
-        return value
 
     @model_validator(mode="after")
     def validate_home_address_against_fixed_abode(self) -> "ClientCreate":
