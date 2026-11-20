@@ -602,12 +602,7 @@ async def upload_coroners_letter(
     ),
     request: Request = None,
 ) -> UploadCoronersLetterResponse:
-    """Upload a coroner's letter to document storage and return its file ID.
-
-    The multipart body must include `office_id` alongside `file`, and the letter is
-    stored against that office. Returns 403 if the office is not one of the user's
-    office codes.
-    """
+    """Upload a coroner's letter to document storage and return its file ID."""
     contents = await file.read()
     file_name = file.filename
     try:

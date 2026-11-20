@@ -1,6 +1,10 @@
+import uuid
 from datetime import UTC, datetime
+from decimal import Decimal
 
 from app.domain.application_backlog_report import ApplicationBacklogRecord
+from app.domain.claim import Claim as ClaimDomain
+from app.domain.claim_evidence import ClaimEvidence as ClaimEvidenceDomain
 from app.domain.coroners_letter import CoronersLetter as CoronersLetterDomain
 from app.models.application.certificate import ApplicationCertificate
 from app.models.application.enums import (
@@ -22,8 +26,14 @@ from app.models.application.index import (
     PublicBody,
     PublicBodyId,
 )
-from app.models.claim.enums import ClaimStatus
-from app.models.claim.index import Claim
+from app.models.claim.enums import (
+    ClaimStatus,
+    ClaimType,
+    InquestOutcomeCode,
+    NumberOfCounselInstructed,
+    POAType,
+)
+from app.models.claim.index import Claim, ClaimEvidence
 
 # Sentinel value to distinguish "not provided" from "explicitly None"
 _NOT_PROVIDED = object()
@@ -244,6 +254,39 @@ def create_base_claim(**overrides) -> Claim:
     return Claim(**(defaults | overrides))
 
 
+def create_base_claim_domain(**overrides) -> ClaimDomain:
+    """Create a base payment-on-account claim domain object with optional field overrides."""
+    defaults = {
+        "claim_type": ClaimType.PAYMENT_ON_ACCOUNT,
+        "net": Decimal("1000.00"),
+        "gross": Decimal("1200.00"),
+        "vat_zero_total": None,
+        "poa_type": POAType.PROFIT_COST,
+    }
+    return ClaimDomain(**(defaults | overrides))
+
+
+def create_base_final_bill_claim_domain(**overrides) -> ClaimDomain:
+    """Create a base final-bill claim domain object with optional field overrides."""
+    defaults = {
+        "claim_type": ClaimType.FINAL_BILL,
+        "poa_type": None,
+        "inquest_outcomes": (InquestOutcomeCode.NATURAL_CAUSES,),
+        "cost_template_file_id": uuid.uuid4(),
+        "cost_template_file_name": "costs.xlsx",
+        "has_counsel_been_paid": True,
+        "has_alternative_funding": False,
+        "has_recovery_costs_awarded": True,
+        "financial_recovery_previous_pre_certificate_costs": Decimal("100.00"),
+        "financial_recovery_cost": Decimal("200.00"),
+        "financial_recovery_damages": Decimal("300.00"),
+        "financial_recovery_interest": Decimal("50.00"),
+        "paying_party": "Test Council",
+        "number_of_counsel_instructed": NumberOfCounselInstructed.TWO,
+    }
+    return create_base_claim_domain(**(defaults | overrides))
+
+
 def create_base_certificate(
     application=_NOT_PROVIDED,
     application_proceeding=_NOT_PROVIDED,
@@ -336,3 +379,23 @@ def create_base_coroners_letter_domain(**overrides) -> CoronersLetterDomain:
         "office_id": "0U651L",
     }
     return CoronersLetterDomain(**(defaults | overrides))
+
+
+def create_base_claim_evidence(**overrides) -> ClaimEvidence:
+    """Create a base claim evidence database model with optional field overrides."""
+    defaults = {
+        "sds_file_name": "claim-evidence_abc123.pdf",
+        "file_name": "test-claim-evidence.pdf",
+        "office_id": "0U651L",
+    }
+    return ClaimEvidence(**(defaults | overrides))
+
+
+def create_base_claim_evidence_domain(**overrides) -> ClaimEvidenceDomain:
+    """Create a base claim evidence domain object with optional field overrides."""
+    defaults = {
+        "sds_file_name": "claim-evidence_abc123.pdf",
+        "file_name": "test-claim-evidence.pdf",
+        "office_id": "0U651L",
+    }
+    return ClaimEvidenceDomain(**(defaults | overrides))

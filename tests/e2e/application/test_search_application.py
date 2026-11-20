@@ -38,6 +38,7 @@ def test_200_search_application_by_reference_returns_expected_fields(session, cl
     assert "dateSubmitted" in result
     assert result["firmName"] == "Test Firm Name"
     assert result["firmNumber"] == "0A123B"
+    assert result["officeId"] == "0U651L"
     assert result["overallDecision"] == MeritsDecision.GRANTED
 
 

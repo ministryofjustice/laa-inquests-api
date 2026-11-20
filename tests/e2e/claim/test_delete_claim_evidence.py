@@ -12,6 +12,7 @@ from app.use_cases.exceptions import ClaimEvidenceDeleteError
 def _upload_evidence_and_get_id(client, auth_token):
     upload_response = client.post(
         "/claims/evidence",
+        data={"office_id": "0U651L"},
         files={
             "file": (
                 "claim_evidence.pdf",
@@ -74,6 +75,7 @@ class TestDeleteClaimEvidenceRbac:
         claim_evidence = ClaimEvidence(
             sds_file_name="stored-claim-evidence_abc123.pdf",
             file_name="claim_evidence.pdf",
+            office_id="0U651L",
         )
         session.add(claim_evidence)
         session.commit()
