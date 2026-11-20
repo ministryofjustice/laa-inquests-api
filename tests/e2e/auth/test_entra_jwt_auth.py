@@ -109,6 +109,7 @@ class TestUploadClaimEvidenceAuth:
     ):
         response = client.post(
             "/claims/evidence",
+            data={"office_id": "0U651L"},
             files={
                 "file": (
                     "claim_evidence.pdf",
@@ -131,6 +132,7 @@ class TestDeleteClaimEvidenceAuth:
         claim_evidence = ClaimEvidence(
             sds_file_name="stored-claim-evidence_abc123.pdf",
             file_name="claim_evidence.pdf",
+            office_id="0U651L",
         )
         session.add(claim_evidence)
         session.commit()

@@ -56,6 +56,7 @@ class SearchApplicationUseCase:
                     date_submitted=application.created_at,
                     firm_name=firm_name,
                     firm_number=application.provider.firm_code,
+                    office_id=application.provider.office_id,
                     overall_decision=application.overall_decision,
                 )
                 for application in matching_applications

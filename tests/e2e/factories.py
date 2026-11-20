@@ -17,7 +17,7 @@ from app.models.application.index import (
     Provider,
 )
 from app.models.claim.enums import ClaimStatus, ClaimType, POAType
-from app.models.claim.index import Claim
+from app.models.claim.index import Claim, ClaimEvidence
 
 
 def create_provider_in_db(session: Session, **overrides) -> Provider:
@@ -197,3 +197,17 @@ def create_claim_in_db(
     session.commit()
     session.refresh(claim)
     return claim
+
+
+def create_claim_evidence_in_db(session: Session, **overrides) -> ClaimEvidence:
+    """Persist claim evidence with optional field overrides."""
+    defaults = {
+        "sds_file_name": "claim-evidence_abc123.pdf",
+        "file_name": "test-claim-evidence.pdf",
+        "office_id": "0U651L",
+    }
+    claim_evidence = ClaimEvidence(**(defaults | overrides))
+    session.add(claim_evidence)
+    session.commit()
+    session.refresh(claim_evidence)
+    return claim_evidence

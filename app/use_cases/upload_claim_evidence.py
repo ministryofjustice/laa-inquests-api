@@ -2,6 +2,7 @@ import logging
 import uuid
 
 from app.domain.claim_evidence import ClaimEvidence
+from app.domain.office_authorisation import is_office_authorised
 from app.domain.spreadsheet_evidence import (
     SpreadsheetRejectedError,
     check_spreadsheet_evidence,
@@ -14,6 +15,7 @@ from app.use_cases.exceptions import (
     ClaimEvidenceUploadError,
     ClaimEvidenceVirusCheckError,
     ClaimEvidenceVirusDetectedError,
+    ProviderOfficeMismatchError,
 )
 
 logger = logging.getLogger(__name__)
@@ -32,7 +34,21 @@ class UploadClaimEvidenceUseCase:
         self,
         claim_evidence: bytes,
         file_name: str,
+        office_id: str,
+        user_office_codes: frozenset[str],
     ) -> uuid.UUID:
+        if not is_office_authorised(office_id, user_office_codes):
+            logger.warning(
+                "Claim evidence upload rejected: office not in user's office codes",
+                extra=build_log_extra(
+                    event="claim_evidence_upload_failed",
+                    reason="office_not_authorised",
+                ),
+            )
+            raise ProviderOfficeMismatchError(
+                "Office id is not in the user's office codes"
+            )
+
         try:
             check_spreadsheet_evidence(file_name, claim_evidence)
         except SpreadsheetRejectedError as e:
@@ -92,6 +108,7 @@ class UploadClaimEvidenceUseCase:
         new_claim_evidence = ClaimEvidence(
             sds_file_name=response_body.sds_file_name,
             file_name=file_name,
+            office_id=office_id,
             file_size=len(claim_evidence),
         )
         claim_evidence_id = (

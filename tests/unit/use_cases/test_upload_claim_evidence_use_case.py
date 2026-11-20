@@ -12,6 +12,7 @@ from app.use_cases.exceptions import (
     ClaimEvidenceUploadError,
     ClaimEvidenceVirusCheckError,
     ClaimEvidenceVirusDetectedError,
+    ProviderOfficeMismatchError,
 )
 from app.use_cases.upload_claim_evidence import UploadClaimEvidenceUseCase
 from tests.helpers.spreadsheet_files import MACRO_XLSX
@@ -23,6 +24,8 @@ request_body = {
 sds_response_body = SDSUploadClaimEvidenceResponse(
     sds_file_name="test_file.pdf", status="SUCCESS"
 )
+OFFICE_ID = "0U651L"
+USER_OFFICE_CODES = frozenset({OFFICE_ID})
 
 
 def test_execute_returns_claim_evidence_id_when_call_is_successful():
@@ -40,7 +43,10 @@ def test_execute_returns_claim_evidence_id_when_call_is_successful():
     )
 
     claim_evidence_id = use_case.execute(
-        request_body["claim_evidence"], request_body["file_name"]
+        claim_evidence=request_body["claim_evidence"],
+        file_name=request_body["file_name"],
+        office_id=OFFICE_ID,
+        user_office_codes=USER_OFFICE_CODES,
     )
 
     assert claim_evidence_id == expected_id
@@ -58,13 +64,46 @@ def test_execute_stores_claim_evidence_in_database():
         upload_claim_evidence_port=upload_port,
     )
 
-    use_case.execute(request_body["claim_evidence"], request_body["file_name"])
+    use_case.execute(
+        claim_evidence=request_body["claim_evidence"],
+        file_name=request_body["file_name"],
+        office_id=OFFICE_ID,
+        user_office_codes=USER_OFFICE_CODES,
+    )
 
     upload_port.save_uploaded_claim_evidence.assert_called_once()
     saved_claim_evidence = upload_port.save_uploaded_claim_evidence.call_args[0][0]
     assert isinstance(saved_claim_evidence, ClaimEvidence)
     assert saved_claim_evidence.sds_file_name == sds_response_body.sds_file_name
     assert saved_claim_evidence.file_name == request_body["file_name"]
+
+
+def test_execute_stores_claim_evidence_with_submitted_office_id():
+    sds_port = MagicMock(spec=SdsPort)
+    sds_port.virus_check_claim_evidence.return_value = True
+    sds_port.save_claim_evidence.return_value = sds_response_body
+    upload_port = MagicMock(spec=UploadClaimEvidencePort)
+
+    use_case = UploadClaimEvidenceUseCase(
+        sds_port=sds_port,
+        upload_claim_evidence_port=upload_port,
+    )
+    use_case.execute(
+        claim_evidence=request_body["claim_evidence"],
+        file_name=request_body["file_name"],
+        office_id=OFFICE_ID,
+        user_office_codes=USER_OFFICE_CODES,
+    )
+
+    upload_port.save_uploaded_claim_evidence.assert_called_once()
+    assert upload_port.save_uploaded_claim_evidence.call_args.args == (
+        ClaimEvidence(
+            sds_file_name=sds_response_body.sds_file_name,
+            file_name=request_body["file_name"],
+            office_id=OFFICE_ID,
+            file_size=len(request_body["claim_evidence"]),
+        ),
+    )
 
 
 def test_execute_stores_file_size_in_bytes():
@@ -78,7 +117,12 @@ def test_execute_stores_file_size_in_bytes():
         upload_claim_evidence_port=upload_port,
     )
 
-    use_case.execute(request_body["claim_evidence"], request_body["file_name"])
+    use_case.execute(
+        claim_evidence=request_body["claim_evidence"],
+        file_name=request_body["file_name"],
+        office_id=OFFICE_ID,
+        user_office_codes=USER_OFFICE_CODES,
+    )
 
     saved_claim_evidence = upload_port.save_uploaded_claim_evidence.call_args[0][0]
     assert saved_claim_evidence.file_size == len(request_body["claim_evidence"])
@@ -96,7 +140,12 @@ def test_execute_raises_an_error_when_virus_check_fails():
     )
 
     with pytest.raises(ClaimEvidenceVirusDetectedError):
-        use_case.execute(request_body["claim_evidence"], request_body["file_name"])
+        use_case.execute(
+            claim_evidence=request_body["claim_evidence"],
+            file_name=request_body["file_name"],
+            office_id=OFFICE_ID,
+            user_office_codes=USER_OFFICE_CODES,
+        )
 
     sds_port.save_claim_evidence.assert_not_called()
     upload_port.save_uploaded_claim_evidence.assert_not_called()
@@ -117,7 +166,12 @@ def test_execute_raises_an_error_when_sds_save_fails():
     )
 
     with pytest.raises(ClaimEvidenceUploadError):
-        use_case.execute(request_body["claim_evidence"], request_body["file_name"])
+        use_case.execute(
+            claim_evidence=request_body["claim_evidence"],
+            file_name=request_body["file_name"],
+            office_id=OFFICE_ID,
+            user_office_codes=USER_OFFICE_CODES,
+        )
 
     upload_port.save_uploaded_claim_evidence.assert_not_called()
 
@@ -135,8 +189,35 @@ def test_execute_raises_an_error_when_virus_check_returns_server_error():
     )
 
     with pytest.raises(ClaimEvidenceVirusCheckError):
-        use_case.execute(request_body["claim_evidence"], request_body["file_name"])
+        use_case.execute(
+            claim_evidence=request_body["claim_evidence"],
+            file_name=request_body["file_name"],
+            office_id=OFFICE_ID,
+            user_office_codes=USER_OFFICE_CODES,
+        )
 
+    sds_port.save_claim_evidence.assert_not_called()
+    upload_port.save_uploaded_claim_evidence.assert_not_called()
+
+
+def test_execute_raises_an_error_when_office_id_is_not_in_user_office_codes():
+    sds_port = MagicMock(spec=SdsPort)
+    upload_port = MagicMock(spec=UploadClaimEvidencePort)
+
+    use_case = UploadClaimEvidenceUseCase(
+        sds_port=sds_port,
+        upload_claim_evidence_port=upload_port,
+    )
+
+    with pytest.raises(ProviderOfficeMismatchError):
+        use_case.execute(
+            claim_evidence=request_body["claim_evidence"],
+            file_name=request_body["file_name"],
+            office_id="1A234B",
+            user_office_codes=USER_OFFICE_CODES,
+        )
+
+    sds_port.virus_check_claim_evidence.assert_not_called()
     sds_port.save_claim_evidence.assert_not_called()
     upload_port.save_uploaded_claim_evidence.assert_not_called()
 
@@ -151,7 +232,12 @@ def test_execute_rejects_macro_enabled_spreadsheet_before_calling_sds():
     )
 
     with pytest.raises(ClaimEvidenceRejectedError) as exc_info:
-        use_case.execute(MACRO_XLSX, "claim_cost_template.xlsx")
+        use_case.execute(
+            claim_evidence=MACRO_XLSX,
+            file_name="claim_cost_template.xlsx",
+            office_id=OFFICE_ID,
+            user_office_codes=USER_OFFICE_CODES,
+        )
 
     assert exc_info.value.code == "MACROS_NOT_ALLOWED"
     assert exc_info.value.safe_message == "Macro-enabled spreadsheets are not allowed"

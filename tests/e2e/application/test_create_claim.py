@@ -549,7 +549,9 @@ class TestCreateClaimFundsAndPersistence:
         self, session, client
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
-        evidence = ClaimEvidence(sds_file_name="stored.pdf", file_name="original.pdf")
+        evidence = ClaimEvidence(
+            sds_file_name="stored.pdf", file_name="original.pdf", office_id="0U651L"
+        )
         session.add(evidence)
         session.commit()
         session.refresh(evidence)
