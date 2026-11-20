@@ -30,6 +30,14 @@ PersonName = Annotated[
     ),
 ]
 
+# The UI sends "" when the user says there is no relationship to record.
+PersonNameOrEmpty = Annotated[
+    str,
+    StringConstraints(
+        max_length=MAX_SHORT_TEXT_LENGTH, pattern=r"^([A-Za-z][A-Za-z' -]*)?$"
+    ),
+]
+
 AddressText = Annotated[
     str,
     StringConstraints(
@@ -37,9 +45,11 @@ AddressText = Annotated[
     ),
 ]
 
+# The UI sends "" when there is no coroner's reference, and duplicate detection
+# treats "" as "not provided".
 CoronersReference = Annotated[
     str,
     StringConstraints(
-        max_length=MAX_SHORT_TEXT_LENGTH, pattern=r"^[A-Za-z0-9][A-Za-z0-9 ./-]*$"
+        max_length=MAX_SHORT_TEXT_LENGTH, pattern=r"^([A-Za-z0-9][A-Za-z0-9 ./-]*)?$"
     ),
 ]

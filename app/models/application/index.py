@@ -28,7 +28,12 @@ from app.models.application.enums import (
     PublicBodyId,
     ReasonForRefusal,
 )
-from app.models.validated_types import AddressText, PersonName
+from app.models.validated_types import (
+    AddressText,
+    CoronersReference,
+    PersonName,
+    PersonNameOrEmpty,
+)
 
 
 # RELATIONS
@@ -366,11 +371,13 @@ class DeceasedCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    deceased_first_name: str = PydanticField(examples=["John"])
-    deceased_last_name: str = PydanticField(examples=["Smith"])
+    deceased_first_name: PersonName = PydanticField(examples=["John"])
+    deceased_last_name: PersonName = PydanticField(examples=["Smith"])
     deceased_date_of_birth: str = PydanticField(examples=["2000-01-01"])
     deceased_date_of_death: str = PydanticField(examples=["2025-01-01"])
-    coroners_reference: str = PydanticField(examples=["Example reference number"])
+    coroners_reference: CoronersReference = PydanticField(
+        examples=["Example reference number"]
+    )
 
     @field_validator("deceased_date_of_birth", "deceased_date_of_death")
     @classmethod
@@ -394,7 +401,9 @@ class DeceasedCreate(BaseModel):
     further_information: str | None = PydanticField(
         default=None, examples=["Further information."]
     )
-    client_relationship_to_deceased: str = PydanticField(examples=["Spouse"])
+    client_relationship_to_deceased: PersonNameOrEmpty = PydanticField(
+        examples=["Spouse"]
+    )
 
 
 class PublicBodyCreate(BaseModel):

@@ -5,6 +5,7 @@ from app.models.validated_types import (
     AddressText,
     CoronersReference,
     PersonName,
+    PersonNameOrEmpty,
     ProseText,
 )
 
@@ -85,9 +86,9 @@ class TestAddressText:
 
 class TestCoronersReference:
     @pytest.mark.parametrize(
-        "value", ["COR-2025-123", "2025/123.A", "Example reference 1", "A" * 50]
+        "value", ["", "COR-2025-123", "2025/123.A", "Example reference 1", "A" * 50]
     )
-    def test_accepts_valid_references(self, value):
+    def test_accepts_valid_references_and_empty_string(self, value):
         assert validate(CoronersReference, value) == value
 
     @pytest.mark.parametrize("character", DANGEROUS_CHARACTERS + ["'", ","])
@@ -95,14 +96,27 @@ class TestCoronersReference:
         with pytest.raises(ValidationError):
             validate(CoronersReference, f"COR{character}123")
 
-    @pytest.mark.parametrize("value", ["", " ", "-123", "/123", "COR-1\n"])
-    def test_rejects_empty_bad_start_and_trailing_newline(self, value):
+    @pytest.mark.parametrize("value", [" ", "-123", "/123", "COR-1\n", "\n"])
+    def test_rejects_whitespace_only_bad_start_and_trailing_newline(self, value):
         with pytest.raises(ValidationError):
             validate(CoronersReference, value)
 
     def test_rejects_more_than_50_characters(self):
         with pytest.raises(ValidationError):
             validate(CoronersReference, "A" * 51)
+
+
+class TestPersonNameOrEmpty:
+    @pytest.mark.parametrize("value", ["", "Son", "O'Donald", "Mary-Jane", "A" * 50])
+    def test_accepts_names_and_empty_string(self, value):
+        assert validate(PersonNameOrEmpty, value) == value
+
+    @pytest.mark.parametrize(
+        "value", [" ", "\n", "Son\n", "-Son", "<Spouse>", "Son1", "A" * 51]
+    )
+    def test_rejects_everything_else_a_person_name_rejects(self, value):
+        with pytest.raises(ValidationError):
+            validate(PersonNameOrEmpty, value)
 
 
 class TestProseText:

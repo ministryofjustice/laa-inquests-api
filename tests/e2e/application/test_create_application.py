@@ -67,6 +67,13 @@ PERSON_NAME_CLIENT_FIELDS = [
     "recipientName",
 ]
 
+DECEASED_FIELDS = [
+    "deceasedFirstName",
+    "deceasedLastName",
+    "coronersReference",
+    "clientRelationshipToDeceased",
+]
+
 
 def _set_client_name_field(body, field, value):
     if field == "recipientName":
@@ -495,6 +502,103 @@ class TestCreateApplication:
     ):
         body = _make_request_body()
         body["client"][address_key][field] = value
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 201
+
+    @pytest.mark.parametrize("field", DECEASED_FIELDS)
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "zxdfsdfdszxdfsdfds'';!--\"=&{()}",
+            "<Spousezxdfsdfds'';!--\"=&{()}>",
+            "<Test>",
+            "Smith\n",
+            "A" * 51,
+        ],
+    )
+    def test_422_rejected_when_deceased_field_contains_disallowed_input(
+        self, client, field, value
+    ):
+        body = _make_request_body()
+        body["deceased"][field] = value
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.parametrize("field", ["deceasedFirstName", "deceasedLastName"])
+    @pytest.mark.parametrize("value", ["", "Smith1", "Zoë", "-Smith"])
+    def test_422_rejected_when_deceased_name_is_empty_or_not_letters(
+        self, client, field, value
+    ):
+        body = _make_request_body()
+        body["deceased"][field] = value
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("deceasedFirstName", "O'Donald"),
+            ("deceasedLastName", "Smith-Jones"),
+            ("deceasedLastName", "De Souza"),
+            ("deceasedFirstName", "A" * 50),
+            ("coronersReference", "COR-2025/123.A"),
+            ("coronersReference", "A" * 50),
+            ("clientRelationshipToDeceased", "Son"),
+            ("clientRelationshipToDeceased", "Step-parent"),
+        ],
+    )
+    def test_201_accepts_deceased_field_with_allowed_characters(
+        self, client, field, value
+    ):
+        body = _make_request_body()
+        body["deceased"][field] = value
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 201
+
+    @pytest.mark.parametrize(
+        "field", ["coronersReference", "clientRelationshipToDeceased"]
+    )
+    def test_201_accepts_empty_string_when_no_coroners_reference_or_relationship(
+        self, client, field
+    ):
+        body = _make_request_body()
+        body["deceased"][field] = ""
 
         response = client.post(
             "/applications",
