@@ -51,6 +51,7 @@ def _seed_evidence(
     evidence = ClaimEvidence(
         sds_file_name="evidence_abc123.pdf",
         file_name="evidence.pdf",
+        office_id="0U651L",
         file_size=file_size,
         claim_id=claim_id,
     )
@@ -505,6 +506,7 @@ def test_200_get_claim_by_id_includes_cost_template_file_size(session, client):
             claim_evidence_id=file_id,
             sds_file_name="template_abc123.xlsx",
             file_name="final_bill_costs.xlsx",
+            office_id="0U651L",
             file_size=20480,
         )
     )

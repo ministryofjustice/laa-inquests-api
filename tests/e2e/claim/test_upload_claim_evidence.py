@@ -138,6 +138,7 @@ class TestUploadClaimEvidenceOfficeId:
 def test_201_upload_claim_evidence_returns_claim_evidence_id(client):
     response = client.post(
         "/claims/evidence",
+        data={"office_id": "0U651L"},
         files={
             "file": (
                 "claim_evidence.pdf",
@@ -157,6 +158,7 @@ def test_201_upload_claim_evidence_stores_file_size(client, session):
     content = b"test content"
     response = client.post(
         "/claims/evidence",
+        data={"office_id": "0U651L"},
         files={"file": ("claim_evidence.pdf", io.BytesIO(content), "application/pdf")},
         headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
     )
@@ -168,6 +170,7 @@ def test_201_upload_claim_evidence_stores_file_size(client, session):
 def test_201_upload_claim_evidence_accepts_xlsx(client):
     response = client.post(
         "/claims/evidence",
+        data={"office_id": "0U651L"},
         files={
             "file": (
                 "claim_cost_template.xlsx",
@@ -186,6 +189,7 @@ def test_201_upload_claim_evidence_accepts_xlsx(client):
 def test_201_upload_claim_evidence_accepts_xls(client):
     response = client.post(
         "/claims/evidence",
+        data={"office_id": "0U651L"},
         files={
             "file": (
                 "claim_cost_template.xls",
@@ -204,6 +208,7 @@ def test_201_upload_claim_evidence_accepts_xls(client):
 def test_422_upload_claim_evidence_with_no_file(client):
     response = client.post(
         "/claims/evidence",
+        data={"office_id": "0U651L"},
         headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
     )
     assert response.status_code == 422
@@ -221,6 +226,7 @@ def test_422_upload_claim_evidence_with_failed_virus_check(client):
 
     response = client.post(
         "/claims/evidence",
+        data={"office_id": "0U651L"},
         files={
             "file": (
                 "claim_evidence.pdf",
@@ -243,6 +249,7 @@ def test_500_upload_claim_evidence_with_sds_server_error(client):
 
     response = client.post(
         "/claims/evidence",
+        data={"office_id": "0U651L"},
         files={
             "file": (
                 "claim_evidence.pdf",
@@ -258,6 +265,7 @@ def test_500_upload_claim_evidence_with_sds_server_error(client):
 def test_201_upload_claim_evidence_allows_multiple_uploads(client):
     first = client.post(
         "/claims/evidence",
+        data={"office_id": "0U651L"},
         files={
             "file": (
                 "claim_evidence_1.pdf",
@@ -269,6 +277,7 @@ def test_201_upload_claim_evidence_allows_multiple_uploads(client):
     )
     second = client.post(
         "/claims/evidence",
+        data={"office_id": "0U651L"},
         files={
             "file": (
                 "claim_evidence_2.pdf",
@@ -293,6 +302,7 @@ class TestUploadClaimEvidenceRbac:
     def test_201_upload_claim_evidence_with_provider_claims_user_app_role(self, client):
         response = client.post(
             "/claims/evidence",
+            data={"office_id": "0U651L"},
             files={
                 "file": (
                     "claim_evidence.pdf",
@@ -315,6 +325,7 @@ class TestUploadClaimEvidenceRbac:
 
         response = client.post(
             "/claims/evidence",
+            data={"office_id": "0U651L"},
             files={
                 "file": (
                     "claim_evidence.pdf",
@@ -335,6 +346,7 @@ class TestUploadClaimEvidenceSentryPii:
     def _upload(self, client):
         return client.post(
             "/claims/evidence",
+            data={"office_id": "0U651L"},
             files={
                 "file": (PII_FILE_NAME, io.BytesIO(b"test content"), "application/pdf")
             },

@@ -16,6 +16,7 @@ def test_rate_limit_is_shared_across_routes_and_exempts_health(client):
         )
         claims_response = client.post(
             "/claims/evidence",
+            data={"office_id": "0U651L"},
             files={"file": ("evidence.pdf", b"test content", "application/pdf")},
             headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
         )
