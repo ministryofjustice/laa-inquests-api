@@ -611,6 +611,53 @@ class TestCreateApplication:
 
         assert response.status_code == 201
 
+    @pytest.mark.parametrize(
+        "value",
+        ["<script>alert(1)</script>", "a > b", "bad\x00value", "bad\x1bvalue"],
+    )
+    def test_422_rejected_when_further_information_contains_disallowed_characters(
+        self, client, value
+    ):
+        body = _make_request_body()
+        body["deceased"]["furtherInformation"] = value
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            'It\'s "quoted"; see = A1 -- fine & (ok) {yes}',
+            "Line one\nLine two",
+            "",
+            None,
+        ],
+    )
+    def test_201_accepts_further_information_with_quotes_semicolons_and_newlines(
+        self, client, value
+    ):
+        body = _make_request_body()
+        body["deceased"]["furtherInformation"] = value
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 201
+
     def test_422_rejected_when_deceased_date_of_death_is_before_date_of_birth(
         self, client
     ):

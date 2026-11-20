@@ -33,6 +33,7 @@ from app.models.validated_types import (
     CoronersReference,
     PersonName,
     PersonNameOrEmpty,
+    ProseText,
 )
 
 
@@ -398,7 +399,7 @@ class DeceasedCreate(BaseModel):
             )
         return self
 
-    further_information: str | None = PydanticField(
+    further_information: ProseText | None = PydanticField(
         default=None, examples=["Further information."]
     )
     client_relationship_to_deceased: PersonNameOrEmpty = PydanticField(
@@ -449,7 +450,7 @@ class RefuseApplicationUpdate(BaseModel):
     reason_for_refusal: ReasonForRefusal | None = PydanticField(
         examples=["NOT_IN_SCOPE"]
     )
-    justification: str | None = PydanticField(
+    justification: ProseText | None = PydanticField(
         examples=["The requested proceeding is out of scope."]
     )
 

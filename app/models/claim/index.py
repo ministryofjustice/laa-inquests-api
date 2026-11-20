@@ -26,6 +26,7 @@ from app.models.claim.enums import (
     ReasonCode,
     TaxCode,
 )
+from app.models.validated_types import ProseText
 
 
 class ClaimBase(SQLModel):
@@ -288,7 +289,9 @@ class ClaimCreate(BaseModel):
     financial_recovery_interest: Decimal | None = PydanticField(
         default=None, examples=["50.00"]
     )
-    paying_party: str | None = PydanticField(default=None, examples=["Some Council"])
+    paying_party: ProseText | None = PydanticField(
+        default=None, examples=["Some Council"]
+    )
     number_of_counsel_instructed: NumberOfCounselInstructed | None = PydanticField(
         default=None, examples=["2"]
     )
@@ -318,7 +321,9 @@ class RejectClaimRequest(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    justification: str = PydanticField(examples=["Rejected following manual review."])
+    justification: ProseText = PydanticField(
+        examples=["Rejected following manual review."]
+    )
 
 
 # REQUEST BODY -- Pay in full
