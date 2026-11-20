@@ -31,7 +31,7 @@ Authorised caseworkers can:
 
 ### Providers
 Authorised providers can:
-* Upload claim evidence to SDS by posting to **/claims/evidence**. The size of the uploaded file is stored with the evidence.
+* Upload claim evidence to SDS by posting to **/claims/evidence**. The size of the uploaded file is stored with the evidence. Spreadsheets must be macro-free **.xlsx** workbooks; other Excel formats, macro-enabled workbooks and files whose content does not match their extension are rejected with a 422 whose `detail` is `{code, message}` (`UNSUPPORTED_FILE_TYPE`, `CONTENT_MISMATCH`, `INVALID_SPREADSHEET` or `MACROS_NOT_ALLOWED`). A file that fails the virus check is rejected with a 422 whose `detail` is a string.
 * Retrieve a piece of claim evidence from SDS by sending a get request to **/claims/{claim_evidence_id}**.
 
 
