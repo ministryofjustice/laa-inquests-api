@@ -507,11 +507,11 @@ class _ClaimSeeder:
         payment = ApprovedClaimAmount(None, gross, vat_zero).payment_amount
         return (funds_before - payment).quantize(Decimal("0.01"))
 
-    @staticmethod
-    def _evidence(spec: _PoaClaimSpec | _FinalBillClaimSpec) -> ClaimEvidence:
+    def _evidence(self, spec: _PoaClaimSpec | _FinalBillClaimSpec) -> ClaimEvidence:
         values: dict[str, Any] = {
             "sds_file_name": spec.evidence_sds_file_name,
             "file_name": spec.evidence_file_name,
+            "office_id": self.application.provider.office_id,
         }
         if spec.evidence_id is not None:
             values["claim_evidence_id"] = spec.evidence_id
