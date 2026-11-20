@@ -173,6 +173,20 @@ def session_fixture(seeded_template_db):
         yield db_session
 
 
+@pytest.fixture(autouse=True)
+def fresh_rate_limiter():
+    # `api` is a module-level app, so without this the in-memory limiter is shared
+    # by every test in the run and later tests hit 429s.
+    previous_rate_limiter = api.state.rate_limiter
+    rate_limiter = create_rate_limiter(
+        Config.RATE_LIMIT_MAX, Config.RATE_WINDOW_MINUTES
+    )
+    api.state.rate_limiter = rate_limiter
+    yield
+    api.state.rate_limiter = previous_rate_limiter
+    rate_limiter.close()
+
+
 @pytest.fixture(name="client")
 def client_fixture(session: Session):
     mock_pdf_generation_port = MagicMock()

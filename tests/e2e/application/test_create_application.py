@@ -450,6 +450,63 @@ class TestCreateApplication:
 
         assert response.status_code == 201
 
+    @pytest.mark.parametrize("address_key", ["homeAddress", "correspondenceAddress"])
+    @pytest.mark.parametrize(
+        "field", ["addressLine1", "addressLine2", "townOrCity", "county"]
+    )
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "zxdfsdfdszxdfsdfds'';!--\"=&{()}",
+            "<Test>",
+            "1 Street;",
+            "1 Street\n",
+            "-1 Street",
+            "A" * 51,
+            "",
+        ],
+    )
+    def test_422_rejected_when_address_field_contains_disallowed_input(
+        self, client, address_key, field, value
+    ):
+        body = _make_request_body()
+        body["client"][address_key][field] = value
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.parametrize("address_key", ["homeAddress", "correspondenceAddress"])
+    @pytest.mark.parametrize(
+        "field", ["addressLine1", "addressLine2", "townOrCity", "county"]
+    )
+    @pytest.mark.parametrize(
+        "value", ["123 Example Street", "Flat 1/2, O'Neill-Court.", "A" * 50]
+    )
+    def test_201_accepts_address_field_with_allowed_characters(
+        self, client, address_key, field, value
+    ):
+        body = _make_request_body()
+        body["client"][address_key][field] = value
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 201
+
     def test_422_rejected_when_deceased_date_of_death_is_before_date_of_birth(
         self, client
     ):

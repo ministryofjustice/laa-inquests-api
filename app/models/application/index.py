@@ -28,7 +28,7 @@ from app.models.application.enums import (
     PublicBodyId,
     ReasonForRefusal,
 )
-from app.models.validated_types import PersonName
+from app.models.validated_types import AddressText, PersonName
 
 
 # RELATIONS
@@ -293,10 +293,10 @@ class AddressCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    address_line_1: str = PydanticField(examples=["123 Example Street"])
-    address_line_2: str | None = PydanticField(default=None, examples=["Jones"])
-    town_or_city: str = PydanticField(examples=["Example Town"])
-    county: str | None = PydanticField(default=None, examples=["Jones"])
+    address_line_1: AddressText = PydanticField(examples=["123 Example Street"])
+    address_line_2: AddressText | None = PydanticField(default=None, examples=["Jones"])
+    town_or_city: AddressText = PydanticField(examples=["Example Town"])
+    county: AddressText | None = PydanticField(default=None, examples=["Jones"])
     postcode: str = PydanticField(examples=["AA1 1AA"])
 
 
