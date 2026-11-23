@@ -1,6 +1,7 @@
 import logging
 import uuid
 
+from app.domain.office_authorisation import is_office_authorised
 from app.logging_utils import build_log_extra
 from app.ports.delete_coroners_letter_port import DeleteCoronersLetterPort
 from app.ports.get_coroners_letter_port import GetCoronersLetterPort
@@ -24,11 +25,15 @@ class DeleteCoronersLetterUseCase:
         self.delete_coroners_letter_port = delete_coroners_letter_port
         self.sds_port = sds_port
 
-    def execute(self, coroners_letter_id: uuid.UUID) -> None:
+    def execute(
+        self, coroners_letter_id: uuid.UUID, user_office_codes: frozenset[str]
+    ) -> None:
         coroners_letter = self.get_coroners_letter_port.get_coroners_letter_by_id(
             coroners_letter_id
         )
-        if coroners_letter is None:
+        if coroners_letter is None or not is_office_authorised(
+            coroners_letter.office_id, user_office_codes
+        ):
             logger.error(
                 "Coroners letter delete failed",
                 extra=build_log_extra(

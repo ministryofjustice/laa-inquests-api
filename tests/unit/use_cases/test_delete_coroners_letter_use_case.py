@@ -32,7 +32,7 @@ def test_execute_deletes_file_from_sds_and_db():
     )
 
     coroners_letter_id = uuid.uuid4()
-    use_case.execute(coroners_letter_id)
+    use_case.execute(coroners_letter_id, frozenset({"0U651L"}))
 
     sds_port.delete_coroners_letter.assert_called_once_with(
         "coroners-letter_abc123.pdf"
@@ -56,7 +56,29 @@ def test_execute_raises_not_found_when_coroners_letter_missing():
     )
 
     with pytest.raises(CoronersLetterNotFoundError):
-        use_case.execute(uuid.uuid4())
+        use_case.execute(uuid.uuid4(), frozenset({"0U651L"}))
+
+    sds_port.delete_coroners_letter.assert_not_called()
+    delete_coroners_letter_port.delete_coroners_letter_by_id.assert_not_called()
+
+
+def test_execute_raises_not_found_when_office_id_not_in_user_office_codes():
+    get_coroners_letter_port = MagicMock(spec=GetCoronersLetterPort)
+    get_coroners_letter_port.get_coroners_letter_by_id.return_value = (
+        create_base_coroners_letter_domain()
+    )
+
+    delete_coroners_letter_port = MagicMock(spec=DeleteCoronersLetterPort)
+    sds_port = MagicMock(spec=SdsPort)
+
+    use_case = DeleteCoronersLetterUseCase(
+        get_coroners_letter_port=get_coroners_letter_port,
+        delete_coroners_letter_port=delete_coroners_letter_port,
+        sds_port=sds_port,
+    )
+
+    with pytest.raises(CoronersLetterNotFoundError):
+        use_case.execute(uuid.uuid4(), frozenset({"002"}))
 
     sds_port.delete_coroners_letter.assert_not_called()
     delete_coroners_letter_port.delete_coroners_letter_by_id.assert_not_called()
@@ -79,7 +101,7 @@ def test_execute_raises_delete_error_when_sds_delete_fails():
     )
 
     with pytest.raises(CoronersLetterDeleteError):
-        use_case.execute(uuid.uuid4())
+        use_case.execute(uuid.uuid4(), frozenset({"0U651L"}))
 
 
 def test_execute_raises_not_found_when_db_delete_returns_false():
@@ -100,4 +122,4 @@ def test_execute_raises_not_found_when_db_delete_returns_false():
     )
 
     with pytest.raises(CoronersLetterNotFoundError):
-        use_case.execute(uuid.uuid4())
+        use_case.execute(uuid.uuid4(), frozenset({"0U651L"}))
