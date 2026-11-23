@@ -130,4 +130,5 @@ def test_execute_returns_response_with_all_required_fields():
     assert result.date_submitted == application.created_at
     assert result.firm_name == "My Firm"
     assert result.firm_number == "0A123B"
+    assert result.office_id == "0U651L"
     assert result.overall_decision == MeritsDecision.SUBMITTED

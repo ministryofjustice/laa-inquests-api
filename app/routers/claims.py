@@ -1,12 +1,13 @@
 import logging
 import uuid
 from mimetypes import add_type, guess_type
-from typing import Literal
+from typing import Annotated, Literal
 
 from fastapi import (
     APIRouter,
     Depends,
     File,
+    Form,
     HTTPException,
     Request,
     Response,
@@ -25,6 +26,7 @@ from app.ports.sds_port import SdsPort
 from app.routers.content_disposition import content_disposition
 from app.routers.dependencies import (
     get_claim_db_adapter,
+    get_current_provider_office_codes,
     get_sds_port,
 )
 from app.use_cases.delete_claim_evidence import DeleteClaimEvidenceUseCase
@@ -36,6 +38,7 @@ from app.use_cases.exceptions import (
     ClaimEvidenceVirusDetectedError,
     ClaimNotFoundError,
     InvalidFileNameError,
+    ProviderOfficeMismatchError,
 )
 from app.use_cases.retrieve_application_for_claim import (
     RetrieveApplicationForClaimUseCase,
@@ -111,6 +114,16 @@ def get_retrieve_application_for_claim_use_case(
     dependencies=[Depends(require_permission_from(Permission.CLAIM_CREATE))],
 )
 async def upload_claim_evidence(
+    user_office_codes: Annotated[
+        frozenset[str], Depends(get_current_provider_office_codes)
+    ],
+    office_id: Annotated[
+        str,
+        Form(
+            min_length=1,
+            description="Office uploading the evidence; must be one of the user's office codes.",
+        ),
+    ],
     file: UploadFile = File(...),
     use_case: UploadClaimEvidenceUseCase = Depends(get_upload_claim_evidence_use_case),
     request: Request = None,
@@ -126,7 +139,11 @@ async def upload_claim_evidence(
         claim_evidence_id = use_case.execute(
             contents,
             file_name,
+            office_id,
+            user_office_codes,
         )
+    except ProviderOfficeMismatchError as e:
+        raise HTTPException(status_code=403, detail=str(e))
     except InvalidFileNameError:
         raise HTTPException(status_code=422, detail="Invalid file name")
     except ClaimEvidenceVirusDetectedError:

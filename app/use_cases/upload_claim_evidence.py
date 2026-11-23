@@ -3,6 +3,7 @@ import uuid
 
 from app.domain.claim_evidence import ClaimEvidence
 from app.domain.file_name import is_valid_upload_file_name
+from app.domain.office_authorisation import is_office_authorised
 from app.logging_utils import build_log_extra
 from app.ports.claim.upload_claim_evidence_port import UploadClaimEvidencePort
 from app.ports.sds_port import SdsPort
@@ -11,6 +12,7 @@ from app.use_cases.exceptions import (
     ClaimEvidenceVirusCheckError,
     ClaimEvidenceVirusDetectedError,
     InvalidFileNameError,
+    ProviderOfficeMismatchError,
 )
 
 logger = logging.getLogger(__name__)
@@ -29,7 +31,21 @@ class UploadClaimEvidenceUseCase:
         self,
         claim_evidence: bytes,
         file_name: str,
+        office_id: str,
+        user_office_codes: frozenset[str],
     ) -> uuid.UUID:
+        if not is_office_authorised(office_id, user_office_codes):
+            logger.warning(
+                "Claim evidence upload rejected: office not in user's office codes",
+                extra=build_log_extra(
+                    event="claim_evidence_upload_failed",
+                    reason="office_not_authorised",
+                ),
+            )
+            raise ProviderOfficeMismatchError(
+                "Office id is not in the user's office codes"
+            )
+
         if not is_valid_upload_file_name(file_name):
             logger.warning(
                 "Claim evidence upload rejected: invalid file name",
@@ -87,6 +103,7 @@ class UploadClaimEvidenceUseCase:
         new_claim_evidence = ClaimEvidence(
             sds_file_name=response_body.sds_file_name,
             file_name=file_name,
+            office_id=office_id,
             file_size=len(claim_evidence),
         )
         claim_evidence_id = (

@@ -18,7 +18,9 @@ def _make_claim_evidence(
     sds_file_name: str = "claim-evidence_abc123.pdf",
     file_name: str = "test-document.pdf",
 ) -> ClaimEvidence:
-    return ClaimEvidence(sds_file_name=sds_file_name, file_name=file_name)
+    return ClaimEvidence(
+        sds_file_name=sds_file_name, file_name=file_name, office_id="0U651L"
+    )
 
 
 def _make_use_case(get_claim_evidence_port: MagicMock, sds_port: MagicMock):

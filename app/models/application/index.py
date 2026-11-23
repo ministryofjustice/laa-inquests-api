@@ -661,6 +661,7 @@ class ApplicationSearchResponse(BaseModel):
     date_submitted: datetime
     firm_name: str | None
     firm_number: str
+    office_id: str
     overall_decision: str
 
 

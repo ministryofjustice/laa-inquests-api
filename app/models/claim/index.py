@@ -214,6 +214,7 @@ class ClaimEvidence(SQLModel, table=True):
     )
     sds_file_name: str
     file_name: str
+    office_id: str
     file_size: int | None = Field(default=None)
     claim_id: int | None = Field(default=None, foreign_key="claim.claim_id")
     claim: Optional["Claim"] = Relationship(back_populates="claim_evidence")

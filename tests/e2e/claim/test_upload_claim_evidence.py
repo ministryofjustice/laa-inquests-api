@@ -4,12 +4,15 @@ import uuid
 from unittest.mock import MagicMock
 
 import pytest
-from sqlmodel import select
+from fastapi.testclient import TestClient
+from sqlmodel import Session, select
 
 from app import api
 from app.auth.rbac import Permission, Role, get_current_user_permissions
 from app.models.claim.index import ClaimEvidence
+from app.ports.sds_port import SdsPort
 from app.routers.claims import get_sds_port
+from app.routers.dependencies import get_current_provider_office_codes
 from app.use_cases.exceptions import ClaimEvidenceUploadError
 from tests.helpers.multipart import UNSAFE_FILE_NAMES, raw_file_upload
 
@@ -22,9 +25,121 @@ def is_valid_uuid(val):
         return False
 
 
+class TestUploadClaimEvidenceOfficeId:
+    @pytest.mark.parametrize("office_id", ["0U651L", "1A234B"])
+    @pytest.mark.parametrize(
+        ("file_name", "content_type"),
+        [
+            pytest.param("poa_evidence.pdf", "application/pdf", id="poa"),
+            pytest.param("final_bill_evidence.pdf", "application/pdf", id="final-bill"),
+            pytest.param(
+                "cost_template.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                id="cost-template-xlsx",
+            ),
+            pytest.param(
+                "cost_template.xls",
+                "application/vnd.ms-excel",
+                id="cost-template-xls",
+            ),
+        ],
+    )
+    def test_201_stores_uploading_office_without_changing_response(
+        self,
+        client: TestClient,
+        session: Session,
+        office_id: str,
+        file_name: str,
+        content_type: str,
+    ) -> None:
+        api.dependency_overrides[get_current_provider_office_codes] = lambda: frozenset(
+            {"0U651L", "1A234B"}
+        )
+        content = b"test content"
+
+        response = client.post(
+            "/claims/evidence",
+            data={"office_id": office_id},
+            files={"file": (file_name, io.BytesIO(content), content_type)},
+            headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
+        )
+
+        assert response.status_code == 201
+        body = response.json()
+        evidence_id = uuid.UUID(body["claimEvidenceId"])
+        assert body == {
+            "claimEvidenceId": str(evidence_id),
+            "claimEvidenceFileName": file_name,
+        }
+        evidence = session.get(ClaimEvidence, evidence_id)
+        assert evidence is not None
+        assert evidence.office_id == office_id
+        assert evidence.claim_id is None
+        assert evidence.file_size == len(content)
+
+    @pytest.mark.parametrize("office_id", [None, ""])
+    def test_422_requires_non_empty_office_without_side_effects(
+        self, client: TestClient, session: Session, office_id: str | None
+    ) -> None:
+        mock_sds = MagicMock(spec=SdsPort)
+        api.dependency_overrides[get_sds_port] = lambda: mock_sds
+        evidence_ids_before = session.exec(
+            select(ClaimEvidence.claim_evidence_id)
+        ).all()
+
+        response = client.post(
+            "/claims/evidence",
+            data={} if office_id is None else {"office_id": office_id},
+            files={
+                "file": ("evidence.pdf", io.BytesIO(b"test content"), "application/pdf")
+            },
+            headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
+        )
+
+        assert response.status_code == 422
+        assert any(
+            error["loc"] == ["body", "office_id"] for error in response.json()["detail"]
+        )
+        mock_sds.virus_check_claim_evidence.assert_not_called()
+        mock_sds.save_claim_evidence.assert_not_called()
+        assert (
+            session.exec(select(ClaimEvidence.claim_evidence_id)).all()
+            == evidence_ids_before
+        )
+
+    def test_403_rejects_another_office_without_side_effects(
+        self, client: TestClient, session: Session
+    ) -> None:
+        mock_sds = MagicMock(spec=SdsPort)
+        api.dependency_overrides[get_sds_port] = lambda: mock_sds
+        evidence_ids_before = session.exec(
+            select(ClaimEvidence.claim_evidence_id)
+        ).all()
+
+        response = client.post(
+            "/claims/evidence",
+            data={"office_id": "1A234B"},
+            files={
+                "file": ("evidence.pdf", io.BytesIO(b"test content"), "application/pdf")
+            },
+            headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
+        )
+
+        assert response.status_code == 403
+        assert "1A234B" not in response.text
+        assert "0U651L" not in response.text
+        mock_sds.virus_check_claim_evidence.assert_not_called()
+        mock_sds.save_claim_evidence.assert_not_called()
+        assert (
+            session.exec(select(ClaimEvidence.claim_evidence_id)).all()
+            == evidence_ids_before
+        )
+
+
 def test_201_upload_claim_evidence_returns_claim_evidence_id(client):
     response = client.post(
         "/claims/evidence",
+        data={"office_id": "0U651L"},
         files={
             "file": (
                 "claim_evidence.pdf",
@@ -44,6 +159,7 @@ def test_201_upload_claim_evidence_stores_file_size(client, session):
     content = b"test content"
     response = client.post(
         "/claims/evidence",
+        data={"office_id": "0U651L"},
         files={"file": ("claim_evidence.pdf", io.BytesIO(content), "application/pdf")},
         headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
     )
@@ -55,6 +171,7 @@ def test_201_upload_claim_evidence_stores_file_size(client, session):
 def test_201_upload_claim_evidence_accepts_xlsx(client):
     response = client.post(
         "/claims/evidence",
+        data={"office_id": "0U651L"},
         files={
             "file": (
                 "claim_cost_template.xlsx",
@@ -73,6 +190,7 @@ def test_201_upload_claim_evidence_accepts_xlsx(client):
 def test_201_upload_claim_evidence_accepts_xls(client):
     response = client.post(
         "/claims/evidence",
+        data={"office_id": "0U651L"},
         files={
             "file": (
                 "claim_cost_template.xls",
@@ -91,6 +209,7 @@ def test_201_upload_claim_evidence_accepts_xls(client):
 def test_422_upload_claim_evidence_with_no_file(client):
     response = client.post(
         "/claims/evidence",
+        data={"office_id": "0U651L"},
         headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
     )
     assert response.status_code == 422
@@ -108,6 +227,7 @@ def test_422_upload_claim_evidence_with_failed_virus_check(client):
 
     response = client.post(
         "/claims/evidence",
+        data={"office_id": "0U651L"},
         files={
             "file": (
                 "claim_evidence.pdf",
@@ -130,6 +250,7 @@ def test_500_upload_claim_evidence_with_sds_server_error(client):
 
     response = client.post(
         "/claims/evidence",
+        data={"office_id": "0U651L"},
         files={
             "file": (
                 "claim_evidence.pdf",
@@ -145,6 +266,7 @@ def test_500_upload_claim_evidence_with_sds_server_error(client):
 def test_201_upload_claim_evidence_allows_multiple_uploads(client):
     first = client.post(
         "/claims/evidence",
+        data={"office_id": "0U651L"},
         files={
             "file": (
                 "claim_evidence_1.pdf",
@@ -156,6 +278,7 @@ def test_201_upload_claim_evidence_allows_multiple_uploads(client):
     )
     second = client.post(
         "/claims/evidence",
+        data={"office_id": "0U651L"},
         files={
             "file": (
                 "claim_evidence_2.pdf",
@@ -189,6 +312,7 @@ class TestUploadClaimEvidenceFileName:
             "/claims/evidence",
             file_name,
             {"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
+            fields={"office_id": "0U651L"},
         )
 
         assert response.status_code == 422
@@ -207,6 +331,7 @@ class TestUploadClaimEvidenceFileName:
             "/claims/evidence",
             file_name,
             {"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
+            fields={"office_id": "0U651L"},
         )
 
         assert response.status_code == 201
@@ -216,6 +341,7 @@ class TestUploadClaimEvidenceRbac:
     def test_201_upload_claim_evidence_with_provider_claims_user_app_role(self, client):
         response = client.post(
             "/claims/evidence",
+            data={"office_id": "0U651L"},
             files={
                 "file": (
                     "claim_evidence.pdf",
@@ -238,6 +364,7 @@ class TestUploadClaimEvidenceRbac:
 
         response = client.post(
             "/claims/evidence",
+            data={"office_id": "0U651L"},
             files={
                 "file": (
                     "claim_evidence.pdf",
@@ -258,6 +385,7 @@ class TestUploadClaimEvidenceSentryPii:
     def _upload(self, client):
         return client.post(
             "/claims/evidence",
+            data={"office_id": "0U651L"},
             files={
                 "file": (PII_FILE_NAME, io.BytesIO(b"test content"), "application/pdf")
             },

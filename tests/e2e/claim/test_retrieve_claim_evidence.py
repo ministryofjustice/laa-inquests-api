@@ -16,6 +16,7 @@ def _create_claim_evidence(session, claim_id: int | None = None) -> ClaimEvidenc
     claim_evidence = ClaimEvidence(
         sds_file_name="stored-claim-evidence_abc123.pdf",
         file_name="claim_evidence.pdf",
+        office_id="0U651L",
         claim_id=claim_id,
     )
     session.add(claim_evidence)
@@ -96,6 +97,7 @@ def test_200_retrieve_claim_evidence_returns_xlsx_content(session, client):
     claim_evidence = ClaimEvidence(
         sds_file_name="stored-claim-evidence_abc123.xlsx",
         file_name="claim_cost_template.xlsx",
+        office_id="0U651L",
     )
     session.add(claim_evidence)
     session.commit()
@@ -122,6 +124,7 @@ def test_200_retrieve_claim_evidence_returns_xls_content(session, client):
     claim_evidence = ClaimEvidence(
         sds_file_name="stored-claim-evidence_abc123.xls",
         file_name="claim_cost_template.xls",
+        office_id="0U651L",
     )
     session.add(claim_evidence)
     session.commit()
@@ -156,6 +159,7 @@ def test_415_retrieve_claim_evidence_returns_415_for_unsupported_mime_type(
     claim_evidence = ClaimEvidence(
         sds_file_name="stored-claim-evidence_abc123.exe",
         file_name="claim_evidence.exe",
+        office_id="0U651L",
     )
     session.add(claim_evidence)
     session.commit()
