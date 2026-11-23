@@ -1170,6 +1170,9 @@ def refuse_decision(
 )
 def delete_coroners_letter(
     coroners_letter_id: uuid.UUID,
+    user_office_codes: Annotated[
+        frozenset[str], Depends(get_current_provider_office_codes)
+    ],
     use_case: DeleteCoronersLetterUseCase = Depends(
         get_delete_coroners_letter_use_case
     ),
@@ -1177,7 +1180,7 @@ def delete_coroners_letter(
 ) -> Response:
     """Delete an uploaded coroner's letter from document storage and the database."""
     try:
-        use_case.execute(coroners_letter_id)
+        use_case.execute(coroners_letter_id, user_office_codes)
     except CoronersLetterNotFoundError:
         logger.warning(
             "Coroners letter delete failed: not found",

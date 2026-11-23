@@ -41,7 +41,7 @@ def test_execute_deletes_file_from_sds_and_db():
     )
 
     claim_evidence_id = uuid.uuid4()
-    use_case.execute(claim_evidence_id)
+    use_case.execute(claim_evidence_id, frozenset({"0U651L"}))
 
     sds_port.delete_claim_evidence.assert_called_once_with("claim-evidence_abc123.pdf")
     delete_claim_evidence_port.delete_claim_evidence_by_id.assert_called_once_with(
@@ -63,7 +63,29 @@ def test_execute_raises_not_found_when_claim_evidence_missing():
     )
 
     with pytest.raises(ClaimEvidenceNotFoundError):
-        use_case.execute(uuid.uuid4())
+        use_case.execute(uuid.uuid4(), frozenset({"0U651L"}))
+
+    sds_port.delete_claim_evidence.assert_not_called()
+    delete_claim_evidence_port.delete_claim_evidence_by_id.assert_not_called()
+
+
+def test_execute_raises_not_found_when_office_id_not_in_user_office_codes():
+    get_claim_evidence_port = MagicMock(spec=GetClaimEvidencePort)
+    get_claim_evidence_port.get_claim_evidence_by_id.return_value = (
+        _make_claim_evidence()
+    )
+
+    delete_claim_evidence_port = MagicMock(spec=DeleteClaimEvidencePort)
+    sds_port = MagicMock(spec=SdsPort)
+
+    use_case = DeleteClaimEvidenceUseCase(
+        get_claim_evidence_port=get_claim_evidence_port,
+        delete_claim_evidence_port=delete_claim_evidence_port,
+        sds_port=sds_port,
+    )
+
+    with pytest.raises(ClaimEvidenceNotFoundError):
+        use_case.execute(uuid.uuid4(), frozenset({"002"}))
 
     sds_port.delete_claim_evidence.assert_not_called()
     delete_claim_evidence_port.delete_claim_evidence_by_id.assert_not_called()
@@ -86,7 +108,7 @@ def test_execute_raises_delete_error_when_sds_delete_fails():
     )
 
     with pytest.raises(ClaimEvidenceDeleteError):
-        use_case.execute(uuid.uuid4())
+        use_case.execute(uuid.uuid4(), frozenset({"0U651L"}))
 
 
 def test_execute_raises_not_found_when_db_delete_returns_false():
@@ -107,4 +129,4 @@ def test_execute_raises_not_found_when_db_delete_returns_false():
     )
 
     with pytest.raises(ClaimEvidenceNotFoundError):
-        use_case.execute(uuid.uuid4())
+        use_case.execute(uuid.uuid4(), frozenset({"0U651L"}))

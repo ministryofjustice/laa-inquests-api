@@ -1,12 +1,23 @@
 import io
 import json
+import uuid
+from dataclasses import replace
 from unittest.mock import MagicMock
 
+import pytest
+
 from app import api
-from app.auth.rbac import Role
-from app.models.claim.index import ClaimEvidence
+from app.auth.rbac import Permission, Role, get_current_user_permissions
+from app.models.claim.enums import ClaimType
+from app.models.claim.index import ClaimCostTemplate, ClaimEvidence
 from app.routers.claims import get_sds_port
+from app.routers.dependencies import get_entra_auth_port
 from app.use_cases.exceptions import ClaimEvidenceDeleteError
+from tests.e2e.factories import (
+    create_application_in_db,
+    create_claim_evidence_in_db,
+    create_claim_for_reference,
+)
 
 
 def _upload_evidence_and_get_id(client, auth_token):
@@ -87,6 +98,140 @@ class TestDeleteClaimEvidenceRbac:
         )
 
         assert response.status_code == 204
+
+
+class TestDeleteClaimEvidenceOfficeIdCheck:
+    @pytest.fixture
+    def sds_files(self, client):
+        files = {"stored-file-key": b"file bytes"}
+        sds = MagicMock()
+        sds.delete_claim_evidence.side_effect = lambda key: files.pop(key)
+        api.dependency_overrides[get_sds_port] = lambda: sds
+        return files, sds
+
+    @staticmethod
+    def _set_token_offices(office_codes):
+        auth = api.dependency_overrides[get_entra_auth_port]()
+        verify_token = auth.verify_token.side_effect
+
+        def verify_with_offices(role, required_scopes=None):
+            user = verify_token(role, required_scopes)
+            return replace(user, office_codes=frozenset(office_codes))
+
+        auth.verify_token.side_effect = verify_with_offices
+        api.dependency_overrides[get_entra_auth_port] = lambda: auth
+
+    @staticmethod
+    def _create_file(session, file_type, office_id, firm_code):
+        application = create_application_in_db(
+            session,
+            provider_overrides={"firm_code": firm_code, "office_id": office_id},
+        )
+        claim = create_claim_for_reference(
+            session,
+            application.laa_reference,
+            claim_type=(
+                ClaimType.PAYMENT_ON_ACCOUNT
+                if file_type == "poa_evidence"
+                else ClaimType.FINAL_BILL
+            ),
+        )
+        evidence = create_claim_evidence_in_db(
+            session,
+            office_id=office_id,
+            sds_file_name="stored-file-key",
+            claim_id=claim.claim_id if file_type != "cost_template" else None,
+        )
+        if file_type == "cost_template":
+            session.add(
+                ClaimCostTemplate(
+                    claim_id=claim.claim_id,
+                    claim_cost_template_file_id=evidence.claim_evidence_id,
+                    claim_cost_template_file_name="cost-template.xlsx",
+                )
+            )
+            session.commit()
+        return evidence
+
+    @pytest.mark.parametrize(
+        "file_type", ["poa_evidence", "final_bill_evidence", "cost_template"]
+    )
+    @pytest.mark.parametrize(
+        ("file_office", "token_offices"),
+        [
+            ("0U651L", {"0U651L"}),
+            ("002", {"0U651L", "002"}),
+        ],
+        ids=["own-office", "second-office-in-token"],
+    )
+    def test_204_deletes_file_when_its_office_id_is_in_the_token(
+        self, session, client, sds_files, file_type, file_office, token_offices
+    ):
+        self._set_token_offices(token_offices)
+        evidence = self._create_file(session, file_type, file_office, "0A123B")
+        evidence_id = evidence.claim_evidence_id
+        files, sds = sds_files
+
+        response = client.delete(
+            f"/claims/{evidence_id}",
+            headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
+        )
+
+        assert response.status_code == 204
+        assert session.get(ClaimEvidence, evidence_id) is None
+        assert "stored-file-key" not in files
+        sds.delete_claim_evidence.assert_called_once_with("stored-file-key")
+
+    @pytest.mark.parametrize(
+        "file_type", ["poa_evidence", "final_bill_evidence", "cost_template"]
+    )
+    @pytest.mark.parametrize(
+        ("firm_code", "file_office"),
+        [("0A123B", "002"), ("ZZ999Z", "003")],
+        ids=["same-firm-different-office", "different-firm"],
+    )
+    def test_404_does_not_delete_file_when_its_office_id_is_not_in_the_token(
+        self, session, client, sds_files, file_type, firm_code, file_office
+    ):
+        self._set_token_offices({"0U651L"})
+        evidence = self._create_file(session, file_type, file_office, firm_code)
+        evidence_id = evidence.claim_evidence_id
+        existing_claim_id = evidence.claim_id
+        files, sds = sds_files
+        headers = {"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"}
+
+        unknown_response = client.delete(f"/claims/{uuid.uuid4()}", headers=headers)
+        response = client.delete(f"/claims/{evidence_id}", headers=headers)
+
+        assert response.status_code == unknown_response.status_code == 404
+        assert response.json() == unknown_response.json()
+        session.expire_all()
+        stored = session.get(ClaimEvidence, evidence_id)
+        assert stored is not None
+        assert stored.claim_id == existing_claim_id
+        assert files["stored-file-key"] == b"file bytes"
+        sds.delete_claim_evidence.assert_not_called()
+
+    def test_403_non_provider_cannot_delete_evidence_even_with_create_permission(
+        self, session, client, sds_files
+    ):
+        evidence = self._create_file(session, "poa_evidence", "0U651L", "0A123B")
+        evidence_id = evidence.claim_evidence_id
+        files, sds = sds_files
+        api.dependency_overrides[get_current_user_permissions] = lambda: {
+            Permission.CLAIM_CREATE
+        }
+
+        response = client.delete(
+            f"/claims/{evidence_id}",
+            headers={"Authorization": f"Bearer {Role.CLAIMS_CASEWORKER.value}"},
+        )
+
+        assert response.status_code == 403
+        session.expire_all()
+        assert session.get(ClaimEvidence, evidence_id) is not None
+        assert files["stored-file-key"] == b"file bytes"
+        sds.delete_claim_evidence.assert_not_called()
 
 
 def test_500_delete_claim_evidence_failure_does_not_send_sds_file_key_to_sentry(

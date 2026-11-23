@@ -273,11 +273,14 @@ def retrieve_application_for_claim(
 )
 def delete_claim_evidence(
     claim_evidence_id: uuid.UUID,
+    user_office_codes: Annotated[
+        frozenset[str], Depends(get_current_provider_office_codes)
+    ],
     use_case: DeleteClaimEvidenceUseCase = Depends(get_delete_claim_evidence_use_case),
     request: Request = None,
 ) -> Response:
     try:
-        use_case.execute(claim_evidence_id)
+        use_case.execute(claim_evidence_id, user_office_codes)
     except ClaimEvidenceNotFoundError:
         logger.warning(
             "Claim evidence delete failed: not found",
