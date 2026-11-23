@@ -56,7 +56,7 @@ jobs:
         env:
           RELEASE_NAME: ${{ steps.extract_release.outputs.release }}
         run: |
-          found=$(helm list --all | grep "$RELEASE_NAME" || [[ $? == 1 ]])
+          found="$(helm list --short --deployed --failed --pending --filter "^${RELEASE_NAME}\$")"
 
           if [[ ! -z "$found" ]]
           then
