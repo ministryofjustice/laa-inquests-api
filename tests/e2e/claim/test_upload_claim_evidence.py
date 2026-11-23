@@ -14,6 +14,7 @@ from app.ports.sds_port import SdsPort
 from app.routers.claims import get_sds_port
 from app.routers.dependencies import get_current_provider_office_codes
 from app.use_cases.exceptions import ClaimEvidenceUploadError
+from tests.helpers.multipart import UNSAFE_FILE_NAMES, raw_file_upload
 from tests.helpers.spreadsheet_files import (
     MACRO_SHEET_XLSX,
     MACRO_XLSX,
@@ -382,6 +383,44 @@ def test_201_upload_claim_evidence_allows_multiple_uploads(client):
 
     assert "claimEvidenceId" in first_body
     assert "claimEvidenceId" in second_body
+
+
+class TestUploadClaimEvidenceFileName:
+    @pytest.mark.parametrize("file_name", UNSAFE_FILE_NAMES)
+    def test_422_upload_claim_evidence_with_unsafe_file_name(
+        self, client, session, file_name
+    ):
+        mock_sds = MagicMock()
+        api.dependency_overrides[get_sds_port] = lambda: mock_sds
+
+        response = raw_file_upload(
+            client,
+            "/claims/evidence",
+            file_name,
+            {"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
+            fields={"office_id": "0U651L"},
+        )
+
+        assert response.status_code == 422
+        assert response.json()["detail"] == "Invalid file name"
+        mock_sds.virus_check_claim_evidence.assert_not_called()
+        mock_sds.save_claim_evidence.assert_not_called()
+        assert session.exec(select(ClaimEvidence)).all() == []
+
+    @pytest.mark.parametrize(
+        "file_name",
+        ["claim_evidence.pdf", "Evidence (1).pdf", "Jane Doe - invoice_2024.pdf"],
+    )
+    def test_201_upload_claim_evidence_with_normal_file_name(self, client, file_name):
+        response = raw_file_upload(
+            client,
+            "/claims/evidence",
+            file_name,
+            {"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
+            fields={"office_id": "0U651L"},
+        )
+
+        assert response.status_code == 201
 
 
 class TestUploadClaimEvidenceRbac:

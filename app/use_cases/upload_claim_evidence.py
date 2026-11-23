@@ -2,6 +2,7 @@ import logging
 import uuid
 
 from app.domain.claim_evidence import ClaimEvidence
+from app.domain.file_name import is_valid_upload_file_name
 from app.domain.office_authorisation import is_office_authorised
 from app.domain.spreadsheet_evidence import (
     SpreadsheetRejectedError,
@@ -15,6 +16,7 @@ from app.use_cases.exceptions import (
     ClaimEvidenceUploadError,
     ClaimEvidenceVirusCheckError,
     ClaimEvidenceVirusDetectedError,
+    InvalidFileNameError,
     ProviderOfficeMismatchError,
 )
 
@@ -48,6 +50,16 @@ class UploadClaimEvidenceUseCase:
             raise ProviderOfficeMismatchError(
                 "Office id is not in the user's office codes"
             )
+
+        if not is_valid_upload_file_name(file_name):
+            logger.warning(
+                "Claim evidence upload rejected: invalid file name",
+                extra=build_log_extra(
+                    event="claim_evidence_upload_failed",
+                    reason="invalid_file_name",
+                ),
+            )
+            raise InvalidFileNameError("Invalid file name")
 
         try:
             check_spreadsheet_evidence(file_name, claim_evidence)

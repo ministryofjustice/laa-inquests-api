@@ -11,6 +11,7 @@ from app.use_cases.exceptions import (
     CoronersLetterUploadError,
     CoronersLetterVirusCheckError,
     CoronersLetterVirusDetectedError,
+    InvalidFileNameError,
     ProviderOfficeMismatchError,
 )
 from app.use_cases.upload_coroners_letter import UploadCoronersLetterUseCase
@@ -181,6 +182,29 @@ def test_execute_raises_an_error_when_office_id_is_not_in_user_office_codes():
             coroners_letter=CORONERS_LETTER,
             file_name=FILE_NAME,
             office_id="1A234B",
+            user_office_codes=USER_OFFICE_CODES,
+        )
+
+    port.virus_check_coroners_letter.assert_not_called()
+    port.save_coroners_letter.assert_not_called()
+    upload_port.save_uploaded_coroners_letter.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "file_name", ["<img src=x onerror=alert(1)>.pdf", 'a".pdf', ""]
+)
+def test_execute_rejects_invalid_file_name_before_any_side_effect(file_name):
+    port = MagicMock(spec=SdsPort)
+    upload_port = MagicMock(spec=UploadCoronersLetterPort)
+    use_case = UploadCoronersLetterUseCase(
+        sds_port=port, upload_coroners_letter_port=upload_port
+    )
+
+    with pytest.raises(InvalidFileNameError):
+        use_case.execute(
+            coroners_letter=CORONERS_LETTER,
+            file_name=file_name,
+            office_id=OFFICE_ID,
             user_office_codes=USER_OFFICE_CODES,
         )
 

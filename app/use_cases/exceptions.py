@@ -22,6 +22,10 @@ class SentryRedactableError(Exception):
         return cls(message, safe_message=message)
 
 
+class InvalidFileNameError(Exception):
+    """The uploaded file name uses characters or a length that is not allowed."""
+
+
 class CoronersLetterUploadError(SentryRedactableError):
     pass
 
