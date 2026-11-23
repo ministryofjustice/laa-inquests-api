@@ -1,4 +1,5 @@
 from .entra_auth import (
+    get_caller,
     get_current_provider_firm_code,
     get_current_provider_office_codes,
     get_entra_auth_port,
@@ -10,6 +11,7 @@ from .entra_auth import (
 from .providers import get_claim_db_adapter, get_sds_port
 
 __all__ = [
+    "get_caller",
     "get_claim_db_adapter",
     "get_current_provider_firm_code",
     "get_current_provider_office_codes",

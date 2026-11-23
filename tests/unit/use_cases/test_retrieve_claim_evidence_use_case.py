@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from app.domain.caller import CaseworkerCaller, ProviderCaller
 from app.domain.claim_evidence import ClaimEvidence
 from app.ports.claim.get_claim_evidence_port import GetClaimEvidencePort
 from app.ports.sds_port import SdsPort
@@ -13,13 +14,16 @@ from app.use_cases.exceptions import (
     SDSClaimEvidenceRetrievalError,
 )
 
+PROVIDER = ProviderCaller(office_codes=frozenset({"0U651L"}))
+
 
 def _make_claim_evidence(
     sds_file_name: str = "claim-evidence_abc123.pdf",
     file_name: str = "test-document.pdf",
+    office_id: str = "0U651L",
 ) -> ClaimEvidence:
     return ClaimEvidence(
-        sds_file_name=sds_file_name, file_name=file_name, office_id="0U651L"
+        sds_file_name=sds_file_name, file_name=file_name, office_id=office_id
     )
 
 
@@ -43,7 +47,7 @@ def test_execute_calls_sds_port_with_sds_file_name():
     sds_port.retrieve_claim_evidence.return_value = iter([])
 
     use_case = _make_use_case(get_claim_evidence_port, sds_port)
-    use_case.execute(uuid.uuid4())
+    use_case.execute(uuid.uuid4(), PROVIDER)
 
     sds_port.retrieve_claim_evidence.assert_called_once_with(
         "claim-evidence_abc123.pdf"
@@ -61,7 +65,7 @@ def test_execute_result_contains_file_name():
     sds_port.retrieve_claim_evidence.return_value = iter([])
 
     use_case = _make_use_case(get_claim_evidence_port, sds_port)
-    result = use_case.execute(uuid.uuid4())
+    result = use_case.execute(uuid.uuid4(), PROVIDER)
 
     assert result.file_name == "test-document.pdf"
 
@@ -77,7 +81,7 @@ def test_execute_returns_iterator_from_port():
     sds_port.retrieve_claim_evidence.return_value = expected_content
 
     use_case = _make_use_case(get_claim_evidence_port, sds_port)
-    response = use_case.execute(uuid.uuid4()).content
+    response = use_case.execute(uuid.uuid4(), PROVIDER).content
 
     assert response == expected_content
 
@@ -89,9 +93,41 @@ def test_execute_raises_error_when_claim_evidence_is_none():
     use_case = _make_use_case(get_claim_evidence_port, sds_port)
 
     with pytest.raises(ClaimEvidenceNotFoundError):
-        use_case.execute(uuid.uuid4())
+        use_case.execute(uuid.uuid4(), PROVIDER)
 
     sds_port.retrieve_claim_evidence.assert_not_called()
+
+
+def test_execute_raises_not_found_when_file_office_id_not_in_providers_office_codes():
+    get_claim_evidence_port = MagicMock(spec=GetClaimEvidencePort)
+    get_claim_evidence_port.get_claim_evidence_by_id.return_value = (
+        _make_claim_evidence(office_id="not-providers-office")
+    )
+    sds_port = MagicMock(spec=SdsPort)
+    use_case = _make_use_case(get_claim_evidence_port, sds_port)
+
+    with pytest.raises(ClaimEvidenceNotFoundError):
+        use_case.execute(uuid.uuid4(), PROVIDER)
+
+    sds_port.retrieve_claim_evidence.assert_not_called()
+
+
+def test_execute_returns_file_for_any_office_for_caseworker():
+    get_claim_evidence_port = MagicMock(spec=GetClaimEvidencePort)
+    get_claim_evidence_port.get_claim_evidence_by_id.return_value = (
+        _make_claim_evidence(
+            sds_file_name="claim-evidence_abc123.pdf", office_id="any-office"
+        )
+    )
+    sds_port = MagicMock(spec=SdsPort)
+    sds_port.retrieve_claim_evidence.return_value = iter([])
+    use_case = _make_use_case(get_claim_evidence_port, sds_port)
+
+    use_case.execute(uuid.uuid4(), CaseworkerCaller())
+
+    sds_port.retrieve_claim_evidence.assert_called_once_with(
+        "claim-evidence_abc123.pdf"
+    )
 
 
 def test_execute_raises_error_when_port_raises_invalid_id():
@@ -104,7 +140,7 @@ def test_execute_raises_error_when_port_raises_invalid_id():
     use_case = _make_use_case(get_claim_evidence_port, sds_port)
 
     with pytest.raises(ClaimEvidenceRetrievalError):
-        use_case.execute(uuid.uuid4())
+        use_case.execute(uuid.uuid4(), PROVIDER)
 
 
 def test_execute_raises_error_when_port_raises_retrieval_error():
@@ -117,4 +153,4 @@ def test_execute_raises_error_when_port_raises_retrieval_error():
     use_case = _make_use_case(get_claim_evidence_port, sds_port)
 
     with pytest.raises(ClaimEvidenceRetrievalError):
-        use_case.execute(uuid.uuid4())
+        use_case.execute(uuid.uuid4(), PROVIDER)
