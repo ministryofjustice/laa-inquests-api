@@ -11,6 +11,7 @@ from sqlmodel import Session, SQLModel, StaticPool, create_engine
 
 from app import api
 from app.auth.rbac import ROLE_PERMISSIONS_MAP
+from app.config import Config
 from app.config.sentry import sentry_config
 from app.db import get_session
 from app.db.session import CustomSession
@@ -32,6 +33,7 @@ from app.models.application.index import (
     SDSUploadCoronersLetterResponse,
 )
 from app.ports.entra_auth_port import AuthenticatedUser
+from app.rate_limit import create_rate_limiter
 from app.routers.applications import (
     get_gov_notify_port,
     get_pdf_generation_port,
@@ -285,9 +287,17 @@ def client_fixture(session: Session):
     api.dependency_overrides[get_sds_port] = get_sds_port_override
     api.dependency_overrides[get_entra_auth_port] = get_entra_auth_port_override
 
+    # A fresh limiter per test stops request counts building up across the session.
+    previous_rate_limiter = api.state.rate_limiter
+    api.state.rate_limiter = create_rate_limiter(
+        Config.RATE_LIMIT_MAX, Config.RATE_WINDOW_MINUTES
+    )
+
     client = TestClient(api, raise_server_exceptions=False)
     yield client
     api.dependency_overrides.clear()
+    api.state.rate_limiter.close()
+    api.state.rate_limiter = previous_rate_limiter
 
 
 @pytest.fixture
