@@ -1,6 +1,7 @@
 import logging
 import uuid
 
+from app.domain.office_authorisation import is_office_authorised
 from app.logging_utils import build_log_extra
 from app.ports.claim.delete_claim_evidence_port import DeleteClaimEvidencePort
 from app.ports.claim.get_claim_evidence_port import GetClaimEvidencePort
@@ -24,11 +25,15 @@ class DeleteClaimEvidenceUseCase:
         self.delete_claim_evidence_port = delete_claim_evidence_port
         self.sds_port = sds_port
 
-    def execute(self, claim_evidence_id: uuid.UUID) -> None:
+    def execute(
+        self, claim_evidence_id: uuid.UUID, user_office_codes: frozenset[str]
+    ) -> None:
         claim_evidence = self.get_claim_evidence_port.get_claim_evidence_by_id(
             claim_evidence_id
         )
-        if claim_evidence is None:
+        if claim_evidence is None or not is_office_authorised(
+            claim_evidence.office_id, user_office_codes
+        ):
             logger.error(
                 "Claim evidence delete failed",
                 extra=build_log_extra(
