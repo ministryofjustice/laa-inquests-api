@@ -16,6 +16,7 @@ from fastapi import (
 from fastapi.responses import StreamingResponse
 
 from app.auth.rbac import Permission, require_permission_from
+from app.domain.caller import Caller
 from app.logging_utils import build_log_extra
 from app.models.claim.index import ClaimApplicationResponse, UploadClaimEvidenceResponse
 from app.ports.claim.delete_claim_evidence_port import DeleteClaimEvidencePort
@@ -25,6 +26,7 @@ from app.ports.claim.upload_claim_evidence_port import UploadClaimEvidencePort
 from app.ports.sds_port import SdsPort
 from app.routers.content_disposition import content_disposition
 from app.routers.dependencies import (
+    get_caller,
     get_claim_db_adapter,
     get_current_provider_office_codes,
     get_sds_port,
@@ -192,13 +194,14 @@ async def upload_claim_evidence(
 )
 def retrieve_claim_evidence(
     claim_evidence_id: uuid.UUID,
+    caller: Annotated[Caller, Depends(get_caller)],
     disposition: Literal["inline", "attachment"] = "inline",
     use_case: RetrieveClaimEvidenceUseCase = Depends(get_claim_evidence_use_case),
     request: Request = None,
 ) -> StreamingResponse:
     """Stream a piece of claim evidence, independent of whether it is linked to a claim yet."""
     try:
-        result = use_case.execute(claim_evidence_id)
+        result = use_case.execute(claim_evidence_id, caller)
     except ClaimEvidenceNotFoundError:
         logger.warning(
             "Claim evidence retrieval failed: not found",

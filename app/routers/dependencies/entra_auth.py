@@ -7,6 +7,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from app.adapters.entra_auth_adapter import EntraAuthAdapter
 from app.config import Config
 from app.contexts.user import set_entra_user_context
+from app.domain.caller import Caller, CaseworkerCaller, ProviderCaller
 from app.ports.entra_auth_port import AuthenticatedUser, EntraAuthPort
 
 _http_bearer = HTTPBearer(auto_error=False)
@@ -68,6 +69,21 @@ def get_current_provider_office_codes(
             headers={"WWW-Authenticate": "Bearer"},
         )
     return user.office_codes
+
+
+def get_caller(
+    user: Annotated[AuthenticatedUser, Depends(verify_entra_token)],
+) -> Caller:
+    """Identify the caller as a provider or a caseworker."""
+    if "User.Provider" in user.scopes:
+        return ProviderCaller(office_codes=get_current_provider_office_codes(user))
+    if "User.Caseworker" in user.scopes:
+        return CaseworkerCaller()
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Insufficient permissions",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 async def verify_entra_caseworker_token(
