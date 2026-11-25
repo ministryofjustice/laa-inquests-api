@@ -5,11 +5,12 @@ from app.models.validated_types import (
     AddressText,
     CoronersReference,
     PersonName,
-    PersonNameOrEmpty,
     ProseText,
+    RelationshipText,
 )
 
 DANGEROUS_CHARACTERS = ["<", ">", ";", '"', "=", "&", "{", "}", "(", ")", "!", "\\"]
+UNICODE_NAMES = ["Siân", "Gŵyn", "Zoë", "José", "Łukasz", "Müller", "Nguyễn", "Søren"]
 
 
 def validate(annotated_type, value):
@@ -18,10 +19,31 @@ def validate(annotated_type, value):
 
 class TestPersonName:
     @pytest.mark.parametrize(
-        "value", ["Jane", "O'Donald", "Mary-Jane", "De Souza", "a", "A" * 50]
+        "value", ["Jane", "O'Donald", "Mary-Jane", "De Souza", "a", "A" * 100]
     )
     def test_accepts_valid_names(self, value):
         assert validate(PersonName, value) == value
+
+    @pytest.mark.parametrize("value", UNICODE_NAMES)
+    def test_accepts_unicode_letters(self, value):
+        assert validate(PersonName, value) == value
+
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            ("  Jane  ", "Jane"),
+            ("Jane\n", "Jane"),
+            ("\tJane\r\n", "Jane"),
+            ("\u00a0Jane\u00a0", "Jane"),
+            ("O\u2019Brien", "O'Brien"),
+            ("O\u2018Brien", "O'Brien"),
+            ("Jose\u0301", "Jos\u00e9"),
+        ],
+    )
+    def test_trims_folds_curly_apostrophes_and_composes_before_checking(
+        self, value, expected
+    ):
+        assert validate(PersonName, value) == expected
 
     @pytest.mark.parametrize("character", DANGEROUS_CHARACTERS)
     def test_rejects_dangerous_characters(self, character):
@@ -30,25 +52,30 @@ class TestPersonName:
 
     @pytest.mark.parametrize(
         "value",
-        ["Jane1", "Zoë", "Jane.", "Jane,", "Jane/Smith", "Jane_Smith", "Jane\u200b"],
+        ["Jane1", "Jane.", "Jane,", "Jane/Smith", "Jane_Smith", "Jane\u200b"],
     )
     def test_rejects_characters_outside_allow_list(self, value):
         with pytest.raises(ValidationError):
             validate(PersonName, value)
 
-    @pytest.mark.parametrize("value", ["", " ", "-Smith", "'Smith", " Smith"])
-    def test_rejects_empty_or_non_letter_start(self, value):
+    @pytest.mark.parametrize(
+        "value", ["", " ", "-Smith", "'Smith", "\u0301", "\u0301Smith"]
+    )
+    def test_rejects_empty_non_letter_start_and_bare_combining_marks(self, value):
         with pytest.raises(ValidationError):
             validate(PersonName, value)
 
-    def test_rejects_more_than_50_characters(self):
+    def test_rejects_more_than_100_characters(self):
         with pytest.raises(ValidationError):
-            validate(PersonName, "A" * 51)
+            validate(PersonName, "A" * 101)
 
-    @pytest.mark.parametrize(
-        "value", ["Jane\n", "Jane\r\n", "Ja\nne", "Jane\t", "Jane\x00"]
-    )
-    def test_rejects_newlines_and_control_characters(self, value):
+    @pytest.mark.parametrize("value", ["Ja\nne", "Ja\tne", "Jane\x00", "Ja\x00ne"])
+    def test_rejects_embedded_newlines_and_control_characters(self, value):
+        with pytest.raises(ValidationError):
+            validate(PersonName, value)
+
+    @pytest.mark.parametrize("value", [None, 123, ["Jane"]])
+    def test_rejects_non_string_input(self, value):
         with pytest.raises(ValidationError):
             validate(PersonName, value)
 
@@ -91,13 +118,20 @@ class TestCoronersReference:
     def test_accepts_valid_references_and_empty_string(self, value):
         assert validate(CoronersReference, value) == value
 
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [(" COR-1 ", "COR-1"), ("COR-1\n", "COR-1"), (" ", ""), ("\n", "")],
+    )
+    def test_trims_and_treats_whitespace_only_as_not_provided(self, value, expected):
+        assert validate(CoronersReference, value) == expected
+
     @pytest.mark.parametrize("character", DANGEROUS_CHARACTERS + ["'", ","])
     def test_rejects_characters_outside_allow_list(self, character):
         with pytest.raises(ValidationError):
             validate(CoronersReference, f"COR{character}123")
 
-    @pytest.mark.parametrize("value", [" ", "-123", "/123", "COR-1\n", "\n"])
-    def test_rejects_whitespace_only_bad_start_and_trailing_newline(self, value):
+    @pytest.mark.parametrize("value", ["-123", "/123", "CO\nR"])
+    def test_rejects_bad_start_and_embedded_newline(self, value):
         with pytest.raises(ValidationError):
             validate(CoronersReference, value)
 
@@ -106,17 +140,28 @@ class TestCoronersReference:
             validate(CoronersReference, "A" * 51)
 
 
-class TestPersonNameOrEmpty:
-    @pytest.mark.parametrize("value", ["", "Son", "O'Donald", "Mary-Jane", "A" * 50])
+class TestRelationshipText:
+    @pytest.mark.parametrize(
+        "value", ["", "Son", "O'Donald", "Step-parent", "Nièce", "A" * 70]
+    )
     def test_accepts_names_and_empty_string(self, value):
-        assert validate(PersonNameOrEmpty, value) == value
+        assert validate(RelationshipText, value) == value
 
     @pytest.mark.parametrize(
-        "value", [" ", "\n", "Son\n", "-Son", "<Spouse>", "Son1", "A" * 51]
+        ("value", "expected"),
+        [(" Son ", "Son"), ("Son\n", "Son"), (" ", ""), ("O\u2019Neill", "O'Neill")],
+    )
+    def test_trims_folds_apostrophes_and_treats_whitespace_only_as_empty(
+        self, value, expected
+    ):
+        assert validate(RelationshipText, value) == expected
+
+    @pytest.mark.parametrize(
+        "value", ["-Son", "<Spouse>", "Son1", "So\nn", "\u0301", "A" * 71]
     )
     def test_rejects_everything_else_a_person_name_rejects(self, value):
         with pytest.raises(ValidationError):
-            validate(PersonNameOrEmpty, value)
+            validate(RelationshipText, value)
 
 
 class TestProseText:

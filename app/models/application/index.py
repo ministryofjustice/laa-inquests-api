@@ -32,8 +32,8 @@ from app.models.validated_types import (
     AddressText,
     CoronersReference,
     PersonName,
-    PersonNameOrEmpty,
     ProseText,
+    RelationshipText,
 )
 
 
@@ -402,7 +402,7 @@ class DeceasedCreate(BaseModel):
     further_information: ProseText | None = PydanticField(
         default=None, examples=["Further information."]
     )
-    client_relationship_to_deceased: PersonNameOrEmpty = PydanticField(
+    client_relationship_to_deceased: RelationshipText = PydanticField(
         examples=["Spouse"]
     )
 

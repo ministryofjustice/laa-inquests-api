@@ -414,11 +414,11 @@ class TestCreateApplication:
             "zxdfsdfdszxdfsdfds'';!--\"=&{()}",
             "<Test>",
             "Smith1",
-            "Zoë",
             "a=b",
-            "Smith\n",
-            "A" * 51,
+            "Sm\nith",
+            "A" * 101,
             "",
+            " ",
         ],
     )
     def test_422_rejected_when_client_name_field_contains_disallowed_input(
@@ -439,7 +439,10 @@ class TestCreateApplication:
         assert response.status_code == 422
 
     @pytest.mark.parametrize("field", PERSON_NAME_CLIENT_FIELDS)
-    @pytest.mark.parametrize("value", ["O'Donald", "Smith-Jones", "De Souza", "A" * 50])
+    @pytest.mark.parametrize(
+        "value",
+        ["O'Donald", "Smith-Jones", "De Souza", "Siân", "Gŵyn", "A" * 100],
+    )
     def test_201_accepts_client_name_field_with_allowed_characters(
         self, client, field, value
     ):
@@ -456,6 +459,32 @@ class TestCreateApplication:
         )
 
         assert response.status_code == 201
+
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            (" Jane ", "Jane"),
+            ("Jane\n", "Jane"),
+            ("O\u2019Brien", "O'Brien"),
+            ("Jose\u0301", "Jos\u00e9"),
+        ],
+    )
+    def test_201_stores_names_trimmed_and_normalised(self, client, value, expected):
+        body = _make_request_body({"clientFirstName": value})
+        body["deceased"]["deceasedFirstName"] = value
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 201
+        assert response.json()["client"]["clientFirstName"] == expected
+        assert response.json()["deceased"]["deceasedFirstName"] == expected
 
     @pytest.mark.parametrize("address_key", ["homeAddress", "correspondenceAddress"])
     @pytest.mark.parametrize(
@@ -521,8 +550,7 @@ class TestCreateApplication:
             "zxdfsdfdszxdfsdfds'';!--\"=&{()}",
             "<Spousezxdfsdfds'';!--\"=&{()}>",
             "<Test>",
-            "Smith\n",
-            "A" * 51,
+            "Sm\nith",
         ],
     )
     def test_422_rejected_when_deceased_field_contains_disallowed_input(
@@ -542,8 +570,34 @@ class TestCreateApplication:
 
         assert response.status_code == 422
 
+    @pytest.mark.parametrize(
+        ("field", "too_long"),
+        [
+            ("deceasedFirstName", "A" * 101),
+            ("deceasedLastName", "A" * 101),
+            ("coronersReference", "A" * 51),
+            ("clientRelationshipToDeceased", "A" * 71),
+        ],
+    )
+    def test_422_rejected_when_deceased_field_exceeds_its_limit(
+        self, client, field, too_long
+    ):
+        body = _make_request_body()
+        body["deceased"][field] = too_long
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 422
+
     @pytest.mark.parametrize("field", ["deceasedFirstName", "deceasedLastName"])
-    @pytest.mark.parametrize("value", ["", "Smith1", "Zoë", "-Smith"])
+    @pytest.mark.parametrize("value", ["", " ", "Smith1", "-Smith"])
     def test_422_rejected_when_deceased_name_is_empty_or_not_letters(
         self, client, field, value
     ):
@@ -567,11 +621,13 @@ class TestCreateApplication:
             ("deceasedFirstName", "O'Donald"),
             ("deceasedLastName", "Smith-Jones"),
             ("deceasedLastName", "De Souza"),
-            ("deceasedFirstName", "A" * 50),
+            ("deceasedLastName", "García"),
+            ("deceasedFirstName", "A" * 100),
             ("coronersReference", "COR-2025/123.A"),
             ("coronersReference", "A" * 50),
             ("clientRelationshipToDeceased", "Son"),
             ("clientRelationshipToDeceased", "Step-parent"),
+            ("clientRelationshipToDeceased", "A" * 70),
         ],
     )
     def test_201_accepts_deceased_field_with_allowed_characters(
