@@ -946,11 +946,12 @@ def list_application_claims(
 def read_claim(
     laa_reference: str,
     claim_reference: str,
+    caller: Annotated[Caller, Depends(get_caller)],
     use_case: GetClaimUseCase = Depends(get_get_claim_use_case),
 ) -> ClaimByIdResponse:
     """Get a single claim by reference for a given application."""
     try:
-        claim = use_case.execute(laa_reference, claim_reference)
+        claim = use_case.execute(laa_reference, claim_reference, caller)
         return claim
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")
