@@ -1,7 +1,6 @@
 import io
 import json
 import uuid
-from dataclasses import replace
 from unittest.mock import MagicMock
 
 import pytest
@@ -10,8 +9,8 @@ from app import api
 from app.auth.rbac import Permission, Role, get_current_user_permissions
 from app.models.application.index import CoronersLetter
 from app.routers.applications import get_sds_port
-from app.routers.dependencies import get_entra_auth_port
 from app.use_cases.exceptions import CoronersLetterDeleteError
+from tests.e2e.auth import set_token_office_codes
 from tests.e2e.factories import create_application_in_db
 
 
@@ -83,18 +82,6 @@ class TestDeleteCoronersLetterOfficeIdCheck:
         api.dependency_overrides[get_sds_port] = lambda: sds
         return files, sds
 
-    @staticmethod
-    def _set_token_offices(office_codes):
-        auth = api.dependency_overrides[get_entra_auth_port]()
-        verify_token = auth.verify_token.side_effect
-
-        def verify_with_offices(role, required_scopes=None):
-            user = verify_token(role, required_scopes)
-            return replace(user, office_codes=frozenset(office_codes))
-
-        auth.verify_token.side_effect = verify_with_offices
-        api.dependency_overrides[get_entra_auth_port] = lambda: auth
-
     @pytest.mark.parametrize(
         ("file_office", "token_offices"),
         [
@@ -106,7 +93,7 @@ class TestDeleteCoronersLetterOfficeIdCheck:
     def test_204_deletes_letter_when_its_office_id_is_in_the_token(
         self, session, client, sds_files, file_office, token_offices
     ):
-        self._set_token_offices(token_offices)
+        set_token_office_codes(token_offices)
         letter = CoronersLetter(
             sds_file_name="stored-file-key",
             file_name="letter.pdf",
@@ -135,7 +122,7 @@ class TestDeleteCoronersLetterOfficeIdCheck:
     def test_404_does_not_delete_letter_when_its_office_id_is_not_in_the_token(
         self, session, client, sds_files, firm_code, file_office
     ):
-        self._set_token_offices({"0U651L"})
+        set_token_office_codes({"0U651L"})
         letter = CoronersLetter(
             sds_file_name="stored-file-key",
             file_name="letter.pdf",
