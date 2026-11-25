@@ -2,6 +2,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from app.domain.caller import CaseworkerCaller, ProviderCaller
 from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ClaimType
 from app.models.claim.index import Claim, ClaimDecision
 from app.ports.application_lookup_port import ApplicationLookupPort
@@ -11,6 +12,8 @@ from app.ports.claim.get_claims_for_application_port import (
 )
 from app.use_cases.exceptions import ApplicationNotFoundError
 from app.use_cases.list_application_claims import ListApplicationClaimsUseCase
+
+PROVIDER = ProviderCaller(office_codes=frozenset({"0U651L"}))
 
 
 def _claim(claim_id: int, status: ClaimStatus) -> Claim:
@@ -27,6 +30,7 @@ def _build_use_case(claims_port, lookup_port=None, decision_port=None):
     if lookup_port is None:
         lookup_port = MagicMock(spec=ApplicationLookupPort)
         application = MagicMock(application_id=1)
+        application.provider.office_id = "0U651L"
         lookup_port.get_application_by_laa_reference.return_value = application
     if decision_port is None:
         decision_port = MagicMock(spec=GetClaimDecisionPort)
@@ -46,7 +50,7 @@ def test_assessed_true_returns_only_non_submitted_claims():
     ]
     use_case = _build_use_case(port)
 
-    result = use_case.execute("1", assessed=True)
+    result = use_case.execute("1", assessed=True, caller=PROVIDER)
 
     assert [c.claim_reference for c in result] == ["INQC-0000-0002"]
     port.get_claims_by_application_id.assert_called_once_with(1)
@@ -60,7 +64,7 @@ def test_assessed_false_returns_only_submitted_claims():
     ]
     use_case = _build_use_case(port)
 
-    result = use_case.execute("1", assessed=False)
+    result = use_case.execute("1", assessed=False, caller=PROVIDER)
 
     assert [c.claim_reference for c in result] == ["INQC-0000-0001"]
 
@@ -70,7 +74,7 @@ def test_returns_empty_list_when_no_claims():
     port.get_claims_by_application_id.return_value = []
     use_case = _build_use_case(port)
 
-    assert use_case.execute("1", assessed=True) == []
+    assert use_case.execute("1", assessed=True, caller=PROVIDER) == []
 
 
 def test_raises_application_not_found_when_application_does_not_exist():
@@ -80,7 +84,7 @@ def test_raises_application_not_found_when_application_does_not_exist():
     use_case = _build_use_case(port, lookup_port)
 
     with pytest.raises(ApplicationNotFoundError):
-        use_case.execute("999999", assessed=True)
+        use_case.execute("999999", assessed=True, caller=PROVIDER)
 
     port.get_claims_by_application_id.assert_not_called()
 
@@ -98,7 +102,7 @@ def test_includes_claim_status_and_decision_status():
     )
     use_case = _build_use_case(port, decision_port=decision_port)
 
-    result = use_case.execute("1", assessed=True)
+    result = use_case.execute("1", assessed=True, caller=PROVIDER)
 
     assert result[0].status_id == ClaimStatus.REJECTED
     assert result[0].claim_decision_status == ClaimDecisionStatus.REJECT
@@ -112,7 +116,35 @@ def test_claim_decision_status_is_none_when_no_decision_exists():
     ]
     use_case = _build_use_case(port)
 
-    result = use_case.execute("1", assessed=True)
+    result = use_case.execute("1", assessed=True, caller=PROVIDER)
 
     assert result[0].status_id == ClaimStatus.ACCEPTED
     assert result[0].claim_decision_status is None
+
+
+def test_raises_application_not_found_when_application_office_id_not_in_providers_office_codes():
+    port = MagicMock(spec=GetClaimsForApplicationPort)
+    lookup_port = MagicMock(spec=ApplicationLookupPort)
+    application = MagicMock(application_id=1)
+    application.provider.office_id = "not-providers-office"
+    lookup_port.get_application_by_laa_reference.return_value = application
+    use_case = _build_use_case(port, lookup_port)
+
+    with pytest.raises(ApplicationNotFoundError):
+        use_case.execute("1", assessed=True, caller=PROVIDER)
+
+    port.get_claims_by_application_id.assert_not_called()
+
+
+def test_returns_claims_for_any_office_for_caseworker():
+    port = MagicMock(spec=GetClaimsForApplicationPort)
+    port.get_claims_by_application_id.return_value = [_claim(1, ClaimStatus.SUBMITTED)]
+    lookup_port = MagicMock(spec=ApplicationLookupPort)
+    application = MagicMock(application_id=1)
+    application.provider.office_id = "any-office"
+    lookup_port.get_application_by_laa_reference.return_value = application
+    use_case = _build_use_case(port, lookup_port)
+
+    result = use_case.execute("1", assessed=False, caller=CaseworkerCaller())
+
+    assert [c.claim_reference for c in result] == ["INQC-0000-0001"]

@@ -26,6 +26,7 @@ from app.adapters.provider_details_adapter import ProviderDetailsAdapter
 from app.auth.rbac import Permission, require_permission_from
 from app.config import Config
 from app.db import get_session
+from app.domain.caller import Caller
 from app.domain.claim_error import ClaimErrorCode
 from app.domain.constants.claim_messages import PROVIDER_OFFICE_ID_MISMATCH_MESSAGE
 from app.logging_utils import build_log_extra
@@ -97,6 +98,7 @@ from app.ports.update_decision_port import ApplicationDecisionPort
 from app.ports.upload_coroners_letter_port import UploadCoronersLetterPort
 from app.routers.content_disposition import content_disposition
 from app.routers.dependencies import (
+    get_caller,
     get_claim_db_adapter,
     get_current_provider_firm_code,
     get_current_provider_office_codes,
@@ -923,13 +925,14 @@ def read_certificate(
 def list_application_claims(
     laa_reference: str,
     assessed: bool,
+    caller: Annotated[Caller, Depends(get_caller)],
     use_case: ListApplicationClaimsUseCase = Depends(
         get_list_application_claims_use_case
     ),
 ) -> list[ClaimSummaryResponse]:
     """List claims for an application, filtered by assessed status."""
     try:
-        claims = use_case.execute(laa_reference, assessed)
+        claims = use_case.execute(laa_reference, assessed, caller)
         return claims
     except ApplicationNotFoundError:
         raise HTTPException(status_code=404, detail="Application not found")

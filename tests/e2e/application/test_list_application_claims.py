@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+import pytest
 from sqlmodel import select
 
 from app.auth.rbac import Role
@@ -12,7 +13,8 @@ from app.models.claim.enums import (
     POAType,
 )
 from app.models.claim.index import Claim, ClaimDecision
-from tests.e2e.factories import create_claim_for_reference
+from tests.e2e.auth import set_token_office_codes
+from tests.e2e.factories import create_application_in_db, create_claim_for_reference
 
 
 def _seed_claim(
@@ -285,3 +287,89 @@ def test_404_when_application_does_not_exist(client):
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Application not found"
+
+
+PROVIDER_OFFICE_ID = "0U651L"
+PROVIDER_FIRM_CODE = "0A123B"
+UNKNOWN_LAA_REFERENCE = "999999"
+
+
+def _create_application_with_claim(session, office_id, firm_code=PROVIDER_FIRM_CODE):
+    application = create_application_in_db(
+        session,
+        provider_overrides={"firm_code": firm_code, "office_id": office_id},
+    )
+    claim = create_claim_for_reference(session, application.laa_reference)
+    return application, claim
+
+
+def _list_claims(
+    client, laa_reference, role=Role.PROVIDER_CLAIMS_USER, assessed="false"
+):
+    return client.get(
+        f"/applications/{laa_reference}/claims?assessed={assessed}",
+        headers={"Authorization": f"Bearer {role.value}"},
+    )
+
+
+def _claim_references(response):
+    return [c["claimReference"] for c in response.json()]
+
+
+class TestListApplicationClaimsOfficeIdCheck:
+    @pytest.mark.parametrize(
+        ("application_office_id", "token_office_ids"),
+        [
+            (PROVIDER_OFFICE_ID, {PROVIDER_OFFICE_ID}),
+            ("002", {PROVIDER_OFFICE_ID, "002"}),
+        ],
+        ids=["own-office", "second-office-in-token"],
+    )
+    def test_200_provider_lists_claims_when_application_office_id_matches_theirs_in_the_token(
+        self, session, client, application_office_id, token_office_ids
+    ):
+        set_token_office_codes(token_office_ids)
+        application, claim = _create_application_with_claim(
+            session, application_office_id
+        )
+
+        response = _list_claims(client, application.laa_reference)
+
+        assert response.status_code == 200
+        assert _claim_references(response) == [claim.claim_reference]
+
+    @pytest.mark.parametrize("assessed", ["true", "false"])
+    @pytest.mark.parametrize(
+        ("firm_code", "application_office_id"),
+        [(PROVIDER_FIRM_CODE, "002"), ("ZZ999Z", "003")],
+        ids=["same-firm-different-office", "different-firm"],
+    )
+    def test_404_provider_cannot_list_claims_when_application_office_id_mismatches_with_the_one_in_their_token(
+        self, session, client, firm_code, application_office_id, assessed
+    ):
+        set_token_office_codes({PROVIDER_OFFICE_ID})
+        application, _ = _create_application_with_claim(
+            session, application_office_id, firm_code
+        )
+
+        unknown_response = _list_claims(
+            client, UNKNOWN_LAA_REFERENCE, assessed=assessed
+        )
+        response = _list_claims(client, application.laa_reference, assessed=assessed)
+
+        assert response.status_code == unknown_response.status_code == 404
+        assert response.json() == unknown_response.json()
+
+    @pytest.mark.parametrize(
+        "caseworker_role",
+        [Role.CLAIMS_CASEWORKER, Role.CUSTOMER_SERVICE_AGENT, Role.ASSURANCE],
+    )
+    def test_200_caseworker_can_list_claims_from_any_office(
+        self, session, client, caseworker_role
+    ):
+        application, claim = _create_application_with_claim(session, "003", "ZZ999Z")
+
+        response = _list_claims(client, application.laa_reference, role=caseworker_role)
+
+        assert response.status_code == 200
+        assert _claim_references(response) == [claim.claim_reference]
