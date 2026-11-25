@@ -6,7 +6,11 @@ from sqlmodel import select
 
 from app import api
 from app.auth.rbac import Permission, Role, get_current_user_permissions
-from app.models.application.index import Application, DuplicateApplicationRecord
+from app.models.application.index import (
+    Application,
+    CoronersLetter,
+    DuplicateApplicationRecord,
+)
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.routers.applications import get_provider_details_port
@@ -325,6 +329,86 @@ class TestCreateApplication:
         new_application = response.json()
         assert new_application["coronersLetter"] is not None
         assert new_application["coronersLetter"]["fileName"] == "test-file_abc123.pdf"
+
+    def test_404_create_application_rejects_another_offices_letter(
+        self, client, session, mock_gov_notify
+    ):
+        letter = CoronersLetter(
+            sds_file_name="other-office.pdf",
+            file_name="letter.pdf",
+            office_id="OTHER_OFFICE",
+        )
+        session.add(letter)
+        session.commit()
+
+        initial_count = len(session.exec(select(Application)).all())
+        body = _make_request_body()
+        body["coronersLetterId"] = str(letter.coroners_letter_id)
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 404
+        assert len(session.exec(select(Application)).all()) == initial_count
+        mock_gov_notify.send_application_submit_confirmation_email.assert_not_called()
+
+    def test_404_create_application_rejects_missing_coroners_letter(
+        self, client, session, mock_gov_notify
+    ):
+        initial_count = len(session.exec(select(Application)).all())
+        body = _make_request_body()
+        body["coronersLetterId"] = str(uuid.uuid4())
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 404
+        assert len(session.exec(select(Application)).all()) == initial_count
+        mock_gov_notify.send_application_submit_confirmation_email.assert_not_called()
+
+    def test_404_create_application_rejects_letter_from_other_authorised_office(
+        self, client, session, mock_gov_notify
+    ):
+        letter = CoronersLetter(
+            sds_file_name="other-office.pdf",
+            file_name="letter.pdf",
+            office_id="OTHER_OFFICE",
+        )
+        session.add(letter)
+        session.commit()
+
+        api.dependency_overrides[get_current_provider_office_codes] = lambda: frozenset(
+            {"0U651L", "OTHER_OFFICE"}
+        )
+
+        initial_count = len(session.exec(select(Application)).all())
+        body = _make_request_body()
+        body["coronersLetterId"] = str(letter.coroners_letter_id)
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 404
+        assert len(session.exec(select(Application)).all()) == initial_count
+        mock_gov_notify.send_application_submit_confirmation_email.assert_not_called()
 
     def test_422_rejected_when_has_no_fixed_abode_is_false_and_home_address_is_absent(
         self, client

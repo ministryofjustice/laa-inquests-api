@@ -12,9 +12,12 @@ from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.exceptions import (
+    CoronersLetterNotFoundError,
     ProviderOfficeMismatchError,
     ProviderOfficeNotFoundError,
 )
+from app.domain.coroners_letter import CoronersLetter
+from app.ports.get_coroners_letter_port import GetCoronersLetterPort
 from app.use_cases.identify_duplicate_applications import (
     IdentifyDuplicateApplicationsUseCase,
 )
@@ -335,3 +338,37 @@ def test_execute_rolls_back_if_identifies_duplicates_fails():
     )
     create_application_port.commit.assert_not_called()
     create_application_port.rollback.assert_called_once()
+
+def test_execute_rejects_letter_owned_by_another_office():
+    request = _make_request()
+    create_application_port = MagicMock(spec=CreateApplicationPort)
+    get_coroners_letter_port = MagicMock(spec=GetCoronersLetterPort)
+    get_coroners_letter_port.get_coroners_letter_by_id.return_value = CoronersLetter(
+        sds_file_name="other-office.pdf",
+        file_name="letter.pdf",
+        office_id="OTHER_OFFICE",
+    )
+    create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
+    gov_notify_port = MagicMock(spec=GovNotifyPort)
+
+    use_case = CreateApplicationUseCase(
+        create_application_port=create_application_port,
+        get_coroners_letter_port=get_coroners_letter_port,
+        create_history_event_port=create_history_event_port,
+        gov_notify_port=gov_notify_port,
+        provider_details_port=MagicMock(spec=ProviderDetailsPort),
+        identify_duplicate_applications_use_case=MagicMock(
+            spec=IdentifyDuplicateApplicationsUseCase
+        ),
+    )
+
+    with pytest.raises(CoronersLetterNotFoundError):
+        use_case.execute(request, "0A123B", frozenset({"0U651L"}))
+
+    get_coroners_letter_port.get_coroners_letter_by_id.assert_called_once_with(
+        request.coroners_letter_id
+    )
+    create_application_port.create_application.assert_not_called()
+    create_application_port.commit.assert_not_called()
+    create_history_event_port.create_history_event.assert_not_called()
+    gov_notify_port.send_application_submit_confirmation_email.assert_not_called()

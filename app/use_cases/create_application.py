@@ -8,7 +8,11 @@ from app.ports.create_application_port import CreateApplicationPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.provider_details_port import ProviderDetailsPort
-from app.use_cases.exceptions import ProviderOfficeMismatchError
+from app.ports.get_coroners_letter_port import GetCoronersLetterPort
+from app.use_cases.exceptions import (
+    CoronersLetterNotFoundError,
+    ProviderOfficeMismatchError,
+)
 from app.use_cases.identify_duplicate_applications import (
     IdentifyDuplicateApplicationsUseCase,
 )
