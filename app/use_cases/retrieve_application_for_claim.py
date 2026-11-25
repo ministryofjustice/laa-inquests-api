@@ -1,5 +1,7 @@
 import logging
 
+from app.domain.caller import Caller, ProviderCaller
+from app.domain.office_authorisation import is_office_authorised
 from app.logging_utils import build_log_extra
 from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.use_cases.exceptions import ClaimNotFoundError
@@ -11,9 +13,18 @@ class RetrieveApplicationForClaimUseCase:
     def __init__(self, get_claim_by_id_port: GetClaimByIdPort) -> None:
         self.get_claim_by_id_port = get_claim_by_id_port
 
-    def execute(self, claim_reference: str) -> str:
+    def execute(self, claim_reference: str, caller: Caller) -> str:
         claim = self.get_claim_by_id_port.get_claim_by_reference(claim_reference)
-        if claim is None or claim.application is None:
+        if (
+            claim is None
+            or claim.application is None
+            or (
+                isinstance(caller, ProviderCaller)
+                and not is_office_authorised(
+                    claim.application.provider.office_id, caller.office_codes
+                )
+            )
+        ):
             logger.error(
                 "Application lookup for claim failed",
                 extra=build_log_extra(

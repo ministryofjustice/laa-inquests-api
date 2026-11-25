@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+import pytest
 from sqlmodel import select
 
 from app.auth.rbac import Role
@@ -11,8 +12,18 @@ from app.models.claim.enums import (
     InquestOutcomeCode,
     POAType,
 )
-from app.models.claim.index import Claim, ClaimDecision
-from tests.e2e.factories import create_claim_for_reference
+from app.models.claim.index import Claim
+from tests.e2e.auth import (
+    TEST_PROVIDER_FIRM_CODE,
+    TEST_PROVIDER_OFFICE_ID,
+    set_token_office_codes,
+)
+from tests.e2e.factories import (
+    create_application_in_db,
+    create_claim_decision_in_db,
+    create_claim_in_db,
+    get_application_id,
+)
 
 
 def _seed_claim(
@@ -24,13 +35,16 @@ def _seed_claim(
     poa_type = (
         POAType.PROFIT_COST if claim_type == ClaimType.PAYMENT_ON_ACCOUNT else None
     )
-    return create_claim_for_reference(
+    return create_claim_in_db(
         session,
-        laa_reference,
-        status,
-        claim_type,
+        application_id=get_application_id(session, laa_reference),
+        status=status,
+        claim_type=claim_type,
+        poa_type=poa_type,
+        total_profit_cost_net=Decimal("1000.00"),
+        total_profit_cost_gross=Decimal("1200.00"),
+        total_profit_cost_vat_zero=Decimal("500.00"),
         total_funds_remaining_after_claim=Decimal("8800.00"),
-        poa_type_id=poa_type,
     )
 
 
@@ -40,15 +54,14 @@ def _seed_final_bill_claim(
     status: ClaimStatus,
     claim_type: ClaimType = ClaimType.NIL_BILL,
 ) -> Claim:
-    return create_claim_for_reference(
+    return create_claim_in_db(
         session,
-        laa_reference,
-        status,
-        claim_type,
+        application_id=get_application_id(session, laa_reference),
+        status=status,
+        claim_type=claim_type,
         total_profit_cost_gross=0,
         total_profit_cost_net=None,
         total_profit_cost_vat_zero=None,
-        poa_type_id=None,
         inquest_outcomes=(InquestOutcomeCode.OPEN_CONCLUSION,),
         has_alternative_funding=False,
         has_recovery_costs_awarded=True,
@@ -58,21 +71,6 @@ def _seed_final_bill_claim(
         financial_recovery_interest=50,
         paying_party="Test Council",
     )
-
-
-def _seed_decision(
-    session,
-    claim_id: int,
-    decision: ClaimDecisionStatus,
-) -> ClaimDecision:
-    claim_decision = ClaimDecision(
-        claim_id=claim_id,
-        decision=decision,
-    )
-    session.add(claim_decision)
-    session.commit()
-    session.refresh(claim_decision)
-    return claim_decision
 
 
 def test_200_returns_empty_list_when_application_has_no_claims(session, client):
@@ -163,7 +161,7 @@ def test_200_includes_claim_status_for_each_claim(session, client):
 def test_200_includes_claim_decision_status_when_a_decision_exists(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference, ClaimStatus.REJECTED)
-    _seed_decision(session, claim.claim_id, ClaimDecisionStatus.REJECT)
+    create_claim_decision_in_db(session, claim.claim_id, ClaimDecisionStatus.REJECT)
 
     response = client.get(
         f"/applications/{laa_reference}/claims?assessed=true",
@@ -285,3 +283,95 @@ def test_404_when_application_does_not_exist(client):
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Application not found"
+
+
+UNKNOWN_LAA_REFERENCE = "999999"
+
+
+def _list_claims(
+    client, laa_reference, role=Role.PROVIDER_CLAIMS_USER, assessed="false"
+):
+    return client.get(
+        f"/applications/{laa_reference}/claims?assessed={assessed}",
+        headers={"Authorization": f"Bearer {role.value}"},
+    )
+
+
+def _claim_references(response):
+    return [c["claimReference"] for c in response.json()]
+
+
+class TestListApplicationClaimsOfficeIdCheck:
+    @pytest.mark.parametrize(
+        ("application_office_id", "token_office_ids"),
+        [
+            (TEST_PROVIDER_OFFICE_ID, {TEST_PROVIDER_OFFICE_ID}),
+            ("1A234B", {TEST_PROVIDER_OFFICE_ID, "1A234B"}),
+        ],
+        ids=["own-office", "second-office-in-token"],
+    )
+    def test_200_provider_lists_claims_when_application_office_id_matches_theirs_in_the_token(
+        self, session, client, application_office_id, token_office_ids
+    ):
+        set_token_office_codes(token_office_ids)
+        application = create_application_in_db(
+            session,
+            provider_overrides={
+                "office_id": application_office_id,
+                "firm_code": TEST_PROVIDER_FIRM_CODE,
+            },
+        )
+        claim = create_claim_in_db(session, application_id=application.application_id)
+
+        response = _list_claims(client, application.laa_reference)
+
+        assert response.status_code == 200
+        assert _claim_references(response) == [claim.claim_reference]
+
+    @pytest.mark.parametrize("assessed", ["true", "false"])
+    @pytest.mark.parametrize(
+        ("firm_code", "application_office_id"),
+        [(TEST_PROVIDER_FIRM_CODE, "1A234B"), ("5678", "test-office-id")],
+        ids=["same-firm-different-office", "different-firm"],
+    )
+    def test_404_provider_cannot_list_claims_when_application_office_id_mismatches_with_the_one_in_their_token(
+        self, session, client, firm_code, application_office_id, assessed
+    ):
+        set_token_office_codes({TEST_PROVIDER_OFFICE_ID})
+        application = create_application_in_db(
+            session,
+            provider_overrides={
+                "office_id": application_office_id,
+                "firm_code": firm_code,
+            },
+        )
+        create_claim_in_db(session, application_id=application.application_id)
+
+        unknown_response = _list_claims(
+            client, UNKNOWN_LAA_REFERENCE, assessed=assessed
+        )
+        response = _list_claims(client, application.laa_reference, assessed=assessed)
+
+        assert response.status_code == unknown_response.status_code == 404
+        assert response.json() == unknown_response.json()
+
+    @pytest.mark.parametrize(
+        "caseworker_role",
+        [Role.CLAIMS_CASEWORKER, Role.CUSTOMER_SERVICE_AGENT, Role.ASSURANCE],
+    )
+    def test_200_caseworker_can_list_claims_from_any_office(
+        self, session, client, caseworker_role
+    ):
+        application = create_application_in_db(
+            session,
+            provider_overrides={
+                "office_id": TEST_PROVIDER_OFFICE_ID,
+                "firm_code": TEST_PROVIDER_FIRM_CODE,
+            },
+        )
+        claim = create_claim_in_db(session, application_id=application.application_id)
+
+        response = _list_claims(client, application.laa_reference, role=caseworker_role)
+
+        assert response.status_code == 200
+        assert _claim_references(response) == [claim.claim_reference]

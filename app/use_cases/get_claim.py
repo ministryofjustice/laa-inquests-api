@@ -1,5 +1,7 @@
 import logging
 
+from app.domain.caller import Caller, ProviderCaller
+from app.domain.office_authorisation import is_office_authorised
 from app.logging_utils import build_log_extra
 from app.models.claim.index import (
     ClaimByIdResponse,
@@ -34,11 +36,18 @@ class GetClaimUseCase:
         self.get_claim_decision_amount_port = get_claim_decision_amount_port
         self.application_lookup_port = application_lookup_port
 
-    def execute(self, laa_reference: str, claim_reference: str) -> ClaimByIdResponse:
+    def execute(
+        self, laa_reference: str, claim_reference: str, caller: Caller
+    ) -> ClaimByIdResponse:
         application = self.application_lookup_port.get_application_by_laa_reference(
             laa_reference
         )
-        if application is None:
+        if application is None or (
+            isinstance(caller, ProviderCaller)
+            and not is_office_authorised(
+                application.provider.office_id, caller.office_codes
+            )
+        ):
             logger.error(
                 "Get claim failed: application not found",
                 extra=build_log_extra(

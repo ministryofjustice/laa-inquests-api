@@ -1,5 +1,7 @@
 import logging
 
+from app.domain.caller import Caller, ProviderCaller
+from app.domain.office_authorisation import is_office_authorised
 from app.logging_utils import build_log_extra
 from app.models.claim.enums import ClaimStatus
 from app.models.claim.index import ClaimSummaryResponse
@@ -24,11 +26,18 @@ class ListApplicationClaimsUseCase:
         self.get_claim_decision_port = get_claim_decision_port
         self.application_lookup_port = application_lookup_port
 
-    def execute(self, laa_reference: str, assessed: bool) -> list[ClaimSummaryResponse]:
+    def execute(
+        self, laa_reference: str, assessed: bool, caller: Caller
+    ) -> list[ClaimSummaryResponse]:
         application = self.application_lookup_port.get_application_by_laa_reference(
             laa_reference
         )
-        if application is None:
+        if application is None or (
+            isinstance(caller, ProviderCaller)
+            and not is_office_authorised(
+                application.provider.office_id, caller.office_codes
+            )
+        ):
             raise ApplicationNotFoundError(laa_reference)
 
         claims = self.get_claims_for_application_port.get_claims_by_application_id(

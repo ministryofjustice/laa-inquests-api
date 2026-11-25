@@ -1,7 +1,6 @@
 import io
 import json
 import uuid
-from dataclasses import replace
 from unittest.mock import MagicMock
 
 import pytest
@@ -11,12 +10,12 @@ from app.auth.rbac import Permission, Role, get_current_user_permissions
 from app.models.claim.enums import ClaimType
 from app.models.claim.index import ClaimCostTemplate, ClaimEvidence
 from app.routers.claims import get_sds_port
-from app.routers.dependencies import get_entra_auth_port
 from app.use_cases.exceptions import ClaimEvidenceDeleteError
+from tests.e2e.auth import set_token_office_codes
 from tests.e2e.factories import (
     create_application_in_db,
     create_claim_evidence_in_db,
-    create_claim_for_reference,
+    create_claim_in_db,
 )
 
 
@@ -110,26 +109,14 @@ class TestDeleteClaimEvidenceOfficeIdCheck:
         return files, sds
 
     @staticmethod
-    def _set_token_offices(office_codes):
-        auth = api.dependency_overrides[get_entra_auth_port]()
-        verify_token = auth.verify_token.side_effect
-
-        def verify_with_offices(role, required_scopes=None):
-            user = verify_token(role, required_scopes)
-            return replace(user, office_codes=frozenset(office_codes))
-
-        auth.verify_token.side_effect = verify_with_offices
-        api.dependency_overrides[get_entra_auth_port] = lambda: auth
-
-    @staticmethod
     def _create_file(session, file_type, office_id, firm_code):
         application = create_application_in_db(
             session,
             provider_overrides={"firm_code": firm_code, "office_id": office_id},
         )
-        claim = create_claim_for_reference(
+        claim = create_claim_in_db(
             session,
-            application.laa_reference,
+            application_id=application.application_id,
             claim_type=(
                 ClaimType.PAYMENT_ON_ACCOUNT
                 if file_type == "poa_evidence"
@@ -167,7 +154,7 @@ class TestDeleteClaimEvidenceOfficeIdCheck:
     def test_204_deletes_file_when_its_office_id_is_in_the_token(
         self, session, client, sds_files, file_type, file_office, token_offices
     ):
-        self._set_token_offices(token_offices)
+        set_token_office_codes(token_offices)
         evidence = self._create_file(session, file_type, file_office, "0A123B")
         evidence_id = evidence.claim_evidence_id
         files, sds = sds_files
@@ -193,7 +180,7 @@ class TestDeleteClaimEvidenceOfficeIdCheck:
     def test_404_does_not_delete_file_when_its_office_id_is_not_in_the_token(
         self, session, client, sds_files, file_type, firm_code, file_office
     ):
-        self._set_token_offices({"0U651L"})
+        set_token_office_codes({"0U651L"})
         evidence = self._create_file(session, file_type, file_office, firm_code)
         evidence_id = evidence.claim_evidence_id
         existing_claim_id = evidence.claim_id

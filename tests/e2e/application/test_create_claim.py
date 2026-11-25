@@ -29,7 +29,12 @@ from app.models.claim.index import (
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.models.notifications.enums import NotificationType
-from tests.e2e.factories import create_application_in_db, create_claim_for_reference
+from tests.e2e.factories import (
+    create_application_in_db,
+    create_claim_decision_in_db,
+    create_claim_in_db,
+    get_application_id,
+)
 from tests.helpers.claim_payloads import (
     make_final_bill_claim_body,
     make_nil_bill_claim_body,
@@ -44,18 +49,17 @@ def _seed_approved_claim(
     gross: Decimal | None = None,
     vat_zero: Decimal | None = None,
 ) -> Claim:
-    claim = create_claim_for_reference(
+    claim = create_claim_in_db(
         session,
-        laa_reference,
-        ClaimStatus.PAY_IN_FULL,
+        application_id=get_application_id(session, laa_reference),
+        status=ClaimStatus.PAY_IN_FULL,
+        claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
         total_profit_cost_net=None,
         total_profit_cost_gross=gross,
         total_profit_cost_vat_zero=vat_zero,
         total_funds_remaining_after_claim=Decimal(0),
-        poa_type_id=None,
     )
-    session.add(ClaimDecision(claim_id=claim.claim_id, decision=decision))
-    session.commit()
+    create_claim_decision_in_db(session, claim.claim_id, decision)
     return claim
 
 
@@ -65,16 +69,15 @@ def _seed_claim_with_type_and_status(
     claim_type: ClaimType,
     status: ClaimStatus,
 ) -> Claim:
-    return create_claim_for_reference(
+    return create_claim_in_db(
         session,
-        laa_reference,
-        status,
-        claim_type,
+        application_id=get_application_id(session, laa_reference),
+        status=status,
+        claim_type=claim_type,
         total_profit_cost_net=None,
         total_profit_cost_gross=Decimal("100.00"),
         total_profit_cost_vat_zero=None,
         total_funds_remaining_after_claim=Decimal(0),
-        poa_type_id=None,
     )
 
 

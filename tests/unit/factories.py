@@ -254,6 +254,21 @@ def create_base_claim(**overrides) -> Claim:
     return Claim(**(defaults | overrides))
 
 
+def create_base_poa_claim(**overrides) -> Claim:
+    """Create a base payment-on-account claim with standard POA amounts."""
+    defaults = {
+        "claim_id": 1,
+        "application_id": 1,
+        "claim_reference": "INQC-0000-0001",
+        "claim_type_id": ClaimType.PAYMENT_ON_ACCOUNT,
+        "total_profit_cost_net": Decimal("1000.00"),
+        "total_profit_cost_gross": Decimal("1200.00"),
+        "total_profit_cost_vat_zero": Decimal("500.00"),
+        "poa_type_id": POAType.PROFIT_COST,
+    }
+    return create_base_claim(**(defaults | overrides))
+
+
 def create_base_claim_domain(**overrides) -> ClaimDomain:
     """Create a base payment-on-account claim domain object with optional field overrides."""
     defaults = {
