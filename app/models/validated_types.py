@@ -6,6 +6,11 @@ from pydantic import AfterValidator, BeforeValidator, StringConstraints
 MAX_SHORT_TEXT_LENGTH = 50
 MAX_NAME_LENGTH = 100
 MAX_RELATIONSHIP_LENGTH = 70
+MAX_ADDRESS_LENGTH = 100
+MAX_COUNTY_LENGTH = 50
+MIN_ADDRESS_LINE_LENGTH = 2
+MIN_TOWN_LENGTH = 2
+MIN_COUNTY_LENGTH = 3
 _ALLOWED_PROSE_WHITESPACE = frozenset("\n\r\t")
 _FORBIDDEN_PROSE_CHARACTERS = frozenset("<>")
 _CONTROL_CATEGORIES = frozenset({"Cc", "Cf"})
@@ -16,6 +21,11 @@ _CURLY_APOSTROPHES = str.maketrans({"\u2018": "'", "\u2019": "'"})
 _LETTER = r"\p{L}\p{M}*"
 _NAME_PATTERN = rf"^{_LETTER}(?:{_LETTER}|[ '-])*$"
 _NAME_OR_EMPTY_PATTERN = rf"^(?:{_LETTER}(?:{_LETTER}|[ '-])*)?$"
+
+# These mirror the external UI. Address text is ASCII only there, and a value must
+# contain a letter or digit (a letter for place names) so "--" or "&&" is not accepted.
+_ADDRESS_LINE_PATTERN = r"^[ '.,/&-]*[A-Za-z0-9][A-Za-z0-9 '.,/&-]*$"
+_PLACE_NAME_PATTERN = r"^[ '-]*[A-Za-z][A-Za-z '-]*$"
 
 
 def _normalise_short_text(value: object) -> object:
@@ -59,11 +69,34 @@ RelationshipText = Annotated[
     BeforeValidator(_normalise_short_text),
 ]
 
-AddressText = Annotated[
+AddressLine = Annotated[
     str,
     StringConstraints(
-        max_length=MAX_SHORT_TEXT_LENGTH, pattern=r"^[A-Za-z0-9][A-Za-z0-9' ,./-]*$"
+        min_length=MIN_ADDRESS_LINE_LENGTH,
+        max_length=MAX_ADDRESS_LENGTH,
+        pattern=_ADDRESS_LINE_PATTERN,
     ),
+    BeforeValidator(_normalise_short_text),
+]
+
+TownName = Annotated[
+    str,
+    StringConstraints(
+        min_length=MIN_TOWN_LENGTH,
+        max_length=MAX_ADDRESS_LENGTH,
+        pattern=_PLACE_NAME_PATTERN,
+    ),
+    BeforeValidator(_normalise_short_text),
+]
+
+CountyName = Annotated[
+    str,
+    StringConstraints(
+        min_length=MIN_COUNTY_LENGTH,
+        max_length=MAX_COUNTY_LENGTH,
+        pattern=_PLACE_NAME_PATTERN,
+    ),
+    BeforeValidator(_normalise_short_text),
 ]
 
 # The UI sends "" when there is no coroner's reference, and duplicate detection

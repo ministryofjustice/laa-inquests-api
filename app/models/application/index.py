@@ -29,11 +29,13 @@ from app.models.application.enums import (
     ReasonForRefusal,
 )
 from app.models.validated_types import (
-    AddressText,
+    AddressLine,
     CoronersReference,
+    CountyName,
     PersonName,
     ProseText,
     RelationshipText,
+    TownName,
 )
 
 
@@ -299,10 +301,10 @@ class AddressCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    address_line_1: AddressText = PydanticField(examples=["123 Example Street"])
-    address_line_2: AddressText | None = PydanticField(default=None, examples=["Jones"])
-    town_or_city: AddressText = PydanticField(examples=["Example Town"])
-    county: AddressText | None = PydanticField(default=None, examples=["Jones"])
+    address_line_1: AddressLine = PydanticField(examples=["123 Example Street"])
+    address_line_2: AddressLine | None = PydanticField(default=None, examples=["Jones"])
+    town_or_city: TownName = PydanticField(examples=["Example Town"])
+    county: CountyName | None = PydanticField(default=None, examples=["Jones"])
     postcode: str = PydanticField(examples=["AA1 1AA"])
 
 

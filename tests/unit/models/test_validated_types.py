@@ -2,11 +2,13 @@ import pytest
 from pydantic import TypeAdapter, ValidationError
 
 from app.models.validated_types import (
-    AddressText,
+    AddressLine,
     CoronersReference,
+    CountyName,
     PersonName,
     ProseText,
     RelationshipText,
+    TownName,
 )
 
 DANGEROUS_CHARACTERS = ["<", ">", ";", '"', "=", "&", "{", "}", "(", ")", "!", "\\"]
@@ -80,35 +82,121 @@ class TestPersonName:
             validate(PersonName, value)
 
 
-class TestAddressText:
+class TestAddressLine:
     @pytest.mark.parametrize(
         "value",
         [
             "123 Example Street",
             "Flat 1/2, O'Neill-Court.",
-            "1",
-            "A" * 50,
+            "Smith & Sons",
+            "1A",
+            "12",
+            "A" * 100,
         ],
     )
-    def test_accepts_valid_addresses(self, value):
-        assert validate(AddressText, value) == value
+    def test_accepts_valid_address_lines(self, value):
+        assert validate(AddressLine, value) == value
 
-    @pytest.mark.parametrize("character", DANGEROUS_CHARACTERS)
+    def test_accepts_leading_punctuation_when_there_is_a_letter_or_digit_like_the_ui(
+        self,
+    ):
+        assert validate(AddressLine, "-1 Street") == "-1 Street"
+
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            (" 1 High Street ", "1 High Street"),
+            ("1 High Street\n", "1 High Street"),
+            ("O\u2019Neill Court", "O'Neill Court"),
+        ],
+    )
+    def test_trims_and_folds_curly_apostrophes(self, value, expected):
+        assert validate(AddressLine, value) == expected
+
+    @pytest.mark.parametrize("character", [c for c in DANGEROUS_CHARACTERS if c != "&"])
     def test_rejects_dangerous_characters(self, character):
         with pytest.raises(ValidationError):
-            validate(AddressText, f"1 Example{character}Street")
+            validate(AddressLine, f"1 Example{character}Street")
 
     @pytest.mark.parametrize(
         "value",
-        ["", " ", "-1 Street", ".1 Street", "'1 Street", "1 Street\n", "1 Str\x00eet"],
+        ["", " ", "1", "A", "--", "'.", "&&", "1 High\nStreet", "1 Str\x00eet"],
     )
-    def test_rejects_empty_bad_start_and_control_characters(self, value):
+    def test_rejects_too_short_without_letter_or_digit_and_control_characters(
+        self, value
+    ):
         with pytest.raises(ValidationError):
-            validate(AddressText, value)
+            validate(AddressLine, value)
 
-    def test_rejects_more_than_50_characters(self):
+    def test_rejects_letters_the_ui_does_not_accept(self):
         with pytest.raises(ValidationError):
-            validate(AddressText, "A" * 51)
+            validate(AddressLine, "1 Café Lane")
+
+    def test_rejects_more_than_100_characters(self):
+        with pytest.raises(ValidationError):
+            validate(AddressLine, "A" * 101)
+
+    @pytest.mark.parametrize("value", [None, 123])
+    def test_rejects_non_string_input(self, value):
+        with pytest.raises(ValidationError):
+            validate(AddressLine, value)
+
+
+class TestTownName:
+    @pytest.mark.parametrize(
+        "value",
+        ["London", "Stoke-on-Trent", "King's Lynn", "St Albans", "Ab", "A" * 100],
+    )
+    def test_accepts_valid_town_names(self, value):
+        assert validate(TownName, value) == value
+
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [(" London\n", "London"), ("King\u2019s Lynn", "King's Lynn")],
+    )
+    def test_trims_and_folds_curly_apostrophes(self, value, expected):
+        assert validate(TownName, value) == expected
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "London1",
+            "<Test>",
+            "Lon;don",
+            "Lon.don",
+            "Lon,don",
+            "Lon&don",
+            "Café",
+            "Lon\ndon",
+            "",
+            " ",
+            "A",
+            "--",
+            "'",
+            "A" * 101,
+        ],
+    )
+    def test_rejects_everything_else(self, value):
+        with pytest.raises(ValidationError):
+            validate(TownName, value)
+
+
+class TestCountyName:
+    @pytest.mark.parametrize(
+        "value", ["Kent", "Greater London", "Ayr", "Tyne-and-Wear", "A" * 50]
+    )
+    def test_accepts_valid_county_names(self, value):
+        assert validate(CountyName, value) == value
+
+    def test_trims(self):
+        assert validate(CountyName, " Kent\n") == "Kent"
+
+    @pytest.mark.parametrize(
+        "value", ["Kent1", "<Test>", "Ke", "", " ", "---", "Kent\nShire", "A" * 51]
+    )
+    def test_rejects_everything_else(self, value):
+        with pytest.raises(ValidationError):
+            validate(CountyName, value)
 
 
 class TestCoronersReference:

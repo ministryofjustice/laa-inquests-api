@@ -74,6 +74,9 @@ DECEASED_FIELDS = [
     "clientRelationshipToDeceased",
 ]
 
+ADDRESS_KEYS = ["homeAddress", "correspondenceAddress"]
+ADDRESS_FIELDS = ["addressLine1", "addressLine2", "townOrCity", "county"]
+
 
 def _set_client_name_field(body, field, value):
     if field == "recipientName":
@@ -486,20 +489,17 @@ class TestCreateApplication:
         assert response.json()["client"]["clientFirstName"] == expected
         assert response.json()["deceased"]["deceasedFirstName"] == expected
 
-    @pytest.mark.parametrize("address_key", ["homeAddress", "correspondenceAddress"])
-    @pytest.mark.parametrize(
-        "field", ["addressLine1", "addressLine2", "townOrCity", "county"]
-    )
+    @pytest.mark.parametrize("address_key", ADDRESS_KEYS)
+    @pytest.mark.parametrize("field", ADDRESS_FIELDS)
     @pytest.mark.parametrize(
         "value",
         [
             "zxdfsdfdszxdfsdfds'';!--\"=&{()}",
             "<Test>",
-            "1 Street;",
-            "1 Street\n",
-            "-1 Street",
-            "A" * 51,
+            "Lon;don",
+            "Lon\ndon",
             "",
+            " ",
         ],
     )
     def test_422_rejected_when_address_field_contains_disallowed_input(
@@ -519,12 +519,57 @@ class TestCreateApplication:
 
         assert response.status_code == 422
 
-    @pytest.mark.parametrize("address_key", ["homeAddress", "correspondenceAddress"])
+    @pytest.mark.parametrize("address_key", ADDRESS_KEYS)
     @pytest.mark.parametrize(
-        "field", ["addressLine1", "addressLine2", "townOrCity", "county"]
+        ("field", "value"),
+        [
+            ("addressLine1", "A"),
+            ("addressLine1", "A" * 101),
+            ("addressLine2", "A"),
+            ("addressLine2", "A" * 101),
+            ("townOrCity", "A"),
+            ("townOrCity", "A" * 101),
+            ("county", "AB"),
+            ("county", "A" * 51),
+            ("townOrCity", "London1"),
+            ("county", "Kent1"),
+        ],
     )
+    def test_422_rejected_when_address_field_breaks_its_length_or_character_rules(
+        self, client, address_key, field, value
+    ):
+        body = _make_request_body()
+        body["client"][address_key][field] = value
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.parametrize("address_key", ADDRESS_KEYS)
     @pytest.mark.parametrize(
-        "value", ["123 Example Street", "Flat 1/2, O'Neill-Court.", "A" * 50]
+        ("field", "value"),
+        [
+            ("addressLine1", "123 Example Street"),
+            ("addressLine1", "Flat 1/2, O'Neill-Court."),
+            ("addressLine1", "Smith & Sons"),
+            ("addressLine1", "A" * 100),
+            ("addressLine2", "Flat 2"),
+            ("addressLine2", "A" * 100),
+            ("townOrCity", "London"),
+            ("townOrCity", "Stoke-on-Trent"),
+            ("townOrCity", "King's Lynn"),
+            ("townOrCity", "A" * 100),
+            ("county", "Kent"),
+            ("county", "Greater London"),
+            ("county", "A" * 50),
+        ],
     )
     def test_201_accepts_address_field_with_allowed_characters(
         self, client, address_key, field, value
@@ -542,6 +587,34 @@ class TestCreateApplication:
         )
 
         assert response.status_code == 201
+
+    @pytest.mark.parametrize("address_key", ADDRESS_KEYS)
+    @pytest.mark.parametrize(
+        ("field", "value", "expected"),
+        [
+            ("addressLine1", " 1 High Street\n", "1 High Street"),
+            ("addressLine1", "O\u2019Neill Court", "O'Neill Court"),
+            ("townOrCity", " London ", "London"),
+            ("county", "Kent\n", "Kent"),
+        ],
+    )
+    def test_201_stores_address_fields_trimmed_and_normalised(
+        self, client, address_key, field, value, expected
+    ):
+        body = _make_request_body()
+        body["client"][address_key][field] = value
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 201
+        assert response.json()["client"][address_key][field] == expected
 
     @pytest.mark.parametrize("field", DECEASED_FIELDS)
     @pytest.mark.parametrize(
