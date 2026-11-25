@@ -16,7 +16,7 @@ from tests.e2e.auth import set_token_office_codes
 from tests.e2e.factories import (
     create_application_in_db,
     create_claim_evidence_in_db,
-    create_claim_for_reference,
+    create_claim_in_db,
 )
 
 
@@ -213,9 +213,9 @@ class TestRetrieveClaimEvidenceOfficeIdCheck:
             session,
             provider_overrides={"firm_code": firm_code, "office_id": office_id},
         )
-        claim = create_claim_for_reference(
+        claim = create_claim_in_db(
             session,
-            application.laa_reference,
+            application_id=application.application_id,
             claim_type=(
                 ClaimType.PAYMENT_ON_ACCOUNT
                 if file_type == "poa_evidence"

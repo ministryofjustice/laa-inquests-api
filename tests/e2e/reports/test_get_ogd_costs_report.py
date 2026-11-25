@@ -22,7 +22,7 @@ from app.models.claim.enums import (
 )
 from app.models.claim.index import Claim, ClaimDecision, ClaimPaymentExtract
 from app.routers.reports import get_ogd_costs_report_port
-from tests.e2e.factories import create_claim_in_db
+from tests.e2e.factories import create_claim_decision_in_db, create_claim_in_db
 from tests.helpers.csv_helpers import parse_csv_fieldnames, parse_csv_rows
 
 OGD_COSTS_REPORT_HEADERS = [
@@ -67,12 +67,9 @@ def _add_decision(
     decided_at: datetime = DECIDED_IN_RANGE,
     decision: ClaimDecisionStatus = ClaimDecisionStatus.PAY_IN_FULL,
 ) -> ClaimDecision:
-    claim_decision = ClaimDecision(
-        claim_id=claim.claim_id, decision=decision, created_at=decided_at
+    return create_claim_decision_in_db(
+        session, claim.claim_id, decision, created_at=decided_at
     )
-    session.add(claim_decision)
-    session.commit()
-    return claim_decision
 
 
 def _add_extract(

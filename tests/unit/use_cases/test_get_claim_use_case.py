@@ -1,5 +1,4 @@
 import uuid
-from datetime import UTC, datetime
 from decimal import Decimal
 from unittest.mock import MagicMock
 
@@ -8,15 +7,14 @@ import pytest
 from app.domain.caller import CaseworkerCaller, ProviderCaller
 from app.domain.claim_evidence import ClaimEvidence as DomainClaimEvidence
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
+from app.models.application.enums import MeritsDecision
+from app.models.application.index import Application
 from app.models.claim.enums import (
     ClaimDecisionStatus,
-    ClaimStatus,
     ClaimType,
-    POAType,
     ReasonCode,
 )
 from app.models.claim.index import (
-    Claim,
     ClaimCostTemplate,
     ClaimDecision,
     ClaimDecisionAmount,
@@ -31,43 +29,32 @@ from app.ports.claim.get_claim_decision_port import GetClaimDecisionPort
 from app.ports.claim.get_claim_evidence_port import GetClaimEvidencePort
 from app.use_cases.exceptions import ApplicationNotFoundError, ClaimNotFoundError
 from app.use_cases.get_claim import GetClaimUseCase
+from tests.unit.factories import (
+    create_base_application,
+    create_base_application_proceeding,
+    create_base_poa_claim,
+    create_base_proceeding,
+    create_base_provider,
+)
 
 PROVIDER = ProviderCaller(office_codes=frozenset({"0U651L"}))
-
-
-def _claim(
-    claim_id: int = 1,
-    application_id: int = 1,
-    claim_reference: str = "INQC-0000-0001",
-    total_funds_remaining_after_claim: Decimal = Decimal(
-        SUBSTANTIVE_CERTIFICATE_AMOUNT
-    ),
-) -> Claim:
-    return Claim(
-        claim_id=claim_id,
-        claim_reference=claim_reference,
-        application_id=application_id,
-        claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
-        status_id=ClaimStatus.SUBMITTED,
-        submission_date=datetime.now(UTC),
-        total_profit_cost_net=Decimal("1000.00"),
-        total_profit_cost_gross=Decimal("1200.00"),
-        total_profit_cost_vat_zero=Decimal("500.00"),
-        total_funds_remaining_after_claim=total_funds_remaining_after_claim,
-        poa_type_id=POAType.PROFIT_COST,
-    )
 
 
 def _application(
     application_id: int = 1,
     substantive_cost_limitation: int = 10000,
     office_id: str = "0U651L",
-):
-    application = MagicMock()
-    application.application_id = application_id
-    application.provider.office_id = office_id
-    application.proceeding.substantive_cost_limitation = substantive_cost_limitation
-    return application
+) -> Application:
+    return create_base_application(
+        application_id=application_id,
+        provider=create_base_provider(office_id=office_id),
+        proceeding=create_base_application_proceeding(
+            merits_decision=MeritsDecision.GRANTED,
+            proceeding=create_base_proceeding(
+                substantive_cost_limitation=substantive_cost_limitation
+            ),
+        ),
+    )
 
 
 def _build_use_case(
@@ -105,7 +92,9 @@ def _build_use_case(
 
 class TestGetClaimBaseProperties:
     def test_returns_response_for_valid_application_and_claim(self):
-        use_case = _build_use_case(claim=_claim(), application=_application())
+        use_case = _build_use_case(
+            claim=create_base_poa_claim(), application=_application()
+        )
 
         result = use_case.execute("1", "INQC-0000-0001", PROVIDER)
 
@@ -115,7 +104,7 @@ class TestGetClaimBaseProperties:
 
     def test_maps_substantive_cost_limitation_from_application(self):
         use_case = _build_use_case(
-            claim=_claim(),
+            claim=create_base_poa_claim(),
             application=_application(substantive_cost_limitation=25000),
         )
 
@@ -125,7 +114,9 @@ class TestGetClaimBaseProperties:
 
     def test_returns_stored_total_funds_remaining_from_claim(self):
         use_case = _build_use_case(
-            claim=_claim(total_funds_remaining_after_claim=Decimal("8800.00")),
+            claim=create_base_poa_claim(
+                total_funds_remaining_after_claim=Decimal("8800.00")
+            ),
             application=_application(),
         )
 
@@ -135,7 +126,7 @@ class TestGetClaimBaseProperties:
 
     def test_total_funds_remaining_defaults_to_certificate_amount_when_not_set(self):
         use_case = _build_use_case(
-            claim=_claim(),
+            claim=create_base_poa_claim(),
             application=_application(),
         )
 
@@ -162,7 +153,7 @@ class TestGetClaimDecision:
             ],
         )
         use_case = _build_use_case(
-            claim=_claim(), application=_application(), decision=decision
+            claim=create_base_poa_claim(), application=_application(), decision=decision
         )
 
         result = use_case.execute("1", "INQC-0000-0001", PROVIDER)
@@ -187,7 +178,7 @@ class TestGetClaimDecision:
             disbursement_gross=Decimal("120.00"),
         )
         use_case = _build_use_case(
-            claim=_claim(),
+            claim=create_base_poa_claim(),
             application=_application(),
             decision=decision,
             decision_amount=amount,
@@ -214,7 +205,7 @@ class TestGetClaimDecision:
             claim_decision_id=7, claim_id=1, decision=ClaimDecisionStatus.REJECT
         )
         use_case = _build_use_case(
-            claim=_claim(), application=_application(), decision=decision
+            claim=create_base_poa_claim(), application=_application(), decision=decision
         )
 
         result = use_case.execute("1", "INQC-0000-0001", PROVIDER)
@@ -223,7 +214,9 @@ class TestGetClaimDecision:
         assert result.claim_decision.decision_amount is None
 
     def test_does_not_look_up_a_decision_amount_when_there_is_no_decision(self):
-        use_case = _build_use_case(claim=_claim(), application=_application())
+        use_case = _build_use_case(
+            claim=create_base_poa_claim(), application=_application()
+        )
 
         use_case.execute("1", "INQC-0000-0001", PROVIDER)
 
@@ -231,7 +224,7 @@ class TestGetClaimDecision:
 
     def test_claim_decision_is_none_when_absent(self):
         use_case = _build_use_case(
-            claim=_claim(), application=_application(), decision=None
+            claim=create_base_poa_claim(), application=_application(), decision=None
         )
 
         result = use_case.execute("1", "INQC-0000-0001", PROVIDER)
@@ -242,7 +235,7 @@ class TestGetClaimDecision:
 class TestGetClaimCostTemplate:
     def test_cost_template_file_is_populated_when_present(self):
         file_id = uuid.uuid4()
-        claim = _claim()
+        claim = create_base_poa_claim()
         claim.claim_cost_template = ClaimCostTemplate(
             claim_id=claim.claim_id,
             claim_cost_template_file_id=file_id,
@@ -261,7 +254,7 @@ class TestGetClaimCostTemplate:
 
     def test_cost_template_file_includes_file_size_from_stored_evidence(self):
         file_id = uuid.uuid4()
-        claim = _claim()
+        claim = create_base_poa_claim()
         claim.claim_cost_template = ClaimCostTemplate(
             claim_id=1,
             claim_cost_template_file_id=file_id,
@@ -283,7 +276,7 @@ class TestGetClaimCostTemplate:
         assert result.claim_cost_template_file.file_size == 20480
 
     def test_cost_template_file_size_is_none_when_evidence_not_found(self):
-        claim = _claim()
+        claim = create_base_poa_claim()
         claim.claim_cost_template = ClaimCostTemplate(
             claim_id=1,
             claim_cost_template_file_id=uuid.uuid4(),
@@ -296,7 +289,9 @@ class TestGetClaimCostTemplate:
         assert result.claim_cost_template_file.file_size is None
 
     def test_cost_template_file_is_none_when_absent(self):
-        use_case = _build_use_case(claim=_claim(), application=_application())
+        use_case = _build_use_case(
+            claim=create_base_poa_claim(), application=_application()
+        )
 
         result = use_case.execute("1", "INQC-0000-0001", PROVIDER)
 
@@ -305,7 +300,7 @@ class TestGetClaimCostTemplate:
 
 class TestGetClaimNotFound:
     def test_raises_application_not_found_when_application_missing(self):
-        use_case = _build_use_case(claim=_claim(), application=None)
+        use_case = _build_use_case(claim=create_base_poa_claim(), application=None)
 
         with pytest.raises(ApplicationNotFoundError):
             use_case.execute("999999", "INQC-0000-0001", PROVIDER)
@@ -318,7 +313,7 @@ class TestGetClaimNotFound:
 
     def test_raises_claim_not_found_when_claim_belongs_to_another_application(self):
         use_case = _build_use_case(
-            claim=_claim(claim_id=1, application_id=1),
+            claim=create_base_poa_claim(claim_id=1, application_id=1),
             application=_application(application_id=2),
         )
 
@@ -331,7 +326,8 @@ class TestGetClaimOfficeIdCheck:
         self,
     ):
         use_case = _build_use_case(
-            claim=_claim(), application=_application(office_id="not-providers-office")
+            claim=create_base_poa_claim(),
+            application=_application(office_id="not-providers-office"),
         )
 
         with pytest.raises(ApplicationNotFoundError):
@@ -341,7 +337,8 @@ class TestGetClaimOfficeIdCheck:
 
     def test_returns_claim_for_any_office_for_caseworker(self):
         use_case = _build_use_case(
-            claim=_claim(), application=_application(office_id="any-office")
+            claim=create_base_poa_claim(),
+            application=_application(office_id="any-office"),
         )
 
         result = use_case.execute("1", "INQC-0000-0001", CaseworkerCaller())

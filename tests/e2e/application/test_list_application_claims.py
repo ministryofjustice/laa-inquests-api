@@ -12,9 +12,18 @@ from app.models.claim.enums import (
     InquestOutcomeCode,
     POAType,
 )
-from app.models.claim.index import Claim, ClaimDecision
-from tests.e2e.auth import set_token_office_codes
-from tests.e2e.factories import create_application_in_db, create_claim_for_reference
+from app.models.claim.index import Claim
+from tests.e2e.auth import (
+    PROVIDER_FIRM_CODE,
+    PROVIDER_OFFICE_ID,
+    set_token_office_codes,
+)
+from tests.e2e.factories import (
+    create_application_in_db,
+    create_claim_decision_in_db,
+    create_claim_in_db,
+    get_application_id,
+)
 
 
 def _seed_claim(
@@ -26,13 +35,16 @@ def _seed_claim(
     poa_type = (
         POAType.PROFIT_COST if claim_type == ClaimType.PAYMENT_ON_ACCOUNT else None
     )
-    return create_claim_for_reference(
+    return create_claim_in_db(
         session,
-        laa_reference,
-        status,
-        claim_type,
+        application_id=get_application_id(session, laa_reference),
+        status=status,
+        claim_type=claim_type,
+        poa_type=poa_type,
+        total_profit_cost_net=Decimal("1000.00"),
+        total_profit_cost_gross=Decimal("1200.00"),
+        total_profit_cost_vat_zero=Decimal("500.00"),
         total_funds_remaining_after_claim=Decimal("8800.00"),
-        poa_type_id=poa_type,
     )
 
 
@@ -42,15 +54,14 @@ def _seed_final_bill_claim(
     status: ClaimStatus,
     claim_type: ClaimType = ClaimType.NIL_BILL,
 ) -> Claim:
-    return create_claim_for_reference(
+    return create_claim_in_db(
         session,
-        laa_reference,
-        status,
-        claim_type,
+        application_id=get_application_id(session, laa_reference),
+        status=status,
+        claim_type=claim_type,
         total_profit_cost_gross=0,
         total_profit_cost_net=None,
         total_profit_cost_vat_zero=None,
-        poa_type_id=None,
         inquest_outcomes=(InquestOutcomeCode.OPEN_CONCLUSION,),
         has_alternative_funding=False,
         has_recovery_costs_awarded=True,
@@ -60,21 +71,6 @@ def _seed_final_bill_claim(
         financial_recovery_interest=50,
         paying_party="Test Council",
     )
-
-
-def _seed_decision(
-    session,
-    claim_id: int,
-    decision: ClaimDecisionStatus,
-) -> ClaimDecision:
-    claim_decision = ClaimDecision(
-        claim_id=claim_id,
-        decision=decision,
-    )
-    session.add(claim_decision)
-    session.commit()
-    session.refresh(claim_decision)
-    return claim_decision
 
 
 def test_200_returns_empty_list_when_application_has_no_claims(session, client):
@@ -165,7 +161,7 @@ def test_200_includes_claim_status_for_each_claim(session, client):
 def test_200_includes_claim_decision_status_when_a_decision_exists(session, client):
     laa_reference = session.exec(select(Application)).first().laa_reference
     claim = _seed_claim(session, laa_reference, ClaimStatus.REJECTED)
-    _seed_decision(session, claim.claim_id, ClaimDecisionStatus.REJECT)
+    create_claim_decision_in_db(session, claim.claim_id, ClaimDecisionStatus.REJECT)
 
     response = client.get(
         f"/applications/{laa_reference}/claims?assessed=true",
@@ -289,18 +285,7 @@ def test_404_when_application_does_not_exist(client):
     assert response.json()["detail"] == "Application not found"
 
 
-PROVIDER_OFFICE_ID = "0U651L"
-PROVIDER_FIRM_CODE = "0A123B"
 UNKNOWN_LAA_REFERENCE = "999999"
-
-
-def _create_application_with_claim(session, office_id, firm_code=PROVIDER_FIRM_CODE):
-    application = create_application_in_db(
-        session,
-        provider_overrides={"firm_code": firm_code, "office_id": office_id},
-    )
-    claim = create_claim_for_reference(session, application.laa_reference)
-    return application, claim
 
 
 def _list_claims(
@@ -329,9 +314,14 @@ class TestListApplicationClaimsOfficeIdCheck:
         self, session, client, application_office_id, token_office_ids
     ):
         set_token_office_codes(token_office_ids)
-        application, claim = _create_application_with_claim(
-            session, application_office_id
+        application = create_application_in_db(
+            session,
+            provider_overrides={
+                "office_id": application_office_id,
+                "firm_code": PROVIDER_FIRM_CODE,
+            },
         )
+        claim = create_claim_in_db(session, application_id=application.application_id)
 
         response = _list_claims(client, application.laa_reference)
 
@@ -348,9 +338,14 @@ class TestListApplicationClaimsOfficeIdCheck:
         self, session, client, firm_code, application_office_id, assessed
     ):
         set_token_office_codes({PROVIDER_OFFICE_ID})
-        application, _ = _create_application_with_claim(
-            session, application_office_id, firm_code
+        application = create_application_in_db(
+            session,
+            provider_overrides={
+                "office_id": application_office_id,
+                "firm_code": firm_code,
+            },
         )
+        create_claim_in_db(session, application_id=application.application_id)
 
         unknown_response = _list_claims(
             client, UNKNOWN_LAA_REFERENCE, assessed=assessed
@@ -367,7 +362,10 @@ class TestListApplicationClaimsOfficeIdCheck:
     def test_200_caseworker_can_list_claims_from_any_office(
         self, session, client, caseworker_role
     ):
-        application, claim = _create_application_with_claim(session, "003", "ZZ999Z")
+        application = create_application_in_db(
+            session, provider_overrides={"office_id": "003", "firm_code": "ZZ999Z"}
+        )
+        claim = create_claim_in_db(session, application_id=application.application_id)
 
         response = _list_claims(client, application.laa_reference, role=caseworker_role)
 

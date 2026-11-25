@@ -7,7 +7,11 @@ from app.models.claim.index import Claim, ClaimDecision, DecisionReason
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.models.notifications.enums import NotificationType
-from tests.e2e.factories import create_application_in_db, create_claim_for_reference
+from tests.e2e.factories import (
+    create_application_in_db,
+    create_claim_in_db,
+    get_application_id,
+)
 
 
 def _reject_payload(overrides=None):
@@ -24,8 +28,12 @@ def _seed_claim(
     claimant_id: str | None = "claimant-123@provider.co.uk",
     claim_type: ClaimType = ClaimType.PAYMENT_ON_ACCOUNT,
 ) -> Claim:
-    return create_claim_for_reference(
-        session, laa_reference, status, claim_type, claimant_id=claimant_id
+    return create_claim_in_db(
+        session,
+        application_id=get_application_id(session, laa_reference),
+        status=status,
+        claim_type=claim_type,
+        claimant_id=claimant_id,
     )
 
 

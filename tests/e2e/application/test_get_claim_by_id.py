@@ -1,5 +1,4 @@
 import uuid
-from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -10,77 +9,47 @@ from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
 from app.models.application.index import Application
 from app.models.claim.enums import (
     ClaimDecisionStatus,
-    ClaimStatus,
     ClaimType,
     InquestOutcomeCode,
     NumberOfCounselInstructed,
     POAType,
-    ReasonCode,
 )
 from app.models.claim.index import (
     Claim,
     ClaimCostTemplate,
     ClaimDecision,
-    ClaimDecisionAmount,
     ClaimEvidence,
     ClaimInquestOutcome,
-    DecisionReason,
 )
-from tests.e2e.auth import set_token_office_codes
-from tests.e2e.factories import create_application_in_db, create_claim_for_reference
+from tests.e2e.auth import (
+    PROVIDER_FIRM_CODE,
+    PROVIDER_OFFICE_ID,
+    set_token_office_codes,
+)
+from tests.e2e.factories import (
+    create_application_in_db,
+    create_claim_decision_amount_in_db,
+    create_claim_decision_in_db,
+    create_claim_evidence_in_db,
+    create_claim_in_db,
+    create_decision_reason_in_db,
+    get_application_id,
+)
 
-PROVIDER_OFFICE_ID = "0U651L"
-PROVIDER_FIRM_CODE = "0A123B"
 UNKNOWN_LAA_REFERENCE = "999999"
 
 
-def _seed_claim(
-    session,
-    laa_reference: int,
-    claim_type: ClaimType = ClaimType.PAYMENT_ON_ACCOUNT,
-    total_funds_remaining_after_claim: Decimal = Decimal(
-        SUBSTANTIVE_CERTIFICATE_AMOUNT
-    ),
-) -> Claim:
-    return create_claim_for_reference(
-        session,
-        laa_reference,
-        claim_type=claim_type,
-        total_funds_remaining_after_claim=total_funds_remaining_after_claim,
+def _seed_claim(session, laa_reference: str, **overrides) -> Claim:
+    return create_claim_in_db(
+        session, application_id=get_application_id(session, laa_reference), **overrides
     )
-
-
-def _seed_evidence(
-    session, claim_id: int, file_size: int | None = None
-) -> ClaimEvidence:
-    evidence = ClaimEvidence(
-        sds_file_name="evidence_abc123.pdf",
-        file_name="evidence.pdf",
-        office_id="0U651L",
-        file_size=file_size,
-        claim_id=claim_id,
-    )
-    session.add(evidence)
-    session.commit()
-    session.refresh(evidence)
-    return evidence
 
 
 def _seed_decision(session, claim_id: int) -> ClaimDecision:
-    decision = ClaimDecision(
-        claim_id=claim_id,
-        decision=ClaimDecisionStatus.REJECT,
+    decision = create_claim_decision_in_db(
+        session, claim_id, ClaimDecisionStatus.REJECT
     )
-    session.add(decision)
-    session.commit()
-    session.refresh(decision)
-    reason = DecisionReason(
-        claim_decision_id=decision.claim_decision_id,
-        reason_code=ReasonCode.MAX_POA_CLAIMS_EXCEEDED,
-        justification="Too many payment on account claims",
-    )
-    session.add(reason)
-    session.commit()
+    create_decision_reason_in_db(session, decision.claim_decision_id)
     session.refresh(decision)
     return decision
 
@@ -88,26 +57,11 @@ def _seed_decision(session, claim_id: int) -> ClaimDecision:
 def _seed_pay_in_full_decision(
     session, claim_id: int, **amounts: Decimal | None
 ) -> ClaimDecision:
-    decision = ClaimDecision(
-        claim_id=claim_id, decision=ClaimDecisionStatus.PAY_IN_FULL
+    decision = create_claim_decision_in_db(
+        session, claim_id, ClaimDecisionStatus.PAY_IN_FULL
     )
-    session.add(decision)
-    session.commit()
-    session.refresh(decision)
-    session.add(
-        ClaimDecisionAmount(claim_decision_id=decision.claim_decision_id, **amounts)
-    )
-    session.commit()
+    create_claim_decision_amount_in_db(session, decision.claim_decision_id, **amounts)
     return decision
-
-
-def _create_application_with_claim(session, office_id, firm_code=PROVIDER_FIRM_CODE):
-    application = create_application_in_db(
-        session,
-        provider_overrides={"firm_code": firm_code, "office_id": office_id},
-    )
-    claim = create_claim_for_reference(session, application.laa_reference)
-    return application, claim
 
 
 def _get_claim(client, laa_reference, claim_reference, role=Role.PROVIDER_CLAIMS_USER):
@@ -122,7 +76,15 @@ class TestGetClaimBaseProperties:
         self, session, client
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
-        claim = _seed_claim(session, laa_reference)
+        claim = _seed_claim(
+            session,
+            laa_reference,
+            claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+            poa_type=POAType.PROFIT_COST,
+            total_profit_cost_net=Decimal("1000.00"),
+            total_profit_cost_gross=Decimal("1200.00"),
+            total_profit_cost_vat_zero=Decimal("500.00"),
+        )
 
         response = client.get(
             f"/applications/{laa_reference}/claims/{claim.claim_reference}",
@@ -178,13 +140,15 @@ class TestGetClaimBaseProperties:
         self, session, client, net, gross, vat_zero, expected_total
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
-        claim = _seed_claim(session, laa_reference)
-        claim.poa_type_id = POAType.EXPERT_COST
-        claim.total_profit_cost_net = Decimal(net)
-        claim.total_profit_cost_gross = Decimal(gross)
-        claim.total_profit_cost_vat_zero = Decimal(vat_zero)
-        session.add(claim)
-        session.commit()
+        claim = _seed_claim(
+            session,
+            laa_reference,
+            claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+            poa_type=POAType.EXPERT_COST,
+            total_profit_cost_net=Decimal(net),
+            total_profit_cost_gross=Decimal(gross),
+            total_profit_cost_vat_zero=Decimal(vat_zero),
+        )
 
         response = client.get(
             f"/applications/{laa_reference}/claims/{claim.claim_reference}",
@@ -196,15 +160,13 @@ class TestGetClaimBaseProperties:
 
     def test_200_get_claim_by_id_returns_final_bill_details(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
-        claim = Claim(
-            application_id=session.exec(
-                select(Application).where(Application.laa_reference == laa_reference)
-            )
-            .one()
-            .application_id,
-            claim_type_id=ClaimType.FINAL_BILL,
-            status_id=ClaimStatus.SUBMITTED,
-            submission_date=datetime.now(UTC),
+        claim = _seed_claim(
+            session,
+            laa_reference,
+            claim_type=ClaimType.FINAL_BILL,
+            total_profit_cost_net=None,
+            total_profit_cost_gross=None,
+            total_profit_cost_vat_zero=None,
             has_counsel_been_paid=True,
             has_alternative_funding=False,
             has_recovery_costs_awarded=True,
@@ -214,11 +176,7 @@ class TestGetClaimBaseProperties:
             financial_recovery_interest=Decimal("50.00"),
             paying_party="Test Council",
             number_of_counsel_instructed=NumberOfCounselInstructed.TWO,
-            claim_reference=f"INQC-{uuid.uuid4().hex[:4].upper()}-{uuid.uuid4().hex[:4].upper()}",
         )
-        session.add(claim)
-        session.commit()
-        session.refresh(claim)
 
         response = client.get(
             f"/applications/{laa_reference}/claims/{claim.claim_reference}",
@@ -288,7 +246,9 @@ class TestGetClaimEvidence:
     def test_200_get_claim_by_id_includes_claim_evidence(self, session, client):
         laa_reference = session.exec(select(Application)).first().laa_reference
         claim = _seed_claim(session, laa_reference)
-        evidence = _seed_evidence(session, claim.claim_id)
+        evidence = create_claim_evidence_in_db(
+            session, claim_id=claim.claim_id, file_name="evidence.pdf"
+        )
 
         response = client.get(
             f"/applications/{laa_reference}/claims/{claim.claim_reference}",
@@ -306,7 +266,7 @@ class TestGetClaimEvidence:
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
         claim = _seed_claim(session, laa_reference)
-        _seed_evidence(session, claim.claim_id, file_size=104448)
+        create_claim_evidence_in_db(session, claim_id=claim.claim_id, file_size=104448)
 
         response = client.get(
             f"/applications/{laa_reference}/claims/{claim.claim_reference}",
@@ -321,7 +281,7 @@ class TestGetClaimEvidence:
     ):
         laa_reference = session.exec(select(Application)).first().laa_reference
         claim = _seed_claim(session, laa_reference)
-        _seed_evidence(session, claim.claim_id)
+        create_claim_evidence_in_db(session, claim_id=claim.claim_id)
 
         response = client.get(
             f"/applications/{laa_reference}/claims/{claim.claim_reference}",
@@ -620,9 +580,14 @@ class TestGetClaimOfficeIdCheck:
         self, session, client, application_office_id, token_office_ids
     ):
         set_token_office_codes(token_office_ids)
-        application, claim = _create_application_with_claim(
-            session, application_office_id
+        application = create_application_in_db(
+            session,
+            provider_overrides={
+                "office_id": application_office_id,
+                "firm_code": PROVIDER_FIRM_CODE,
+            },
         )
+        claim = create_claim_in_db(session, application_id=application.application_id)
 
         response = _get_claim(client, application.laa_reference, claim.claim_reference)
 
@@ -638,9 +603,14 @@ class TestGetClaimOfficeIdCheck:
         self, session, client, firm_code, application_office_id
     ):
         set_token_office_codes({PROVIDER_OFFICE_ID})
-        application, claim = _create_application_with_claim(
-            session, application_office_id, firm_code
+        application = create_application_in_db(
+            session,
+            provider_overrides={
+                "office_id": application_office_id,
+                "firm_code": firm_code,
+            },
         )
+        claim = create_claim_in_db(session, application_id=application.application_id)
 
         unknown_response = _get_claim(
             client, UNKNOWN_LAA_REFERENCE, claim.claim_reference
@@ -657,7 +627,10 @@ class TestGetClaimOfficeIdCheck:
     def test_200_caseworker_can_get_claim_from_any_office(
         self, session, client, caseworker_role
     ):
-        application, claim = _create_application_with_claim(session, "003", "ZZ999Z")
+        application = create_application_in_db(
+            session, provider_overrides={"office_id": "003", "firm_code": "ZZ999Z"}
+        )
+        claim = create_claim_in_db(session, application_id=application.application_id)
 
         response = _get_claim(
             client, application.laa_reference, claim.claim_reference, caseworker_role

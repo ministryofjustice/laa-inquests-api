@@ -1,5 +1,4 @@
 from datetime import UTC, datetime
-from decimal import Decimal
 from unittest.mock import MagicMock, call
 
 import pytest
@@ -9,7 +8,6 @@ from app.models.claim.enums import (
     ClaimDecisionStatus,
     ClaimStatus,
     ClaimType,
-    POAType,
     ReasonCode,
 )
 from app.models.claim.index import Claim, ClaimDecision
@@ -29,20 +27,14 @@ from app.use_cases.exceptions import (
     ClaimNotFoundError,
 )
 from app.use_cases.reject_claim import RejectClaimCommand, RejectClaimUseCase
+from tests.unit.factories import create_base_poa_claim
 
 
 def _claim(claim_id: int = 1, application_id: int = 1) -> Claim:
-    return Claim(
+    return create_base_poa_claim(
         claim_id=claim_id,
         application_id=application_id,
-        claim_reference="INQC-0000-0001",
-        claim_type_id=ClaimType.PAYMENT_ON_ACCOUNT,
-        status_id=ClaimStatus.SUBMITTED,
         submission_date=datetime.now(UTC),
-        total_profit_cost_net=Decimal("1000.00"),
-        total_profit_cost_gross=Decimal("1200.00"),
-        total_profit_cost_vat_zero=Decimal("500.00"),
-        poa_type_id=POAType.PROFIT_COST,
         claimant_id="claimant-123@provider.co.uk",
     )
 

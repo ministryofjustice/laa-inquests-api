@@ -2,7 +2,6 @@
 
 import uuid
 from datetime import UTC, datetime
-from decimal import Decimal
 
 from sqlmodel import Session, select
 
@@ -16,8 +15,20 @@ from app.models.application.index import (
     ProceedingId,
     Provider,
 )
-from app.models.claim.enums import ClaimStatus, ClaimType, POAType
-from app.models.claim.index import Claim, ClaimEvidence
+from app.models.claim.enums import (
+    ClaimDecisionStatus,
+    ClaimStatus,
+    ClaimType,
+    POAType,
+    ReasonCode,
+)
+from app.models.claim.index import (
+    Claim,
+    ClaimDecision,
+    ClaimDecisionAmount,
+    ClaimEvidence,
+    DecisionReason,
+)
 
 
 def create_provider_in_db(session: Session, **overrides) -> Provider:
@@ -140,34 +151,6 @@ def get_application_id(session: Session, laa_reference: str | int) -> int:
     ).one()
 
 
-def create_claim_for_reference(
-    session: Session,
-    laa_reference: str | int,
-    status: ClaimStatus = ClaimStatus.SUBMITTED,
-    claim_type: ClaimType = ClaimType.PAYMENT_ON_ACCOUNT,
-    **overrides,
-) -> Claim:
-    """Persist a claim with standard POA amounts for the application with this LAA reference.
-
-    ``**overrides`` are ``Claim`` field names and replace the defaults.
-    """
-    fields = {
-        "application_id": get_application_id(session, laa_reference),
-        "claim_reference": _new_claim_reference(),
-        "claim_type_id": claim_type,
-        "status_id": status,
-        "total_profit_cost_net": Decimal("1000.00"),
-        "total_profit_cost_gross": Decimal("1200.00"),
-        "total_profit_cost_vat_zero": Decimal("500.00"),
-        "poa_type_id": POAType.PROFIT_COST,
-    }
-    claim = Claim(**(fields | overrides))
-    session.add(claim)
-    session.commit()
-    session.refresh(claim)
-    return claim
-
-
 def create_claim_in_db(
     session: Session,
     *,
@@ -180,23 +163,66 @@ def create_claim_in_db(
     claim_type: ClaimType = ClaimType.FINAL_BILL,
     claim_reference: str | None = None,
     poa_type: POAType | None = None,
+    **overrides,
 ) -> Claim:
     """Persist a claim with optional field overrides."""
-    claim = Claim(
-        application_id=application_id,
-        claim_reference=claim_reference or _new_claim_reference(),
-        claim_type_id=claim_type,
-        status_id=status,
-        submission_date=submission_date or datetime.now(UTC),
-        total_profit_cost_vat_zero=total_profit_cost_vat_zero,
-        total_profit_cost_net=total_profit_cost_net,
-        total_profit_cost_gross=total_profit_cost_gross,
-        poa_type_id=poa_type,
-    )
+    fields = {
+        "application_id": application_id,
+        "claim_reference": claim_reference or _new_claim_reference(),
+        "claim_type_id": claim_type,
+        "status_id": status,
+        "submission_date": submission_date or datetime.now(UTC),
+        "total_profit_cost_vat_zero": total_profit_cost_vat_zero,
+        "total_profit_cost_net": total_profit_cost_net,
+        "total_profit_cost_gross": total_profit_cost_gross,
+        "poa_type_id": poa_type,
+    }
+    claim = Claim(**(fields | overrides))
     session.add(claim)
     session.commit()
     session.refresh(claim)
     return claim
+
+
+def create_claim_decision_in_db(
+    session: Session, claim_id: int, decision: ClaimDecisionStatus, **overrides
+) -> ClaimDecision:
+    """Persist a decision for this claim with optional field overrides."""
+    claim_decision = ClaimDecision(claim_id=claim_id, decision=decision, **overrides)
+    session.add(claim_decision)
+    session.commit()
+    session.refresh(claim_decision)
+    return claim_decision
+
+
+def create_decision_reason_in_db(
+    session: Session, claim_decision_id: int, **overrides
+) -> DecisionReason:
+    """Persist a decision reason with optional field overrides."""
+    defaults = {
+        "reason_code": ReasonCode.MAX_POA_CLAIMS_EXCEEDED,
+        "justification": "Too many payment on account claims",
+    }
+    reason = DecisionReason(
+        claim_decision_id=claim_decision_id, **(defaults | overrides)
+    )
+    session.add(reason)
+    session.commit()
+    session.refresh(reason)
+    return reason
+
+
+def create_claim_decision_amount_in_db(
+    session: Session, claim_decision_id: int, **amounts
+) -> ClaimDecisionAmount:
+    """Persist decision amounts; ``**amounts`` are ``ClaimDecisionAmount`` fields."""
+    decision_amount = ClaimDecisionAmount(
+        claim_decision_id=claim_decision_id, **amounts
+    )
+    session.add(decision_amount)
+    session.commit()
+    session.refresh(decision_amount)
+    return decision_amount
 
 
 def create_claim_evidence_in_db(session: Session, **overrides) -> ClaimEvidence:
