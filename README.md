@@ -136,6 +136,18 @@ uvicorn app:api --reload
 Swagger API documentation can be found at the `/` or `/docs` endpoint.
 Redoc documentation can be found at the `/redoc` endpoint.
 
+## CSV reports
+Every report is written with `SafeCsvWriter` (`app/domain/csv_safety.py`), never `csv.writer`
+directly (a unit test fails if it is). The writer prefixes every string cell that a
+spreadsheet could read as a formula (`=`, `+`, `-`, `@`, including after leading whitespace
+or control characters) with an apostrophe. The stored data is unchanged, and the apostrophe
+is visible when the CSV is opened in a spreadsheet.
+
+Protection applies to every column by default, so a new report column needs no extra work.
+The only exemption is `Amount`: wrap a money value your own code has formatted, for example
+`Amount(f"{value:.2f}")`, so a negative such as `-100.00` stays a number. Never wrap text
+that came from a user, a provider or another system.
+
 ## Tests
 To install testing dependencies run:
 ```bash

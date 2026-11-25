@@ -1,10 +1,10 @@
-import csv
 import io
 import logging
 from datetime import datetime
 
 from app.domain.application_backlog_report import ApplicationBacklogRecord
 from app.domain.constants.report_csv_headers import APPLICATION_BACKLOG_REPORT_HEADERS
+from app.domain.csv_safety import SafeCsvWriter
 from app.logging_utils import build_log_extra
 from app.ports.application_backlog_port import ApplicationBacklogPort
 from app.ports.provider_details_port import ProviderDetailsPort
@@ -28,8 +28,7 @@ class GenerateApplicationBacklogReportUseCase:
             firm_name_lookup = self._build_firm_name_lookup(applications)
 
             output = io.StringIO()
-            writer = csv.writer(output)
-            writer.writerow(APPLICATION_BACKLOG_REPORT_HEADERS)
+            writer = SafeCsvWriter(output, APPLICATION_BACKLOG_REPORT_HEADERS)
 
             for application in applications:
                 firm_code = application.firm_code

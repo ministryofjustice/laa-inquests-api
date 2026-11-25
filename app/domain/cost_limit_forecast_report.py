@@ -3,6 +3,7 @@ from datetime import date
 from decimal import Decimal
 
 from app.domain.claim import ApprovedClaimAmount, calculate_available_funds
+from app.domain.csv_safety import Amount
 from app.models.application.enums import MeritsDecision, PublicBodyId
 from app.models.claim.enums import ClaimDecisionStatus, ClaimStatus, ClaimType
 
@@ -86,7 +87,7 @@ def build_cost_limit_forecast_row(
         PUBLIC_BODY_DELIMITER.join(
             sorted(body.value for body in candidate.public_bodies)
         ),
-        f"{Decimal(candidate.cost_limit):.2f}",
-        f"{remaining:.2f}",
+        Amount(f"{Decimal(candidate.cost_limit):.2f}"),
+        Amount(f"{remaining:.2f}"),
         candidate.certificate_effective_date.strftime(_DATE_FORMAT),
     ]

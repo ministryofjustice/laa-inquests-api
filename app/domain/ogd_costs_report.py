@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
-from app.domain.csv_safety import neutralise_csv_formula
+from app.domain.csv_safety import Amount, neutralise_csv_formula
 from app.models.application.enums import PublicBodyId
 from app.models.claim.enums import (
     ClaimDecisionStatus,
@@ -69,7 +69,7 @@ def build_ogd_costs_row(
         format_public_bodies(public_bodies),
         line.laa_reference,
         line.invoice_number,
-        f"{line.invoice_amount:.2f}",
+        Amount(f"{line.invoice_amount:.2f}"),
         line.tax_code.value,
         neutralise_csv_formula(f"{line.deceased_first_name} {line.deceased_last_name}"),
         _date_of_death(line.deceased_date_of_death),

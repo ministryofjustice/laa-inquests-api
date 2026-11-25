@@ -1,9 +1,9 @@
-import csv
 import io
 import logging
 from datetime import date
 
 from app.domain.constants.report_csv_headers import DECISIONS_REPORT_HEADERS
+from app.domain.csv_safety import SafeCsvWriter
 from app.domain.decisions_report import (
     InvalidDecisionRecordError,
     build_decisions_report_row,
@@ -45,8 +45,7 @@ class GenerateDecisionsReportUseCase:
             raise ReportGenerationError(str(exc)) from exc
 
         buffer = io.StringIO()
-        writer = csv.writer(buffer)
-        writer.writerow(DECISIONS_REPORT_HEADERS)
+        writer = SafeCsvWriter(buffer, DECISIONS_REPORT_HEADERS)
         writer.writerows(rows)
 
         logger.info(
