@@ -5,8 +5,10 @@ from app.models.validated_types import (
     AddressLine,
     CoronersReference,
     CountyName,
+    OrganisationName,
     PersonName,
     ProseText,
+    RecipientName,
     RelationshipText,
     TownName,
 )
@@ -250,6 +252,93 @@ class TestRelationshipText:
     def test_rejects_everything_else_a_person_name_rejects(self, value):
         with pytest.raises(ValidationError):
             validate(RelationshipText, value)
+
+
+class TestRecipientName:
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "Smith & Co. Solicitors, Ltd",
+            "O'Brien-Jones",
+            "Siân Jones",
+            "Acme 24 Ltd",
+            "J",
+            "A" * 100,
+        ],
+    )
+    def test_accepts_person_and_organisation_names(self, value):
+        assert validate(RecipientName, value) == value
+
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            (" Smith & Co. ", "Smith & Co."),
+            ("Smith & Co.\n", "Smith & Co."),
+            ("O\u2019Brien & Sons", "O'Brien & Sons"),
+            ("Jose\u0301 & Co", "Jos\u00e9 & Co"),
+        ],
+    )
+    def test_trims_folds_curly_apostrophes_and_composes_accents(self, value, expected):
+        assert validate(RecipientName, value) == expected
+
+    @pytest.mark.parametrize(
+        "character",
+        [c for c in DANGEROUS_CHARACTERS if c != "&"] + ["/", "@", "+", "_"],
+    )
+    def test_rejects_characters_outside_the_allow_list(self, character):
+        with pytest.raises(ValidationError):
+            validate(RecipientName, f"Smith{character}Co")
+
+    @pytest.mark.parametrize(
+        "value", ["", " ", "&&", "--", "...", "Smith\nCo", "Smith\x00Co", "A" * 101]
+    )
+    def test_rejects_empty_without_letter_or_digit_control_characters_and_too_long(
+        self, value
+    ):
+        with pytest.raises(ValidationError):
+            validate(RecipientName, value)
+
+    @pytest.mark.parametrize("value", [None, 123])
+    def test_rejects_non_string_input(self, value):
+        with pytest.raises(ValidationError):
+            validate(RecipientName, value)
+
+
+class TestOrganisationName:
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "Test Council",
+            "Hammersmith & Fulham Council",
+            "St. Mary's Trust, Ltd",
+            "A" * 100,
+        ],
+    )
+    def test_accepts_organisation_names(self, value):
+        assert validate(OrganisationName, value) == value
+
+    @pytest.mark.parametrize("value", ["", " ", "\n"])
+    def test_accepts_empty_and_treats_whitespace_only_as_empty(self, value):
+        assert validate(OrganisationName, value) == ""
+
+    def test_trims(self):
+        assert validate(OrganisationName, " Test Council\n") == "Test Council"
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "<script>",
+            "Council;",
+            'He said "no"',
+            "Co/Ltd",
+            "&&",
+            "Test\nCouncil",
+            "A" * 101,
+        ],
+    )
+    def test_rejects_everything_else(self, value):
+        with pytest.raises(ValidationError):
+            validate(OrganisationName, value)
 
 
 class TestProseText:

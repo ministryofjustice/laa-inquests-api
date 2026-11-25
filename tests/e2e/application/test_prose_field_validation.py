@@ -5,7 +5,6 @@ from app.auth.rbac import Role
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimType
 from tests.e2e.factories import create_application_in_db, create_claim_for_reference
-from tests.helpers.claim_payloads import make_final_bill_claim_body
 
 pytestmark = pytest.mark.usefixtures("mock_gov_notify")
 
@@ -94,22 +93,3 @@ class TestCreateNoteText:
     @pytest.mark.parametrize("value", ACCEPTED_PROSE)
     def test_204_accepts_quotes_semicolons_and_newlines(self, session, client, value):
         assert self._create_note(client, session, value).status_code == 204
-
-
-class TestCreateClaimPayingParty:
-    @staticmethod
-    def _create_claim(client, session, paying_party):
-        laa_reference = session.exec(select(Application)).first().laa_reference
-        return client.post(
-            f"/applications/{laa_reference}/claim",
-            json=make_final_bill_claim_body({"payingParty": paying_party}),
-            headers=_headers(Role.PROVIDER_CLAIMS_USER),
-        )
-
-    @pytest.mark.parametrize("value", REJECTED_PROSE)
-    def test_422_rejects_disallowed_characters(self, session, client, value):
-        assert self._create_claim(client, session, value).status_code == 422
-
-    @pytest.mark.parametrize("value", ACCEPTED_PROSE)
-    def test_201_accepts_quotes_semicolons_and_newlines(self, session, client, value):
-        assert self._create_claim(client, session, value).status_code == 201

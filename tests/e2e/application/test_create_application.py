@@ -64,8 +64,9 @@ PERSON_NAME_CLIENT_FIELDS = [
     "clientFirstName",
     "clientLastName",
     "clientLastNameAtBirth",
-    "recipientName",
 ]
+
+RECIPIENT_TYPES = ["PERSON", "ORGANISATION"]
 
 DECEASED_FIELDS = [
     "deceasedFirstName",
@@ -79,13 +80,14 @@ ADDRESS_FIELDS = ["addressLine1", "addressLine2", "townOrCity", "county"]
 
 
 def _set_client_name_field(body, field, value):
-    if field == "recipientName":
-        body["client"]["correspondenceRecipient"] = {
-            "recipientType": "PERSON",
-            "recipientName": value,
-        }
-    else:
-        body["client"][field] = value
+    body["client"][field] = value
+
+
+def _set_recipient(body, recipient_type, name):
+    body["client"]["correspondenceRecipient"] = {
+        "recipientType": recipient_type,
+        "recipientName": name,
+    }
 
 
 class TestCreateApplication:
@@ -488,6 +490,96 @@ class TestCreateApplication:
         assert response.status_code == 201
         assert response.json()["client"]["clientFirstName"] == expected
         assert response.json()["deceased"]["deceasedFirstName"] == expected
+
+    @pytest.mark.parametrize("recipient_type", RECIPIENT_TYPES)
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "zxdfsdfdszxdfsdfds'';!--\"=&{()}",
+            "<Test>",
+            "Smith;",
+            "Smith/Jones",
+            "Sm\nith",
+            "&&",
+            "A" * 101,
+            "",
+            " ",
+        ],
+    )
+    def test_422_rejected_when_recipient_name_contains_disallowed_input(
+        self, client, recipient_type, value
+    ):
+        body = _make_request_body()
+        _set_recipient(body, recipient_type, value)
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.parametrize("recipient_type", RECIPIENT_TYPES)
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "Smith & Co. Solicitors, Ltd",
+            "O'Brien-Jones",
+            "Siân Jones",
+            "Acme 24 Ltd",
+            "A" * 100,
+        ],
+    )
+    def test_201_accepts_person_and_organisation_recipient_names(
+        self, client, recipient_type, value
+    ):
+        body = _make_request_body()
+        _set_recipient(body, recipient_type, value)
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 201
+        assert (
+            response.json()["client"]["correspondenceRecipient"]["recipientType"]
+            == recipient_type
+        )
+
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            (" Smith & Co. ", "Smith & Co."),
+            ("O\u2019Brien & Sons", "O'Brien & Sons"),
+        ],
+    )
+    def test_201_stores_recipient_name_trimmed_and_normalised(
+        self, client, value, expected
+    ):
+        body = _make_request_body()
+        _set_recipient(body, "ORGANISATION", value)
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 201
+        recipient = response.json()["client"]["correspondenceRecipient"]
+        assert recipient["recipientName"] == expected
 
     @pytest.mark.parametrize("address_key", ADDRESS_KEYS)
     @pytest.mark.parametrize("field", ADDRESS_FIELDS)

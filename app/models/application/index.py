@@ -34,6 +34,7 @@ from app.models.validated_types import (
     CountyName,
     PersonName,
     ProseText,
+    RecipientName,
     RelationshipText,
     TownName,
 )
@@ -315,7 +316,7 @@ class CorrespondenceRecipientCreate(BaseModel):
         from_attributes=True,
     )
     recipient_type: CorrespondenceRecipientType
-    recipient_name: PersonName
+    recipient_name: RecipientName
 
 
 class ClientCreate(BaseModel):

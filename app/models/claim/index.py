@@ -26,7 +26,7 @@ from app.models.claim.enums import (
     ReasonCode,
     TaxCode,
 )
-from app.models.validated_types import ProseText
+from app.models.validated_types import OrganisationName, ProseText
 
 
 class ClaimBase(SQLModel):
@@ -289,7 +289,7 @@ class ClaimCreate(BaseModel):
     financial_recovery_interest: Decimal | None = PydanticField(
         default=None, examples=["50.00"]
     )
-    paying_party: ProseText | None = PydanticField(
+    paying_party: OrganisationName | None = PydanticField(
         default=None, examples=["Some Council"]
     )
     number_of_counsel_instructed: NumberOfCounselInstructed | None = PydanticField(

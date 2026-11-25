@@ -8,6 +8,7 @@ MAX_NAME_LENGTH = 100
 MAX_RELATIONSHIP_LENGTH = 70
 MAX_ADDRESS_LENGTH = 100
 MAX_COUNTY_LENGTH = 50
+MAX_ORGANISATION_LENGTH = 100
 MIN_ADDRESS_LINE_LENGTH = 2
 MIN_TOWN_LENGTH = 2
 MIN_COUNTY_LENGTH = 3
@@ -26,6 +27,13 @@ _NAME_OR_EMPTY_PATTERN = rf"^(?:{_LETTER}(?:{_LETTER}|[ '-])*)?$"
 # contain a letter or digit (a letter for place names) so "--" or "&&" is not accepted.
 _ADDRESS_LINE_PATTERN = r"^[ '.,/&-]*[A-Za-z0-9][A-Za-z0-9 '.,/&-]*$"
 _PLACE_NAME_PATTERN = r"^[ '-]*[A-Za-z][A-Za-z '-]*$"
+
+# Recipient and organisation names mirror the UI: Unicode letters and digits, with a
+# little punctuation for names like "Smith & Co., Ltd". At least one letter or digit.
+_ALPHANUMERIC = rf"(?:{_LETTER}|\p{{N}})"
+_ORGANISATION_BODY = rf"[ '.,&-]*{_ALPHANUMERIC}(?:{_ALPHANUMERIC}|[ '.,&-])*"
+_RECIPIENT_NAME_PATTERN = rf"^{_ORGANISATION_BODY}$"
+_ORGANISATION_NAME_PATTERN = rf"^(?:{_ORGANISATION_BODY})?$"
 
 
 def _normalise_short_text(value: object) -> object:
@@ -95,6 +103,25 @@ CountyName = Annotated[
         min_length=MIN_COUNTY_LENGTH,
         max_length=MAX_COUNTY_LENGTH,
         pattern=_PLACE_NAME_PATTERN,
+    ),
+    BeforeValidator(_normalise_short_text),
+]
+
+# One rule for PERSON and ORGANISATION recipients, as in the UI.
+RecipientName = Annotated[
+    str,
+    StringConstraints(
+        max_length=MAX_ORGANISATION_LENGTH, pattern=_RECIPIENT_NAME_PATTERN
+    ),
+    BeforeValidator(_normalise_short_text),
+]
+
+# For final and nil bills the UI sends "" when the paying party is blank, and the API
+# requires the field to be present for those claim types, so "" must stay valid.
+OrganisationName = Annotated[
+    str,
+    StringConstraints(
+        max_length=MAX_ORGANISATION_LENGTH, pattern=_ORGANISATION_NAME_PATTERN
     ),
     BeforeValidator(_normalise_short_text),
 ]
