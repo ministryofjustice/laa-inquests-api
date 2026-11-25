@@ -14,8 +14,8 @@ from app.models.claim.enums import (
 )
 from app.models.claim.index import Claim
 from tests.e2e.auth import (
-    PROVIDER_FIRM_CODE,
-    PROVIDER_OFFICE_ID,
+    TEST_PROVIDER_FIRM_CODE,
+    TEST_PROVIDER_OFFICE_ID,
     set_token_office_codes,
 )
 from tests.e2e.factories import (
@@ -305,8 +305,8 @@ class TestListApplicationClaimsOfficeIdCheck:
     @pytest.mark.parametrize(
         ("application_office_id", "token_office_ids"),
         [
-            (PROVIDER_OFFICE_ID, {PROVIDER_OFFICE_ID}),
-            ("002", {PROVIDER_OFFICE_ID, "002"}),
+            (TEST_PROVIDER_OFFICE_ID, {TEST_PROVIDER_OFFICE_ID}),
+            ("1A234B", {TEST_PROVIDER_OFFICE_ID, "1A234B"}),
         ],
         ids=["own-office", "second-office-in-token"],
     )
@@ -318,7 +318,7 @@ class TestListApplicationClaimsOfficeIdCheck:
             session,
             provider_overrides={
                 "office_id": application_office_id,
-                "firm_code": PROVIDER_FIRM_CODE,
+                "firm_code": TEST_PROVIDER_FIRM_CODE,
             },
         )
         claim = create_claim_in_db(session, application_id=application.application_id)
@@ -331,13 +331,13 @@ class TestListApplicationClaimsOfficeIdCheck:
     @pytest.mark.parametrize("assessed", ["true", "false"])
     @pytest.mark.parametrize(
         ("firm_code", "application_office_id"),
-        [(PROVIDER_FIRM_CODE, "002"), ("ZZ999Z", "003")],
+        [(TEST_PROVIDER_FIRM_CODE, "1A234B"), ("5678", "test-office-id")],
         ids=["same-firm-different-office", "different-firm"],
     )
     def test_404_provider_cannot_list_claims_when_application_office_id_mismatches_with_the_one_in_their_token(
         self, session, client, firm_code, application_office_id, assessed
     ):
-        set_token_office_codes({PROVIDER_OFFICE_ID})
+        set_token_office_codes({TEST_PROVIDER_OFFICE_ID})
         application = create_application_in_db(
             session,
             provider_overrides={
@@ -363,7 +363,11 @@ class TestListApplicationClaimsOfficeIdCheck:
         self, session, client, caseworker_role
     ):
         application = create_application_in_db(
-            session, provider_overrides={"office_id": "003", "firm_code": "ZZ999Z"}
+            session,
+            provider_overrides={
+                "office_id": TEST_PROVIDER_OFFICE_ID,
+                "firm_code": TEST_PROVIDER_FIRM_CODE,
+            },
         )
         claim = create_claim_in_db(session, application_id=application.application_id)
 

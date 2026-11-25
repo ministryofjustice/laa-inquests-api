@@ -22,8 +22,8 @@ from app.models.claim.index import (
     ClaimInquestOutcome,
 )
 from tests.e2e.auth import (
-    PROVIDER_FIRM_CODE,
-    PROVIDER_OFFICE_ID,
+    TEST_PROVIDER_FIRM_CODE,
+    TEST_PROVIDER_OFFICE_ID,
     set_token_office_codes,
 )
 from tests.e2e.factories import (
@@ -571,8 +571,8 @@ class TestGetClaimOfficeIdCheck:
     @pytest.mark.parametrize(
         ("application_office_id", "token_office_ids"),
         [
-            (PROVIDER_OFFICE_ID, {PROVIDER_OFFICE_ID}),
-            ("002", {PROVIDER_OFFICE_ID, "002"}),
+            (TEST_PROVIDER_OFFICE_ID, {TEST_PROVIDER_OFFICE_ID}),
+            ("1A234B", {TEST_PROVIDER_OFFICE_ID, "1A234B"}),
         ],
         ids=["own-office", "second-office-in-token"],
     )
@@ -584,7 +584,7 @@ class TestGetClaimOfficeIdCheck:
             session,
             provider_overrides={
                 "office_id": application_office_id,
-                "firm_code": PROVIDER_FIRM_CODE,
+                "firm_code": TEST_PROVIDER_FIRM_CODE,
             },
         )
         claim = create_claim_in_db(session, application_id=application.application_id)
@@ -596,13 +596,13 @@ class TestGetClaimOfficeIdCheck:
 
     @pytest.mark.parametrize(
         ("firm_code", "application_office_id"),
-        [(PROVIDER_FIRM_CODE, "002"), ("ZZ999Z", "003")],
+        [(TEST_PROVIDER_FIRM_CODE, "1A234B"), ("ZZ999Z", "test-office-id")],
         ids=["same-firm-different-office", "different-firm"],
     )
     def test_404_provider_cannot_get_claim_when_application_office_id_mismatches_with_the_one_in_the_token(
         self, session, client, firm_code, application_office_id
     ):
-        set_token_office_codes({PROVIDER_OFFICE_ID})
+        set_token_office_codes({TEST_PROVIDER_OFFICE_ID})
         application = create_application_in_db(
             session,
             provider_overrides={
@@ -628,7 +628,11 @@ class TestGetClaimOfficeIdCheck:
         self, session, client, caseworker_role
     ):
         application = create_application_in_db(
-            session, provider_overrides={"office_id": "003", "firm_code": "ZZ999Z"}
+            session,
+            provider_overrides={
+                "office_id": TEST_PROVIDER_OFFICE_ID,
+                "firm_code": TEST_PROVIDER_FIRM_CODE,
+            },
         )
         claim = create_claim_in_db(session, application_id=application.application_id)
 

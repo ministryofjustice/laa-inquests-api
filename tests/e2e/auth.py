@@ -5,8 +5,8 @@ from dataclasses import replace
 from app import api
 from app.routers.dependencies import get_entra_auth_port
 
-PROVIDER_OFFICE_ID = "0U651L"
-PROVIDER_FIRM_CODE = "0A123B"
+TEST_PROVIDER_OFFICE_ID = "0U651L"
+TEST_PROVIDER_FIRM_CODE = "1234"
 
 
 def set_token_office_codes(office_codes: set[str]) -> None:

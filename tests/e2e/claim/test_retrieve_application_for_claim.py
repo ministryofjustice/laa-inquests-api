@@ -2,8 +2,8 @@ import pytest
 
 from app.auth.rbac import Role
 from tests.e2e.auth import (
-    PROVIDER_FIRM_CODE,
-    PROVIDER_OFFICE_ID,
+    TEST_PROVIDER_FIRM_CODE,
+    TEST_PROVIDER_OFFICE_ID,
     set_token_office_codes,
 )
 from tests.e2e.factories import create_application_in_db, create_claim_in_db
@@ -56,8 +56,8 @@ class TestRetrieveApplicationForClaimOfficeIdCheck:
     @pytest.mark.parametrize(
         ("application_office_id", "token_office_ids"),
         [
-            (PROVIDER_OFFICE_ID, {PROVIDER_OFFICE_ID}),
-            ("U68YP1", {PROVIDER_OFFICE_ID, "U68YP1"}),
+            (TEST_PROVIDER_OFFICE_ID, {TEST_PROVIDER_OFFICE_ID}),
+            ("U68YP1", {TEST_PROVIDER_OFFICE_ID, "U68YP1"}),
         ],
         ids=["own-office", "second-office-in-token"],
     )
@@ -69,7 +69,7 @@ class TestRetrieveApplicationForClaimOfficeIdCheck:
             session,
             provider_overrides={
                 "office_id": application_office_id,
-                "firm_code": PROVIDER_FIRM_CODE,
+                "firm_code": TEST_PROVIDER_FIRM_CODE,
             },
         )
         claim = create_claim_in_db(session, application_id=application.application_id)
@@ -81,13 +81,13 @@ class TestRetrieveApplicationForClaimOfficeIdCheck:
 
     @pytest.mark.parametrize(
         ("firm_code", "application_office_id"),
-        [(PROVIDER_FIRM_CODE, "U68YP1"), ("ZZ999Z", "P38Y31")],
+        [(TEST_PROVIDER_FIRM_CODE, "U68YP1"), ("ZZ999Z", "P38Y31")],
         ids=["same-firm-different-office", "different-firm"],
     )
     def test_404_provider_cannot_get_application_when_application_office_id_mismatches_with_the_one_in_the_token(
         self, session, client, firm_code, application_office_id
     ):
-        set_token_office_codes({PROVIDER_OFFICE_ID})
+        set_token_office_codes({TEST_PROVIDER_OFFICE_ID})
         application = create_application_in_db(
             session,
             provider_overrides={
@@ -113,8 +113,8 @@ class TestRetrieveApplicationForClaimOfficeIdCheck:
         application = create_application_in_db(
             session,
             provider_overrides={
-                "office_id": PROVIDER_OFFICE_ID,
-                "firm_code": PROVIDER_FIRM_CODE,
+                "office_id": TEST_PROVIDER_OFFICE_ID,
+                "firm_code": TEST_PROVIDER_FIRM_CODE,
             },
         )
         claim = create_claim_in_db(session, application_id=application.application_id)
