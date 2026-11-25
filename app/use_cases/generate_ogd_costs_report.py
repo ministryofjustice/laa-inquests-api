@@ -1,9 +1,9 @@
-import csv
 import io
 import logging
 from datetime import date
 
 from app.domain.constants.report_csv_headers import OGD_COSTS_REPORT_HEADERS
+from app.domain.csv_safety import SafeCsvWriter
 from app.domain.ogd_costs_report import (
     InvalidOgdCostsRecordError,
     build_ogd_costs_row,
@@ -29,8 +29,7 @@ class GenerateOgdCostsReportUseCase:
         )
 
         buffer = io.StringIO()
-        writer = csv.writer(buffer)
-        writer.writerow(OGD_COSTS_REPORT_HEADERS)
+        writer = SafeCsvWriter(buffer, OGD_COSTS_REPORT_HEADERS)
         row_count = 0
 
         try:

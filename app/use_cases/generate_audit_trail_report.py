@@ -1,4 +1,3 @@
-import csv
 import heapq
 import io
 import logging
@@ -7,6 +6,7 @@ from datetime import UTC, date, datetime
 from app.domain.audit_event_catalogue import EventDescriptionError, describe_event
 from app.domain.audit_trail import AuditTrailEvent, csv_safe
 from app.domain.constants.report_csv_headers import AUDIT_TRAIL_REPORT_HEADERS
+from app.domain.csv_safety import SafeCsvWriter
 from app.logging_utils import build_log_extra
 from app.ports.audit_trail_report_port import AuditTrailReportPort
 from app.ports.provider_details_port import ProviderDetailsPort
@@ -87,8 +87,7 @@ class GenerateAuditTrailReportUseCase:
         self, events: list[AuditTrailEvent], firm_names: dict[str, str]
     ) -> str:
         buffer = io.StringIO()
-        writer = csv.writer(buffer)
-        writer.writerow(AUDIT_TRAIL_REPORT_HEADERS)
+        writer = SafeCsvWriter(buffer, AUDIT_TRAIL_REPORT_HEADERS)
         for event in events:
             writer.writerow(self._build_row(event, firm_names))
         return buffer.getvalue()

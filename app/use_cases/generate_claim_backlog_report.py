@@ -1,8 +1,8 @@
-import csv
 import io
 import logging
 
 from app.domain.constants.report_csv_headers import CLAIMS_BACKLOG_REPORT_HEADERS
+from app.domain.csv_safety import Amount, SafeCsvWriter
 from app.logging_utils import build_log_extra
 from app.models.application.index import Application
 from app.ports.claim_backlog_port import ClaimBacklogPort
@@ -29,8 +29,7 @@ class GenerateClaimBacklogReportUseCase:
             )
 
             output = io.StringIO()
-            writer = csv.writer(output)
-            writer.writerow(CLAIMS_BACKLOG_REPORT_HEADERS)
+            writer = SafeCsvWriter(output, CLAIMS_BACKLOG_REPORT_HEADERS)
 
             for claim in claims:
                 application = claim.application
@@ -59,17 +58,17 @@ class GenerateClaimBacklogReportUseCase:
                         str(claim.claim_reference),
                         claim.status_id.value,
                         (
-                            f"{claim.total_profit_cost_vat_zero:.2f}"
+                            Amount(f"{claim.total_profit_cost_vat_zero:.2f}")
                             if claim.total_profit_cost_vat_zero is not None
                             else ""
                         ),
                         (
-                            f"{claim.total_profit_cost_net:.2f}"
+                            Amount(f"{claim.total_profit_cost_net:.2f}")
                             if claim.total_profit_cost_net is not None
                             else ""
                         ),
                         (
-                            f"{claim.total_profit_cost_gross:.2f}"
+                            Amount(f"{claim.total_profit_cost_gross:.2f}")
                             if claim.total_profit_cost_gross is not None
                             else ""
                         ),

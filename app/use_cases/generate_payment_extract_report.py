@@ -1,4 +1,3 @@
-import csv
 import io
 import itertools
 import logging
@@ -6,7 +5,7 @@ from collections.abc import Iterator
 from datetime import UTC, date, datetime
 
 from app.domain.constants.report_csv_headers import PAYMENT_EXTRACT_REPORT_HEADERS
-from app.domain.csv_safety import neutralise_csv_formula
+from app.domain.csv_safety import Amount, SafeCsvWriter, neutralise_csv_formula
 from app.domain.payment_extract_report import (
     PaymentExtractReportSourceLine,
     PaymentLineClassification,
@@ -112,8 +111,7 @@ class GeneratePaymentExtractReportUseCase:
         classifications: dict[PaymentLineType, PaymentLineClassification],
     ) -> Iterator[str]:
         buffer = io.StringIO()
-        writer = csv.writer(buffer)
-        writer.writerow(PAYMENT_EXTRACT_REPORT_HEADERS)
+        writer = SafeCsvWriter(buffer, PAYMENT_EXTRACT_REPORT_HEADERS)
         row_count = 0
 
         try:
@@ -159,7 +157,7 @@ class GeneratePaymentExtractReportUseCase:
 
         return [
             classification.description,
-            f"{line.invoice_amount:.2f}",
+            Amount(f"{line.invoice_amount:.2f}"),
             line.invoice_date.isoformat(),
             line.line_type.invoice_type.value,
             line.invoice_number,
