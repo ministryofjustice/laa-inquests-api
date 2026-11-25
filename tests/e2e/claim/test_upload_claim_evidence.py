@@ -15,6 +15,14 @@ from app.routers.claims import get_sds_port
 from app.routers.dependencies import get_current_provider_office_codes
 from app.use_cases.exceptions import ClaimEvidenceUploadError
 from tests.helpers.multipart import UNSAFE_FILE_NAMES, raw_file_upload
+from tests.helpers.spreadsheet_files import (
+    MACRO_SHEET_XLSX,
+    MACRO_XLSX,
+    OLE2_XLS,
+    PLAIN_XLSX,
+    XLSX_MIME_TYPE,
+    build_zip,
+)
 
 
 def is_valid_uuid(val):
@@ -28,19 +36,22 @@ def is_valid_uuid(val):
 class TestUploadClaimEvidenceOfficeId:
     @pytest.mark.parametrize("office_id", ["0U651L", "1A234B"])
     @pytest.mark.parametrize(
-        ("file_name", "content_type"),
+        ("file_name", "content_type", "content"),
         [
-            pytest.param("poa_evidence.pdf", "application/pdf", id="poa"),
-            pytest.param("final_bill_evidence.pdf", "application/pdf", id="final-bill"),
             pytest.param(
-                "cost_template.xlsx",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                id="cost-template-xlsx",
+                "poa_evidence.pdf", "application/pdf", b"test content", id="poa"
             ),
             pytest.param(
-                "cost_template.xls",
-                "application/vnd.ms-excel",
-                id="cost-template-xls",
+                "final_bill_evidence.pdf",
+                "application/pdf",
+                b"test content",
+                id="final-bill",
+            ),
+            pytest.param(
+                "cost_template.xlsx",
+                XLSX_MIME_TYPE,
+                PLAIN_XLSX,
+                id="cost-template-xlsx",
             ),
         ],
     )
@@ -51,11 +62,11 @@ class TestUploadClaimEvidenceOfficeId:
         office_id: str,
         file_name: str,
         content_type: str,
+        content: bytes,
     ) -> None:
         api.dependency_overrides[get_current_provider_office_codes] = lambda: frozenset(
             {"0U651L", "1A234B"}
         )
-        content = b"test content"
 
         response = client.post(
             "/claims/evidence",
@@ -175,8 +186,8 @@ def test_201_upload_claim_evidence_accepts_xlsx(client):
         files={
             "file": (
                 "claim_cost_template.xlsx",
-                io.BytesIO(b"test content"),
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                io.BytesIO(PLAIN_XLSX),
+                XLSX_MIME_TYPE,
             )
         },
         headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
@@ -187,23 +198,98 @@ def test_201_upload_claim_evidence_accepts_xlsx(client):
     assert is_valid_uuid(body["claimEvidenceId"])
 
 
-def test_201_upload_claim_evidence_accepts_xls(client):
-    response = client.post(
+def _upload_spreadsheet(client, file_name, content, mime_type=XLSX_MIME_TYPE):
+    return client.post(
         "/claims/evidence",
         data={"office_id": "0U651L"},
-        files={
-            "file": (
-                "claim_cost_template.xls",
-                io.BytesIO(b"test content"),
-                "application/vnd.ms-excel",
-            )
-        },
+        files={"file": (file_name, io.BytesIO(content), mime_type)},
         headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
     )
-    assert response.status_code == 201
-    body = response.json()
-    assert "claimEvidenceId" in body
-    assert is_valid_uuid(body["claimEvidenceId"])
+
+
+@pytest.mark.parametrize(
+    ("file_name", "content", "mime_type", "expected_code"),
+    [
+        pytest.param(
+            "claim_cost_template.xlsx",
+            MACRO_XLSX,
+            XLSX_MIME_TYPE,
+            "MACROS_NOT_ALLOWED",
+            id="macro_workbook_declared_as_xlsx",
+        ),
+        pytest.param(
+            "claim_cost_template.xlsx",
+            MACRO_SHEET_XLSX,
+            XLSX_MIME_TYPE,
+            "MACROS_NOT_ALLOWED",
+            id="excel_4_macro_sheet",
+        ),
+        pytest.param(
+            "claim_cost_template.xlsm",
+            MACRO_XLSX,
+            "application/vnd.ms-excel.sheet.macroEnabled.12",
+            "UNSUPPORTED_FILE_TYPE",
+            id="xlsm_extension",
+        ),
+        pytest.param(
+            "claim_cost_template.xls",
+            OLE2_XLS,
+            "application/vnd.ms-excel",
+            "UNSUPPORTED_FILE_TYPE",
+            id="xls_extension",
+        ),
+        pytest.param(
+            "claim_evidence.pdf",
+            MACRO_XLSX,
+            "application/pdf",
+            "CONTENT_MISMATCH",
+            id="macro_workbook_renamed_to_pdf",
+        ),
+        pytest.param(
+            "claim_cost_template.xlsx",
+            b"test content",
+            XLSX_MIME_TYPE,
+            "CONTENT_MISMATCH",
+            id="xlsx_name_with_non_zip_content",
+        ),
+        pytest.param(
+            "claim_cost_template.xlsx",
+            build_zip((("readme.txt", b"not a workbook"),)),
+            XLSX_MIME_TYPE,
+            "INVALID_SPREADSHEET",
+            id="zip_that_is_not_a_workbook",
+        ),
+    ],
+)
+def test_422_upload_claim_evidence_rejects_unsafe_spreadsheet(
+    client, file_name, content, mime_type, expected_code
+):
+    response = _upload_spreadsheet(client, file_name, content, mime_type)
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["code"] == expected_code
+    assert detail["message"]
+
+
+def test_422_rejected_spreadsheet_is_not_sent_to_sds(client):
+    mock_sds = MagicMock()
+    api.dependency_overrides[get_sds_port] = lambda: mock_sds
+
+    response = _upload_spreadsheet(client, "claim_cost_template.xlsx", MACRO_XLSX)
+
+    assert response.status_code == 422
+    mock_sds.virus_check_claim_evidence.assert_not_called()
+    mock_sds.save_claim_evidence.assert_not_called()
+
+
+def test_422_rejected_spreadsheet_is_not_stored(client, session):
+    evidence_count_before = len(session.exec(select(ClaimEvidence)).all())
+
+    response = _upload_spreadsheet(client, "claim_cost_template.xlsx", MACRO_XLSX)
+
+    assert response.status_code == 422
+    assert len(session.exec(select(ClaimEvidence)).all()) == evidence_count_before
 
 
 def test_422_upload_claim_evidence_with_no_file(client):
@@ -323,7 +409,7 @@ class TestUploadClaimEvidenceFileName:
 
     @pytest.mark.parametrize(
         "file_name",
-        ["claim_evidence.pdf", "Evidence (1).pdf", "Jane Doe - invoice_2024.xlsx"],
+        ["claim_evidence.pdf", "Evidence (1).pdf", "Jane Doe - invoice_2024.pdf"],
     )
     def test_201_upload_claim_evidence_with_normal_file_name(self, client, file_name):
         response = raw_file_upload(
@@ -435,5 +521,26 @@ class TestUploadClaimEvidenceSentryPii:
 
         assert response.status_code == 422
         assert len(captured_sentry_events) >= 1
+        assert "Jane" not in json.dumps(captured_sentry_events)
+        assert "passport" not in json.dumps(captured_sentry_events)
+
+    def test_422_rejected_spreadsheet_does_not_send_file_name_to_sentry_or_response(
+        self, client, captured_sentry_events
+    ):
+        response = client.post(
+            "/claims/evidence",
+            data={"office_id": "0U651L"},
+            files={
+                "file": (
+                    "Jane Doe passport.xlsx",
+                    io.BytesIO(MACRO_XLSX),
+                    XLSX_MIME_TYPE,
+                )
+            },
+            headers={"Authorization": f"Bearer {Role.PROVIDER_CLAIMS_USER.value}"},
+        )
+
+        assert response.status_code == 422
+        assert "Jane" not in response.text
         assert "Jane" not in json.dumps(captured_sentry_events)
         assert "passport" not in json.dumps(captured_sentry_events)
