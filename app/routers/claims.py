@@ -258,12 +258,13 @@ def retrieve_claim_evidence(
 )
 def retrieve_application_for_claim(
     claim_reference: str,
+    caller: Annotated[Caller, Depends(get_caller)],
     use_case: RetrieveApplicationForClaimUseCase = Depends(
         get_retrieve_application_for_claim_use_case
     ),
 ) -> ClaimApplicationResponse:
     try:
-        laa_reference = use_case.execute(claim_reference)
+        laa_reference = use_case.execute(claim_reference, caller)
         return ClaimApplicationResponse(laa_reference=laa_reference)
     except ClaimNotFoundError:
         raise HTTPException(status_code=404, detail="Claim not found")
