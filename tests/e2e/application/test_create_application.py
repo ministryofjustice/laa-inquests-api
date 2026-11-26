@@ -80,7 +80,6 @@ def valid_application_body(session):
     return body
 
 
-
 class TestCreateApplication:
     def test_201_create_application_response_contains_expected_base_properties(
         self, client, session
@@ -97,7 +96,7 @@ class TestCreateApplication:
 
         body = _make_request_body()
         body["coronersLetterId"] = str(letter.coroners_letter_id)
-        
+
         response = client.post(
             "/applications",
             json=body,
@@ -143,7 +142,9 @@ class TestCreateApplication:
         assert isinstance(proceeding["proceedingName"], str)
         assert isinstance(proceeding["proceedingDescription"], str)
 
-    def test_201_responds_with_expected_client_details(self, client, valid_application_body):
+    def test_201_responds_with_expected_client_details(
+        self, client, valid_application_body
+    ):
         response = client.post(
             "/applications",
             json=valid_application_body,
@@ -197,7 +198,9 @@ class TestCreateApplication:
         ).one()
         assert application.provider.firm_code == "0A123B"
 
-    def test_201_create_application_creates_history_event(self, client, session, valid_application_body):
+    def test_201_create_application_creates_history_event(
+        self, client, session, valid_application_body
+    ):
         response = client.post(
             "/applications",
             json=valid_application_body,
@@ -231,7 +234,9 @@ class TestCreateApplication:
         assert history_event.event_data is None
         assert history_event.application_id == application.application_id
 
-    def test_201_create_application_creates_duplicate_records(self, client, session, valid_application_body):
+    def test_201_create_application_creates_duplicate_records(
+        self, client, session, valid_application_body
+    ):
         first_application_id = (
             session.exec(select(Application).order_by(Application.created_at.desc()))
             .first()
@@ -270,9 +275,13 @@ class TestCreateApplication:
         assert len(duplicate_records) == 1
         assert response.json()["potentialDuplicateApplications"] is None
 
-    def test_201_create_application_can_omit_correspondence_address(self, client, valid_application_body):
+    def test_201_create_application_can_omit_correspondence_address(
+        self, client, valid_application_body
+    ):
         request_body = valid_application_body
-        request_body["client"]["correspondenceAddressSource"] = "USE_CLIENT_HOME_ADDRESS"
+        request_body["client"]["correspondenceAddressSource"] = (
+            "USE_CLIENT_HOME_ADDRESS"
+        )
         request_body["client"].pop("correspondenceAddress")
 
         response = client.post(
@@ -307,7 +316,9 @@ class TestCreateApplication:
         public_body = new_application["publicBodies"][0]
         assert public_body["publicBodyDescription"] == "Department for Transport"
 
-    def test_201_create_application_response_includes_deceased_details(self, client, valid_application_body):
+    def test_201_create_application_response_includes_deceased_details(
+        self, client, valid_application_body
+    ):
         response = client.post(
             "/applications",
             json=valid_application_body,
@@ -635,7 +646,9 @@ class TestCreateApplication:
         assert response.status_code == 201
         assert response.json()["potentialDuplicateApplications"] is None
 
-    def test_201_create_application_response_includes_provider_email(self, client, valid_application_body):
+    def test_201_create_application_response_includes_provider_email(
+        self, client, valid_application_body
+    ):
         response = client.post(
             "/applications",
             json=valid_application_body,
@@ -671,7 +684,9 @@ class TestCreateApplication:
 
         assert response.status_code == 403
 
-    def test_404_create_application_rejected_when_office_not_found(self, client, valid_application_body):
+    def test_404_create_application_rejected_when_office_not_found(
+        self, client, valid_application_body
+    ):
         def get_provider_details_port_override():
             mock_port = MagicMock()
             mock_port.get_firm_name.side_effect = ProviderOfficeNotFoundError(
@@ -801,7 +816,9 @@ class TestCreateApplication:
 
 class TestCreateApplicationRbac:
     def test_201_create_application_with_provider_application_user_app_role(
-        self, client, valid_application_body,
+        self,
+        client,
+        valid_application_body,
     ):
         response = client.post(
             "/applications",
@@ -813,7 +830,9 @@ class TestCreateApplicationRbac:
         )
         assert response.status_code == 201
 
-    def test_201_create_application_with_permission_override(self, client, valid_application_body):
+    def test_201_create_application_with_permission_override(
+        self, client, valid_application_body
+    ):
         def get_current_user_permissions_override():
             return {Permission.APPLICATION_CREATE}
 

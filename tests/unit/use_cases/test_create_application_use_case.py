@@ -62,6 +62,7 @@ def _make_request(email_address: str = "provider@example.com") -> ApplicationCre
         }
     )
 
+
 @pytest.fixture
 def matching_coroners_letter_port():
     port = MagicMock(spec=GetCoronersLetterPort)
@@ -71,6 +72,7 @@ def matching_coroners_letter_port():
         office_id="0U651L",
     )
     return port
+
 
 def test_execute_creates_application_sends_confirmation_email_and_commits(
     matching_coroners_letter_port,
@@ -194,6 +196,7 @@ def test_execute_rolls_back_and_reraises_when_notify_fails(
     create_application_port.commit.assert_not_called()
     create_application_port.rollback.assert_called_once_with()
 
+
 def test_execute_rolls_back_and_reraises_when_commit_fails(
     matching_coroners_letter_port,
 ):
@@ -226,6 +229,7 @@ def test_execute_rolls_back_and_reraises_when_commit_fails(
         "provider@example.com",
     )
     create_application_port.rollback.assert_called_once_with()
+
 
 def test_execute_rejects_provider_office_mismatch_before_creation(
     matching_coroners_letter_port,
@@ -265,6 +269,7 @@ def test_execute_rejects_provider_office_mismatch_before_creation(
     matching_coroners_letter_port.get_coroners_letter_by_id.assert_not_called()
     create_application_port.create_application.assert_not_called()
     create_application_port.rollback.assert_not_called()
+
 
 def test_execute_rolls_back_and_reraises_when_provider_office_not_found(
     matching_coroners_letter_port,
@@ -370,6 +375,7 @@ def test_execute_rolls_back_if_identifies_duplicates_fails(
     )
     create_application_port.commit.assert_not_called()
     create_application_port.rollback.assert_called_once()
+
 
 def test_execute_rejects_letter_owned_by_another_office():
     request = _make_request()

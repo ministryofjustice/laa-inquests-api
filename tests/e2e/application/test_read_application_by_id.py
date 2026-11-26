@@ -1,4 +1,3 @@
-
 import pytest
 from sqlmodel import select
 
@@ -88,7 +87,9 @@ def test_200_returns_client_correspondence_recipient_flag_when_client_is_recipie
     assert requested_application["client"]["correspondenceRecipient"] is None
 
 
-def test_200_returns_explicit_correspondence_recipient_from_stored_application(client, session):
+def test_200_returns_explicit_correspondence_recipient_from_stored_application(
+    client, session
+):
 
     letter = CoronersLetter(
         sds_file_name="test_sds_file.pdf",

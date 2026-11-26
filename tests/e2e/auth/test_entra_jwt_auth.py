@@ -68,7 +68,7 @@ def test_201_create_application_returns_201_when_provider_application_user_token
 
     body = create_application_payload()
     body["coronersLetterId"] = str(letter.coroners_letter_id)
-    
+
     response = client.post(
         "/applications",
         json=body,

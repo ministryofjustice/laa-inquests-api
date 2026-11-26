@@ -56,7 +56,10 @@ class CreateApplicationUseCase:
         coroners_letter = self.get_coroners_letter_port.get_coroners_letter_by_id(
             request.coroners_letter_id
         )
-        if coroners_letter is None or coroners_letter.office_id != request.provider.office_id:
+        if (
+            coroners_letter is None
+            or coroners_letter.office_id != request.provider.office_id
+        ):
             raise CoronersLetterNotFoundError.safe("Coroners letter not found")
 
         application = self.create_application_port.create_application(
