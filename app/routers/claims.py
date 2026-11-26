@@ -19,7 +19,7 @@ from app.auth.rbac import Permission, require_permission_from
 from app.domain.caller import Caller
 from app.logging_utils import build_log_extra
 from app.models.claim.index import ClaimApplicationResponse, UploadClaimEvidenceResponse
-from app.models.validated_types import OfficeCode
+from app.models.validated_types import ClaimReference, OfficeCode
 from app.ports.claim.delete_claim_evidence_port import DeleteClaimEvidencePort
 from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.ports.claim.get_claim_evidence_port import GetClaimEvidencePort
@@ -272,7 +272,7 @@ def retrieve_claim_evidence(
     dependencies=[Depends(require_permission_from(Permission.CLAIM_READ))],
 )
 def retrieve_application_for_claim(
-    claim_reference: str,
+    claim_reference: ClaimReference,
     caller: Annotated[Caller, Depends(get_caller)],
     use_case: RetrieveApplicationForClaimUseCase = Depends(
         get_retrieve_application_for_claim_use_case

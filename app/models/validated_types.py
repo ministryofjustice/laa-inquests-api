@@ -19,6 +19,8 @@ MIN_POSTCODE_LENGTH = 5
 MAX_POSTCODE_LENGTH = 8
 MAX_OFFICE_CODE_LENGTH = 20
 MAX_EMAIL_LENGTH = 254
+MAX_REFERENCE_PARAM_LENGTH = 20
+MAX_SEARCH_REFERENCE_LENGTH = 50
 _ALLOWED_PROSE_WHITESPACE = frozenset("\n\r\t")
 _FORBIDDEN_PROSE_CHARACTERS = frozenset("<>")
 _CONTROL_CATEGORIES = frozenset({"Cc", "Cf"})
@@ -45,6 +47,8 @@ _ORGANISATION_NAME_PATTERN = rf"^(?:{_ORGANISATION_BODY})?$"
 _REFERENCE_TEXT_PATTERN = r"^(?:[A-Za-z0-9][A-Za-z0-9 ./-]*)?$"
 _POSTCODE_PATTERN = r"^[A-Za-z0-9 ]+$"
 _OFFICE_CODE_PATTERN = r"^[A-Za-z0-9]+$"
+_REFERENCE_PARAM_PATTERN = r"^[A-Za-z0-9-]+$"
+_FIRM_CODE_PATTERN = r"^[A-Za-z0-9]+$"
 
 # Letters, digits and ._%+'#- before the @ (a quote mark is common in surnames, and "#"
 # appears in guest-account usernames such as "jane_firm.com#EXT#@tenant..."), and ASCII
@@ -216,4 +220,34 @@ EmailAddress = Annotated[
     str,
     StringConstraints(max_length=MAX_EMAIL_LENGTH, pattern=_EMAIL_PATTERN),
     BeforeValidator(_normalise_short_text),
+]
+
+# Reference path params are shape-checked only, never matched to the exact INQ-XXX-XXX
+# format, so an unknown but well-formed reference is still a 404. They are not trimmed
+# or case-folded: the use cases look references up exactly as given.
+_ReferenceParam = Annotated[
+    str,
+    StringConstraints(
+        min_length=1,
+        max_length=MAX_REFERENCE_PARAM_LENGTH,
+        pattern=_REFERENCE_PARAM_PATTERN,
+    ),
+]
+LaaReference = _ReferenceParam
+ClaimReference = _ReferenceParam
+
+# The firm id is put into a URL for the provider details service, so anything that could
+# change that URL (dots, "?", "#", "/", spaces) is rejected.
+FirmCode = Annotated[
+    str,
+    StringConstraints(
+        min_length=1, max_length=MAX_REFERENCE_PARAM_LENGTH, pattern=_FIRM_CODE_PATTERN
+    ),
+]
+
+# Only capped. The external UI sends whatever the user types into case search, and the
+# use case trims, uppercases and returns an empty list for no match, which must stay a
+# "no results" page rather than become an error.
+SearchReference = Annotated[
+    str, StringConstraints(max_length=MAX_SEARCH_REFERENCE_LENGTH)
 ]

@@ -3,9 +3,12 @@ from pydantic import TypeAdapter, ValidationError
 
 from app.models.validated_types import (
     AddressLine,
+    ClaimReference,
     CoronersReference,
     CountyName,
     EmailAddress,
+    FirmCode,
+    LaaReference,
     Nino,
     OfficeCode,
     OrganisationName,
@@ -15,6 +18,7 @@ from app.models.validated_types import (
     ProseText,
     RecipientName,
     RelationshipText,
+    SearchReference,
     TownName,
 )
 
@@ -563,6 +567,67 @@ class TestEmailAddress:
     def test_rejects_non_string_input(self, value):
         with pytest.raises(ValidationError):
             validate(EmailAddress, value)
+
+
+class TestReferenceParams:
+    @pytest.mark.parametrize("annotated_type", [LaaReference, ClaimReference])
+    @pytest.mark.parametrize(
+        "value",
+        ["INQ-ABC-DEF", "INQC-ABCD-EFGH", "99999", "inq-abc-def", "A", "A" * 20],
+    )
+    def test_accepts_well_formed_references_including_unknown_ones(
+        self, annotated_type, value
+    ):
+        assert validate(annotated_type, value) == value
+
+    @pytest.mark.parametrize("annotated_type", [LaaReference, ClaimReference])
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "",
+            "INQ ABC",
+            "<b>",
+            "INQ_ABC",
+            "INQ.ABC",
+            "INQ-ABC-DEF\n",
+            "../x",
+            "é",
+            "A" * 21,
+        ],
+    )
+    def test_rejects_malformed_references(self, annotated_type, value):
+        with pytest.raises(ValidationError):
+            validate(annotated_type, value)
+
+
+class TestFirmCode:
+    @pytest.mark.parametrize("value", ["0A123B", "123", "ABC123", "A" * 20])
+    def test_accepts_letters_and_digits(self, value):
+        assert validate(FirmCode, value) == value
+
+    @pytest.mark.parametrize(
+        "value", ["", "a b", "a?b", "a#b", "a.b", "a/b", "a-b", "é", "A" * 21]
+    )
+    def test_rejects_characters_that_could_alter_the_provider_details_url(self, value):
+        with pytest.raises(ValidationError):
+            validate(FirmCode, value)
+
+
+class TestSearchReference:
+    @pytest.mark.parametrize(
+        "value", ["", "INQ-ABC-DEF", " inq abc def ", "<b>", "A" * 50]
+    )
+    def test_only_caps_the_length_so_typos_still_search_and_find_nothing(self, value):
+        assert validate(SearchReference, value) == value
+
+    def test_rejects_more_than_50_characters(self):
+        with pytest.raises(ValidationError):
+            validate(SearchReference, "A" * 51)
+
+    @pytest.mark.parametrize("value", [None, 123])
+    def test_rejects_non_string_input(self, value):
+        with pytest.raises(ValidationError):
+            validate(SearchReference, value)
 
 
 class TestProseText:

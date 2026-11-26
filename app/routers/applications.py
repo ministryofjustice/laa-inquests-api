@@ -55,7 +55,13 @@ from app.models.claim.index import (
     RejectClaimRequest,
 )
 from app.models.history.index import CreateNoteRequest, HistoryEventResponse
-from app.models.validated_types import OfficeCode
+from app.models.validated_types import (
+    ClaimReference,
+    FirmCode,
+    LaaReference,
+    OfficeCode,
+    SearchReference,
+)
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_decision_amount_port import (
     CreateClaimDecisionAmountPort,
@@ -666,7 +672,7 @@ async def upload_coroners_letter(
     dependencies=[Depends(require_permission_from(Permission.CLAIM_CREATE))],
 )
 def create_claim(
-    laa_reference: str,
+    laa_reference: LaaReference,
     request: ClaimCreate,
     firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
     office_codes: Annotated[frozenset[str], Depends(get_current_provider_office_codes)],
@@ -743,7 +749,7 @@ def create_claim(
     dependencies=[Depends(require_permission_from(Permission.CASE_NOTE_CREATE))],
 )
 def create_note(
-    laa_reference: str,
+    laa_reference: LaaReference,
     request: CreateNoteRequest,
     use_case: CreateNoteUseCase = Depends(get_create_note_use_case),
 ) -> Response:
@@ -793,7 +799,7 @@ def list_public_bodies(
     dependencies=[Depends(require_permission_from(Permission.APPLICATION_SEARCH))],
 )
 async def search_application(
-    laa_reference: str,
+    laa_reference: SearchReference,
     firm_code: Annotated[str, Depends(get_current_provider_firm_code)],
     office_codes: Annotated[frozenset[str], Depends(get_current_provider_office_codes)],
     merits_decision: MeritsDecision | None = None,
@@ -830,7 +836,7 @@ async def search_application(
     dependencies=[Depends(require_permission_from(Permission.PROVIDER_OFFICES_READ))],
 )
 async def list_provider_offices(
-    firm_id: str,
+    firm_id: FirmCode,
     office_codes: Annotated[frozenset[str], Depends(get_current_provider_office_codes)],
     use_case: ListProviderOfficesUseCase = Depends(get_list_provider_offices_use_case),
     request: Request = None,
@@ -870,7 +876,7 @@ async def list_provider_offices(
     ],
 )
 async def read_application(
-    laa_reference: str,
+    laa_reference: LaaReference,
     use_case: GetApplicationUseCase = Depends(get_get_application_use_case),
 ) -> ApplicationResponse:
     """Get information about a given application."""
@@ -896,7 +902,7 @@ async def read_application(
     ],
 )
 def read_certificate(
-    laa_reference: str,
+    laa_reference: LaaReference,
     use_case: RetrieveCertificateUseCase = Depends(get_retrieve_certificate_use_case),
 ) -> ApplicationCertificateResponse:
     """Get the populated certificate context for a given application."""
@@ -923,7 +929,7 @@ def read_certificate(
     dependencies=[Depends(require_permission_from(Permission.CLAIM_READ))],
 )
 def list_application_claims(
-    laa_reference: str,
+    laa_reference: LaaReference,
     assessed: bool,
     caller: Annotated[Caller, Depends(get_caller)],
     use_case: ListApplicationClaimsUseCase = Depends(
@@ -944,8 +950,8 @@ def list_application_claims(
     dependencies=[Depends(require_permission_from(Permission.CLAIM_READ))],
 )
 def read_claim(
-    laa_reference: str,
-    claim_reference: str,
+    laa_reference: LaaReference,
+    claim_reference: ClaimReference,
     caller: Annotated[Caller, Depends(get_caller)],
     use_case: GetClaimUseCase = Depends(get_get_claim_use_case),
 ) -> ClaimByIdResponse:
@@ -978,7 +984,7 @@ def get_coroners_letter_use_case(
     dependencies=[Depends(require_permission_from(Permission.APPLICATION_READ))],
 )
 def retrieve_coroners_letter(
-    laa_reference: str,
+    laa_reference: LaaReference,
     use_case: RetrieveCoronersLetterUseCase = Depends(get_coroners_letter_use_case),
 ) -> StreamingResponse:
     """Stream the coroner's letter for a given application."""
@@ -1019,7 +1025,7 @@ def retrieve_coroners_letter(
     dependencies=[Depends(require_permission_from(Permission.HISTORY_READ))],
 )
 def get_application_history(
-    laa_reference: str,
+    laa_reference: LaaReference,
     use_case: GetApplicationHistoryUseCase = Depends(get_application_history_use_case),
 ) -> list[HistoryEventResponse]:
     """Get the history of a given application."""
@@ -1036,8 +1042,8 @@ def get_application_history(
     dependencies=[Depends(require_permission_from(Permission.CLAIM_MANAGE))],
 )
 def pay_in_full_claim(
-    laa_reference: str,
-    claim_reference: str,
+    laa_reference: LaaReference,
+    claim_reference: ClaimReference,
     request: PayInFullClaimRequest,
     use_case: PayInFullClaimUseCase = Depends(get_pay_in_full_claim_use_case),
 ) -> Response:
@@ -1075,8 +1081,8 @@ def pay_in_full_claim(
     dependencies=[Depends(require_permission_from(Permission.CLAIM_MANAGE))],
 )
 def reject_claim(
-    laa_reference: str,
-    claim_reference: str,
+    laa_reference: LaaReference,
+    claim_reference: ClaimReference,
     request: RejectClaimRequest,
     use_case: RejectClaimUseCase = Depends(get_reject_claim_use_case),
 ) -> Response:
@@ -1105,7 +1111,7 @@ def reject_claim(
     dependencies=[Depends(require_permission_from(Permission.APPLICATION_MANAGE))],
 )
 def grant_decision(
-    laa_reference: str,
+    laa_reference: LaaReference,
     request: GrantApplicationUpdate,
     use_case: GrantDecisionUseCase = Depends(get_grant_decision_use_case),
 ) -> Response:
@@ -1127,7 +1133,7 @@ def grant_decision(
     dependencies=[Depends(require_permission_from(Permission.APPLICATION_MANAGE))],
 )
 def update_application_public_bodies(
-    laa_reference: str,
+    laa_reference: LaaReference,
     request: UpdateApplicationPublicBodiesRequest,
     use_case: UpdatePublicBodiesUseCase = Depends(
         get_update_application_public_bodies_use_case
@@ -1152,7 +1158,7 @@ def update_application_public_bodies(
     dependencies=[Depends(require_permission_from(Permission.APPLICATION_MANAGE))],
 )
 def refuse_decision(
-    laa_reference: str,
+    laa_reference: LaaReference,
     request: RefuseApplicationUpdate,
     use_case: RefuseDecisionUseCase = Depends(get_make_merits_decision_use_case),
 ) -> Response:
