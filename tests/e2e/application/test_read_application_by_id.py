@@ -89,11 +89,21 @@ def test_200_returns_client_correspondence_recipient_flag_when_client_is_recipie
     assert requested_application["client"]["correspondenceRecipient"] is None
 
 
-def test_200_returns_explicit_correspondence_recipient_from_stored_application(client):
+def test_200_returns_explicit_correspondence_recipient_from_stored_application(client, session):
+
+    letter = CoronersLetter(
+        sds_file_name="test_sds_file.pdf",
+        file_name="test_file.pdf",
+        office_id="0U651L",
+    )
+    session.add(letter)
+    session.commit()
+    session.refresh(letter)
+
     create_response = client.post(
         "/applications",
         json={
-            "coronersLetterId": str(uuid.uuid4()),
+            "coronersLetterId": str(letter.coroners_letter_id),
             "proceeding": {"proceedingId": "IQ042"},
             "client": {
                 "clientFirstName": "Test",

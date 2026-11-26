@@ -227,6 +227,9 @@ def get_create_application_use_case(
     create_application_port: CreateApplicationPort = Depends(
         get_application_db_adapter
     ),
+    get_coroners_letter_port: GetCoronersLetterPort = Depends(
+        get_application_db_adapter
+    ),
     create_history_event_port: CreateHistoryEventPort = Depends(
         get_history_event_adapter
     ),
@@ -238,6 +241,7 @@ def get_create_application_use_case(
 ) -> CreateApplicationUseCase:
     return CreateApplicationUseCase(
         create_application_port=create_application_port,
+        get_coroners_letter_port=get_coroners_letter_port,
         create_history_event_port=create_history_event_port,
         gov_notify_port=gov_notify_port,
         provider_details_port=provider_details_port,
@@ -573,6 +577,8 @@ def create_application(
     try:
         application = use_case.execute(request, firm_code, user_office_codes)
         return application
+    except CoronersLetterNotFoundError:
+        raise HTTPException(status_code=404, detail="Coroners letter not found")
     except ProviderOfficeMismatchError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ProviderOfficeNotFoundError as e:

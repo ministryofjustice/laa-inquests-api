@@ -24,6 +24,7 @@ class CreateApplicationUseCase:
     def __init__(
         self,
         create_application_port: CreateApplicationPort,
+        get_coroners_letter_port: GetCoronersLetterPort,
         create_history_event_port: CreateHistoryEventPort,
         gov_notify_port: GovNotifyPort,
         provider_details_port: ProviderDetailsPort,
@@ -32,6 +33,7 @@ class CreateApplicationUseCase:
         self.create_application_port = create_application_port
         self.create_history_event_port = create_history_event_port
         self.gov_notify_port = gov_notify_port
+        self.get_coroners_letter_port = get_coroners_letter_port
         self.provider_details_port = provider_details_port
         self.identify_duplicate_applications_use_case = (
             identify_duplicate_applications_use_case
@@ -43,19 +45,25 @@ class CreateApplicationUseCase:
         firm_code: str,
         user_office_codes: frozenset[str],
     ) -> Application:
+        if request.provider.office_id not in user_office_codes:
+            logger.error(
+                f"Office id {request.provider.office_id} is not in the user's office codes"
+            )
+            raise ProviderOfficeMismatchError(
+                f"Office id {request.provider.office_id} is not in the user's office codes"
+            )
+
+        coroners_letter = self.get_coroners_letter_port.get_coroners_letter_by_id(
+            request.coroners_letter_id
+        )
+        if coroners_letter is None or coroners_letter.office_id != request.provider.office_id:
+            raise CoronersLetterNotFoundError.safe("Coroners letter not found")
+
         application = self.create_application_port.create_application(
             request, firm_code
         )
 
         try:
-            if application.provider.office_id not in user_office_codes:
-                logger.error(
-                    f"Office id {application.provider.office_id} is not in the user's office codes"
-                )
-                raise ProviderOfficeMismatchError(
-                    f"Office id {application.provider.office_id} is not in the user's office codes"
-                )
-
             self.provider_details_port.get_firm_name(
                 firm_code, application.provider.office_id
             )
