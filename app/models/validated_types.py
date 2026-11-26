@@ -21,6 +21,10 @@ MAX_OFFICE_CODE_LENGTH = 20
 MAX_EMAIL_LENGTH = 254
 MAX_REFERENCE_PARAM_LENGTH = 20
 MAX_SEARCH_REFERENCE_LENGTH = 50
+MIN_FURTHER_INFORMATION_LENGTH = 2
+MAX_FURTHER_INFORMATION_LENGTH = 500
+MAX_REFUSAL_JUSTIFICATION_LENGTH = 1500
+MAX_REJECTION_REASON_LENGTH = 500
 _ALLOWED_PROSE_WHITESPACE = frozenset("\n\r\t")
 _FORBIDDEN_PROSE_CHARACTERS = frozenset("<>")
 _CONTROL_CATEGORIES = frozenset({"Cc", "Cf"})
@@ -99,6 +103,44 @@ def _validate_prose_text(value: str) -> str:
 
 
 ProseText = Annotated[str, AfterValidator(_validate_prose_text)]
+
+
+def _at_least_two_characters_unless_empty(value: str) -> str:
+    if value and len(value) < MIN_FURTHER_INFORMATION_LENGTH:
+        raise ValueError("must be at least 2 characters when provided")
+    return value
+
+
+def _not_blank(value: str) -> str:
+    if not value.strip():
+        raise ValueError("must contain at least one visible character")
+    return value
+
+
+# The caps below mirror the UI's limits, which the API did not enforce before. Counting
+# is by code point here and by UTF-16 unit in the UI, so the API is never stricter.
+
+# The UI sends "" when nothing is entered, and 2-500 characters when something is.
+FurtherInformation = Annotated[
+    str,
+    StringConstraints(max_length=MAX_FURTHER_INFORMATION_LENGTH),
+    AfterValidator(_validate_prose_text),
+    AfterValidator(_at_least_two_characters_unless_empty),
+]
+
+# Whether a refusal justification is present and visible is checked on the request model.
+RefusalJustification = Annotated[
+    str,
+    StringConstraints(max_length=MAX_REFUSAL_JUSTIFICATION_LENGTH),
+    AfterValidator(_validate_prose_text),
+]
+
+RejectionReason = Annotated[
+    str,
+    StringConstraints(max_length=MAX_REJECTION_REASON_LENGTH),
+    AfterValidator(_validate_prose_text),
+    AfterValidator(_not_blank),
+]
 
 PersonName = Annotated[
     str,

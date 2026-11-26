@@ -53,6 +53,20 @@ class TestRefuseDecisionJustification:
 
         assert response.status_code == 204
 
+    def test_204_accepts_exactly_1500_characters(self, session, client):
+        application = create_application_in_db(session)
+
+        response = self._refuse(client, application.laa_reference, "A" * 1500)
+
+        assert response.status_code == 204
+
+    def test_422_rejects_more_than_1500_characters(self, session, client):
+        application = create_application_in_db(session)
+
+        response = self._refuse(client, application.laa_reference, "A" * 1501)
+
+        assert response.status_code == 422
+
 
 class TestRejectClaimJustification:
     @staticmethod
@@ -74,6 +88,15 @@ class TestRejectClaimJustification:
     @pytest.mark.parametrize("value", ACCEPTED_PROSE)
     def test_204_accepts_quotes_semicolons_and_newlines(self, session, client, value):
         assert self._reject(client, session, value).status_code == 204
+
+    def test_204_accepts_exactly_500_characters(self, session, client):
+        assert self._reject(client, session, "A" * 500).status_code == 204
+
+    @pytest.mark.parametrize("value", ["A" * 501, "", " ", "\n\t"])
+    def test_422_rejects_blank_and_more_than_500_characters(
+        self, session, client, value
+    ):
+        assert self._reject(client, session, value).status_code == 422
 
 
 class TestCreateNoteText:

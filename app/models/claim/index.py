@@ -26,7 +26,7 @@ from app.models.claim.enums import (
     ReasonCode,
     TaxCode,
 )
-from app.models.validated_types import EmailAddress, OrganisationName, ProseText
+from app.models.validated_types import EmailAddress, OrganisationName, RejectionReason
 
 
 class ClaimBase(SQLModel):
@@ -321,7 +321,7 @@ class RejectClaimRequest(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    justification: ProseText = PydanticField(
+    justification: RejectionReason = PydanticField(
         examples=["Rejected following manual review."]
     )
 

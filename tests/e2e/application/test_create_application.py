@@ -1065,6 +1065,22 @@ class TestCreateApplication:
 
         assert response.status_code == 201
 
+    @pytest.mark.parametrize("value", ["a", "A" * 501])
+    def test_422_rejected_when_further_information_is_one_character_or_over_500(
+        self, client, value
+    ):
+        body = _make_request_body()
+        body["deceased"]["furtherInformation"] = value
+
+        assert _post_application(client, body).status_code == 422
+
+    @pytest.mark.parametrize("value", ["ab", "A" * 500])
+    def test_201_accepts_further_information_at_the_ui_limits(self, client, value):
+        body = _make_request_body()
+        body["deceased"]["furtherInformation"] = value
+
+        assert _post_application(client, body).status_code == 201
+
     @pytest.mark.parametrize(
         "value",
         ["<script>alert(1)</script>", "a > b", "bad\x00value", "bad\x1bvalue"],

@@ -8,6 +8,7 @@ from app.models.validated_types import (
     CountyName,
     EmailAddress,
     FirmCode,
+    FurtherInformation,
     LaaReference,
     Nino,
     OfficeCode,
@@ -17,6 +18,8 @@ from app.models.validated_types import (
     PreviousReference,
     ProseText,
     RecipientName,
+    RefusalJustification,
+    RejectionReason,
     RelationshipText,
     SearchReference,
     TownName,
@@ -628,6 +631,56 @@ class TestSearchReference:
     def test_rejects_non_string_input(self, value):
         with pytest.raises(ValidationError):
             validate(SearchReference, value)
+
+
+class TestFurtherInformation:
+    @pytest.mark.parametrize(
+        "value",
+        ["", "ab", "Line one\nLine two", 'It\'s "quoted"; fine = & (ok)', "A" * 500],
+    )
+    def test_accepts_nothing_or_two_to_500_characters(self, value):
+        assert validate(FurtherInformation, value) == value
+
+    @pytest.mark.parametrize("value", ["a", "A" * 501])
+    def test_rejects_one_character_and_more_than_500(self, value):
+        with pytest.raises(ValidationError):
+            validate(FurtherInformation, value)
+
+    @pytest.mark.parametrize("value", ["<script>", "a > b", "bad\x00value"])
+    def test_still_rejects_angle_brackets_and_control_characters(self, value):
+        with pytest.raises(ValidationError):
+            validate(FurtherInformation, value)
+
+
+class TestRefusalJustification:
+    @pytest.mark.parametrize(
+        "value", ["Out of scope.", "Line one\nLine two", "A" * 1500]
+    )
+    def test_accepts_up_to_1500_characters(self, value):
+        assert validate(RefusalJustification, value) == value
+
+    @pytest.mark.parametrize("value", ["A" * 1501, "<b>", "bad\x00value"])
+    def test_rejects_more_than_1500_angle_brackets_and_control_characters(self, value):
+        with pytest.raises(ValidationError):
+            validate(RefusalJustification, value)
+
+
+class TestRejectionReason:
+    @pytest.mark.parametrize(
+        "value",
+        ["A", "Rejected following manual review.", "Line one\nLine two", "A" * 500],
+    )
+    def test_accepts_one_to_500_characters(self, value):
+        assert validate(RejectionReason, value) == value
+
+    @pytest.mark.parametrize(
+        "value", ["", " ", "\n\t", "A" * 501, "<b>", "bad\x00value"]
+    )
+    def test_rejects_blank_more_than_500_angle_brackets_and_control_characters(
+        self, value
+    ):
+        with pytest.raises(ValidationError):
+            validate(RejectionReason, value)
 
 
 class TestProseText:
