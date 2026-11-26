@@ -6,9 +6,9 @@ from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.notifications.enums import NotificationType
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
+from app.ports.get_coroners_letter_port import GetCoronersLetterPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.provider_details_port import ProviderDetailsPort
-from app.ports.get_coroners_letter_port import GetCoronersLetterPort
 from app.use_cases.exceptions import (
     CoronersLetterNotFoundError,
     ProviderOfficeMismatchError,
