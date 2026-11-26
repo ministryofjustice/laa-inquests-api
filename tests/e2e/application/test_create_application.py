@@ -277,6 +277,88 @@ class TestCreateApplication:
         assert len(duplicate_records) == 1
         assert response.json()["potentialDuplicateApplications"] is None
 
+    @staticmethod
+    def _duplicate_records_for(session, laa_reference, other_application_id):
+        application_id = (
+            session.exec(
+                select(Application).where(Application.laa_reference == laa_reference)
+            )
+            .one()
+            .application_id
+        )
+        return session.exec(
+            select(DuplicateApplicationRecord)
+            .where(DuplicateApplicationRecord.application_id == application_id)
+            .where(
+                DuplicateApplicationRecord.duplicate_application_id
+                == other_application_id
+            )
+        ).all()
+
+    @pytest.mark.parametrize(
+        ("first_name", "last_name"),
+        [
+            ("Tést", "Súrname"),
+            ("TEST", "SURNAME"),
+            ("Te\u0301st", "Surname"),
+            ("  Test ", "Surname"),
+        ],
+    )
+    def test_201_records_a_duplicate_when_the_name_differs_only_in_accents_or_case(
+        self, client, session, first_name, last_name
+    ):
+        existing_application_id = (
+            session.exec(select(Application)).first().application_id
+        )
+        body = _make_request_body()
+        body["deceased"].update(
+            {
+                "deceasedFirstName": first_name,
+                "deceasedLastName": last_name,
+                # Only the date of birth and the name match the existing application.
+                "deceasedDateOfBirth": "1993-02-01",
+                "coronersReference": "OTHER-REF-1",
+            }
+        )
+
+        response = _post_application(client, body)
+
+        assert response.status_code == 201
+        assert (
+            len(
+                self._duplicate_records_for(
+                    session, response.json()["laaReference"], existing_application_id
+                )
+            )
+            == 1
+        )
+
+    def test_201_does_not_record_a_duplicate_when_only_the_name_matches(
+        self, client, session
+    ):
+        existing_application_id = (
+            session.exec(select(Application)).first().application_id
+        )
+        body = _make_request_body()
+        body["deceased"].update(
+            {
+                "deceasedFirstName": "Tést",
+                "deceasedLastName": "Súrname",
+                "deceasedDateOfBirth": "1990-01-01",
+                "coronersReference": "OTHER-REF-1",
+            }
+        )
+
+        response = _post_application(client, body)
+
+        assert response.status_code == 201
+        assert (
+            self._duplicate_records_for(
+                session, response.json()["laaReference"], existing_application_id
+            )
+            == []
+        )
+
     def test_201_create_application_can_omit_correspondence_address(self, client):
         request_body = _make_request_body(
             {"correspondenceAddressSource": "USE_CLIENT_HOME_ADDRESS"}

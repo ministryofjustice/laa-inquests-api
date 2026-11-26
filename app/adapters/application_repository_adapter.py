@@ -9,6 +9,7 @@ from sqlmodel import Session, exists, select
 from app.config import Config
 from app.domain.application_backlog_report import ApplicationBacklogRecord
 from app.domain.coroners_letter import CoronersLetter
+from app.domain.name_matching import name_match_key
 from app.domain.reference_rules import ReferenceRules
 from app.logging_utils import build_log_extra
 from app.models.application.enums import MeritsDecision
@@ -526,11 +527,10 @@ class ApplicationRepositoryAdapter(
     @staticmethod
     def _duplicate_signal_count(new_deceased: Deceased, other: Deceased) -> int:
         """How many of the four duplicate signals the two deceased records share."""
-        same_name = (
-            other.deceased_first_name.strip().lower()
-            == new_deceased.deceased_first_name.strip().lower()
-            and other.deceased_last_name.strip().lower()
-            == new_deceased.deceased_last_name.strip().lower()
+        same_name = name_match_key(other.deceased_first_name) == name_match_key(
+            new_deceased.deceased_first_name
+        ) and name_match_key(other.deceased_last_name) == name_match_key(
+            new_deceased.deceased_last_name
         )
         return sum(
             [
