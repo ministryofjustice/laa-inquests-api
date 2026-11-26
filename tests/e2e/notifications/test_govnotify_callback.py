@@ -1,5 +1,6 @@
 """E2E tests for GovNotify delivery receipt callback endpoint."""
 
+import secrets
 from unittest.mock import patch
 
 import pytest
@@ -202,3 +203,45 @@ def test_200_callback_accepts_fields_at_their_limits_and_absent_optional_fields(
     )
 
     assert response.status_code == 200
+
+
+def test_401_callback_rejects_every_request_when_no_token_is_configured(client):
+    """An unset token must fail closed: "Bearer " with nothing after it matched "" before."""
+    with patch("app.routers.notifications.Config.GOV_NOTIFY_CALLBACK_BEARER_TOKEN", ""):
+        response = client.post(
+            "/notifications/callback",
+            json=_make_callback_payload(),
+            headers={"Authorization": "Bearer "},
+        )
+
+    assert response.status_code == 401
+
+
+def test_401_callback_compares_the_token_in_constant_time(
+    client, gov_notify_bearer_token
+):
+    with patch(
+        "app.routers.notifications.secrets.compare_digest",
+        wraps=secrets.compare_digest,
+    ) as compare_digest:
+        response = client.post(
+            "/notifications/callback",
+            json=_make_callback_payload(),
+            headers={"Authorization": "Bearer not-the-token"},
+        )
+
+    assert response.status_code == 401
+    compare_digest.assert_called_once()
+
+
+def test_401_callback_rejects_a_non_ascii_token_instead_of_failing(
+    client, gov_notify_bearer_token
+):
+    """compare_digest raises on non-ASCII str, so the comparison has to be on bytes."""
+    response = client.post(
+        "/notifications/callback",
+        json=_make_callback_payload(),
+        headers={"Authorization": b"Bearer t\xf6k\xe9n"},
+    )
+
+    assert response.status_code == 401
