@@ -159,3 +159,50 @@ def test_generate_print_letter_pdf_contains_end_date(
     assert pdf_text.count("15 July 2324") == 3
     pdf_text_no_newlines = pdf_text.replace("\n", " ")
     assert "End date" in pdf_text_no_newlines
+
+
+MARKUP = "<img src=x onerror=1>"
+ESCAPED_MARKUP = "&lt;img src=x onerror=1&gt;"
+
+
+def _render_certificate_html(**overrides) -> str:
+    context = _sample_context().model_copy(update=overrides)
+    template = PdfGeneratorAdapter().jinja_env.get_template("certificate.html")
+    return template.render(**context.model_dump())
+
+
+@pytest.mark.parametrize(
+    "field", ["address_line_1", "address_line_2", "town_or_city", "county", "postcode"]
+)
+@pytest.mark.parametrize(
+    "address_field", ["client_address", "office_address"], ids=["client", "office"]
+)
+def test_certificate_escapes_markup_in_address_lines(address_field, field):
+    address = create_base_office_address(**{field: MARKUP})
+
+    html = _render_certificate_html(**{address_field: address})
+
+    assert MARKUP not in html
+    assert ESCAPED_MARKUP in html
+
+
+def test_certificate_escapes_markup_in_opponent_details():
+    html = _render_certificate_html(opponent_details=["Legit Body", MARKUP])
+
+    assert MARKUP not in html
+    assert f"Legit Body<br>{ESCAPED_MARKUP}" in html
+
+
+def test_certificate_escapes_ampersands_in_opponent_details():
+    html = _render_certificate_html(opponent_details=["Smith & Sons"])
+
+    assert "Smith &amp; Sons" in html
+
+
+def test_certificate_separates_address_lines_with_line_breaks():
+    html = _render_certificate_html()
+
+    assert (
+        "1 High Street<br>Westminster<br>London<br>Greater London<br>SW1A 1AA" in html
+    )
+    assert "&lt;br&gt;" not in html
