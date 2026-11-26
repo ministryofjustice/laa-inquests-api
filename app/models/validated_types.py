@@ -1,3 +1,4 @@
+import re
 import unicodedata
 from typing import Annotated
 
@@ -12,6 +13,10 @@ MAX_ORGANISATION_LENGTH = 100
 MIN_ADDRESS_LINE_LENGTH = 2
 MIN_TOWN_LENGTH = 2
 MIN_COUNTY_LENGTH = 3
+MAX_PREVIOUS_REFERENCE_LENGTH = 35
+MAX_NINO_LENGTH = 15
+MIN_POSTCODE_LENGTH = 5
+MAX_POSTCODE_LENGTH = 8
 _ALLOWED_PROSE_WHITESPACE = frozenset("\n\r\t")
 _FORBIDDEN_PROSE_CHARACTERS = frozenset("<>")
 _CONTROL_CATEGORIES = frozenset({"Cc", "Cf"})
@@ -35,6 +40,18 @@ _ORGANISATION_BODY = rf"[ '.,&-]*{_ALPHANUMERIC}(?:{_ALPHANUMERIC}|[ '.,&-])*"
 _RECIPIENT_NAME_PATTERN = rf"^{_ORGANISATION_BODY}$"
 _ORGANISATION_NAME_PATTERN = rf"^(?:{_ORGANISATION_BODY})?$"
 
+_REFERENCE_TEXT_PATTERN = r"^(?:[A-Za-z0-9][A-Za-z0-9 ./-]*)?$"
+_POSTCODE_PATTERN = r"^[A-Za-z0-9 ]+$"
+
+# The UI's NINO rule, anchored at both ends (the UI's has no end anchor, so anything
+# after the suffix letter passes there). Python's re is used because the prefix
+# exclusions need a lookahead, which the regex engine behind `pattern` does not have.
+# ASCII mode stops "ſ" and the Kelvin sign matching "s" and "k" case-insensitively.
+_NINO_PATTERN = re.compile(
+    r"(?!BG|GB|NK|KN|TN|NT|ZZ)[A-CEG-HJ-TW-Z]{2} *[0-9]{6} *[A-D]",
+    re.ASCII | re.IGNORECASE,
+)
+
 
 def _normalise_short_text(value: object) -> object:
     """Trim, fold curly apostrophes and compose accents before the checks run.
@@ -46,6 +63,12 @@ def _normalise_short_text(value: object) -> object:
     if not isinstance(value, str):
         return value
     return unicodedata.normalize("NFC", value.translate(_CURLY_APOSTROPHES)).strip()
+
+
+def _validate_nino(value: str) -> str:
+    if not _NINO_PATTERN.fullmatch(value):
+        raise ValueError("must be a valid National Insurance number")
+    return value
 
 
 def _validate_prose_text(value: str) -> str:
@@ -131,7 +154,38 @@ OrganisationName = Annotated[
 CoronersReference = Annotated[
     str,
     StringConstraints(
-        max_length=MAX_SHORT_TEXT_LENGTH, pattern=r"^([A-Za-z0-9][A-Za-z0-9 ./-]*)?$"
+        max_length=MAX_SHORT_TEXT_LENGTH, pattern=_REFERENCE_TEXT_PATTERN
     ),
     BeforeValidator(_normalise_short_text),
+]
+
+# Applicants may quote older or other-format references, so this is not forced to the
+# INQ-XXX-XXX shape. "" means not provided, as the confirmation email treats it.
+PreviousReference = Annotated[
+    str,
+    StringConstraints(
+        max_length=MAX_PREVIOUS_REFERENCE_LENGTH, pattern=_REFERENCE_TEXT_PATTERN
+    ),
+    BeforeValidator(_normalise_short_text),
+]
+
+# Stored as typed, like the UI: no uppercasing and spaces between the groups are kept.
+Nino = Annotated[
+    str,
+    StringConstraints(max_length=MAX_NINO_LENGTH),
+    BeforeValidator(_normalise_short_text),
+    AfterValidator(_validate_nino),
+]
+
+# Uppercased only after the ASCII check, so a character such as "ſ" (which uppercases
+# to "S") is rejected instead of being silently turned into ASCII.
+Postcode = Annotated[
+    str,
+    StringConstraints(
+        min_length=MIN_POSTCODE_LENGTH,
+        max_length=MAX_POSTCODE_LENGTH,
+        pattern=_POSTCODE_PATTERN,
+    ),
+    BeforeValidator(_normalise_short_text),
+    AfterValidator(str.upper),
 ]

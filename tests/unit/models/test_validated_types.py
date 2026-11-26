@@ -5,8 +5,11 @@ from app.models.validated_types import (
     AddressLine,
     CoronersReference,
     CountyName,
+    Nino,
     OrganisationName,
     PersonName,
+    Postcode,
+    PreviousReference,
     ProseText,
     RecipientName,
     RelationshipText,
@@ -339,6 +342,134 @@ class TestOrganisationName:
     def test_rejects_everything_else(self, value):
         with pytest.raises(ValidationError):
             validate(OrganisationName, value)
+
+
+class TestNino:
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "AA123456A",
+            "AB123456C",
+            "ab123456c",
+            "AB 123456 C",
+            "JG123456D",
+            "QQ123456C",
+        ],
+    )
+    def test_accepts_valid_numbers_and_keeps_them_as_typed(self, value):
+        assert validate(Nino, value) == value
+
+    def test_trims_surrounding_whitespace(self):
+        assert validate(Nino, " AB123456C\n") == "AB123456C"
+
+    @pytest.mark.parametrize("letter", ["D", "F", "I", "U", "V"])
+    @pytest.mark.parametrize("position", [0, 1])
+    def test_rejects_letters_the_ui_excludes_in_either_position(self, letter, position):
+        prefix = ["A", "A"]
+        prefix[position] = letter
+
+        with pytest.raises(ValidationError):
+            validate(Nino, f"{''.join(prefix)}123456A")
+
+    @pytest.mark.parametrize("prefix", ["BG", "GB", "NK", "KN", "TN", "NT", "ZZ", "bg"])
+    def test_rejects_the_prefixes_the_ui_excludes(self, prefix):
+        with pytest.raises(ValidationError):
+            validate(Nino, f"{prefix}123456A")
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "AB123456E",
+            "AB12345A",
+            "AB1234567A",
+            "AB123456",
+            "A1123456A",
+            "AB 12 34 56 C",
+            "AB\n123456C",
+            "AB\t123456C",
+            "ſb123456c",
+            "",
+            " ",
+        ],
+    )
+    def test_rejects_the_wrong_shape(self, value):
+        with pytest.raises(ValidationError):
+            validate(Nino, value)
+
+    @pytest.mark.parametrize("value", ["AB123456A<b>", "AB123456A;", "AB123456Ax"])
+    def test_rejects_anything_after_the_suffix_letter(self, value):
+        with pytest.raises(ValidationError):
+            validate(Nino, value)
+
+    @pytest.mark.parametrize("value", [None, 123])
+    def test_rejects_non_string_input(self, value):
+        with pytest.raises(ValidationError):
+            validate(Nino, value)
+
+
+class TestPostcode:
+    @pytest.mark.parametrize(
+        "value", ["SW1A 1AA", "M1 1AE", "CR26XH", "EC1A1BB", "AB12 3CD"]
+    )
+    def test_accepts_valid_postcodes(self, value):
+        assert validate(Postcode, value) == value
+
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [("sw1a 1aa", "SW1A 1AA"), (" SW1A 1AA\n", "SW1A 1AA"), ("m11ae", "M11AE")],
+    )
+    def test_trims_and_uppercases(self, value, expected):
+        assert validate(Postcode, value) == expected
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "SW1A",
+            "SW1A 1AAA1",
+            "SW1A-1AA",
+            "SW1A,1AA",
+            "<b>SW1A",
+            "SW1A\n1AA",
+            "SW1A\t1AA",
+            "",
+            " ",
+        ],
+    )
+    def test_rejects_wrong_length_and_characters(self, value):
+        with pytest.raises(ValidationError):
+            validate(Postcode, value)
+
+    @pytest.mark.parametrize("value", ["ſw1a 1aa", "ı1234", "ß1234"])
+    def test_rejects_non_ascii_before_uppercasing_can_turn_it_into_ascii(self, value):
+        with pytest.raises(ValidationError):
+            validate(Postcode, value)
+
+    @pytest.mark.parametrize("value", [None, 123])
+    def test_rejects_non_string_input(self, value):
+        with pytest.raises(ValidationError):
+            validate(Postcode, value)
+
+
+class TestPreviousReference:
+    @pytest.mark.parametrize(
+        "value", ["", "INQ-ABC-DEF", "1234567/A", "Ref 12.3", "A" * 35]
+    )
+    def test_accepts_references_and_empty_string(self, value):
+        assert validate(PreviousReference, value) == value
+
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [(" INQ-ABC-DEF\n", "INQ-ABC-DEF"), (" ", ""), ("\n", "")],
+    )
+    def test_trims_and_treats_whitespace_only_as_not_provided(self, value, expected):
+        assert validate(PreviousReference, value) == expected
+
+    @pytest.mark.parametrize(
+        "value", ["<b>", "INQ;ABC", "INQ'ABC", "-INQ", "INQ\nABC", "A" * 36]
+    )
+    def test_rejects_everything_else(self, value):
+        with pytest.raises(ValidationError):
+            validate(PreviousReference, value)
 
 
 class TestProseText:
