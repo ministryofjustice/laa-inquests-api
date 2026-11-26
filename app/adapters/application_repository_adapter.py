@@ -2,13 +2,14 @@ import logging
 import random
 import uuid
 
-from sqlalchemy import and_, case, false, func
+from sqlalchemy import false, or_
 from sqlalchemy.orm import aliased, joinedload
 from sqlmodel import Session, exists, select
 
 from app.config import Config
 from app.domain.application_backlog_report import ApplicationBacklogRecord
 from app.domain.coroners_letter import CoronersLetter
+from app.domain.name_matching import name_match_key
 from app.domain.reference_rules import ReferenceRules
 from app.logging_utils import build_log_extra
 from app.models.application.enums import MeritsDecision
@@ -486,33 +487,21 @@ class ApplicationRepositoryAdapter(
 
         new_deceased = application.deceased
 
-        same_date_of_birth = (
-            Deceased.deceased_date_of_birth == new_deceased.deceased_date_of_birth
-        )
-        same_date_of_death = (
-            Deceased.deceased_date_of_death == new_deceased.deceased_date_of_death
-        )
-        same_coroners_reference = (
-            Deceased.coroners_reference == new_deceased.coroners_reference
-            if new_deceased.coroners_reference != ""
-            else false()
-        )
-        same_name = and_(
-            func.lower(func.trim(Deceased.deceased_first_name))
-            == new_deceased.deceased_first_name.strip().lower(),
-            func.lower(func.trim(Deceased.deceased_last_name))
-            == new_deceased.deceased_last_name.strip().lower(),
+        # A name match is only one signal, so while the threshold is 2 or more a duplicate
+        # must also match on at least one of these. Finding those candidates in SQL keeps
+        # the name comparison, which SQL cannot do reliably, out of the query.
+        shares_a_non_name_signal = or_(
+            Deceased.deceased_date_of_birth == new_deceased.deceased_date_of_birth,
+            Deceased.deceased_date_of_death == new_deceased.deceased_date_of_death,
+            (
+                Deceased.coroners_reference == new_deceased.coroners_reference
+                if new_deceased.coroners_reference != ""
+                else false()
+            ),
         )
 
-        match_count = (
-            case((same_date_of_birth, 1), else_=0)
-            + case((same_date_of_death, 1), else_=0)
-            + case((same_coroners_reference, 1), else_=0)
-            + case((same_name, 1), else_=0)
-        )
-
-        duplicate_application_id = self.session.exec(
-            select(Application.application_id)
+        candidates = self.session.exec(
+            select(Application.application_id, Deceased)
             .join(Deceased, Application.deceased_id == Deceased.deceased_id)
             .join(
                 ApplicationProceeding,
@@ -524,9 +513,34 @@ class ApplicationRepositoryAdapter(
                     self.ELIGIBLE_DUPLICATE_STATUS
                 )
             )
-            .where(match_count >= self.DUPLICATE_MATCH_THRESHOLD)
+            .where(shares_a_non_name_signal)
+            .order_by(Application.application_id)
         ).all()
-        return list(duplicate_application_id)
+
+        return [
+            candidate_id
+            for candidate_id, candidate in candidates
+            if self._duplicate_signal_count(new_deceased, candidate)
+            >= self.DUPLICATE_MATCH_THRESHOLD
+        ]
+
+    @staticmethod
+    def _duplicate_signal_count(new_deceased: Deceased, other: Deceased) -> int:
+        """How many of the four duplicate signals the two deceased records share."""
+        same_name = name_match_key(other.deceased_first_name) == name_match_key(
+            new_deceased.deceased_first_name
+        ) and name_match_key(other.deceased_last_name) == name_match_key(
+            new_deceased.deceased_last_name
+        )
+        return sum(
+            [
+                other.deceased_date_of_birth == new_deceased.deceased_date_of_birth,
+                other.deceased_date_of_death == new_deceased.deceased_date_of_death,
+                new_deceased.coroners_reference != ""
+                and other.coroners_reference == new_deceased.coroners_reference,
+                same_name,
+            ]
+        )
 
     def create_duplicate_records(
         self, application_id: int, duplicate_application_ids: list[int]

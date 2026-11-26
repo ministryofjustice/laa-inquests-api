@@ -931,6 +931,199 @@ class TestIdentifyDuplicateApplications:
         result = adapter.identify_duplicates(application.application_id)
         assert result == []
 
+    def test_the_threshold_needs_a_signal_other_than_the_name(self):
+        """identify_duplicates finds candidates on date of birth, date of death or
+        coroner's reference first, which is only correct while a name match alone
+        (one signal) cannot reach the threshold."""
+        assert ApplicationRepositoryAdapter.DUPLICATE_MATCH_THRESHOLD >= 2
+
+    def test_a_name_match_on_its_own_is_not_a_duplicate(self, session):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        create_application_in_db(
+            session,
+            deceased_overrides={
+                "deceased_date_of_birth": "DIFFERENT_DATE_OF_BIRTH",
+                "deceased_date_of_death": "DIFFERENT_DATE_OF_DEATH",
+                "deceased_first_name": application.deceased.deceased_first_name,
+                "deceased_last_name": application.deceased.deceased_last_name,
+                "coroners_reference": "DIFFERENT_CORONERS_REFERENCE",
+            },
+        )
+
+        assert adapter.identify_duplicates(application.application_id) == []
+
+    @pytest.mark.parametrize(
+        "matching",
+        [
+            ("deceased_date_of_birth", "deceased_first_name", "deceased_last_name"),
+            ("deceased_date_of_birth", "coroners_reference"),
+            ("deceased_date_of_death", "coroners_reference"),
+            ("deceased_date_of_birth", "deceased_date_of_death"),
+            ("deceased_date_of_death", "deceased_first_name", "deceased_last_name"),
+            ("coroners_reference", "deceased_first_name", "deceased_last_name"),
+        ],
+        ids=lambda fields: "+".join(field.replace("deceased_", "") for field in fields),
+    )
+    def test_any_two_signals_make_a_duplicate(self, session, matching):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+        deceased = application.deceased
+        different = {
+            "deceased_date_of_birth": "DIFFERENT_DATE_OF_BIRTH",
+            "deceased_date_of_death": "DIFFERENT_DATE_OF_DEATH",
+            "deceased_first_name": "DIFFERENT_FIRST_NAME",
+            "deceased_last_name": "DIFFERENT_LAST_NAME",
+            "coroners_reference": "DIFFERENT_CORONERS_REFERENCE",
+        }
+        overrides = different | {field: getattr(deceased, field) for field in matching}
+
+        duplicate = create_application_in_db(session, deceased_overrides=overrides)
+
+        assert duplicate.application_id in adapter.identify_duplicates(
+            application.application_id
+        )
+
+    def test_names_are_compared_ignoring_surrounding_spaces(self, session):
+        application = session.exec(select(Application)).first()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        duplicate = create_application_in_db(
+            session,
+            deceased_overrides={
+                "deceased_date_of_birth": application.deceased.deceased_date_of_birth,
+                "deceased_date_of_death": "DIFFERENT_DATE_OF_DEATH",
+                "deceased_first_name": f"  {application.deceased.deceased_first_name} ",
+                "deceased_last_name": f" {application.deceased.deceased_last_name}  ",
+                "coroners_reference": "DIFFERENT_CORONERS_REFERENCE",
+            },
+        )
+
+        assert duplicate.application_id in adapter.identify_duplicates(
+            application.application_id
+        )
+
+    def test_two_empty_coroners_references_are_not_a_matching_signal(self, session):
+        application = session.exec(select(Application)).first()
+        application.deceased.coroners_reference = ""
+        session.add(application.deceased)
+        session.commit()
+        adapter = ApplicationRepositoryAdapter(session)
+
+        other = create_application_in_db(
+            session,
+            deceased_overrides={
+                "deceased_date_of_birth": application.deceased.deceased_date_of_birth,
+                "deceased_date_of_death": "DIFFERENT_DATE_OF_DEATH",
+                "deceased_first_name": "DIFFERENT_FIRST_NAME",
+                "deceased_last_name": "DIFFERENT_LAST_NAME",
+                "coroners_reference": "",
+            },
+        )
+
+        assert other.application_id not in adapter.identify_duplicates(
+            application.application_id
+        )
+
+    @staticmethod
+    def _duplicate_pair_sharing_only_the_date_of_birth(
+        session, new_names, stored_names
+    ):
+        """The existing application with `new_names`, and another that shares only its
+        date of birth and has `stored_names`, so a duplicate needs the name to match."""
+        application = session.exec(select(Application)).first()
+        application.deceased.deceased_first_name = new_names[0]
+        application.deceased.deceased_last_name = new_names[1]
+        session.add(application.deceased)
+        session.commit()
+        other = create_application_in_db(
+            session,
+            deceased_overrides={
+                "deceased_date_of_birth": application.deceased.deceased_date_of_birth,
+                "deceased_date_of_death": "DIFFERENT_DATE_OF_DEATH",
+                "deceased_first_name": stored_names[0],
+                "deceased_last_name": stored_names[1],
+                "coroners_reference": "DIFFERENT_CORONERS_REFERENCE",
+            },
+        )
+        return application, other
+
+    @pytest.mark.parametrize(
+        ("new_names", "stored_names"),
+        [
+            (("José", "García"), ("Jose", "Garcia")),
+            (("Jose", "Garcia"), ("José", "García")),
+            (("Jos\u00e9", "Garc\u00eda"), ("Jose\u0301", "Garci\u0301a")),
+            (("Łukasz", "Müller"), ("Lukasz", "Muller")),
+            (("Mary-Jane", "O'Brien"), ("Mary Jane", "OBrien")),
+            (("Mary Jane", "O'Brien"), ("Mary-Jane", "O\u2019Brien")),
+        ],
+        ids=[
+            "accents",
+            "accents-reversed",
+            "composed-vs-decomposed",
+            "letters",
+            "punctuation",
+            "legacy-curly-apostrophe",
+        ],
+    )
+    def test_names_that_differ_only_in_accents_or_punctuation_count_as_a_name_match(
+        self, session, new_names, stored_names
+    ):
+        application, other = self._duplicate_pair_sharing_only_the_date_of_birth(
+            session, new_names, stored_names
+        )
+
+        assert other.application_id in ApplicationRepositoryAdapter(
+            session
+        ).identify_duplicates(application.application_id)
+
+    @pytest.mark.parametrize(
+        ("new_names", "stored_names"),
+        [
+            (("Smith", "Jones"), ("Smyth", "Jones")),
+            (("Jon", "Smith"), ("John", "Smith")),
+            (("Muller", "Smith"), ("Mueller", "Smith")),
+            (("Jane", "Smith"), ("Smith", "Jane")),
+        ],
+    )
+    def test_different_names_are_still_not_a_name_match(
+        self, session, new_names, stored_names
+    ):
+        application, other = self._duplicate_pair_sharing_only_the_date_of_birth(
+            session, new_names, stored_names
+        )
+
+        assert other.application_id not in ApplicationRepositoryAdapter(
+            session
+        ).identify_duplicates(application.application_id)
+
+    def test_a_name_that_matches_only_after_folding_accents_is_still_just_one_signal(
+        self, session
+    ):
+        application = session.exec(select(Application)).first()
+        application.deceased.deceased_first_name = "José"
+        session.add(application.deceased)
+        session.commit()
+        create_application_in_db(
+            session,
+            deceased_overrides={
+                "deceased_date_of_birth": "DIFFERENT_DATE_OF_BIRTH",
+                "deceased_date_of_death": "DIFFERENT_DATE_OF_DEATH",
+                "deceased_first_name": "Jose",
+                "deceased_last_name": application.deceased.deceased_last_name,
+                "coroners_reference": "DIFFERENT_CORONERS_REFERENCE",
+            },
+        )
+
+        assert (
+            ApplicationRepositoryAdapter(session).identify_duplicates(
+                application.application_id
+            )
+            == []
+        )
+
 
 class TestCreateDuplicateRecords:
     @pytest.fixture
