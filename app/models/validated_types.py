@@ -105,6 +105,17 @@ def _validate_prose_text(value: str) -> str:
 ProseText = Annotated[str, AfterValidator(_validate_prose_text)]
 
 
+def _reject_control_characters(value: str) -> str:
+    if any(unicodedata.category(char) in _CONTROL_CATEGORIES for char in value):
+        raise ValueError("must be a single line without control characters")
+    return value
+
+
+# For values sent by another system (such as GOV.UK Notify) that are logged and not
+# stored. Apply the length with `Field(max_length=...)` where it is used.
+SingleLineText = Annotated[str, AfterValidator(_reject_control_characters)]
+
+
 def _at_least_two_characters_unless_empty(value: str) -> str:
     if value and len(value) < MIN_FURTHER_INFORMATION_LENGTH:
         raise ValueError("must be at least 2 characters when provided")

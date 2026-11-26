@@ -22,6 +22,7 @@ from app.models.validated_types import (
     RejectionReason,
     RelationshipText,
     SearchReference,
+    SingleLineText,
     TownName,
 )
 
@@ -681,6 +682,33 @@ class TestRejectionReason:
     ):
         with pytest.raises(ValidationError):
             validate(RejectionReason, value)
+
+
+class TestSingleLineText:
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "740e5834-3a29-46b4-9a6f-16142fde533a",
+            "dev-APP-123456",
+            "a b",
+            "Zoë <b>",
+            "",
+        ],
+    )
+    def test_accepts_ordinary_text(self, value):
+        assert validate(SingleLineText, value) == value
+
+    @pytest.mark.parametrize(
+        "value", ["a\nb", "a\rb", "a\tb", "a\x00b", "a\x1bb", "a\x7fb", "a\u200bb"]
+    )
+    def test_rejects_newlines_and_control_or_format_characters(self, value):
+        with pytest.raises(ValidationError):
+            validate(SingleLineText, value)
+
+    @pytest.mark.parametrize("value", [None, 123])
+    def test_rejects_non_string_input(self, value):
+        with pytest.raises(ValidationError):
+            validate(SingleLineText, value)
 
 
 class TestProseText:
