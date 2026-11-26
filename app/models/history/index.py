@@ -8,6 +8,7 @@ from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
 
 from app.models.history.enums import ActorType, HistoryEventReference
+from app.models.validated_types import ProseText
 
 
 class HistoryEvent(SQLModel, table=True):
@@ -35,7 +36,7 @@ class CreateNoteRequest(BaseModel):
         from_attributes=True,
     )
 
-    note_text: str = PydanticField(min_length=1, max_length=10_000)
+    note_text: ProseText = PydanticField(min_length=1, max_length=10_000)
 
     @field_validator("note_text")
     @classmethod

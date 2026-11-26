@@ -1,6 +1,7 @@
 """Router for notification-related endpoints."""
 
 import logging
+import secrets
 import time
 from typing import Annotated
 
@@ -41,7 +42,12 @@ def verify_bearer_token(authorization: str) -> None:
 
     token = authorization.replace("Bearer ", "", 1)
 
-    if token != expected_token:
+    # An unset token must reject everything, otherwise "Bearer " with nothing after it
+    # matches the empty default. Bytes are compared because compare_digest raises on a
+    # str that is not ASCII.
+    if not expected_token or not secrets.compare_digest(
+        token.encode(), expected_token.encode()
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid bearer token",

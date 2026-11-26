@@ -1,0 +1,164 @@
+import pytest
+from sqlmodel import select
+
+from app.auth.rbac import Role
+from app.models.application.index import Application
+from app.models.claim.enums import ClaimType
+from app.models.history.index import HistoryEvent
+from tests.e2e.factories import (
+    create_application_in_db,
+    create_claim_in_db,
+    get_application_id,
+)
+
+pytestmark = pytest.mark.usefixtures("mock_gov_notify")
+
+REJECTED_PROSE = [
+    "<script>alert(1)</script>",
+    "a > b",
+    "<Test'';!--\"=&{()}>",
+    "bad\x00value",
+    "bad\x1bvalue",
+]
+ACCEPTED_PROSE = [
+    'It\'s "quoted"; see = A1 -- fine & (ok) {yes}',
+    "Line one\nLine two",
+]
+
+
+def _headers(role: Role) -> dict[str, str]:
+    return {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {role.value}",
+    }
+
+
+class TestRefuseDecisionJustification:
+    @staticmethod
+    def _refuse(client, laa_reference, justification):
+        return client.patch(
+            f"/applications/{laa_reference}/refuse-decision",
+            json={"reasonForRefusal": "NOT_IN_SCOPE", "justification": justification},
+            headers=_headers(Role.APPLICATIONS_CASEWORKER),
+        )
+
+    @pytest.mark.parametrize("value", REJECTED_PROSE)
+    def test_422_rejects_disallowed_characters(self, session, client, value):
+        application = create_application_in_db(session)
+
+        response = self._refuse(client, application.laa_reference, value)
+
+        assert response.status_code == 422
+
+    @pytest.mark.parametrize("value", ACCEPTED_PROSE)
+    def test_204_accepts_quotes_semicolons_and_newlines(self, session, client, value):
+        application = create_application_in_db(session)
+
+        response = self._refuse(client, application.laa_reference, value)
+
+        assert response.status_code == 204
+
+    def test_204_accepts_exactly_1500_characters(self, session, client):
+        application = create_application_in_db(session)
+
+        response = self._refuse(client, application.laa_reference, "A" * 1500)
+
+        assert response.status_code == 204
+
+    def test_422_rejects_more_than_1500_characters(self, session, client):
+        application = create_application_in_db(session)
+
+        response = self._refuse(client, application.laa_reference, "A" * 1501)
+
+        assert response.status_code == 422
+
+
+class TestRejectClaimJustification:
+    @staticmethod
+    def _reject(client, session, justification):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+        claim = create_claim_in_db(
+            session,
+            application_id=get_application_id(session, laa_reference),
+            claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+        )
+        return client.patch(
+            f"/applications/{laa_reference}/claims/{claim.claim_reference}/reject",
+            json={"justification": justification},
+            headers=_headers(Role.CLAIMS_CASEWORKER),
+        )
+
+    @pytest.mark.parametrize("value", REJECTED_PROSE)
+    def test_422_rejects_disallowed_characters(self, session, client, value):
+        assert self._reject(client, session, value).status_code == 422
+
+    @pytest.mark.parametrize("value", ACCEPTED_PROSE)
+    def test_204_accepts_quotes_semicolons_and_newlines(self, session, client, value):
+        assert self._reject(client, session, value).status_code == 204
+
+    def test_204_accepts_exactly_500_characters(self, session, client):
+        assert self._reject(client, session, "A" * 500).status_code == 204
+
+    @pytest.mark.parametrize("value", ["A" * 501, "", " ", "\n\t"])
+    def test_422_rejects_blank_and_more_than_500_characters(
+        self, session, client, value
+    ):
+        assert self._reject(client, session, value).status_code == 422
+
+
+class TestCreateNoteText:
+    @staticmethod
+    def _create_note(client, session, note_text):
+        laa_reference = session.exec(select(Application)).first().laa_reference
+        return client.post(
+            f"/applications/{laa_reference}/note",
+            json={"noteText": note_text},
+            headers=_headers(Role.APPLICATIONS_CASEWORKER),
+        )
+
+    @pytest.mark.parametrize("value", REJECTED_PROSE)
+    def test_422_rejects_disallowed_characters(self, session, client, value):
+        assert self._create_note(client, session, value).status_code == 422
+
+    @pytest.mark.parametrize("value", ACCEPTED_PROSE)
+    def test_204_accepts_quotes_semicolons_and_newlines(self, session, client, value):
+        assert self._create_note(client, session, value).status_code == 204
+
+
+class TestRejectedProseNeverReachesTheHistory:
+    """Notes, refusals and rejections are copied into history events and the audit
+    report, so text that fails validation must leave no event behind."""
+
+    @pytest.mark.parametrize("value", ["<script>alert(1)</script>", "bad\x00value"])
+    def test_rejected_note_refusal_and_rejection_add_no_history_event(
+        self, session, client, value
+    ):
+        application = create_application_in_db(session)
+        reference = application.laa_reference
+        claim = create_claim_in_db(
+            session,
+            application_id=application.application_id,
+            claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
+        )
+        events_before = len(session.exec(select(HistoryEvent)).all())
+
+        responses = [
+            client.post(
+                f"/applications/{reference}/note",
+                json={"noteText": value},
+                headers=_headers(Role.APPLICATIONS_CASEWORKER),
+            ),
+            client.patch(
+                f"/applications/{reference}/refuse-decision",
+                json={"reasonForRefusal": "NOT_IN_SCOPE", "justification": value},
+                headers=_headers(Role.APPLICATIONS_CASEWORKER),
+            ),
+            client.patch(
+                f"/applications/{reference}/claims/{claim.claim_reference}/reject",
+                json={"justification": value},
+                headers=_headers(Role.CLAIMS_CASEWORKER),
+            ),
+        ]
+
+        assert [response.status_code for response in responses] == [422, 422, 422]
+        assert len(session.exec(select(HistoryEvent)).all()) == events_before

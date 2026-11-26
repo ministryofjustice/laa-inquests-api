@@ -19,8 +19,10 @@ from sqlalchemy import Column
 from sqlmodel import Enum, Field, Relationship, SQLModel
 
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
-from app.domain.csv_safety import starts_with_formula_trigger
-from app.models.application.constants import UNGRANTED_SUBSTANTIVE_COST_LIMITATION
+from app.models.application.constants import (
+    ISO_DATE_MAX_LENGTH,
+    UNGRANTED_SUBSTANTIVE_COST_LIMITATION,
+)
 from app.models.application.enums import (
     AddressSource,
     CorrespondenceRecipientType,
@@ -28,6 +30,22 @@ from app.models.application.enums import (
     ProceedingId,
     PublicBodyId,
     ReasonForRefusal,
+)
+from app.models.validated_types import (
+    AddressLine,
+    CoronersReference,
+    CountyName,
+    EmailAddress,
+    FurtherInformation,
+    Nino,
+    OfficeCode,
+    PersonName,
+    Postcode,
+    PreviousReference,
+    RecipientName,
+    RefusalJustification,
+    RelationshipText,
+    TownName,
 )
 
 
@@ -293,11 +311,11 @@ class AddressCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    address_line_1: str = PydanticField(examples=["123 Example Street"])
-    address_line_2: str | None = PydanticField(default=None, examples=["Jones"])
-    town_or_city: str = PydanticField(examples=["Example Town"])
-    county: str | None = PydanticField(default=None, examples=["Jones"])
-    postcode: str = PydanticField(examples=["AA1 1AA"])
+    address_line_1: AddressLine = PydanticField(examples=["123 Example Street"])
+    address_line_2: AddressLine | None = PydanticField(default=None, examples=["Jones"])
+    town_or_city: TownName = PydanticField(examples=["Example Town"])
+    county: CountyName | None = PydanticField(default=None, examples=["Jones"])
+    postcode: Postcode = PydanticField(examples=["AA1 1AA"])
 
 
 class CorrespondenceRecipientCreate(BaseModel):
@@ -307,7 +325,7 @@ class CorrespondenceRecipientCreate(BaseModel):
         from_attributes=True,
     )
     recipient_type: CorrespondenceRecipientType
-    recipient_name: str
+    recipient_name: RecipientName
 
 
 class ClientCreate(BaseModel):
@@ -316,13 +334,15 @@ class ClientCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    client_first_name: str = PydanticField(examples=["Jane"])
-    client_last_name: str = PydanticField(examples=["Smith"])
-    client_last_name_at_birth: str | None = PydanticField(
+    client_first_name: PersonName = PydanticField(examples=["Jane"])
+    client_last_name: PersonName = PydanticField(examples=["Smith"])
+    client_last_name_at_birth: PersonName | None = PydanticField(
         default=None, examples=["Jones"]
     )
-    date_of_birth: str = PydanticField(examples=["2000-01-01"])
-    national_insurance_number: str | None = PydanticField(
+    date_of_birth: str = PydanticField(
+        max_length=ISO_DATE_MAX_LENGTH, examples=["2000-01-01"]
+    )
+    national_insurance_number: Nino | None = PydanticField(
         default=None, examples=["AA123456A"]
     )
 
@@ -336,23 +356,16 @@ class ClientCreate(BaseModel):
         return v
 
     has_applied_previously: bool = PydanticField(default=False, examples=[False])
-    prev_application_reference: str | None = PydanticField(
-        default=None, examples=["TBD"]
+    prev_application_reference: PreviousReference | None = PydanticField(
+        default=None, examples=["INQ-ABC-DEF"]
     )
-    correspondence_address_source: str = PydanticField(
+    correspondence_address_source: AddressSource = PydanticField(
         examples=["USE_SPECIFIED_ADDRESS"]
     )
     correspondence_address: AddressCreate | None = None
     home_address: AddressCreate | None = None
     has_no_fixed_abode: bool = PydanticField(default=False, examples=[False])
     correspondence_recipient: CorrespondenceRecipientCreate | None = None
-
-    @field_validator("client_first_name", "client_last_name")
-    @classmethod
-    def reject_formula_prefix(cls, value: str) -> str:
-        if starts_with_formula_trigger(value):
-            raise ValueError("must not start with =, +, - or @")
-        return value
 
     @model_validator(mode="after")
     def validate_home_address_against_fixed_abode(self) -> "ClientCreate":
@@ -373,11 +386,17 @@ class DeceasedCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    deceased_first_name: str = PydanticField(examples=["John"])
-    deceased_last_name: str = PydanticField(examples=["Smith"])
-    deceased_date_of_birth: str = PydanticField(examples=["2000-01-01"])
-    deceased_date_of_death: str = PydanticField(examples=["2025-01-01"])
-    coroners_reference: str = PydanticField(examples=["Example reference number"])
+    deceased_first_name: PersonName = PydanticField(examples=["John"])
+    deceased_last_name: PersonName = PydanticField(examples=["Smith"])
+    deceased_date_of_birth: str = PydanticField(
+        max_length=ISO_DATE_MAX_LENGTH, examples=["2000-01-01"]
+    )
+    deceased_date_of_death: str = PydanticField(
+        max_length=ISO_DATE_MAX_LENGTH, examples=["2025-01-01"]
+    )
+    coroners_reference: CoronersReference = PydanticField(
+        examples=["Example reference number"]
+    )
 
     @field_validator("deceased_date_of_birth", "deceased_date_of_death")
     @classmethod
@@ -398,10 +417,12 @@ class DeceasedCreate(BaseModel):
             )
         return self
 
-    further_information: str | None = PydanticField(
+    further_information: FurtherInformation | None = PydanticField(
         default=None, examples=["Further information."]
     )
-    client_relationship_to_deceased: str = PydanticField(examples=["Spouse"])
+    client_relationship_to_deceased: RelationshipText = PydanticField(
+        examples=["Spouse"]
+    )
 
 
 class PublicBodyCreate(BaseModel):
@@ -410,7 +431,7 @@ class PublicBodyCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    public_body_id: str = PydanticField(
+    public_body_id: PublicBodyId = PydanticField(
         examples=["Department of Health and Social Care"]
     )
 
@@ -421,8 +442,8 @@ class ProviderCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    office_id: str = PydanticField(examples=["0U651L"])
-    email_address: str = PydanticField(examples=["provider@example.com"])
+    office_id: OfficeCode = PydanticField(examples=["0U651L"])
+    email_address: EmailAddress = PydanticField(examples=["provider@example.com"])
 
 
 class ApplicationCreate(BaseModel):
@@ -447,7 +468,7 @@ class RefuseApplicationUpdate(BaseModel):
     reason_for_refusal: ReasonForRefusal | None = PydanticField(
         examples=["NOT_IN_SCOPE"]
     )
-    justification: str | None = PydanticField(
+    justification: RefusalJustification | None = PydanticField(
         examples=["The requested proceeding is out of scope."]
     )
 

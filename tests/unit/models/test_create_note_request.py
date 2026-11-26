@@ -25,6 +25,8 @@ def test_create_note_request_accepts_10_000_characters():
         "",
         " \t\n",
         "a" * 10_001,
+        "<script>alert(1)</script>",
+        "bad\x00value",
     ],
 )
 def test_create_note_request_rejects_invalid_text(note_text):

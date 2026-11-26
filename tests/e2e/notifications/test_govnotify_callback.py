@@ -1,5 +1,6 @@
 """E2E tests for GovNotify delivery receipt callback endpoint."""
 
+import secrets
 from unittest.mock import patch
 
 import pytest
@@ -141,3 +142,106 @@ def test_200_callback_extracts_environment_and_reference_from_reference_field(
     log_extra = mock_logger.info.call_args.kwargs["extra"]["extra"]
     assert log_extra["environment_from_reference"] == "production"
     assert log_extra["laa_reference"] == "APP-999999"
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("id", "a" * 65),
+        ("id", "a\u200bb"),
+        ("reference", "a" * 101),
+        ("reference", "dev-APP\n123456"),
+        ("reference", "dev-APP\x00123456"),
+        ("to", "a" * 255),
+        ("to", "provider@example.com\r\nBcc: someone@example.com"),
+        ("created_at", "2" * 41),
+        ("completed_at", "2026-06-17T12:00:00Z\n"),
+        ("sent_at", "2" * 41),
+    ],
+)
+def test_422_callback_rejects_oversized_or_control_character_fields(
+    client, gov_notify_bearer_token, field, value
+):
+    """Fields are bounded and single line, as the body is validated before the token."""
+    with patch("app.routers.notifications.logger") as mock_logger:
+        response = client.post(
+            "/notifications/callback",
+            json=_make_callback_payload({field: value}),
+            headers={"Authorization": f"Bearer {gov_notify_bearer_token}"},
+        )
+
+    assert response.status_code == 422
+    mock_logger.info.assert_not_called()
+
+
+def test_422_callback_rejects_oversized_fields_without_a_bearer_token(client):
+    response = client.post(
+        "/notifications/callback",
+        json=_make_callback_payload({"reference": "a" * 10_000}),
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"id": "a" * 64},
+        {"reference": "a" * 100},
+        {"to": "a" * 254},
+        {"created_at": "2" * 40, "completed_at": "2" * 40, "sent_at": "2" * 40},
+        {"reference": None, "completed_at": None, "sent_at": None},
+    ],
+)
+def test_200_callback_accepts_fields_at_their_limits_and_absent_optional_fields(
+    client, gov_notify_bearer_token, overrides
+):
+    response = client.post(
+        "/notifications/callback",
+        json=_make_callback_payload(overrides),
+        headers={"Authorization": f"Bearer {gov_notify_bearer_token}"},
+    )
+
+    assert response.status_code == 200
+
+
+def test_401_callback_rejects_every_request_when_no_token_is_configured(client):
+    """An unset token must fail closed: "Bearer " with nothing after it matched "" before."""
+    with patch("app.routers.notifications.Config.GOV_NOTIFY_CALLBACK_BEARER_TOKEN", ""):
+        response = client.post(
+            "/notifications/callback",
+            json=_make_callback_payload(),
+            headers={"Authorization": "Bearer "},
+        )
+
+    assert response.status_code == 401
+
+
+def test_401_callback_compares_the_token_in_constant_time(
+    client, gov_notify_bearer_token
+):
+    with patch(
+        "app.routers.notifications.secrets.compare_digest",
+        wraps=secrets.compare_digest,
+    ) as compare_digest:
+        response = client.post(
+            "/notifications/callback",
+            json=_make_callback_payload(),
+            headers={"Authorization": "Bearer not-the-token"},
+        )
+
+    assert response.status_code == 401
+    compare_digest.assert_called_once()
+
+
+def test_401_callback_rejects_a_non_ascii_token_instead_of_failing(
+    client, gov_notify_bearer_token
+):
+    """compare_digest raises on non-ASCII str, so the comparison has to be on bytes."""
+    response = client.post(
+        "/notifications/callback",
+        json=_make_callback_payload(),
+        headers={"Authorization": b"Bearer t\xf6k\xe9n"},
+    )
+
+    assert response.status_code == 401

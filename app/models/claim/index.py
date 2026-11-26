@@ -13,7 +13,7 @@ from sqlmodel import Enum, Field, Relationship, SQLModel
 
 from app.domain.claim_total import resolve_claim_total
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
-from app.domain.file_name import is_valid_upload_file_name
+from app.domain.file_name import MAX_FILE_NAME_LENGTH, is_valid_upload_file_name
 from app.models.application.index import Application
 from app.models.claim.enums import (
     ClaimDecisionStatus,
@@ -26,6 +26,7 @@ from app.models.claim.enums import (
     ReasonCode,
     TaxCode,
 )
+from app.models.validated_types import EmailAddress, OrganisationName, RejectionReason
 
 
 class ClaimBase(SQLModel):
@@ -231,7 +232,7 @@ class ClaimCostTemplateFile(BaseModel):
         examples=["3fa85f64-5717-4562-b3fc-2c963f66afa6"]
     )
     claim_cost_template_file_name: str = PydanticField(
-        examples=["claim_cost_template.xlsx"]
+        max_length=MAX_FILE_NAME_LENGTH, examples=["claim_cost_template.xlsx"]
     )
 
     @field_validator("claim_cost_template_file_name")
@@ -261,7 +262,7 @@ class ClaimCreate(BaseModel):
         default=None, examples=["500.00"]
     )
     poa_type_id: POAType | None = PydanticField(default=None, examples=["PROFIT_COST"])
-    claimant_id: str = PydanticField(examples=["claimant-123@provider.co.uk"])
+    claimant_id: EmailAddress = PydanticField(examples=["claimant-123@provider.co.uk"])
     claim_evidence_ids: list[uuid.UUID] | None = PydanticField(
         default=None,
         examples=[["3fa85f64-5717-4562-b3fc-2c963f66afa6"]],
@@ -288,7 +289,9 @@ class ClaimCreate(BaseModel):
     financial_recovery_interest: Decimal | None = PydanticField(
         default=None, examples=["50.00"]
     )
-    paying_party: str | None = PydanticField(default=None, examples=["Some Council"])
+    paying_party: OrganisationName | None = PydanticField(
+        default=None, examples=["Some Council"]
+    )
     number_of_counsel_instructed: NumberOfCounselInstructed | None = PydanticField(
         default=None, examples=["2"]
     )
@@ -318,7 +321,9 @@ class RejectClaimRequest(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    justification: str = PydanticField(examples=["Rejected following manual review."])
+    justification: RejectionReason = PydanticField(
+        examples=["Rejected following manual review."]
+    )
 
 
 # REQUEST BODY -- Pay in full

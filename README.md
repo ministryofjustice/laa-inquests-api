@@ -148,6 +148,43 @@ The only exemption is `Amount`: wrap a money value your own code has formatted, 
 `Amount(f"{value:.2f}")`, so a negative such as `-100.00` stays a number. Never wrap text
 that came from a user, a provider or another system.
 
+## Free-text input validation
+Every text field a client can send is checked by a type from `app/models/validated_types.py`,
+and a failure returns 422. The rules mirror the external and internal UIs, so users normally
+see the error in the UI first, and add a character allow-list where the UI had none. Short
+fields are trimmed, composed to Unicode NFC and have curly apostrophes (`’`) folded to `'`
+before they are checked, and the cleaned value is what is stored. Existing stored data is not
+re-validated.
+
+| Field | Allowed | Length |
+|---|---|---|
+| Client first, last and last name at birth; deceased first and last name | Unicode letters, space, `'`, `-`; starts with a letter | 1–100 |
+| Client's relationship to the deceased | as names; empty allowed | 0–70 |
+| Coroner's reference | ASCII letters, digits, space, `.` `/` `-`; starts with a letter or digit; empty allowed | 0–50 |
+| Previous application reference | as coroner's reference | 0–35 |
+| Address lines | ASCII letters, digits, space, `'` `.` `,` `/` `&` `-`; needs a letter or digit | 2–100 |
+| Town or city | ASCII letters, space, `'`, `-`; needs a letter | 2–100 |
+| County | as town or city | 3–50 |
+| Postcode | ASCII letters, digits, space; trimmed and uppercased | 5–8 |
+| Correspondence recipient name (person or organisation) | Unicode letters, digits, space, `'` `.` `,` `&` `-`; needs a letter or digit | 1–100 |
+| Paying party | as recipient name; empty allowed | 0–100 |
+| National Insurance number | `AB123456C` format, spaces allowed between the groups; stored as typed | up to 15 |
+| Provider office id | ASCII letters and digits | 1–20 |
+| Provider email, claimant id | mailbox-style email address | up to 254 |
+| Further information | no `<`, `>` or control characters; empty, or at least 2 | up to 500 |
+| Refusal justification | no `<`, `>` or control characters | up to 1,500 |
+| Claim rejection reason | as above, and must contain a visible character | 1–500 |
+| Case note | as above, and must contain a visible character | 1–10,000 |
+| `laa_reference`, `claim_reference` in URLs | letters, digits, `-`; the exact format is not checked, so an unknown reference is still a 404 | 1–20 |
+| `firm_id` in URLs | ASCII letters and digits (it is put into a provider details URL) | 1–20 |
+| `laa_reference` search query | length only, so a mistyped reference finds nothing instead of erroring | up to 50 |
+| GOV.UK Notify callback strings | single line, no control characters | id 64, reference 100, to 254, timestamps 40 |
+
+To add a text field, use one of these types rather than a plain `str`.
+`tests/unit/models/test_request_strings_are_bounded.py` fails for any request string that has
+no length bound and is not allow-listed with a reason. Input validation is defence in depth:
+spreadsheet formulas are neutralised where reports are written (see CSV reports above).
+
 ## Tests
 To install testing dependencies run:
 ```bash
