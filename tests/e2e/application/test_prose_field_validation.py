@@ -5,7 +5,11 @@ from app.auth.rbac import Role
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimType
 from app.models.history.index import HistoryEvent
-from tests.e2e.factories import create_application_in_db, create_claim_for_reference
+from tests.e2e.factories import (
+    create_application_in_db,
+    create_claim_in_db,
+    get_application_id,
+)
 
 pytestmark = pytest.mark.usefixtures("mock_gov_notify")
 
@@ -73,8 +77,10 @@ class TestRejectClaimJustification:
     @staticmethod
     def _reject(client, session, justification):
         laa_reference = session.exec(select(Application)).first().laa_reference
-        claim = create_claim_for_reference(
-            session, laa_reference, claim_type=ClaimType.PAYMENT_ON_ACCOUNT
+        claim = create_claim_in_db(
+            session,
+            application_id=get_application_id(session, laa_reference),
+            claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
         )
         return client.patch(
             f"/applications/{laa_reference}/claims/{claim.claim_reference}/reject",
@@ -129,8 +135,10 @@ class TestRejectedProseNeverReachesTheHistory:
     ):
         application = create_application_in_db(session)
         reference = application.laa_reference
-        claim = create_claim_for_reference(
-            session, reference, claim_type=ClaimType.PAYMENT_ON_ACCOUNT
+        claim = create_claim_in_db(
+            session,
+            application_id=application.application_id,
+            claim_type=ClaimType.PAYMENT_ON_ACCOUNT,
         )
         events_before = len(session.exec(select(HistoryEvent)).all())
 
