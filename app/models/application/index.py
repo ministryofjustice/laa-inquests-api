@@ -32,7 +32,10 @@ from app.models.validated_types import (
     AddressLine,
     CoronersReference,
     CountyName,
+    Nino,
     PersonName,
+    Postcode,
+    PreviousReference,
     ProseText,
     RecipientName,
     RelationshipText,
@@ -306,7 +309,7 @@ class AddressCreate(BaseModel):
     address_line_2: AddressLine | None = PydanticField(default=None, examples=["Jones"])
     town_or_city: TownName = PydanticField(examples=["Example Town"])
     county: CountyName | None = PydanticField(default=None, examples=["Jones"])
-    postcode: str = PydanticField(examples=["AA1 1AA"])
+    postcode: Postcode = PydanticField(examples=["AA1 1AA"])
 
 
 class CorrespondenceRecipientCreate(BaseModel):
@@ -331,7 +334,7 @@ class ClientCreate(BaseModel):
         default=None, examples=["Jones"]
     )
     date_of_birth: str = PydanticField(examples=["2000-01-01"])
-    national_insurance_number: str | None = PydanticField(
+    national_insurance_number: Nino | None = PydanticField(
         default=None, examples=["AA123456A"]
     )
 
@@ -345,10 +348,10 @@ class ClientCreate(BaseModel):
         return v
 
     has_applied_previously: bool = PydanticField(default=False, examples=[False])
-    prev_application_reference: str | None = PydanticField(
-        default=None, examples=["TBD"]
+    prev_application_reference: PreviousReference | None = PydanticField(
+        default=None, examples=["INQ-ABC-DEF"]
     )
-    correspondence_address_source: str = PydanticField(
+    correspondence_address_source: AddressSource = PydanticField(
         examples=["USE_SPECIFIED_ADDRESS"]
     )
     correspondence_address: AddressCreate | None = None

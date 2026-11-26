@@ -9,7 +9,7 @@ def create_application_payload() -> dict:
             "clientFirstName": "Test",
             "clientLastName": "Surname",
             "dateOfBirth": "1990-01-01",
-            "nationalInsuranceNumber": "AB12345A",
+            "nationalInsuranceNumber": "AB123456A",
             "correspondenceAddressSource": "USE_SPECIFIED_ADDRESS",
             "correspondenceAddress": {
                 "addressLine1": "2 Example Lane",

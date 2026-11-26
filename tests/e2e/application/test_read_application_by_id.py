@@ -99,7 +99,7 @@ def test_200_returns_explicit_correspondence_recipient_from_stored_application(c
                 "clientFirstName": "Test",
                 "clientLastName": "Surname",
                 "dateOfBirth": "1990-01-01",
-                "nationalInsuranceNumber": "AB12345A",
+                "nationalInsuranceNumber": "AB123456A",
                 "correspondenceAddressSource": "USE_SPECIFIED_ADDRESS",
                 "correspondenceAddress": {
                     "addressLine1": "2 Example Lane",

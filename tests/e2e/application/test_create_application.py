@@ -21,7 +21,7 @@ def _make_request_body(client_overrides=None):
         "clientFirstName": "Test",
         "clientLastName": "Surname",
         "dateOfBirth": "1990-01-01",
-        "nationalInsuranceNumber": "AB12345A",
+        "nationalInsuranceNumber": "AB123456A",
         "correspondenceAddressSource": "USE_SPECIFIED_ADDRESS",
         "correspondenceAddress": {
             "addressLine1": "2 Example Lane",
@@ -90,6 +90,17 @@ def _set_recipient(body, recipient_type, name):
     }
 
 
+def _post_application(client, body):
+    return client.post(
+        "/applications",
+        json=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+        },
+    )
+
+
 class TestCreateApplication:
     def test_201_create_application_response_contains_expected_base_properties(
         self, client
@@ -155,7 +166,7 @@ class TestCreateApplication:
         assert client_data["clientLastName"] == "Surname"
         assert client_data["clientLastNameAtBirth"] is None
         assert client_data["dateOfBirth"] == "1990-01-01"
-        assert client_data["nationalInsuranceNumber"] == "AB12345A"
+        assert client_data["nationalInsuranceNumber"] == "AB123456A"
         assert client_data["correspondenceAddressSource"] == "USE_SPECIFIED_ADDRESS"
         assert client_data["correspondenceAddress"] == {
             "addressLine1": "2 Example Lane",
@@ -580,6 +591,131 @@ class TestCreateApplication:
         assert response.status_code == 201
         recipient = response.json()["client"]["correspondenceRecipient"]
         assert recipient["recipientName"] == expected
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "AB123456A<b>",
+            "AB123456E",
+            "AB12345A",
+            "BG123456A",
+            "DA123456A",
+            "<script>",
+            "zxdfsdfdszxdfsdfds'';!--\"=&{()}",
+            "AB\n123456C",
+            "",
+            " ",
+        ],
+    )
+    def test_422_rejected_when_national_insurance_number_is_invalid(
+        self, client, value
+    ):
+        body = _make_request_body({"nationalInsuranceNumber": value})
+
+        assert _post_application(client, body).status_code == 422
+
+    @pytest.mark.parametrize("value", ["AA123456A", "ab 123456 c", "JG123456D", None])
+    def test_201_accepts_a_valid_or_absent_national_insurance_number(
+        self, client, value
+    ):
+        body = _make_request_body({"nationalInsuranceNumber": value})
+
+        assert _post_application(client, body).status_code == 201
+
+    def test_201_stores_national_insurance_number_trimmed_and_as_typed(self, client):
+        body = _make_request_body({"nationalInsuranceNumber": " ab 123456 c\n"})
+
+        response = _post_application(client, body)
+
+        assert response.status_code == 201
+        assert response.json()["client"]["nationalInsuranceNumber"] == "ab 123456 c"
+
+    @pytest.mark.parametrize("address_key", ADDRESS_KEYS)
+    @pytest.mark.parametrize(
+        "value",
+        ["SW1A", "SW1A 1AAA1", "SW1A-1AA", "<b>SW1A", "SW1A\n1AA", "ſw1a 1aa", "", " "],
+    )
+    def test_422_rejected_when_postcode_is_invalid(self, client, address_key, value):
+        body = _make_request_body()
+        body["client"][address_key]["postcode"] = value
+
+        assert _post_application(client, body).status_code == 422
+
+    @pytest.mark.parametrize("address_key", ADDRESS_KEYS)
+    @pytest.mark.parametrize("value", ["SW1A 1AA", "M11AE", "EC1A1BB"])
+    def test_201_accepts_valid_postcodes(self, client, address_key, value):
+        body = _make_request_body()
+        body["client"][address_key]["postcode"] = value
+
+        assert _post_application(client, body).status_code == 201
+
+    @pytest.mark.parametrize("address_key", ADDRESS_KEYS)
+    @pytest.mark.parametrize(
+        ("value", "expected"), [("sw1a 1aa", "SW1A 1AA"), (" M1 1AE\n", "M1 1AE")]
+    )
+    def test_201_stores_postcode_trimmed_and_uppercased(
+        self, client, address_key, value, expected
+    ):
+        body = _make_request_body()
+        body["client"][address_key]["postcode"] = value
+
+        response = _post_application(client, body)
+
+        assert response.status_code == 201
+        assert response.json()["client"][address_key]["postcode"] == expected
+
+    @pytest.mark.parametrize(
+        "value", ["<b>", "INQ;ABC", "A" * 36, "-INQ", "INQ\nABC", "INQ'ABC"]
+    )
+    def test_422_rejected_when_previous_application_reference_is_invalid(
+        self, client, value
+    ):
+        body = _make_request_body({"prevApplicationReference": value})
+
+        assert _post_application(client, body).status_code == 422
+
+    @pytest.mark.parametrize("value", ["INQ-ABC-DEF", "1234567/A", "A" * 35, "", None])
+    def test_201_accepts_previous_application_reference_or_none(self, client, value):
+        body = _make_request_body({"prevApplicationReference": value})
+
+        assert _post_application(client, body).status_code == 201
+
+    def test_201_stores_previous_application_reference_trimmed(self, client):
+        body = _make_request_body({"prevApplicationReference": " INQ-ABC-DEF\n"})
+
+        response = _post_application(client, body)
+
+        assert response.status_code == 201
+        assert response.json()["client"]["prevApplicationReference"] == "INQ-ABC-DEF"
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "BAD_VALUE",
+            "use_specified_address",
+            " USE_SPECIFIED_ADDRESS",
+            "<script>",
+            "",
+        ],
+    )
+    def test_422_rejected_when_correspondence_address_source_is_not_a_known_value(
+        self, client, value
+    ):
+        body = _make_request_body({"correspondenceAddressSource": value})
+
+        assert _post_application(client, body).status_code == 422
+
+    @pytest.mark.parametrize(
+        "value",
+        ["USE_CLIENT_HOME_ADDRESS", "USE_PROVIDER_ADDRESS", "USE_SPECIFIED_ADDRESS"],
+    )
+    def test_201_accepts_each_known_correspondence_address_source(self, client, value):
+        body = _make_request_body({"correspondenceAddressSource": value})
+
+        response = _post_application(client, body)
+
+        assert response.status_code == 201
+        assert response.json()["client"]["correspondenceAddressSource"] == value
 
     @pytest.mark.parametrize("address_key", ADDRESS_KEYS)
     @pytest.mark.parametrize("field", ADDRESS_FIELDS)
