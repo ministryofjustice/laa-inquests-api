@@ -4,6 +4,7 @@ from sqlmodel import select
 from app.auth.rbac import Role
 from app.models.application.index import Application
 from app.models.claim.enums import ClaimType
+from app.models.history.index import HistoryEvent
 from tests.e2e.factories import create_application_in_db, create_claim_for_reference
 
 pytestmark = pytest.mark.usefixtures("mock_gov_notify")
@@ -116,3 +117,40 @@ class TestCreateNoteText:
     @pytest.mark.parametrize("value", ACCEPTED_PROSE)
     def test_204_accepts_quotes_semicolons_and_newlines(self, session, client, value):
         assert self._create_note(client, session, value).status_code == 204
+
+
+class TestRejectedProseNeverReachesTheHistory:
+    """Notes, refusals and rejections are copied into history events and the audit
+    report, so text that fails validation must leave no event behind."""
+
+    @pytest.mark.parametrize("value", ["<script>alert(1)</script>", "bad\x00value"])
+    def test_rejected_note_refusal_and_rejection_add_no_history_event(
+        self, session, client, value
+    ):
+        application = create_application_in_db(session)
+        reference = application.laa_reference
+        claim = create_claim_for_reference(
+            session, reference, claim_type=ClaimType.PAYMENT_ON_ACCOUNT
+        )
+        events_before = len(session.exec(select(HistoryEvent)).all())
+
+        responses = [
+            client.post(
+                f"/applications/{reference}/note",
+                json={"noteText": value},
+                headers=_headers(Role.APPLICATIONS_CASEWORKER),
+            ),
+            client.patch(
+                f"/applications/{reference}/refuse-decision",
+                json={"reasonForRefusal": "NOT_IN_SCOPE", "justification": value},
+                headers=_headers(Role.APPLICATIONS_CASEWORKER),
+            ),
+            client.patch(
+                f"/applications/{reference}/claims/{claim.claim_reference}/reject",
+                json={"justification": value},
+                headers=_headers(Role.CLAIMS_CASEWORKER),
+            ),
+        ]
+
+        assert [response.status_code for response in responses] == [422, 422, 422]
+        assert len(session.exec(select(HistoryEvent)).all()) == events_before

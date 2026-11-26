@@ -13,7 +13,7 @@ from sqlmodel import Enum, Field, Relationship, SQLModel
 
 from app.domain.claim_total import resolve_claim_total
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
-from app.domain.file_name import is_valid_upload_file_name
+from app.domain.file_name import MAX_FILE_NAME_LENGTH, is_valid_upload_file_name
 from app.models.application.index import Application
 from app.models.claim.enums import (
     ClaimDecisionStatus,
@@ -232,7 +232,7 @@ class ClaimCostTemplateFile(BaseModel):
         examples=["3fa85f64-5717-4562-b3fc-2c963f66afa6"]
     )
     claim_cost_template_file_name: str = PydanticField(
-        examples=["claim_cost_template.xlsx"]
+        max_length=MAX_FILE_NAME_LENGTH, examples=["claim_cost_template.xlsx"]
     )
 
     @field_validator("claim_cost_template_file_name")

@@ -19,7 +19,10 @@ from sqlalchemy import Column
 from sqlmodel import Enum, Field, Relationship, SQLModel
 
 from app.domain.constants.claims import SUBSTANTIVE_CERTIFICATE_AMOUNT
-from app.models.application.constants import UNGRANTED_SUBSTANTIVE_COST_LIMITATION
+from app.models.application.constants import (
+    ISO_DATE_MAX_LENGTH,
+    UNGRANTED_SUBSTANTIVE_COST_LIMITATION,
+)
 from app.models.application.enums import (
     AddressSource,
     CorrespondenceRecipientType,
@@ -336,7 +339,9 @@ class ClientCreate(BaseModel):
     client_last_name_at_birth: PersonName | None = PydanticField(
         default=None, examples=["Jones"]
     )
-    date_of_birth: str = PydanticField(examples=["2000-01-01"])
+    date_of_birth: str = PydanticField(
+        max_length=ISO_DATE_MAX_LENGTH, examples=["2000-01-01"]
+    )
     national_insurance_number: Nino | None = PydanticField(
         default=None, examples=["AA123456A"]
     )
@@ -383,8 +388,12 @@ class DeceasedCreate(BaseModel):
     )
     deceased_first_name: PersonName = PydanticField(examples=["John"])
     deceased_last_name: PersonName = PydanticField(examples=["Smith"])
-    deceased_date_of_birth: str = PydanticField(examples=["2000-01-01"])
-    deceased_date_of_death: str = PydanticField(examples=["2025-01-01"])
+    deceased_date_of_birth: str = PydanticField(
+        max_length=ISO_DATE_MAX_LENGTH, examples=["2000-01-01"]
+    )
+    deceased_date_of_death: str = PydanticField(
+        max_length=ISO_DATE_MAX_LENGTH, examples=["2025-01-01"]
+    )
     coroners_reference: CoronersReference = PydanticField(
         examples=["Example reference number"]
     )
