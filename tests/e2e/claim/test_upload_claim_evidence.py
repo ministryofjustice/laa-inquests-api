@@ -88,8 +88,10 @@ class TestUploadClaimEvidenceOfficeId:
         assert evidence.claim_id is None
         assert evidence.file_size == len(content)
 
-    @pytest.mark.parametrize("office_id", [None, ""])
-    def test_422_requires_non_empty_office_without_side_effects(
+    @pytest.mark.parametrize(
+        "office_id", [None, "", " ", "0U 651L", "0U651L<b>", "0U-651L", "A" * 21]
+    )
+    def test_422_requires_valid_office_without_side_effects(
         self, client: TestClient, session: Session, office_id: str | None
     ) -> None:
         mock_sds = MagicMock(spec=SdsPort)

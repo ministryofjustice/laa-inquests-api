@@ -32,7 +32,9 @@ from app.models.validated_types import (
     AddressLine,
     CoronersReference,
     CountyName,
+    EmailAddress,
     Nino,
+    OfficeCode,
     PersonName,
     Postcode,
     PreviousReference,
@@ -419,7 +421,7 @@ class PublicBodyCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    public_body_id: str = PydanticField(
+    public_body_id: PublicBodyId = PydanticField(
         examples=["Department of Health and Social Care"]
     )
 
@@ -430,8 +432,8 @@ class ProviderCreate(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
-    office_id: str = PydanticField(examples=["0U651L"])
-    email_address: str = PydanticField(examples=["provider@example.com"])
+    office_id: OfficeCode = PydanticField(examples=["0U651L"])
+    email_address: EmailAddress = PydanticField(examples=["provider@example.com"])
 
 
 class ApplicationCreate(BaseModel):

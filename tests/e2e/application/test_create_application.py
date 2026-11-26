@@ -717,6 +717,103 @@ class TestCreateApplication:
         assert response.status_code == 201
         assert response.json()["client"]["correspondenceAddressSource"] == value
 
+    @pytest.mark.parametrize(
+        "value", ["0U 651L", "0U651L<b>", "0U-651L", "0U\n651L", "A" * 21, "", " "]
+    )
+    def test_422_rejected_when_provider_office_id_is_not_letters_and_digits(
+        self, client, value
+    ):
+        body = _make_request_body()
+        body["provider"]["officeId"] = value
+
+        assert _post_application(client, body).status_code == 422
+
+    def test_201_trims_provider_office_id(self, client):
+        body = _make_request_body()
+        body["provider"]["officeId"] = " 0U651L\n"
+
+        response = _post_application(client, body)
+
+        assert response.status_code == 201
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "provider@example",
+            "provider@",
+            "@example.com",
+            "pro vider@example.com",
+            "<b>@example.com",
+            "provider@example.com;x",
+            "a@b.c",
+            f"{'a' * 250}@example.com",
+            "",
+            " ",
+        ],
+    )
+    def test_422_rejected_when_provider_email_is_not_a_mailbox_address(
+        self, client, value
+    ):
+        body = _make_request_body()
+        body["provider"]["emailAddress"] = value
+
+        assert _post_application(client, body).status_code == 422
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "provider@example.com",
+            "o'brien+tag@firm.co.uk",
+            "first.last_firm.com#EXT#@tenant.onmicrosoft.com",
+        ],
+    )
+    def test_201_accepts_mailbox_style_provider_emails(self, client, value):
+        body = _make_request_body()
+        body["provider"]["emailAddress"] = value
+
+        response = _post_application(client, body)
+
+        assert response.status_code == 201
+        assert response.json()["provider"]["emailAddress"] == value
+
+    def test_201_stores_provider_email_trimmed(self, client):
+        body = _make_request_body()
+        body["provider"]["emailAddress"] = " provider@example.com\n"
+
+        response = _post_application(client, body)
+
+        assert response.status_code == 201
+        assert response.json()["provider"]["emailAddress"] == "provider@example.com"
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "Not A Body",
+            "department for transport",
+            "Department for Transport ",
+            "<script>",
+            "",
+            " ",
+        ],
+    )
+    def test_422_rejected_when_public_body_is_not_a_known_value(self, client, value):
+        body = _make_request_body()
+        body["publicBodies"] = [{"publicBodyId": value}]
+
+        assert _post_application(client, body).status_code == 422
+
+    @pytest.mark.parametrize(
+        "value",
+        ["Department for Transport", "Department of Health and Social Care"],
+    )
+    def test_201_accepts_the_known_public_bodies_in_the_test_database(
+        self, client, value
+    ):
+        body = _make_request_body()
+        body["publicBodies"] = [{"publicBodyId": value}]
+
+        assert _post_application(client, body).status_code == 201
+
     @pytest.mark.parametrize("address_key", ADDRESS_KEYS)
     @pytest.mark.parametrize("field", ADDRESS_FIELDS)
     @pytest.mark.parametrize(

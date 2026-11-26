@@ -5,7 +5,9 @@ from app.models.validated_types import (
     AddressLine,
     CoronersReference,
     CountyName,
+    EmailAddress,
     Nino,
+    OfficeCode,
     OrganisationName,
     PersonName,
     Postcode,
@@ -470,6 +472,97 @@ class TestPreviousReference:
     def test_rejects_everything_else(self, value):
         with pytest.raises(ValidationError):
             validate(PreviousReference, value)
+
+
+class TestOfficeCode:
+    @pytest.mark.parametrize(
+        "value", ["0U651L", "1A234B", "ABC123", "0u651l", "A", "A" * 20]
+    )
+    def test_accepts_letters_and_digits(self, value):
+        assert validate(OfficeCode, value) == value
+
+    def test_trims(self):
+        assert validate(OfficeCode, " 0U651L\n") == "0U651L"
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "",
+            " ",
+            "0U 651L",
+            "0U-651L",
+            "0U651L<b>",
+            "0U651L;",
+            "0U\n651L",
+            "é0U651L",
+            "A" * 21,
+        ],
+    )
+    def test_rejects_everything_else(self, value):
+        with pytest.raises(ValidationError):
+            validate(OfficeCode, value)
+
+    @pytest.mark.parametrize("value", [None, 123])
+    def test_rejects_non_string_input(self, value):
+        with pytest.raises(ValidationError):
+            validate(OfficeCode, value)
+
+
+class TestEmailAddress:
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "provider@example.com",
+            "claimant-123@provider.co.uk",
+            "o'brien+tag@firm.co.uk",
+            "first.last_firm.com#EXT#@tenant.onmicrosoft.com",
+            "a@b.co",
+            f"{'a' * 64}@example.com",
+        ],
+    )
+    def test_accepts_mailbox_style_addresses(self, value):
+        assert validate(EmailAddress, value) == value
+
+    def test_trims_and_keeps_case(self):
+        assert (
+            validate(EmailAddress, " Provider@Example.com\n") == "Provider@Example.com"
+        )
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "provider@example",
+            "provider@",
+            "@example.com",
+            "pro vider@example.com",
+            "<b>@example.com",
+            "provider@example.com;x",
+            'pro"vider@example.com',
+            "pro,vider@example.com",
+            "pro(vider)@example.com",
+            "a@b.c",
+            "provider@@example.com",
+            "provider@exam_ple.com",
+            "provider@-example.com",
+            "provider@example-.com",
+            "provider@example..com",
+            "pr\novider@example.com",
+            "pröv@example.com",
+            "provider@exämple.com",
+            f"{'a' * 65}@example.com",
+            f"{'a' * 250}@example.com",
+            "",
+            " ",
+        ],
+    )
+    def test_rejects_everything_else(self, value):
+        with pytest.raises(ValidationError):
+            validate(EmailAddress, value)
+
+    @pytest.mark.parametrize("value", [None, 123])
+    def test_rejects_non_string_input(self, value):
+        with pytest.raises(ValidationError):
+            validate(EmailAddress, value)
 
 
 class TestProseText:

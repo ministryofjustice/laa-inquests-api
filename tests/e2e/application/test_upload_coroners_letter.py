@@ -56,8 +56,10 @@ class TestUploadCoronersLetter:
         assert letter is not None
         assert letter.office_id == "1A234B"
 
-    @pytest.mark.parametrize("office_id", [None, ""])
-    def test_422_upload_coroners_letter_requires_a_non_empty_office_id(
+    @pytest.mark.parametrize(
+        "office_id", [None, "", " ", "0U 651L", "0U651L<b>", "0U-651L", "A" * 21]
+    )
+    def test_422_upload_coroners_letter_requires_a_valid_office_id(
         self, client: TestClient, session: Session, office_id: str | None
     ) -> None:
         mock_sds = MagicMock(spec=SdsPort)

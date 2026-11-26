@@ -17,6 +17,8 @@ MAX_PREVIOUS_REFERENCE_LENGTH = 35
 MAX_NINO_LENGTH = 15
 MIN_POSTCODE_LENGTH = 5
 MAX_POSTCODE_LENGTH = 8
+MAX_OFFICE_CODE_LENGTH = 20
+MAX_EMAIL_LENGTH = 254
 _ALLOWED_PROSE_WHITESPACE = frozenset("\n\r\t")
 _FORBIDDEN_PROSE_CHARACTERS = frozenset("<>")
 _CONTROL_CATEGORIES = frozenset({"Cc", "Cf"})
@@ -42,6 +44,15 @@ _ORGANISATION_NAME_PATTERN = rf"^(?:{_ORGANISATION_BODY})?$"
 
 _REFERENCE_TEXT_PATTERN = r"^(?:[A-Za-z0-9][A-Za-z0-9 ./-]*)?$"
 _POSTCODE_PATTERN = r"^[A-Za-z0-9 ]+$"
+_OFFICE_CODE_PATTERN = r"^[A-Za-z0-9]+$"
+
+# Letters, digits and ._%+'#- before the @ (a quote mark is common in surnames, and "#"
+# appears in guest-account usernames such as "jane_firm.com#EXT#@tenant..."), and ASCII
+# domain labels. Nothing that could break out of a header, HTML or a CSV cell.
+_EMAIL_PATTERN = (
+    r"^[A-Za-z0-9._%+'#-]{1,64}@"
+    r"(?:[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,}$"
+)
 
 # The UI's NINO rule, anchored at both ends (the UI's has no end anchor, so anything
 # after the suffix letter passes there). Python's re is used because the prefix
@@ -188,4 +199,21 @@ Postcode = Annotated[
     ),
     BeforeValidator(_normalise_short_text),
     AfterValidator(str.upper),
+]
+
+OfficeCode = Annotated[
+    str,
+    StringConstraints(
+        min_length=1, max_length=MAX_OFFICE_CODE_LENGTH, pattern=_OFFICE_CODE_PATTERN
+    ),
+    BeforeValidator(_normalise_short_text),
+]
+
+# The provider email and claimant id both come from the signed-in user's Entra username
+# and are emailed to, so this is a mailbox-shaped address rather than free text. Case is
+# kept as given. `email-validator` is only a transitive dependency, so a regex is used.
+EmailAddress = Annotated[
+    str,
+    StringConstraints(max_length=MAX_EMAIL_LENGTH, pattern=_EMAIL_PATTERN),
+    BeforeValidator(_normalise_short_text),
 ]

@@ -19,6 +19,7 @@ from app.auth.rbac import Permission, require_permission_from
 from app.domain.caller import Caller
 from app.logging_utils import build_log_extra
 from app.models.claim.index import ClaimApplicationResponse, UploadClaimEvidenceResponse
+from app.models.validated_types import OfficeCode
 from app.ports.claim.delete_claim_evidence_port import DeleteClaimEvidencePort
 from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.ports.claim.get_claim_evidence_port import GetClaimEvidencePort
@@ -121,9 +122,8 @@ async def upload_claim_evidence(
         frozenset[str], Depends(get_current_provider_office_codes)
     ],
     office_id: Annotated[
-        str,
+        OfficeCode,
         Form(
-            min_length=1,
             description="Office uploading the evidence; must be one of the user's office codes.",
         ),
     ],

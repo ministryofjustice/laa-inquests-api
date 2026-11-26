@@ -55,6 +55,7 @@ from app.models.claim.index import (
     RejectClaimRequest,
 )
 from app.models.history.index import CreateNoteRequest, HistoryEventResponse
+from app.models.validated_types import OfficeCode
 from app.ports.application_lookup_port import ApplicationLookupPort
 from app.ports.claim.create_claim_decision_amount_port import (
     CreateClaimDecisionAmountPort,
@@ -594,9 +595,8 @@ async def upload_coroners_letter(
         frozenset[str], Depends(get_current_provider_office_codes)
     ],
     office_id: Annotated[
-        str,
+        OfficeCode,
         Form(
-            min_length=1,
             description="Office uploading the letter; must be one of the user's office codes.",
         ),
     ],
