@@ -19,7 +19,7 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 # One-off owner for evidence not attached to any claim. Not a default for new uploads.
-UNATTACHED_EVIDENCE_OFFICE_ID = "0U651L"
+UNATTACHED_EVIDENCE_OFFICE_ID = "MISSING"
 
 
 def upgrade() -> None:

@@ -19,7 +19,7 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 # One-off owner for letters not attached to any application. Not a default for new uploads.
-UNATTACHED_LETTER_OFFICE_ID = "0U651L"
+UNATTACHED_LETTER_OFFICE_ID = "MISSING"
 
 
 def upgrade() -> None:
