@@ -1,8 +1,7 @@
 import logging
 import uuid
 
-from app.domain.caller import Caller, ProviderCaller
-from app.domain.office_authorisation import is_office_authorised
+from app.domain.caller import Caller
 from app.logging_utils import build_log_extra
 from app.models.claim.index import ClaimEvidenceResult
 from app.ports.claim.get_claim_evidence_port import GetClaimEvidencePort
@@ -30,9 +29,8 @@ class RetrieveClaimEvidenceUseCase:
         claim_evidence = self.get_claim_evidence_port.get_claim_evidence_by_id(
             claim_evidence_id
         )
-        if claim_evidence is None or (
-            isinstance(caller, ProviderCaller)
-            and not is_office_authorised(claim_evidence.office_id, caller.office_codes)
+        if claim_evidence is None or not caller.can_access_resource_owned_by(
+            claim_evidence.office_id
         ):
             logger.error(
                 "Claim evidence retrieval failed",
