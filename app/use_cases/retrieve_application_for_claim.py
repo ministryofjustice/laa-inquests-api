@@ -1,7 +1,6 @@
 import logging
 
-from app.domain.caller import Caller, ProviderCaller
-from app.domain.office_authorisation import is_office_authorised
+from app.domain.caller import Caller
 from app.logging_utils import build_log_extra
 from app.ports.claim.get_claim_by_id_port import GetClaimByIdPort
 from app.use_cases.exceptions import ClaimNotFoundError
@@ -18,11 +17,8 @@ class RetrieveApplicationForClaimUseCase:
         if (
             claim is None
             or claim.application is None
-            or (
-                isinstance(caller, ProviderCaller)
-                and not is_office_authorised(
-                    claim.application.provider.office_id, caller.office_codes
-                )
+            or not caller.can_access_resource_owned_by(
+                claim.application.provider.office_id
             )
         ):
             logger.error(
