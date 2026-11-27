@@ -6,9 +6,13 @@ from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.notifications.enums import NotificationType
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
+from app.ports.get_coroners_letter_port import GetCoronersLetterPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.provider_details_port import ProviderDetailsPort
-from app.use_cases.exceptions import ProviderOfficeMismatchError
+from app.use_cases.exceptions import (
+    CoronersLetterNotFoundError,
+    ProviderOfficeMismatchError,
+)
 from app.use_cases.identify_duplicate_applications import (
     IdentifyDuplicateApplicationsUseCase,
 )
@@ -20,6 +24,7 @@ class CreateApplicationUseCase:
     def __init__(
         self,
         create_application_port: CreateApplicationPort,
+        get_coroners_letter_port: GetCoronersLetterPort,
         create_history_event_port: CreateHistoryEventPort,
         gov_notify_port: GovNotifyPort,
         provider_details_port: ProviderDetailsPort,
@@ -28,6 +33,7 @@ class CreateApplicationUseCase:
         self.create_application_port = create_application_port
         self.create_history_event_port = create_history_event_port
         self.gov_notify_port = gov_notify_port
+        self.get_coroners_letter_port = get_coroners_letter_port
         self.provider_details_port = provider_details_port
         self.identify_duplicate_applications_use_case = (
             identify_duplicate_applications_use_case
@@ -39,19 +45,28 @@ class CreateApplicationUseCase:
         firm_code: str,
         user_office_codes: frozenset[str],
     ) -> Application:
+        if request.provider.office_id not in user_office_codes:
+            logger.error(
+                f"Office id {request.provider.office_id} is not in the user's office codes"
+            )
+            raise ProviderOfficeMismatchError(
+                f"Office id {request.provider.office_id} is not in the user's office codes"
+            )
+
+        coroners_letter = self.get_coroners_letter_port.get_coroners_letter_by_id(
+            request.coroners_letter_id
+        )
+        if (
+            coroners_letter is None
+            or coroners_letter.office_id != request.provider.office_id
+        ):
+            raise CoronersLetterNotFoundError.safe("Coroners letter not found")
+
         application = self.create_application_port.create_application(
             request, firm_code
         )
 
         try:
-            if application.provider.office_id not in user_office_codes:
-                logger.error(
-                    f"Office id {application.provider.office_id} is not in the user's office codes"
-                )
-                raise ProviderOfficeMismatchError(
-                    f"Office id {application.provider.office_id} is not in the user's office codes"
-                )
-
             self.provider_details_port.get_firm_name(
                 firm_code, application.provider.office_id
             )

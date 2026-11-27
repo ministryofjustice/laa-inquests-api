@@ -55,11 +55,23 @@ def test_401_verify_entra_token_dependency_rejects_unauthorized_request(
 
 
 def test_201_create_application_returns_201_when_provider_application_user_token(
-    client,
+    client, session
 ):
+    letter = CoronersLetter(
+        sds_file_name="test_sds_file.pdf",
+        file_name="test_file.pdf",
+        office_id="0U651L",
+    )
+    session.add(letter)
+    session.commit()
+    session.refresh(letter)
+
+    body = create_application_payload()
+    body["coronersLetterId"] = str(letter.coroners_letter_id)
+
     response = client.post(
         "/applications",
-        json=create_application_payload(),
+        json=body,
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",

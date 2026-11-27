@@ -6,7 +6,11 @@ from sqlmodel import select
 
 from app import api
 from app.auth.rbac import Permission, Role, get_current_user_permissions
-from app.models.application.index import Application, DuplicateApplicationRecord
+from app.models.application.index import (
+    Application,
+    CoronersLetter,
+    DuplicateApplicationRecord,
+)
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.history.index import HistoryEvent
 from app.routers.applications import get_provider_details_port
@@ -60,13 +64,42 @@ def _make_request_body(client_overrides=None):
     }
 
 
+@pytest.fixture
+def valid_application_body(session):
+    letter = CoronersLetter(
+        sds_file_name="test_sds_file.pdf",
+        file_name="test_file.pdf",
+        office_id="0U651L",
+    )
+    session.add(letter)
+    session.commit()
+    session.refresh(letter)
+
+    body = _make_request_body()
+    body["coronersLetterId"] = str(letter.coroners_letter_id)
+    return body
+
+
 class TestCreateApplication:
     def test_201_create_application_response_contains_expected_base_properties(
-        self, client
+        self, client, session
     ):
+
+        letter = CoronersLetter(
+            sds_file_name="test_sds_file.pdf",
+            file_name="test_file.pdf",
+            office_id="0U651L",
+        )
+        session.add(letter)
+        session.commit()
+        session.refresh(letter)
+
+        body = _make_request_body()
+        body["coronersLetterId"] = str(letter.coroners_letter_id)
+
         response = client.post(
             "/applications",
-            json=_make_request_body(),
+            json=body,
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
@@ -85,11 +118,11 @@ class TestCreateApplication:
         assert isinstance(new_application["proceeding"], dict)
 
     def test_201_create_application_response_contains_expected_proceeding_information(
-        self, client
+        self, client, valid_application_body
     ):
         response = client.post(
             "/applications",
-            json=_make_request_body(),
+            json=valid_application_body,
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
@@ -109,10 +142,12 @@ class TestCreateApplication:
         assert isinstance(proceeding["proceedingName"], str)
         assert isinstance(proceeding["proceedingDescription"], str)
 
-    def test_201_responds_with_expected_client_details(self, client):
+    def test_201_responds_with_expected_client_details(
+        self, client, valid_application_body
+    ):
         response = client.post(
             "/applications",
-            json=_make_request_body(),
+            json=valid_application_body,
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
@@ -145,11 +180,11 @@ class TestCreateApplication:
         assert not client_data["hasAppliedPreviously"]
 
     def test_201_create_application_stores_authenticated_users_firm_code(
-        self, client, session
+        self, client, session, valid_application_body
     ):
         response = client.post(
             "/applications",
-            json=_make_request_body(),
+            json=valid_application_body,
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
@@ -163,10 +198,12 @@ class TestCreateApplication:
         ).one()
         assert application.provider.firm_code == "0A123B"
 
-    def test_201_create_application_creates_history_event(self, client, session):
+    def test_201_create_application_creates_history_event(
+        self, client, session, valid_application_body
+    ):
         response = client.post(
             "/applications",
-            json=_make_request_body(),
+            json=valid_application_body,
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
@@ -197,7 +234,9 @@ class TestCreateApplication:
         assert history_event.event_data is None
         assert history_event.application_id == application.application_id
 
-    def test_201_create_application_creates_duplicate_records(self, client, session):
+    def test_201_create_application_creates_duplicate_records(
+        self, client, session, valid_application_body
+    ):
         first_application_id = (
             session.exec(select(Application).order_by(Application.created_at.desc()))
             .first()
@@ -206,7 +245,7 @@ class TestCreateApplication:
 
         response = client.post(
             "/applications",
-            json=_make_request_body(),
+            json=valid_application_body,
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
@@ -236,9 +275,12 @@ class TestCreateApplication:
         assert len(duplicate_records) == 1
         assert response.json()["potentialDuplicateApplications"] is None
 
-    def test_201_create_application_can_omit_correspondence_address(self, client):
-        request_body = _make_request_body(
-            {"correspondenceAddressSource": "USE_CLIENT_HOME_ADDRESS"}
+    def test_201_create_application_can_omit_correspondence_address(
+        self, client, valid_application_body
+    ):
+        request_body = valid_application_body
+        request_body["client"]["correspondenceAddressSource"] = (
+            "USE_CLIENT_HOME_ADDRESS"
         )
         request_body["client"].pop("correspondenceAddress")
 
@@ -259,11 +301,11 @@ class TestCreateApplication:
         assert client_details["correspondenceAddress"] is None
 
     def test_201_create_application_responds_with_expected_public_body_details(
-        self, client
+        self, client, valid_application_body
     ):
         response = client.post(
             "/applications",
-            json=_make_request_body(),
+            json=valid_application_body,
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
@@ -274,10 +316,12 @@ class TestCreateApplication:
         public_body = new_application["publicBodies"][0]
         assert public_body["publicBodyDescription"] == "Department for Transport"
 
-    def test_201_create_application_response_includes_deceased_details(self, client):
+    def test_201_create_application_response_includes_deceased_details(
+        self, client, valid_application_body
+    ):
         response = client.post(
             "/applications",
-            json=_make_request_body(),
+            json=valid_application_body,
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
@@ -325,6 +369,86 @@ class TestCreateApplication:
         new_application = response.json()
         assert new_application["coronersLetter"] is not None
         assert new_application["coronersLetter"]["fileName"] == "test-file_abc123.pdf"
+
+    def test_404_create_application_rejects_another_offices_letter(
+        self, client, session, mock_gov_notify
+    ):
+        letter = CoronersLetter(
+            sds_file_name="other-office.pdf",
+            file_name="letter.pdf",
+            office_id="OTHER_OFFICE",
+        )
+        session.add(letter)
+        session.commit()
+
+        initial_count = len(session.exec(select(Application)).all())
+        body = _make_request_body()
+        body["coronersLetterId"] = str(letter.coroners_letter_id)
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 404
+        assert len(session.exec(select(Application)).all()) == initial_count
+        mock_gov_notify.send_application_submit_confirmation_email.assert_not_called()
+
+    def test_404_create_application_rejects_missing_coroners_letter(
+        self, client, session, mock_gov_notify
+    ):
+        initial_count = len(session.exec(select(Application)).all())
+        body = _make_request_body()
+        body["coronersLetterId"] = str(uuid.uuid4())
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 404
+        assert len(session.exec(select(Application)).all()) == initial_count
+        mock_gov_notify.send_application_submit_confirmation_email.assert_not_called()
+
+    def test_404_create_application_rejects_letter_from_other_authorised_office(
+        self, client, session, mock_gov_notify
+    ):
+        letter = CoronersLetter(
+            sds_file_name="other-office.pdf",
+            file_name="letter.pdf",
+            office_id="OTHER_OFFICE",
+        )
+        session.add(letter)
+        session.commit()
+
+        api.dependency_overrides[get_current_provider_office_codes] = lambda: frozenset(
+            {"0U651L", "OTHER_OFFICE"}
+        )
+
+        initial_count = len(session.exec(select(Application)).all())
+        body = _make_request_body()
+        body["coronersLetterId"] = str(letter.coroners_letter_id)
+
+        response = client.post(
+            "/applications",
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
+            },
+        )
+
+        assert response.status_code == 404
+        assert len(session.exec(select(Application)).all()) == initial_count
+        mock_gov_notify.send_application_submit_confirmation_email.assert_not_called()
 
     def test_422_rejected_when_has_no_fixed_abode_is_false_and_home_address_is_absent(
         self, client
@@ -384,9 +508,10 @@ class TestCreateApplication:
 
     @pytest.mark.parametrize("value", ["O'Brien", "Smith-Jones", "Zoë", "a=b"])
     def test_201_accepts_client_names_that_only_contain_formula_characters_inside(
-        self, client, value
+        self, client, value, valid_application_body
     ):
-        body = _make_request_body({"clientLastName": value})
+        body = valid_application_body
+        body["client"]["clientLastName"] = value
 
         response = client.post(
             "/applications",
@@ -422,9 +547,9 @@ class TestCreateApplication:
         )
 
     def test_201_accepted_when_deceased_date_of_death_equals_date_of_birth(
-        self, client
+        self, client, valid_application_body
     ):
-        body = _make_request_body()
+        body = valid_application_body
         body["deceased"]["deceasedDateOfBirth"] = "2025-01-01"
         body["deceased"]["deceasedDateOfDeath"] = "2025-01-01"
 
@@ -440,14 +565,11 @@ class TestCreateApplication:
         assert response.status_code == 201
 
     def test_201_accepted_when_has_no_fixed_abode_is_true_and_no_home_address_provided(
-        self, client
+        self, client, valid_application_body
     ):
-        body = _make_request_body(
-            {
-                "hasNoFixedAbode": True,
-                "correspondenceAddressSource": "USE_SPECIFIED_ADDRESS",
-            }
-        )
+        body = valid_application_body
+        body["client"]["hasNoFixedAbode"] = True
+        body["client"]["correspondenceAddressSource"] = "USE_SPECIFIED_ADDRESS"
         body["client"].pop("homeAddress")
 
         response = client.post(
@@ -465,11 +587,14 @@ class TestCreateApplication:
         assert client_data["homeAddress"] is None
 
     def test_201_accepted_when_has_no_fixed_abode_is_false_and_home_address_is_provided(
-        self, client
+        self, client, valid_application_body
     ):
+
+        valid_application_body["client"]["hasNoFixedAbode"] = False
+
         response = client.post(
             "/applications",
-            json=_make_request_body({"hasNoFixedAbode": False}),
+            json=valid_application_body,
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
@@ -483,9 +608,9 @@ class TestCreateApplication:
         assert client_data["homeAddress"]["addressLine1"] == "1 Example Lane"
 
     def test_201_create_application_includes_explicit_correspondence_recipient(
-        self, client
+        self, client, valid_application_body
     ):
-        body = _make_request_body()
+        body = valid_application_body
         body["client"]["correspondenceRecipient"] = {
             "recipientType": "ORGANISATION",
             "recipientName": "Inquests Support Org",
@@ -507,11 +632,11 @@ class TestCreateApplication:
         }
 
     def test_201_create_application_response_none_potential_duplicate_applications(
-        self, client
+        self, client, valid_application_body
     ):
         response = client.post(
             "/applications",
-            json=_make_request_body(),
+            json=valid_application_body,
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
@@ -521,10 +646,12 @@ class TestCreateApplication:
         assert response.status_code == 201
         assert response.json()["potentialDuplicateApplications"] is None
 
-    def test_201_create_application_response_includes_provider_email(self, client):
+    def test_201_create_application_response_includes_provider_email(
+        self, client, valid_application_body
+    ):
         response = client.post(
             "/applications",
-            json=_make_request_body(),
+            json=valid_application_body,
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
@@ -557,7 +684,9 @@ class TestCreateApplication:
 
         assert response.status_code == 403
 
-    def test_404_create_application_rejected_when_office_not_found(self, client):
+    def test_404_create_application_rejected_when_office_not_found(
+        self, client, valid_application_body
+    ):
         def get_provider_details_port_override():
             mock_port = MagicMock()
             mock_port.get_firm_name.side_effect = ProviderOfficeNotFoundError(
@@ -571,7 +700,7 @@ class TestCreateApplication:
 
         response = client.post(
             "/applications",
-            json=_make_request_body(),
+            json=valid_application_body,
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
@@ -579,6 +708,10 @@ class TestCreateApplication:
         )
 
         assert response.status_code == 404
+
+        assert response.json()["detail"] == (
+            "Office 0U651L details not found for firm 0A123B"
+        )
 
     def test_422_create_application_rejected_when_provider_email_missing(self, client):
         body = _make_request_body()
@@ -643,7 +776,7 @@ class TestCreateApplication:
         assert response.status_code == 422
 
     def test_500_create_application_rolls_back_when_gov_notify_fails(
-        self, client, session, mock_gov_notify
+        self, client, session, mock_gov_notify, valid_application_body
     ):
         """
         Test that application creation rolls back when GovNotify email sending fails.
@@ -664,7 +797,7 @@ class TestCreateApplication:
 
         response = client.post(
             "/applications",
-            json=_make_request_body(),
+            json=valid_application_body,
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
@@ -683,11 +816,13 @@ class TestCreateApplication:
 
 class TestCreateApplicationRbac:
     def test_201_create_application_with_provider_application_user_app_role(
-        self, client
+        self,
+        client,
+        valid_application_body,
     ):
         response = client.post(
             "/applications",
-            json=_make_request_body(),
+            json=valid_application_body,
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",
@@ -695,7 +830,9 @@ class TestCreateApplicationRbac:
         )
         assert response.status_code == 201
 
-    def test_201_create_application_with_permission_override(self, client):
+    def test_201_create_application_with_permission_override(
+        self, client, valid_application_body
+    ):
         def get_current_user_permissions_override():
             return {Permission.APPLICATION_CREATE}
 
@@ -705,7 +842,7 @@ class TestCreateApplicationRbac:
 
         response = client.post(
             "/applications",
-            json=_make_request_body(),
+            json=valid_application_body,
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {Role.PROVIDER_APPLICATION_USER.value}",

@@ -3,15 +3,18 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
+from app.domain.coroners_letter import CoronersLetter
 from app.models.application.index import ApplicationCreate
 from app.models.history.enums import ActorType, HistoryEventReference
 from app.models.notifications.enums import NotificationType
 from app.ports.create_application_port import CreateApplicationPort
 from app.ports.create_history_event_port import CreateHistoryEventPort
+from app.ports.get_coroners_letter_port import GetCoronersLetterPort
 from app.ports.gov_notify_port import GovNotifyPort
 from app.ports.provider_details_port import ProviderDetailsPort
 from app.use_cases.create_application import CreateApplicationUseCase
 from app.use_cases.exceptions import (
+    CoronersLetterNotFoundError,
     ProviderOfficeMismatchError,
     ProviderOfficeNotFoundError,
 )
@@ -60,7 +63,20 @@ def _make_request(email_address: str = "provider@example.com") -> ApplicationCre
     )
 
 
-def test_execute_creates_application_sends_confirmation_email_and_commits():
+@pytest.fixture
+def matching_coroners_letter_port():
+    port = MagicMock(spec=GetCoronersLetterPort)
+    port.get_coroners_letter_by_id.return_value = CoronersLetter(
+        sds_file_name="test_sds_file.pdf",
+        file_name="test_file.pdf",
+        office_id="0U651L",
+    )
+    return port
+
+
+def test_execute_creates_application_sends_confirmation_email_and_commits(
+    matching_coroners_letter_port,
+):
     request = _make_request()
     application = create_base_application()
     create_application_port = MagicMock(spec=CreateApplicationPort)
@@ -74,6 +90,7 @@ def test_execute_creates_application_sends_confirmation_email_and_commits():
 
     use_case = CreateApplicationUseCase(
         create_application_port=create_application_port,
+        get_coroners_letter_port=matching_coroners_letter_port,
         create_history_event_port=create_history_event_port,
         gov_notify_port=gov_notify_port,
         provider_details_port=provider_details_port,
@@ -121,7 +138,9 @@ def test_execute_creates_application_sends_confirmation_email_and_commits():
     create_application_port.rollback.assert_not_called()
 
 
-def test_execute_passes_authenticated_firm_code_to_create_application_port():
+def test_execute_passes_authenticated_firm_code_to_create_application_port(
+    matching_coroners_letter_port,
+):
     request = _make_request()
     create_application_port = MagicMock(spec=CreateApplicationPort)
     create_application_port.create_application.return_value = create_base_application()
@@ -134,6 +153,7 @@ def test_execute_passes_authenticated_firm_code_to_create_application_port():
 
     use_case = CreateApplicationUseCase(
         create_application_port=create_application_port,
+        get_coroners_letter_port=matching_coroners_letter_port,
         create_history_event_port=create_history_event_port,
         gov_notify_port=gov_notify_port,
         provider_details_port=provider_details_port,
@@ -145,7 +165,9 @@ def test_execute_passes_authenticated_firm_code_to_create_application_port():
     create_application_port.create_application.assert_called_once_with(request, "1473")
 
 
-def test_execute_rolls_back_and_reraises_when_notify_fails():
+def test_execute_rolls_back_and_reraises_when_notify_fails(
+    matching_coroners_letter_port,
+):
     request = _make_request()
     create_application_port = MagicMock(spec=CreateApplicationPort)
     create_application_port.create_application.return_value = create_base_application()
@@ -161,6 +183,7 @@ def test_execute_rolls_back_and_reraises_when_notify_fails():
 
     use_case = CreateApplicationUseCase(
         create_application_port=create_application_port,
+        get_coroners_letter_port=matching_coroners_letter_port,
         create_history_event_port=create_history_event_port,
         gov_notify_port=gov_notify_port,
         provider_details_port=provider_details_port,
@@ -174,7 +197,9 @@ def test_execute_rolls_back_and_reraises_when_notify_fails():
     create_application_port.rollback.assert_called_once_with()
 
 
-def test_execute_rolls_back_and_reraises_when_commit_fails():
+def test_execute_rolls_back_and_reraises_when_commit_fails(
+    matching_coroners_letter_port,
+):
     request = _make_request()
     application = create_base_application()
     create_application_port = MagicMock(spec=CreateApplicationPort)
@@ -189,6 +214,7 @@ def test_execute_rolls_back_and_reraises_when_commit_fails():
 
     use_case = CreateApplicationUseCase(
         create_application_port=create_application_port,
+        get_coroners_letter_port=matching_coroners_letter_port,
         create_history_event_port=create_history_event_port,
         gov_notify_port=gov_notify_port,
         provider_details_port=provider_details_port,
@@ -205,7 +231,9 @@ def test_execute_rolls_back_and_reraises_when_commit_fails():
     create_application_port.rollback.assert_called_once_with()
 
 
-def test_execute_rolls_back_and_reraises_when_provider_office_mismatch():
+def test_execute_rejects_provider_office_mismatch_before_creation(
+    matching_coroners_letter_port,
+):
     request = _make_request()
     application = create_base_application()
     create_application_port = MagicMock(spec=CreateApplicationPort)
@@ -219,6 +247,7 @@ def test_execute_rolls_back_and_reraises_when_provider_office_mismatch():
 
     use_case = CreateApplicationUseCase(
         create_application_port=create_application_port,
+        get_coroners_letter_port=matching_coroners_letter_port,
         create_history_event_port=create_history_event_port,
         gov_notify_port=gov_notify_port,
         provider_details_port=provider_details_port,
@@ -237,10 +266,14 @@ def test_execute_rolls_back_and_reraises_when_provider_office_mismatch():
     create_history_event_port.create_history_event.assert_not_called()
     gov_notify_port.send_application_submit_confirmation_email.assert_not_called()
     create_application_port.commit.assert_not_called()
-    create_application_port.rollback.assert_called_once_with()
+    matching_coroners_letter_port.get_coroners_letter_by_id.assert_not_called()
+    create_application_port.create_application.assert_not_called()
+    create_application_port.rollback.assert_not_called()
 
 
-def test_execute_rolls_back_and_reraises_when_provider_office_not_found():
+def test_execute_rolls_back_and_reraises_when_provider_office_not_found(
+    matching_coroners_letter_port,
+):
     request = _make_request()
     application = create_base_application()
     create_application_port = MagicMock(spec=CreateApplicationPort)
@@ -257,6 +290,7 @@ def test_execute_rolls_back_and_reraises_when_provider_office_not_found():
 
     use_case = CreateApplicationUseCase(
         create_application_port=create_application_port,
+        get_coroners_letter_port=matching_coroners_letter_port,
         create_history_event_port=create_history_event_port,
         gov_notify_port=gov_notify_port,
         provider_details_port=provider_details_port,
@@ -275,7 +309,9 @@ def test_execute_rolls_back_and_reraises_when_provider_office_not_found():
     create_application_port.rollback.assert_called_once_with()
 
 
-def test_execute_identifies_duplicates_for_new_application():
+def test_execute_identifies_duplicates_for_new_application(
+    matching_coroners_letter_port,
+):
     request = _make_request()
     application = create_base_application()
     create_application_port = MagicMock(spec=CreateApplicationPort)
@@ -289,6 +325,7 @@ def test_execute_identifies_duplicates_for_new_application():
 
     use_case = CreateApplicationUseCase(
         create_application_port=create_application_port,
+        get_coroners_letter_port=matching_coroners_letter_port,
         create_history_event_port=create_history_event_port,
         gov_notify_port=gov_notify_port,
         provider_details_port=provider_details_port,
@@ -303,7 +340,9 @@ def test_execute_identifies_duplicates_for_new_application():
     create_application_port.commit.assert_called_once()
 
 
-def test_execute_rolls_back_if_identifies_duplicates_fails():
+def test_execute_rolls_back_if_identifies_duplicates_fails(
+    matching_coroners_letter_port,
+):
     request = _make_request()
     application = create_base_application()
     create_application_port = MagicMock(spec=CreateApplicationPort)
@@ -321,6 +360,7 @@ def test_execute_rolls_back_if_identifies_duplicates_fails():
 
     use_case = CreateApplicationUseCase(
         create_application_port=create_application_port,
+        get_coroners_letter_port=matching_coroners_letter_port,
         create_history_event_port=create_history_event_port,
         gov_notify_port=gov_notify_port,
         provider_details_port=provider_details_port,
@@ -335,3 +375,38 @@ def test_execute_rolls_back_if_identifies_duplicates_fails():
     )
     create_application_port.commit.assert_not_called()
     create_application_port.rollback.assert_called_once()
+
+
+def test_execute_rejects_letter_owned_by_another_office():
+    request = _make_request()
+    create_application_port = MagicMock(spec=CreateApplicationPort)
+    get_coroners_letter_port = MagicMock(spec=GetCoronersLetterPort)
+    get_coroners_letter_port.get_coroners_letter_by_id.return_value = CoronersLetter(
+        sds_file_name="other-office.pdf",
+        file_name="letter.pdf",
+        office_id="OTHER_OFFICE",
+    )
+    create_history_event_port = MagicMock(spec=CreateHistoryEventPort)
+    gov_notify_port = MagicMock(spec=GovNotifyPort)
+
+    use_case = CreateApplicationUseCase(
+        create_application_port=create_application_port,
+        get_coroners_letter_port=get_coroners_letter_port,
+        create_history_event_port=create_history_event_port,
+        gov_notify_port=gov_notify_port,
+        provider_details_port=MagicMock(spec=ProviderDetailsPort),
+        identify_duplicate_applications_use_case=MagicMock(
+            spec=IdentifyDuplicateApplicationsUseCase
+        ),
+    )
+
+    with pytest.raises(CoronersLetterNotFoundError):
+        use_case.execute(request, "0A123B", frozenset({"0U651L"}))
+
+    get_coroners_letter_port.get_coroners_letter_by_id.assert_called_once_with(
+        request.coroners_letter_id
+    )
+    create_application_port.create_application.assert_not_called()
+    create_application_port.commit.assert_not_called()
+    create_history_event_port.create_history_event.assert_not_called()
+    gov_notify_port.send_application_submit_confirmation_email.assert_not_called()
